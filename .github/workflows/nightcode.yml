@@ -1,7 +1,7 @@
 name: Run NightCode Cloud Workflow
 
 on:
-  workflow_dispatch: # Allows you to manually trigger it from the Actions tab
+  workflow_dispatch:
 
 jobs:
   run-nightcode:
@@ -24,11 +24,11 @@ jobs:
       - name: Run Orchestrator
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: python orchestrator.py
+        run: python code/orchestrator.py
 
       - name: Commit & Push Generated Code
         run: |
           git config --global user.name "NightCode Bot"
           git config --global user.email "nightcode-bot@users.noreply.github.com"
-          git add generated_app.py
-          git diff --staged --quiet || (git commit -m "chore: auto-generate app via NightCode cloud runner" && git push)
+          git add output/
+          git diff --staged --quiet || (git commit -m "chore: auto-generate app in output directory" && git push)
