@@ -6,30 +6,32 @@ import time
 import requests
 import subprocess
 
-# OpenRouter Setup - Target a fast, high-capacity free coding model
-API_KEY = os.getenv("OPENROUTER_API_KEY", "sk-or-v1-YOUR-KEY-HERE")
-API_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "qwen/qwen-2.5-coder-32b-instruct:free"
+# Google Gemini API Setup
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "YOUR_GEMINI_API_KEY_HERE")
+MODEL = "gemini-2.5-flash"
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={GEMINI_API_KEY}"
 
 
 def call_llm(system_prompt, user_prompt, retries=3):
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json",
-    }
+    headers = {"Content-Type": "application/json"}
+    
     payload = {
-        "model": MODEL,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+        "system_instruction": {
+            "parts": [{"text": system_prompt}]
+        },
+        "contents": [
+            {
+                "parts": [{"text": user_prompt}]
+            }
+        ]
     }
 
     for attempt in range(retries):
         try:
             response = requests.post(API_URL, json=payload, headers=headers, timeout=60)
             if response.status_code == 200:
-                return response.json()["choices"][0]["message"]["content"]
+                data = response.json()
+                return data["candidates"][0]["content"]["parts"][0]["text"]
             elif response.status_code in (429, 502, 503, 504):
                 print(f"⚠️ API Status {response.status_code}. Retrying in {2 ** attempt}s...")
                 time.sleep(2 ** attempt)
@@ -54,7 +56,7 @@ def generate_folder_slug(goal):
 
 
 def extract_json(text):
-    """Robustly extracts JSON object even if surrounded by commentary."""
+    """Extracts JSON object even if surrounded by commentary or markdown blocks."""
     text = re.sub(r"```json\s*", "", text)
     text = re.sub(r"```\s*", "", text).strip()
     match = re.search(r"(\{.*\})", text, re.DOTALL)
@@ -76,10 +78,10 @@ def run_refinement_loop(user_vision):
     print(f"🚀 NightCode Task: {user_vision}")
     print(f"📁 Output Destination: output/{folder_slug}/\n")
 
-    # Fast Architectural Blueprint (1 quick API call)
-    print("🧠 [Architect] Creating technical specification...")
+    # Fast Architectural Blueprint
+    print("🧠 [Architect] Creating technical specification with Gemini...")
     strategy = call_llm(
-        "You are a Software Architect. Give a concise 2-sentence file structure plan for the requested software.",
+        "You are a Lead Software Architect. Provide a concise 2-sentence file structure plan for the requested software.",
         user_vision
     )
     print(f"📋 Strategy Plan:\n{strategy}\n" + "-" * 50)
@@ -88,9 +90,9 @@ def run_refinement_loop(user_vision):
         print(f"--- 🔄 ITERATION {turn}/{max_turns} ---")
 
         coder_system = (
-            "You are an expert developer. Output ONLY a valid raw JSON object mapping "
+            "You are an expert software developer. Output ONLY a valid raw JSON object mapping "
             "filenames to their complete code contents (e.g. {\"index.html\": \"...\", \"game.js\": \"...\"}). "
-            "Do NOT include markdown blocks like ```json or any conversational commentary."
+            "Do NOT include markdown block formatting like ```json or any conversational commentary."
         )
 
         coder_prompt = (
@@ -99,29 +101,26 @@ def run_refinement_loop(user_vision):
             f"Previous Feedback/Error: {feedback}"
         )
 
-        print("🤖 [LLM A] Generating codebase...")
+        print("🤖 [LLM A] Generating codebase with Gemini...")
         raw_response = call_llm(coder_system, coder_prompt)
         json_str = extract_json(raw_response)
 
         try:
             file_map = json.loads(json_str)
         except json.JSONDecodeError as e:
-            feedback = f"Output was invalid JSON: {e}. Output ONLY a raw JSON object with keys as filenames and values as code string."
-            print("⚠️ Output was not valid JSON. Requesting fix in next turn...")
+            feedback = f"Output was invalid JSON: {e}. Output ONLY a raw JSON object with keys as filenames and values as code strings."
+            print("⚠️ Output was not valid JSON. Retrying...")
             continue
 
-        # Save files (with automatic subdirectory creation!)
+        # Save files (automatically creates nested folders)
         for filename, content in file_map.items():
             file_path = os.path.join(target_dir, filename)
-            
-            # Ensure subfolders exist if filename contains relative path
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
             print(f"  📄 Saved {filename}")
 
-        # Check if python execution test is applicable (e.g. if main.py exists)
+        # Check if Python sandbox testing applies
         main_file = os.path.join(target_dir, "main.py")
         if os.path.exists(main_file):
             print("🧪 Testing main.py in sandbox...")
@@ -142,7 +141,7 @@ def run_refinement_loop(user_vision):
             print(f"\n🎉 Multi-file project built successfully! Check: output/{folder_slug}/")
             return
 
-        print("🕵️ [LLM B] Reviewing error...")
+        print("🕵️ [LLM B] Reviewing error with Gemini...")
         feedback = call_llm("Explain concisely how to fix the broken execution error.", f"Error:\n{feedback}")
 
     print("\n🎉 NightCode execution complete!")
