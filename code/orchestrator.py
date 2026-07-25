@@ -32,10 +32,15 @@ def call_llm(system_prompt, user_prompt):
 
 
 def generate_folder_slug(goal):
-    """Asks the LLM to create a clean, 2-4 word dash-separated folder name."""
-    system_prompt = "You create clean directory names. Convert the user's goal into a short 2-4 word slug with hyphens. Respond with ONLY the slug, no spaces, no punctuation."
-    slug = call_llm(system_prompt, goal).strip().lower()
-    slug = re.sub(r"[^\w-]", "", slug)  # Keep only alphanumeric & hyphens
+    """Generates a clean 2-4 word directory slug directly from the goal string."""
+    # Strip common safety/metadata prefix garbage if an LLM generates it
+    words = re.findall(r'\b[a-zA-Z0-9]+\b', goal.lower())
+    # Filter out common filler words
+    ignore_words = {'write', 'a', 'python', 'script', 'build', 'tool', 'that', 'uses', 'for', 'to', 'and', 'with', 'an'}
+    filtered_words = [w for w in words if w not in ignore_words]
+    
+    # Pick the first 3-4 meaningful words
+    slug = "-".join(filtered_words[:4])
     return slug if slug else "app-project"
 
 
