@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import requests
 import subprocess
 
@@ -30,11 +31,28 @@ def call_llm(system_prompt, user_prompt):
 
 
 def slugify(text):
-    """Converts a goal string into a safe folder name (e.g. 'user-input-processor')."""
+    """Converts a goal string into a safe folder name."""
     text = text.lower()
-    text = re.sub(r"[^\w\s-]", "", text)  # Remove special chars
-    text = re.sub(r"[\s_-]+", "-", text).strip("-")  # Convert spaces to hyphens
-    return text[:40]  # Keep it reasonably short
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"[\s_-]+", "-", text).strip("-")
+    return text[:40]
+
+
+def install_package(package_name):
+    """Dynamically installs a missing Python package using pip."""
+    print(f"📦 Auto-installing missing dependency: {package_name}...")
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", package_name],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        print(f"✅ Successfully installed {package_name}!")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to install {package_name}: {e.stderr}")
+        return False
 
 
 def run_refinement_loop(goal):
@@ -42,14 +60,10 @@ def run_refinement_loop(goal):
     current_code = ""
     feedback = "Initial build."
 
-    # Determine paths relative to repository root
-    repo_root = os.path.dirname(
-        os.path.dirname(os.path.abspath(__file__))
-    )  # Step up from code/
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     goal_folder_name = slugify(goal)
     target_dir = os.path.join(repo_root, "output", goal_folder_name)
 
-    # Ensure target output subfolder exists
     os.makedirs(target_dir, exist_ok=True)
     file_path = os.path.join(target_dir, "generated_app.py")
 
@@ -65,38 +79,51 @@ def run_refinement_loop(goal):
 
         print("🤖 [LLM A] Generating code...")
         current_code = call_llm(coder_system, coder_prompt)
-
-        # Clean code blocks
         current_code = (
             current_code.replace("```python", "").replace("```", "").strip()
         )
 
-        # Save generated code to output subfolder
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(current_code)
 
-        # 2. Execution Test
-        print("🧪 Testing code in terminal...")
-        try:
-            result = subprocess.run(
-                ["python", file_path],
-                input="1\nAlice\n",  # Feeds simulated inputs
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
+        # 2. Execution Test & Dependency Interception Loop
+        retry_test = True
+        while retry_test:
+            retry_test = False
+            print("🧪 Testing code in terminal...")
+            try:
+                result = subprocess.run(
+                    [sys.executable, file_path],
+                    input="1\nAlice\n",
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
 
-            if result.returncode == 0:
-                print("\n✅ Code executed successfully!")
-                print(f"Output:\n{result.stdout}")
-                break
+                if result.returncode == 0:
+                    print("\n✅ Code executed successfully!")
+                    print(f"Output:\n{result.stdout}")
+                    print("\n🎉 NightCode execution complete!")
+                    return
 
-            error_log = result.stderr
-            print(f"⚠️ Failed! Execution Error:\n{error_log[:200]}...")
+                error_log = result.stderr
 
-        except subprocess.TimeoutExpired:
-            error_log = "Execution timed out! Code got stuck on input or an infinite loop."
-            print(f"⚠️ Failed! {error_log}")
+                # --- AUTO-DEPENDENCY CHECK ---
+                match = re.search(r"ModuleNotFoundError: No module named '([^']+)'", error_log)
+                if match:
+                    missing_module = match.group(1)
+                    print(f"⚠️ Detected missing module: '{missing_module}'")
+                    
+                    # Attempt pip install
+                    if install_package(missing_module):
+                        retry_test = True  # Re-run test immediately without wasting an LLM call!
+                        continue
+
+                print(f"⚠️ Failed! Execution Error:\n{error_log[:200]}...")
+
+            except subprocess.TimeoutExpired:
+                error_log = "Execution timed out! Code got stuck on input or an infinite loop."
+                print(f"⚠️ Failed! {error_log}")
 
         # 3. LLM B (Critic)
         critic_system = "You are a code reviewer. Analyze the error and explain concisely what needs to be changed."
@@ -109,6 +136,6 @@ def run_refinement_loop(goal):
 
 
 if __name__ == "__main__":
-    GOAL = "Write a python script that takes input from users, runs it through a function, and returns the output in a formatted way."
+    # Test with a goal requiring external third-party libraries!
+    GOAL = "Write a python script that uses requests to fetch quotes from [https://dummyjson.com/quotes](https://dummyjson.com/quotes) and displays 2 random ones."
     run_refinement_loop(GOAL)
-    
