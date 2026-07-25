@@ -8,11 +8,11 @@ import subprocess
 
 # Google Gemini API Setup
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-1.5-flash"
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={GEMINI_API_KEY}"
 
 
-def call_llm(system_prompt, user_prompt, retries=3):
+def call_llm(system_prompt, user_prompt, retries=5):
     headers = {"Content-Type": "application/json"}
     
     payload = {
@@ -25,6 +25,28 @@ def call_llm(system_prompt, user_prompt, retries=3):
             }
         ]
     }
+
+    # Delays for rate limit backoff (in seconds)
+    delays = [5, 10, 20, 30, 45]
+
+    for attempt in range(retries):
+        try:
+            response = requests.post(API_URL, json=payload, headers=headers, timeout=90)
+            if response.status_code == 200:
+                data = response.json()
+                return data["candidates"][0]["content"]["parts"][0]["text"]
+            elif response.status_code in (429, 502, 503, 504):
+                delay = delays[min(attempt, len(delays) - 1)]
+                print(f"⚠️ API Status {response.status_code} (Rate Limit). Retrying in {delay}s...")
+                time.sleep(delay)
+            else:
+                raise Exception(f"API Error {response.status_code}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            delay = delays[min(attempt, len(delays) - 1)]
+            print(f"⚠️ Network error: {e}. Retrying in {delay}s...")
+            time.sleep(delay)
+
+    raise Exception("❌ Max API retries exceeded.")
 
     for attempt in range(retries):
         try:
