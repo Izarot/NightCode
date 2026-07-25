@@ -56,7 +56,7 @@ def install_package(package_name):
 
 
 def run_refinement_loop(goal):
-    max_turns = 5
+    max_turns = 10
     current_code = ""
     feedback = "Initial build."
 
