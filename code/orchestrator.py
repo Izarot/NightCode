@@ -2,16 +2,17 @@ import json
 import os
 import re
 import sys
+import time
 import requests
 import subprocess
 
-# OpenRouter Setup
+# OpenRouter Setup - Target a fast, high-capacity free coding model
 API_KEY = os.getenv("OPENROUTER_API_KEY", "sk-or-v1-YOUR-KEY-HERE")
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "openrouter/free"
+MODEL = "qwen/qwen-2.5-coder-32b-instruct:free"
 
 
-def call_llm(system_prompt, user_prompt):
+def call_llm(system_prompt, user_prompt, retries=3):
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json",
@@ -24,130 +25,107 @@ def call_llm(system_prompt, user_prompt):
         ],
     }
 
-    response = requests.post(API_URL, json=payload, headers=headers)
-    if response.status_code != 200:
-        raise Exception(f"API Error {response.status_code}: {response.text}")
+    for attempt in range(retries):
+        try:
+            response = requests.post(API_URL, json=payload, headers=headers, timeout=60)
+            if response.status_code == 200:
+                return response.json()["choices"][0]["message"]["content"]
+            elif response.status_code in (429, 502, 503, 504):
+                print(f"⚠️ API Status {response.status_code}. Retrying in {2 ** attempt}s...")
+                time.sleep(2 ** attempt)
+            else:
+                raise Exception(f"API Error {response.status_code}: {response.text}")
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️ Network error: {e}. Retrying...")
+            time.sleep(2 ** attempt)
 
-    return response.json()["choices"][0]["message"]["content"]
+    raise Exception("❌ Max API retries exceeded.")
 
 
 def generate_folder_slug(goal):
-    """Generates a clean 2-4 word directory slug directly from the goal string."""
+    """Derives a clean folder slug locally without an extra API call."""
     words = re.findall(r"\b[a-zA-Z0-9]+\b", goal.lower())
     ignore_words = {
-        "write", "a", "python", "script", "build", "tool", "that", "uses",
-        "for", "to", "and", "with", "an", "make", "create", "game"
+        "make", "create", "build", "game", "a", "in", "the", "using", "with", "and", "to", "for", "of", "tool", "app"
     }
     filtered_words = [w for w in words if w not in ignore_words]
     slug = "-".join(filtered_words[:4])
     return slug if slug else "app-project"
 
 
-def run_llm_x_architect(user_vision):
-    """LLM X: Product Manager that expands a high-level vision into detailed technical specs."""
-    print("🧠 [LLM X - Architect] Expanding vision into detailed blueprint...")
-    system_prompt = (
-        "You are a Lead Software Architect. Take the high-level project vision "
-        "and expand it into a detailed specification. Define the project layout, "
-        "required features, key files (e.g. main.py, utils.py, index.html, etc.), and implementation requirements."
-    )
-    spec = call_llm(system_prompt, user_vision)
-    print("\n📋 Project Architecture Specs:\n" + spec + "\n" + "=" * 50)
-    return spec
-
-
-def run_dev_team_huddle(goal_spec, current_files, max_turns=6):
-    """Pre-iteration conversation between LLM A (Coder) and LLM B (Reviewer)."""
-    print("💬 [Team Huddle] LLM A & LLM B brainstorming iteration strategy...")
-    
-    conversation = []
-    coder_persona = "You are LLM A (Lead Developer). Propose technical implementation plans concise and clearly."
-    critic_persona = "You are LLM B (Code Reviewer/Architect). Critique the developer's plan, highlight risks/missing files, and suggest improvements."
-
-    # Turn 1: Developer proposes a plan
-    dev_msg = call_llm(
-        coder_persona,
-        f"Project Spec:\n{goal_spec}\nCurrent Files:\n{json.dumps(current_files)}\nHow should we structure/improve the project in this iteration? Keep response short (2-3 sentences)."
-    )
-    conversation.append(f"LLM A (Coder): {dev_msg}")
-
-    for i in range(max_turns - 1):
-        # Alternate between Critic and Coder
-        if i % 2 == 0:
-            msg = call_llm(
-                critic_persona,
-                f"Conversation so far:\n" + "\n".join(conversation) + "\nProvide feedback or approve the plan concisely."
-            )
-            conversation.append(f"LLM B (Critic): {msg}")
-        else:
-            msg = call_llm(
-                coder_persona,
-                f"Conversation so far:\n" + "\n".join(conversation) + "\nAdjust plan based on critic feedback concisely."
-            )
-            conversation.append(f"LLM A (Coder): {msg}")
-
-    summary = "\n".join(conversation)
-    print("🤝 [Team Huddle Complete] Agreed Plan:\n" + summary + "\n" + "-" * 50)
-    return summary
+def extract_json(text):
+    """Robustly extracts JSON object even if surrounded by commentary."""
+    text = re.sub(r"```json\s*", "", text)
+    text = re.sub(r"```\s*", "", text).strip()
+    match = re.search(r"(\{.*\})", text, re.DOTALL)
+    if match:
+        return match.group(1)
+    return text
 
 
 def run_refinement_loop(user_vision):
-    max_turns = 10
+    max_turns = 5
     file_map = {}
     feedback = "Initial build."
-
-    # 1. Trigger LLM X to build full blueprint
-    goal_spec = run_llm_x_architect(user_vision)
 
     folder_slug = generate_folder_slug(user_vision)
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     target_dir = os.path.join(repo_root, "output", folder_slug)
     os.makedirs(target_dir, exist_ok=True)
 
-    print(f"🚀 Starting NightCode Target: {user_vision}")
-    print(f"📁 Output Destination: {target_dir}\n")
+    print(f"🚀 NightCode Task: {user_vision}")
+    print(f"📁 Output Destination: output/{folder_slug}/\n")
+
+    # Fast Architectural Blueprint (1 quick API call)
+    print("🧠 [Architect] Creating technical specification...")
+    strategy = call_llm(
+        "You are a Software Architect. Give a concise 2-sentence file structure plan for the requested software.",
+        user_vision
+    )
+    print(f"📋 Strategy Plan:\n{strategy}\n" + "-" * 50)
 
     for turn in range(1, max_turns + 1):
         print(f"--- 🔄 ITERATION {turn}/{max_turns} ---")
 
-        # 2. Pre-iteration Brainstorm Chat (LLM A + LLM B)
-        huddle_plan = run_dev_team_huddle(goal_spec, file_map, max_turns=4)
-
-        # 3. LLM A generates JSON files based on the team's agreement
-        coder_system = """You are an expert developer. Output a valid JSON object mapping filenames to their file contents.
-Include all necessary source files, config files, and a README.md.
-Do NOT include markdown block formatting like ```json. Output ONLY raw JSON."""
-
-        coder_prompt = (
-            f"Project Spec:\n{goal_spec}\n"
-            f"Agreed Team Strategy:\n{huddle_plan}\n"
-            f"Previous Files:\n{json.dumps(file_map, indent=2)}\n"
-            f"Terminal Feedback:\n{feedback}"
+        coder_system = (
+            "You are an expert developer. Output ONLY a valid raw JSON object mapping "
+            "filenames to their complete code contents (e.g. {\"index.html\": \"...\", \"game.js\": \"...\"}). "
+            "Do NOT include markdown blocks like ```json or any conversational commentary."
         )
 
-        print("🤖 [LLM A] Generating multi-file codebase...")
-        response_text = call_llm(coder_system, coder_prompt)
-        response_text = response_text.replace("```json", "").replace("```", "").strip()
+        coder_prompt = (
+            f"Goal: {user_vision}\n"
+            f"Architecture Strategy: {strategy}\n"
+            f"Previous Feedback/Error: {feedback}"
+        )
+
+        print("🤖 [LLM A] Generating codebase...")
+        raw_response = call_llm(coder_system, coder_prompt)
+        json_str = extract_json(raw_response)
 
         try:
-            file_map = json.loads(response_text)
-        except json.JSONDecodeError:
-            feedback = "Your output was not valid JSON! Output ONLY a raw valid JSON object mapping filenames to file code."
-            print("⚠️ Failed! Output was not valid JSON. Retrying...")
+            file_map = json.loads(json_str)
+        except json.JSONDecodeError as e:
+            feedback = f"Output was invalid JSON: {e}. Output ONLY a raw JSON object with keys as filenames and values as code string."
+            print("⚠️ Output was not valid JSON. Requesting fix in next turn...")
             continue
 
-        # Write files
+        # Save files (with automatic subdirectory creation!)
         for filename, content in file_map.items():
             file_path = os.path.join(target_dir, filename)
+            
+            # Ensure subfolders exist if filename contains relative path
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
-            print(f"  📄 Wrote {filename}")
+            print(f"  📄 Saved {filename}")
 
         # Check if python execution test is applicable (e.g. if main.py exists)
         main_file = os.path.join(target_dir, "main.py")
         if os.path.exists(main_file):
             print("🧪 Testing main.py in sandbox...")
-            result = subprocess.run(
+            res = subprocess.run(
                 [sys.executable, main_file],
                 input="1\nAlice\n",
                 capture_output=True,
@@ -155,20 +133,21 @@ Do NOT include markdown block formatting like ```json. Output ONLY raw JSON."""
                 timeout=10,
                 cwd=target_dir,
             )
-            if result.returncode == 0:
-                print("\n✅ Project built and verified successfully!")
+            if res.returncode == 0:
+                print("\n✅ Verified successfully!")
                 return
-            feedback = result.stderr
-            print(f"⚠️ Failed! Execution Error:\n{feedback[:200]}...")
+            feedback = res.stderr
+            print(f"⚠️ Execution Error:\n{feedback[:200]}...")
         else:
-            print("ℹ️ Web/Multi-asset project generated (no main.py execution needed).")
-            print(f"\n🎉 NightCode build complete! Files saved in: output/{folder_slug}/")
+            print(f"\n🎉 Multi-file project built successfully! Check: output/{folder_slug}/")
             return
+
+        print("🕵️ [LLM B] Reviewing error...")
+        feedback = call_llm("Explain concisely how to fix the broken execution error.", f"Error:\n{feedback}")
 
     print("\n🎉 NightCode execution complete!")
 
 
 if __name__ == "__main__":
-    # Huge goal example!
-    BIG_GOAL = "Create a 3D Voxel game using HTML5, Three.js, and JavaScript with player movement, block placement, and a simple UI."
-    run_refinement_loop(BIG_GOAL)
+    GOAL = "Create a 3D Voxel game using HTML5, Three.js, and JavaScript with player movement, block placement, and a simple UI."
+    run_refinement_loop(GOAL)
