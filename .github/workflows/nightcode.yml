@@ -3,6 +3,9 @@ name: Run NightCode Cloud Workflow
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   run-nightcode:
     runs-on: ubuntu-latest
@@ -19,7 +22,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install -r code/requirements.txt
 
       - name: Run Orchestrator
         env:
