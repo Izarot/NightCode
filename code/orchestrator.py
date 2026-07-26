@@ -11,9 +11,14 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # Exact Free Models from your OpenRouter catalog
-MODEL_SPEC = "nvidia/nemotron-3-super:free"
-MODEL_ARCHITECT = "nvidia/nemotron-3-nano-30b-a3b:free"
-MODEL_CODER = "poolside/laguna-m.1:free"
+# 1. LLM X (Game Spec Writer - High reasoning)
+MODEL_SPEC = "nvidia/nemotron-3-super-120b-a12b:free"
+
+# 2. Architect (File Blueprint - Fast & lightweight)
+MODEL_ARCHITECT = "nvidia/nemotron-nano-9b-v2:free"
+
+# 3. LLM A (Code Generator - Dedicated code synthesis)
+MODEL_CODER = "poolside/laguna-s-2.1:free"
 
 def call_llm(model, system_prompt, user_prompt, retries=3):
     headers = {
