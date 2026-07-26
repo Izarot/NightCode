@@ -13,7 +13,16 @@ API_URL = "https://openrouter.ai/api/v1/chat/completions"
 # Exact Free Models from your OpenRouter screenshots
 MODEL_SPEC = "openai/gpt-oss-20b:free"         # High reasoning for specs
 MODEL_ARCHITECT = "inclusionai/ling-3.0-flash-20260723:free" # Fast architecture
-MODEL_CODER = "poolside/laguna-s-2.1:free"     # Dedicated code synthesis
+
+# Fallback list for the Coder. 
+# Nemotron models added at the front since no one uses them (avoids rate limits!)
+MODELS_CODER = [
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "nvidia/nemotron-nano-9b-v2:free",
+    "poolside/laguna-s-2.1:free",
+    "openai/gpt-oss-20b:free",
+    "inclusionai/ling-3.0-flash-20260723:free"
+]
 
 def call_llm(model, system_prompt, user_prompt, retries=3):
     headers = {
@@ -30,15 +39,16 @@ def call_llm(model, system_prompt, user_prompt, retries=3):
             {"role": "user", "content": user_prompt},
         ],
         "temperature": 0.3,
-        "max_tokens": 8000  # CRITICAL: Prevents JSON truncation on large codebases
+        "max_tokens": 8000
     }
 
-    delays = [2, 5, 10]
+    # Much longer delays for free tier rate limits
+    delays = [10, 30, 60]
 
     for attempt in range(retries):
         try:
             print(f"⏳ Sending API request to {model} (Attempt {attempt + 1}/{retries})...", flush=True)
-            response = requests.post(API_URL, json=payload, headers=headers, timeout=60)
+            response = requests.post(API_URL, json=payload, headers=headers, timeout=90)
 
             if response.status_code == 200:
                 print("✅ API Response Received!", flush=True)
@@ -51,7 +61,16 @@ def call_llm(model, system_prompt, user_prompt, retries=3):
                     pass
                 print("⚠️ Received empty content structure. Retrying...", flush=True)
             elif response.status_code == 429:
-                print("⚠️ Rate limited. Waiting longer...", flush=True)
+                # Smart Rate Limit Handling: Check for Retry-After header
+                retry_after = response.headers.get("Retry-After")
+                if retry_after and retry_after.isdigit():
+                    wait_time = int(retry_after)
+                else:
+                    wait_time = delays[min(attempt, len(delays) - 1)]
+                
+                print(f"⚠️ Rate limited by {model}. Sleeping for {wait_time}s...", flush=True)
+                time.sleep(wait_time)
+                continue # Skip the default sleep below and retry immediately
             else:
                 print(f"⚠️ Status Code {response.status_code}: {response.text[:150]}", flush=True)
 
@@ -60,10 +79,11 @@ def call_llm(model, system_prompt, user_prompt, retries=3):
         except requests.exceptions.RequestException as e:
             print(f"⚠️ Network error: {e}. Retrying...", flush=True)
 
+        # Default sleep if it wasn't a 429 or if header was missing
         if attempt < retries - 1:
             time.sleep(delays[min(attempt, len(delays) - 1)])
 
-    raise Exception(f"❌ API Call failed after {retries} retries on {model}.")
+    return None # Return None instead of raising exception so we can try fallback models
 
 
 def generate_game_specification_with_llm_x(seed_prompt):
@@ -79,6 +99,8 @@ def generate_game_specification_with_llm_x(seed_prompt):
 
     print("🎯 [LLM X] Generating high-level goal specification...", flush=True)
     spec = call_llm(MODEL_SPEC, system_prompt, seed_prompt)
+    if not spec:
+        raise Exception("❌ Failed to generate game specification. API completely unavailable.")
     return spec
 
 
@@ -98,7 +120,6 @@ def extract_json(text):
     if not text or not isinstance(text, str):
         return "{}"
     
-    # Remove markdown code blocks safely
     text = re.sub(r"```(?:json)?", "", text).strip()
     
     start = text.find('{')
@@ -127,6 +148,10 @@ def run_refinement_loop(user_vision, seed_prompt):
         "You are a Lead Software Architect. Provide a concise 2-sentence file structure plan for the requested software.",
         user_vision,
     )
+    if not strategy:
+        strategy = "Standard HTML5 game structure: index.html, style.css, game.js"
+        print("⚠️ Architect unavailable, using default strategy.", flush=True)
+        
     print(f"📋 Strategy Plan:\n{strategy}\n" + "-" * 50, flush=True)
 
     for turn in range(1, max_turns + 1):
@@ -144,8 +169,21 @@ def run_refinement_loop(user_vision, seed_prompt):
             f"Previous Feedback/Error: {feedback}"
         )
 
-        print("🤖 [LLM A] Generating codebase...", flush=True)
-        raw_response = call_llm(MODEL_CODER, coder_system, coder_prompt)
+        raw_response = None
+        
+        # Try each coder model until one succeeds
+        for coder_model in MODELS_CODER:
+            print(f"🤖 [LLM A] Generating codebase with {coder_model}...", flush=True)
+            raw_response = call_llm(coder_model, coder_system, coder_prompt)
+            
+            if raw_response:
+                break # Success! Break out of the fallback loop
+            else:
+                print(f"⚠️ {coder_model} failed completely. Trying next fallback model...", flush=True)
+                
+        if not raw_response:
+            raise Exception("❌ All coder models failed due to rate limits or errors. Aborting.")
+
         json_str = extract_json(raw_response)
 
         try:
@@ -155,7 +193,7 @@ def run_refinement_loop(user_vision, seed_prompt):
             print("⚠️ Output was not valid JSON. Retrying...", flush=True)
             continue
 
-        # Save files safely (handles nested directories like 'js/game.js')
+        # Save files safely
         for filename, content in file_map.items():
             clean_filename = os.path.normpath(filename).lstrip('./')
             if os.path.isabs(clean_filename):
@@ -168,7 +206,7 @@ def run_refinement_loop(user_vision, seed_prompt):
                 f.write(content)
             print(f"  📄 Saved {clean_filename}", flush=True)
 
-        # --- THE FIX: VERIFY BOTH PYTHON AND HTML5 ---
+        # Verify HTML5 Structure
         main_py = os.path.join(target_dir, "main.py")
         index_html = os.path.join(target_dir, "index.html")
 
@@ -197,7 +235,6 @@ def run_refinement_loop(user_vision, seed_prompt):
             with open(index_html, "r", encoding="utf-8") as f:
                 html_content = f.read()
                 
-            # Simple validation: Check if canvas is actually defined
             if "<canvas" in html_content:
                 print("✅ HTML5 Canvas structure verified!", flush=True)
                 print(f"\n🎉 Multi-file project built successfully! Check: output/{folder_slug}/", flush=True)
@@ -206,7 +243,6 @@ def run_refinement_loop(user_vision, seed_prompt):
                 feedback = "index.html was generated but is missing the <canvas> element required for the game."
                 print(f"⚠️ Verification Error: {feedback}", flush=True)
         else:
-            # If neither exists, we still exit but warn the user
             print(f"\n🎉 Multi-file project built successfully! Check: output/{folder_slug}/", flush=True)
             print("⚠️ Note: No main.py or index.html found to automatically test.", flush=True)
             return
