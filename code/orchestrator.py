@@ -7,9 +7,9 @@ import requests
 import subprocess
 
 # Google Gemini API Setup (Using stable v1beta 2.0 endpoint)
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-MODEL = "gemini-2.0-flash"
-API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent?key={GEMINI_API_KEY}"
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
+MODEL = "openrouter/free"
+API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 def call_llm(system_prompt, user_prompt, retries=5):
