@@ -8,7 +8,7 @@ import subprocess
 
 # OpenRouter Configuration
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-MODEL = "cohere/north-mini-code:free"
+MODEL = "meta-llama/llama-3.3-70b-instruct:free"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
