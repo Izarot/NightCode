@@ -8,11 +8,15 @@ import subprocess
 
 # OpenRouter Configuration
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-MODEL = "cohere/north-mini-code:free"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
+# Exact Free Models from your OpenRouter catalog
+MODEL_SPEC = "openai/gpt-oss-20b:free"
+MODEL_ARCHITECT = "nvidia/nemotron-3-nano-30b-a3b:free"
+MODEL_CODER = "cohere/north-mini-code:free"
 
-def call_llm(system_prompt, user_prompt, retries=3):
+
+def call_llm(model, system_prompt, user_prompt, retries=3):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
@@ -21,7 +25,7 @@ def call_llm(system_prompt, user_prompt, retries=3):
     }
 
     payload = {
-        "model": MODEL,
+        "model": model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -33,13 +37,21 @@ def call_llm(system_prompt, user_prompt, retries=3):
 
     for attempt in range(retries):
         try:
-            print(f"⏳ Sending API request to {MODEL} (Attempt {attempt + 1}/{retries})...", flush=True)
+            print(f"⏳ Sending API request to {model} (Attempt {attempt + 1}/{retries})...", flush=True)
             # Strict 30s socket timeout prevents workflow from hanging forever
             response = requests.post(API_URL, json=payload, headers=headers, timeout=30)
 
             if response.status_code == 200:
                 print("✅ API Response Received!", flush=True)
-                return response.json()["choices"][0]["message"]["content"]
+                data = response.json()
+                # Safe access to prevent NoneType crashes
+                try:
+                    content = data["choices"][0]["message"]["content"]
+                    if content:
+                        return content
+                except (KeyError, IndexError, TypeError):
+                    pass
+                print("⚠️ Received empty content structure. Retrying...", flush=True)
             else:
                 print(f"⚠️ Status Code {response.status_code}: {response.text[:150]}", flush=True)
 
@@ -51,7 +63,7 @@ def call_llm(system_prompt, user_prompt, retries=3):
         if attempt < retries - 1:
             time.sleep(delays[min(attempt, len(delays) - 1)])
 
-    raise Exception(f"❌ API Call failed after {retries} retries.")
+    raise Exception(f"❌ API Call failed after {retries} retries on {model}.")
 
 
 def generate_game_specification_with_llm_x(seed_prompt):
@@ -69,13 +81,13 @@ def generate_game_specification_with_llm_x(seed_prompt):
     )
 
     print("🎯 [LLM X] Generating high-level goal specification...", flush=True)
-    spec = call_llm(system_prompt, seed_prompt)
+    spec = call_llm(MODEL_SPEC, system_prompt, seed_prompt)
     return spec
 
 
 def generate_folder_slug(goal):
     """Derives a clean folder slug locally without an extra API call."""
-    words = re.findall(r"\b[a-zA-Z0-9]+\b", goal.lower())
+    words = re.findall(r"\b[a-zA-Z0-9]+\b", str(goal).lower())
     ignore_words = {
         "make", "create", "build", "game", "a", "in", "the", "using", "with", "and", "to", "for", "of", "tool", "app"
     }
@@ -86,6 +98,8 @@ def generate_folder_slug(goal):
 
 def extract_json(text):
     """Extracts JSON object even if surrounded by commentary or markdown blocks."""
+    if not text or not isinstance(text, str):
+        return ""
     text = re.sub(r"```json\s*", "", text)
     text = re.sub(r"```\s*", "", text).strip()
     match = re.search(r"(\{.*\})", text, re.DOTALL)
@@ -109,6 +123,7 @@ def run_refinement_loop(user_vision):
     # Fast Architectural Blueprint
     print("🧠 [Architect] Creating technical file blueprint...", flush=True)
     strategy = call_llm(
+        MODEL_ARCHITECT,
         "You are a Lead Software Architect. Provide a concise 2-sentence file structure plan for the requested software.",
         user_vision,
     )
@@ -130,7 +145,7 @@ def run_refinement_loop(user_vision):
         )
 
         print("🤖 [LLM A] Generating codebase...", flush=True)
-        raw_response = call_llm(coder_system, coder_prompt)
+        raw_response = call_llm(MODEL_CODER, coder_system, coder_prompt)
         json_str = extract_json(raw_response)
 
         try:
@@ -170,7 +185,7 @@ def run_refinement_loop(user_vision):
             return
 
         print("🕵️ [LLM B] Reviewing error...", flush=True)
-        feedback = call_llm("Explain concisely how to fix the broken execution error.", f"Error:\n{feedback}")
+        feedback = call_llm(MODEL_SPEC, "Explain concisely how to fix the broken execution error.", f"Error:\n{feedback}")
 
     print("\n🎉 NightCode execution complete!", flush=True)
 
