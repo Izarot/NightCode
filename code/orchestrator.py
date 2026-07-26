@@ -8,7 +8,7 @@ import subprocess
 
 # OpenRouter Configuration
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-MODEL = "openrouter/free"
+MODEL = "meta-llama/llama-3.3-70b-instruct:free"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
@@ -26,7 +26,7 @@ def call_llm(system_prompt, user_prompt, retries=5):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "temperature": 0.2,
+        "temperature": 0.3,
     }
 
     delays = [3, 5, 10, 15, 20]
@@ -48,6 +48,26 @@ def call_llm(system_prompt, user_prompt, retries=5):
             time.sleep(delay)
 
     raise Exception("❌ Max API retries exceeded.")
+
+
+def generate_game_specification_with_llm_x(seed_prompt):
+    """
+    LLM X (Goal Generator): Takes a raw concept and automatically expands 
+    it into a feature-rich, arcade-quality technical specification.
+    """
+    system_prompt = (
+        "You are LLM X, a Game Director and Lead Systems Architect. "
+        "Your sole job is to take a basic seed concept and expand it into a detailed, "
+        "actionable technical specification for a complete 2D HTML5 Canvas game. "
+        "Specify explicit requirements for: player movement physics (WASD/Mouse), shooting mechanics, "
+        "particle explosion effects, enemy types/behaviors, wave progression, glowing visuals, "
+        "and sleek HUD/UI elements. "
+        "Output ONLY the complete goal specification text."
+    )
+    
+    print("🎯 [LLM X] Generating high-level goal specification...")
+    spec = call_llm(system_prompt, seed_prompt)
+    return spec
 
 
 def generate_folder_slug(goal):
@@ -81,11 +101,10 @@ def run_refinement_loop(user_vision):
     target_dir = os.path.join(repo_root, "output", folder_slug)
     os.makedirs(target_dir, exist_ok=True)
 
-    print(f"🚀 NightCode Task: {user_vision}")
     print(f"📁 Output Destination: output/{folder_slug}/\n")
 
     # Fast Architectural Blueprint
-    print("🧠 [Architect] Creating technical specification with OpenRouter...")
+    print("🧠 [Architect] Creating technical file blueprint...")
     strategy = call_llm(
         "You are a Lead Software Architect. Provide a concise 2-sentence file structure plan for the requested software.",
         user_vision
@@ -154,5 +173,11 @@ def run_refinement_loop(user_vision):
 
 
 if __name__ == "__main__":
-    GOAL = "Create a 2D game using HTML5 and JavaScript with shooting mechanics, enemy spawns, score tracking, and a simple UI."
-    run_refinement_loop(GOAL)
+    SEED_CONCEPT = "A fast-paced neon top-down arcade shooter."
+    
+    # 1. LLM X generates the goal specification
+    generated_goal = generate_game_specification_with_llm_x(SEED_CONCEPT)
+    print(f"\n✨ [LLM X Generated Goal]:\n{generated_goal}\n" + "=" * 50 + "\n")
+    
+    # 2. Run the coder refinement pipeline with LLM X's spec
+    run_refinement_loop(generated_goal)
