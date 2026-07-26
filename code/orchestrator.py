@@ -153,5 +153,5 @@ def run_refinement_loop(user_vision):
 
 
 if __name__ == "__main__":
-    GOAL = "Create a 3D Voxel game using HTML5, Three.js, and JavaScript with player movement, block placement, and a simple UI."
+    GOAL = "Create a 3D game using HTML5, and JavaScript with shooting mechanics and a simple UI."
     run_refinement_loop(GOAL)
