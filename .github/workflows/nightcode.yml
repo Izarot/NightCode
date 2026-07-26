@@ -2,6 +2,8 @@ name: Run NightCode Cloud Workflow
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
 
 permissions:
   contents: write
@@ -9,6 +11,7 @@ permissions:
 jobs:
   run-nightcode:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
 
     steps:
       - name: Checkout Repository
@@ -27,6 +30,7 @@ jobs:
       - name: Run Orchestrator
         env:
          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # ADDED YOUR GEMINI KEY
         run: python code/orchestrator.py
 
       - name: Commit & Push Generated Code
