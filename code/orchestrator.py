@@ -12,7 +12,7 @@ MODEL = "cohere/north-mini-code:free"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
-def call_llm(system_prompt, user_prompt, retries=5):
+def call_llm(system_prompt, user_prompt, retries=3):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
         "Content-Type": "application/json",
@@ -29,31 +29,34 @@ def call_llm(system_prompt, user_prompt, retries=5):
         "temperature": 0.3,
     }
 
-    delays = [3, 5, 10, 15, 20]
+    delays = [2, 5, 10]
 
     for attempt in range(retries):
         try:
-            response = requests.post(API_URL, json=payload, headers=headers, timeout=60)
-            if response.status_code == 200:
-                return response.json()["choices"][0]["message"]["content"]
-            elif response.status_code in (429, 502, 503, 504):
-                delay = delays[min(attempt, len(delays) - 1)]
-                print(f"⚠️ API Status {response.status_code} (Rate Limit). Retrying in {delay}s...")
-                time.sleep(delay)
-            else:
-                raise Exception(f"API Error {response.status_code}: {response.text}")
-        except requests.exceptions.RequestException as e:
-            delay = delays[min(attempt, len(delays) - 1)]
-            print(f"⚠️ Network error: {e}. Retrying in {delay}s...")
-            time.sleep(delay)
+            print(f"⏳ Sending API request to {MODEL} (Attempt {attempt + 1}/{retries})...", flush=True)
+            # Strict 30s socket timeout prevents workflow from hanging forever
+            response = requests.post(API_URL, json=payload, headers=headers, timeout=30)
 
-    raise Exception("❌ Max API retries exceeded.")
+            if response.status_code == 200:
+                print("✅ API Response Received!", flush=True)
+                return response.json()["choices"][0]["message"]["content"]
+            else:
+                print(f"⚠️ Status Code {response.status_code}: {response.text[:150]}", flush=True)
+
+        except requests.exceptions.Timeout:
+            print("⏱️ Request timed out after 30s. Retrying...", flush=True)
+        except requests.exceptions.RequestException as e:
+            print(f"⚠️ Network error: {e}. Retrying...", flush=True)
+
+        if attempt < retries - 1:
+            time.sleep(delays[min(attempt, len(delays) - 1)])
+
+    raise Exception(f"❌ API Call failed after {retries} retries.")
 
 
 def generate_game_specification_with_llm_x(seed_prompt):
     """
-    LLM X (Goal Generator): Takes a raw concept and automatically expands 
-    it into a feature-rich, arcade-quality technical specification.
+    LLM X (Goal Generator): Expands basic input into a full game specification.
     """
     system_prompt = (
         "You are LLM X, a Game Director and Lead Systems Architect. "
@@ -64,8 +67,8 @@ def generate_game_specification_with_llm_x(seed_prompt):
         "and sleek HUD/UI elements. "
         "Output ONLY the complete goal specification text."
     )
-    
-    print("🎯 [LLM X] Generating high-level goal specification...")
+
+    print("🎯 [LLM X] Generating high-level goal specification...", flush=True)
     spec = call_llm(system_prompt, seed_prompt)
     return spec
 
@@ -101,22 +104,22 @@ def run_refinement_loop(user_vision):
     target_dir = os.path.join(repo_root, "output", folder_slug)
     os.makedirs(target_dir, exist_ok=True)
 
-    print(f"📁 Output Destination: output/{folder_slug}/\n")
+    print(f"📁 Output Destination: output/{folder_slug}/\n", flush=True)
 
     # Fast Architectural Blueprint
-    print("🧠 [Architect] Creating technical file blueprint...")
+    print("🧠 [Architect] Creating technical file blueprint...", flush=True)
     strategy = call_llm(
         "You are a Lead Software Architect. Provide a concise 2-sentence file structure plan for the requested software.",
-        user_vision
+        user_vision,
     )
-    print(f"📋 Strategy Plan:\n{strategy}\n" + "-" * 50)
+    print(f"📋 Strategy Plan:\n{strategy}\n" + "-" * 50, flush=True)
 
     for turn in range(1, max_turns + 1):
-        print(f"--- 🔄 ITERATION {turn}/{max_turns} ---")
+        print(f"\n--- 🔄 ITERATION {turn}/{max_turns} ---", flush=True)
 
         coder_system = (
             "You are an expert software developer. Output ONLY a valid raw JSON object mapping "
-            "filenames to their complete code contents (e.g. {\"index.html\": \"...\", \"game.js\": \"...\"}). "
+            'filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). '
             "Do NOT include markdown block formatting like ```json or any conversational commentary."
         )
 
@@ -126,7 +129,7 @@ def run_refinement_loop(user_vision):
             f"Previous Feedback/Error: {feedback}"
         )
 
-        print("🤖 [LLM A] Generating codebase...")
+        print("🤖 [LLM A] Generating codebase...", flush=True)
         raw_response = call_llm(coder_system, coder_prompt)
         json_str = extract_json(raw_response)
 
@@ -134,7 +137,7 @@ def run_refinement_loop(user_vision):
             file_map = json.loads(json_str)
         except json.JSONDecodeError as e:
             feedback = f"Output was invalid JSON: {e}. Output ONLY a raw JSON object with keys as filenames and values as code strings."
-            print("⚠️ Output was not valid JSON. Retrying...")
+            print("⚠️ Output was not valid JSON. Retrying...", flush=True)
             continue
 
         # Save files (automatically creates nested folders)
@@ -143,12 +146,12 @@ def run_refinement_loop(user_vision):
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
-            print(f"  📄 Saved {filename}")
+            print(f"  📄 Saved {filename}", flush=True)
 
         # Check if Python sandbox testing applies
         main_file = os.path.join(target_dir, "main.py")
         if os.path.exists(main_file):
-            print("🧪 Testing main.py in sandbox...")
+            print("🧪 Testing main.py in sandbox...", flush=True)
             res = subprocess.run(
                 [sys.executable, main_file],
                 input="1\nAlice\n",
@@ -158,26 +161,26 @@ def run_refinement_loop(user_vision):
                 cwd=target_dir,
             )
             if res.returncode == 0:
-                print("\n✅ Verified successfully!")
+                print("\n✅ Verified successfully!", flush=True)
                 return
             feedback = res.stderr
-            print(f"⚠️ Execution Error:\n{feedback[:200]}...")
+            print(f"⚠️ Execution Error:\n{feedback[:200]}...", flush=True)
         else:
-            print(f"\n🎉 Multi-file project built successfully! Check: output/{folder_slug}/")
+            print(f"\n🎉 Multi-file project built successfully! Check: output/{folder_slug}/", flush=True)
             return
 
-        print("🕵️ [LLM B] Reviewing error...")
+        print("🕵️ [LLM B] Reviewing error...", flush=True)
         feedback = call_llm("Explain concisely how to fix the broken execution error.", f"Error:\n{feedback}")
 
-    print("\n🎉 NightCode execution complete!")
+    print("\n🎉 NightCode execution complete!", flush=True)
 
 
 if __name__ == "__main__":
     SEED_CONCEPT = "A fast-paced neon top-down arcade shooter."
-    
+
     # 1. LLM X generates the goal specification
     generated_goal = generate_game_specification_with_llm_x(SEED_CONCEPT)
-    print(f"\n✨ [LLM X Generated Goal]:\n{generated_goal}\n" + "=" * 50 + "\n")
-    
+    print(f"\n✨ [LLM X Generated Goal]:\n{generated_goal}\n" + "=" * 50 + "\n", flush=True)
+
     # 2. Run the coder refinement pipeline with LLM X's spec
     run_refinement_loop(generated_goal)
