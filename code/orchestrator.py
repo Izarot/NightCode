@@ -6,35 +6,36 @@ import time
 import requests
 import subprocess
 
-# Google Gemini API Setup (Using stable v1beta 2.0 endpoint)
+# OpenRouter Configuration
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 MODEL = "openrouter/free"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 def call_llm(system_prompt, user_prompt, retries=5):
-    headers = {"Content-Type": "application/json"}
-    
-    payload = {
-        "system_instruction": {
-            "parts": [{"text": system_prompt}]
-        },
-        "contents": [
-            {
-                "parts": [{"text": user_prompt}]
-            }
-        ]
+    headers = {
+        "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://github.com",
+        "X-Title": "NightCode Orchestrator",
     }
 
-    # Delays for rate limit backoff (in seconds)
-    delays = [5, 10, 20, 30, 45]
+    payload = {
+        "model": MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.2,
+    }
+
+    delays = [3, 5, 10, 15, 20]
 
     for attempt in range(retries):
         try:
-            response = requests.post(API_URL, json=payload, headers=headers, timeout=90)
+            response = requests.post(API_URL, json=payload, headers=headers, timeout=60)
             if response.status_code == 200:
-                data = response.json()
-                return data["candidates"][0]["content"]["parts"][0]["text"]
+                return response.json()["choices"][0]["message"]["content"]
             elif response.status_code in (429, 502, 503, 504):
                 delay = delays[min(attempt, len(delays) - 1)]
                 print(f"⚠️ API Status {response.status_code} (Rate Limit). Retrying in {delay}s...")
@@ -84,7 +85,7 @@ def run_refinement_loop(user_vision):
     print(f"📁 Output Destination: output/{folder_slug}/\n")
 
     # Fast Architectural Blueprint
-    print("🧠 [Architect] Creating technical specification with Gemini...")
+    print("🧠 [Architect] Creating technical specification with OpenRouter...")
     strategy = call_llm(
         "You are a Lead Software Architect. Provide a concise 2-sentence file structure plan for the requested software.",
         user_vision
@@ -106,7 +107,7 @@ def run_refinement_loop(user_vision):
             f"Previous Feedback/Error: {feedback}"
         )
 
-        print("🤖 [LLM A] Generating codebase with Gemini...")
+        print("🤖 [LLM A] Generating codebase...")
         raw_response = call_llm(coder_system, coder_prompt)
         json_str = extract_json(raw_response)
 
@@ -146,12 +147,12 @@ def run_refinement_loop(user_vision):
             print(f"\n🎉 Multi-file project built successfully! Check: output/{folder_slug}/")
             return
 
-        print("🕵️ [LLM B] Reviewing error with Gemini...")
+        print("🕵️ [LLM B] Reviewing error...")
         feedback = call_llm("Explain concisely how to fix the broken execution error.", f"Error:\n{feedback}")
 
     print("\n🎉 NightCode execution complete!")
 
 
 if __name__ == "__main__":
-    GOAL = "Create a 2D game using HTML5, and JavaScript with shooting mechanics and a simple UI."
+    GOAL = "Create a 2D game using HTML5 and JavaScript with shooting mechanics, enemy spawns, score tracking, and a simple UI."
     run_refinement_loop(GOAL)
