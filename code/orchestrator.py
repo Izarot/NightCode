@@ -9,14 +9,12 @@ import subprocess
 
 # OpenRouter Configuration
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "") # Loaded to bypass OR rate limits!
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-# Models (No Together AI used)
 MODEL_SPEC = "google/gemini-2.0-flash-exp:free"         
 MODEL_ARCHITECT = "inclusionai/ling-3.0-flash-20260723:free" 
 
-# Massive list of free models. Prioritizing the best coders, then Nemotron, then Laguna.
 MODELS_CODER = [
     "deepseek/deepseek-chat:free",
     "qwen/qwen-2.5-coder-32b-instruct:free",
@@ -29,7 +27,6 @@ MODELS_CODER = [
     "inclusionai/ling-3.0-flash-20260723:free"
 ]
 
-# Famous game ideas for LLM X to pick from
 FAMOUS_IDEAS = [
     "A classic Snake game where the snake grows longer as it eats apples.",
     "A Pong clone with a neon aesthetic and AI opponent.",
@@ -49,7 +46,6 @@ def call_llm(model, system_prompt, user_prompt, retries=3):
         "X-Title": "NightCode Orchestrator",
     }
 
-    # If we have a Gemini key, pass it to OpenRouter to bypass Google rate limits!
     if GEMINI_API_KEY:
         headers["HTTP-Provider-Google"] = f"Bearer {GEMINI_API_KEY}"
 
@@ -142,7 +138,7 @@ def extract_json(text):
 
 
 def run_refinement_loop(user_vision, seed_prompt):
-    max_turns = 20 # 20 cycles of A/B conversation!
+    max_turns = 20
     file_map = {}
     feedback = "Initial build."
 
@@ -197,20 +193,34 @@ def run_refinement_loop(user_vision, seed_prompt):
 
         try:
             file_map = json.loads(json_str)
+            # BULLETPROOFING: Check if LLM returned empty JSON {}
+            if not file_map:
+                feedback = "Output was an empty JSON object {}. Please generate the actual code files."
+                print("⚠️ Output was empty JSON. Retrying...", flush=True)
+                continue
         except json.JSONDecodeError as e:
             feedback = f"Output was invalid JSON: {e}. Output ONLY a raw JSON object with keys as filenames and values as code strings."
             print("⚠️ Output was not valid JSON. Retrying...", flush=True)
             continue
 
+        # Save files safely
         for filename, content in file_map.items():
-            clean_filename = os.path.normpath(filename).lstrip('./')
-            if os.path.isabs(clean_filename):
-                clean_filename = os.path.basename(clean_filename)
-            file_path = os.path.join(target_dir, clean_filename)
-            os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            with open(file_path, "w", encoding="utf-8") as f:
-                f.write(content)
-            print(f"  📄 Saved {clean_filename}", flush=True)
+            try:
+                clean_filename = os.path.normpath(filename).lstrip('./')
+                if os.path.isabs(clean_filename):
+                    clean_filename = os.path.basename(clean_filename)
+                file_path = os.path.join(target_dir, clean_filename)
+                
+                # BULLETPROOFING: Ensure directory exists only if there is a directory path
+                dir_name = os.path.dirname(file_path)
+                if dir_name:
+                    os.makedirs(dir_name, exist_ok=True)
+                
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                print(f"  📄 Saved {clean_filename}", flush=True)
+            except Exception as e:
+                print(f"  ⚠️ Skipping file {filename} due to error: {e}", flush=True)
 
         main_py = os.path.join(target_dir, "main.py")
         index_html = os.path.join(target_dir, "index.html")
@@ -240,30 +250,36 @@ def run_refinement_loop(user_vision, seed_prompt):
                 feedback = "index.html was generated but is missing the <canvas> element required for the game."
                 print(f"⚠️ Verification Error: {feedback}", flush=True)
         else:
-            print(f"\n🎉 Multi-file project built successfully! Check: output/{folder_slug}/", flush=True)
-            return
+            feedback = "Neither main.py nor index.html was generated. Ensure you output standard web files."
+            print(f"⚠️ Verification Error: {feedback}", flush=True)
 
         print("🕵️ [LLM B] Reviewing error...", flush=True)
-        feedback = call_llm(MODEL_SPEC, "Explain concisely how to fix the broken execution/structure error.", f"Error:\n{feedback}")
+        llm_b_response = call_llm(MODEL_SPEC, "Explain concisely how to fix the broken execution/structure error.", f"Error:\n{feedback}")
+        
+        # BULLETPROOFING: If LLM B fails, keep the old feedback
+        if llm_b_response:
+            feedback = llm_b_response
+        else:
+            print("⚠️ LLM B failed to respond. Keeping previous feedback.", flush=True)
 
-    print("\n🎉 NightCode execution complete for this idea!", flush=True)
+    # BULLETPROOFING: Save a debug log if it fails after 20 cycles
+    print("\n⚠️ Max cycles reached. Saving debug log.", flush=True)
+    with open(os.path.join(target_dir, "debug.log"), "w") as f:
+        f.write(f"Failed to build after {max_turns} cycles.\nLast Feedback:\n{feedback}")
 
 
 if __name__ == "__main__":
-    # THE INFINITE LOOP: Runs until GitHub Actions times out (~6 hours)
     while True:
         try:
-            # Pick a random famous idea
             SEED_CONCEPT = random.choice(FAMOUS_IDEAS)
             
             generated_goal = generate_game_specification_with_llm_x(SEED_CONCEPT)
             print(f"\n✨ [LLM X Generated Goal]:\n{generated_goal}\n" + "=" * 50 + "\n", flush=True)
 
-            # Run the 20-cycle loop
             run_refinement_loop(generated_goal, SEED_CONCEPT)
             
             print("\n🔄 Project finished! Starting next project in 10 seconds...\n", flush=True)
-            time.sleep(10) # Brief pause before starting the next game
+            time.sleep(10)
             
         except Exception as e:
             print(f"\n💥 Critical error on this project: {e}. Moving to next idea in 30 seconds...", flush=True)
