@@ -38,6 +38,10 @@ FAMOUS_IDEAS = [
     "A top-down 2D maze game where you collect coins and avoid ghosts (Pac-Man style)."
 ]
 
+# GRACEFUL EXIT TIMER: 5 hours 40 minutes = 20400 seconds
+MAX_RUN_TIME_SECONDS = 20400 
+start_time = time.time()
+
 def call_llm(model, system_prompt, user_prompt, retries=3):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -86,7 +90,8 @@ def call_llm(model, system_prompt, user_prompt, retries=3):
                 time.sleep(wait_time)
                 continue
             else:
-                print(f"⚠️ Status Code {response.status_code}: {response.text[:150]}", flush=True)
+                # IMPROVED ERROR LOGGING: Print the FULL error so we know exactly what went wrong
+                print(f"⚠️ API Error {response.status_code}: {response.text}", flush=True)
 
         except requests.exceptions.Timeout:
             print("⏱️ Request timed out. Retrying...", flush=True)
@@ -193,7 +198,6 @@ def run_refinement_loop(user_vision, seed_prompt):
 
         try:
             file_map = json.loads(json_str)
-            # BULLETPROOFING: Check if LLM returned empty JSON {}
             if not file_map:
                 feedback = "Output was an empty JSON object {}. Please generate the actual code files."
                 print("⚠️ Output was empty JSON. Retrying...", flush=True)
@@ -203,19 +207,15 @@ def run_refinement_loop(user_vision, seed_prompt):
             print("⚠️ Output was not valid JSON. Retrying...", flush=True)
             continue
 
-        # Save files safely
         for filename, content in file_map.items():
             try:
                 clean_filename = os.path.normpath(filename).lstrip('./')
                 if os.path.isabs(clean_filename):
                     clean_filename = os.path.basename(clean_filename)
                 file_path = os.path.join(target_dir, clean_filename)
-                
-                # BULLETPROOFING: Ensure directory exists only if there is a directory path
                 dir_name = os.path.dirname(file_path)
                 if dir_name:
                     os.makedirs(dir_name, exist_ok=True)
-                
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(content)
                 print(f"  📄 Saved {clean_filename}", flush=True)
@@ -255,24 +255,28 @@ def run_refinement_loop(user_vision, seed_prompt):
 
         print("🕵️ [LLM B] Reviewing error...", flush=True)
         llm_b_response = call_llm(MODEL_SPEC, "Explain concisely how to fix the broken execution/structure error.", f"Error:\n{feedback}")
-        
-        # BULLETPROOFING: If LLM B fails, keep the old feedback
         if llm_b_response:
             feedback = llm_b_response
         else:
             print("⚠️ LLM B failed to respond. Keeping previous feedback.", flush=True)
 
-    # BULLETPROOFING: Save a debug log if it fails after 20 cycles
     print("\n⚠️ Max cycles reached. Saving debug log.", flush=True)
     with open(os.path.join(target_dir, "debug.log"), "w") as f:
         f.write(f"Failed to build after {max_turns} cycles.\nLast Feedback:\n{feedback}")
 
 
 if __name__ == "__main__":
+    print("🚀 NightCode Orchestrator starting. Will run for 5 hours 40 minutes.", flush=True)
+    
     while True:
+        # Check if we have exceeded 5 hours 40 minutes
+        elapsed_time = time.time() - start_time
+        if elapsed_time >= MAX_RUN_TIME_SECONDS:
+            print("\n⏰ 4:40 AM reached! Stopping gracefully to allow final commit.", flush=True)
+            break
+            
         try:
             SEED_CONCEPT = random.choice(FAMOUS_IDEAS)
-            
             generated_goal = generate_game_specification_with_llm_x(SEED_CONCEPT)
             print(f"\n✨ [LLM X Generated Goal]:\n{generated_goal}\n" + "=" * 50 + "\n", flush=True)
 
@@ -284,3 +288,5 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"\n💥 Critical error on this project: {e}. Moving to next idea in 30 seconds...", flush=True)
             time.sleep(30)
+            
+    print("👋 NightCode Orchestrator finished its shift. Goodnight!", flush=True)
