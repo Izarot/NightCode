@@ -25,6 +25,12 @@ MODELS_CODER = [
     "poolside/laguna-s-2.1:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "inclusionai/ling-3.0-flash-20260723:free"
+    "openai/gpt-oss-20b:free"
+    "nvidia/nemotron-3.5-content-safety:free"
+    "nvidia/nemotron-3-embed-1b:free"
+    "google/gemma-4-26b-a4b-it:free"
+    "google/gemma-4-31b-it:free"
+    "cohere/north-mini-code:free"
 ]
 
 FAMOUS_IDEAS = [
@@ -200,7 +206,6 @@ def run_refinement_loop(user_vision, seed_prompt):
     for turn in range(1, max_turns + 1):
         print(f"\n--- 🔄 ITERATION {turn}/{max_turns} ---", flush=True)
 
-        # UPGRADED PROMPT: Keep code concise to avoid token limits!
         coder_system = (
             "You are an expert software developer. Output ONLY a valid raw JSON object mapping "
             'filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). '
@@ -246,7 +251,7 @@ def run_refinement_loop(user_vision, seed_prompt):
             print(f"\n🎉 Multi-file project built successfully! Check: output/{folder_slug}/", flush=True)
             return
 
-        feedback = "Execution failed or structure invalid." # Basic fallback
+        feedback = "Execution failed or structure invalid."
         main_py = os.path.join(target_dir, "main.py")
         index_html = os.path.join(target_dir, "index.html")
         if os.path.exists(main_py):
@@ -384,11 +389,20 @@ def generate_arcade_lobby():
 if __name__ == "__main__":
     print("🚀 NightCode Orchestrator starting.", flush=True)
     overall_start_time = time.time()
-    phase_1_end_time = overall_start_time + (5 * 3600) # 5 hours for new games
-    phase_2_end_time = phase_1_end_time + (40 * 60)    # 40 mins for fixing
     
-    # --- PHASE 1: NEW GAMES (5 HOURS) ---
-    print("🟢 PHASE 1: Generating new games for 5 hours.", flush=True)
+    # Check if GitHub told us to run in FIX_ONLY mode (for the 12 PM shift)
+    run_mode = os.getenv("RUN_MODE", "FULL_RUN")
+    
+    if run_mode == "FIX_ONLY":
+        print("🟡 MIDNOON SHIFT: Fixing broken games for 1 hour.", flush=True)
+        phase_1_end_time = overall_start_time # Skip Phase 1 entirely
+        phase_2_end_time = overall_start_time + (60 * 60) # 1 hour
+    else:
+        print("🟢 NIGHT SHIFT: Generating new games for 5 hours, then 40 mins fixing.", flush=True)
+        phase_1_end_time = overall_start_time + (5 * 3600) # 5 hours for new games
+        phase_2_end_time = phase_1_end_time + (40 * 60)    # 40 mins for fixing
+    
+    # --- PHASE 1: NEW GAMES ---
     while time.time() < phase_1_end_time:
         try:
             SEED_CONCEPT = random.choice(FAMOUS_IDEAS)
@@ -401,37 +415,38 @@ if __name__ == "__main__":
             print(f"\n💥 Critical error on this project: {e}. Moving to next idea in 30 seconds...", flush=True)
             time.sleep(30)
             
-    # --- PHASE 2: FIXING BROKEN GAMES (40 MINUTES) ---
-    print("\n🟡 PHASE 2: Improving incomplete games for 40 minutes.", flush=True)
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    output_dir = os.path.join(repo_root, "output")
-    
-    while time.time() < phase_2_end_time:
-        broken_projects = []
-        if os.path.exists(output_dir):
-            for folder in os.listdir(output_dir):
-                folder_path = os.path.join(output_dir, folder)
-                if os.path.isdir(folder_path) and os.path.exists(os.path.join(folder_path, "debug.log")):
-                    broken_projects.append(folder_path)
-                    
-        if not broken_projects:
-            print("✅ No broken projects found! Generating a new game instead.", flush=True)
-            try:
-                SEED_CONCEPT = random.choice(FAMOUS_IDEAS)
-                generated_goal = generate_game_specification_with_llm_x(SEED_CONCEPT)
-                run_refinement_loop(generated_goal, SEED_CONCEPT)
-            except Exception as e:
-                print(f"Error: {e}", flush=True)
-                time.sleep(30)
-        else:
-            for project in broken_projects:
-                if time.time() >= phase_2_end_time:
-                    break
+    # --- PHASE 2: FIXING BROKEN GAMES ---
+    if time.time() < phase_2_end_time:
+        print("\n🟡 PHASE 2: Improving incomplete games.", flush=True)
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        output_dir = os.path.join(repo_root, "output")
+        
+        while time.time() < phase_2_end_time:
+            broken_projects = []
+            if os.path.exists(output_dir):
+                for folder in os.listdir(output_dir):
+                    folder_path = os.path.join(output_dir, folder)
+                    if os.path.isdir(folder_path) and os.path.exists(os.path.join(folder_path, "debug.log")):
+                        broken_projects.append(folder_path)
+                        
+            if not broken_projects:
+                print("✅ No broken projects found! Generating a new game instead.", flush=True)
                 try:
-                    improve_project(project)
+                    SEED_CONCEPT = random.choice(FAMOUS_IDEAS)
+                    generated_goal = generate_game_specification_with_llm_x(SEED_CONCEPT)
+                    run_refinement_loop(generated_goal, SEED_CONCEPT)
                 except Exception as e:
-                    print(f"Error fixing {project}: {e}", flush=True)
-                    
+                    print(f"Error: {e}", flush=True)
+                    time.sleep(30)
+            else:
+                for project in broken_projects:
+                    if time.time() >= phase_2_end_time:
+                        break
+                    try:
+                        improve_project(project)
+                    except Exception as e:
+                        print(f"Error fixing {project}: {e}", flush=True)
+                        
     # --- FINAL PHASE: BUILD THE ARCADE LOBBY ---
     generate_arcade_lobby()
     
