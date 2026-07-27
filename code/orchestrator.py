@@ -7,6 +7,10 @@ import random
 import requests
 import subprocess
 
+# ZETA UPGRADE: Import the games list from our new file!
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from games import FAMOUS_IDEAS
+
 # OpenRouter Configuration
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -28,37 +32,19 @@ MODELS_CODER = [
     "inclusionai/ling-3.0-flash-20260723:free"
 ]
 
-FAMOUS_IDEAS = [
-    "A classic Snake game where the snake grows longer as it eats apples.",
-    "A Pong clone with a neon aesthetic and AI opponent.",
-    "A Breakout/Arkanoid game where the player bounces a ball to break bricks.",
-    "An Asteroids clone where the player shoots flying space rocks.",
-    "A Tetris-style block stacking puzzle game.",
-    "A Space Invaders style shooter with descending alien waves.",
-    "A simple Flappy Bird clone where you click to fly through pipes.",
-    "A top-down 2D maze game where you collect coins and avoid ghosts (Pac-Man style)."
-]
-
 def git_push():
-    """ZETA UPGRADE: Safely runs Git commands directly from Python."""
+    """Safely runs Git commands directly from Python."""
     try:
-        # 1. Git Add
         subprocess.run(["git", "add", "."], check=True)
-        
-        # 2. Check if there's anything to commit (prevents Git from going crazy)
         status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
         if status.stdout.strip():
-            # 3. Git Commit
             print("📦 Git: Committing changes...", flush=True)
             subprocess.run(["git", "commit", "-m", "a new update"], check=True)
-            
-            # 4. Git Push
             print("🚀 Git: Pushing to GitHub...", flush=True)
             subprocess.run(["git", "push"], check=True)
             print("✅ Git: Push successful!", flush=True)
         else:
             print("✅ Git: No changes to push.", flush=True)
-            
     except subprocess.CalledProcessError as e:
         print(f"⚠️ Git Error: {e}", flush=True)
 
