@@ -3,7 +3,8 @@ name: Run NightCode Cloud Workflow
 on:
   workflow_dispatch:
   schedule:
-    - cron: "30 17 * * *" # 11:00 PM IST (17:30 UTC) every night
+    - cron: "30 17 * * *" # 11:00 PM IST (Night Shift)
+    - cron: "30 6 * * *"  # 12:00 PM IST (Midnoon Shift - Fix Only)
 
 permissions:
   contents: write
@@ -11,7 +12,7 @@ permissions:
 jobs:
   run-nightcode:
     runs-on: ubuntu-latest
-    timeout-minutes: 345 # 5 hours 45 mins (stops at 4:45 AM IST)
+    timeout-minutes: 345
 
     steps:
       - name: Checkout Repository
@@ -27,29 +28,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r code/requirements.txt
 
-      - name: Run Orchestrator & Auto-Push Every 5 Mins
+      - name: Configure Git & Run Orchestrator
         env:
          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+         RUN_MODE: ${{ github.event.schedule == '30 6 * * *' && 'FIX_ONLY' || 'FULL_RUN' }}
         run: |
-          mkdir -p output
-          touch output/.gitkeep
-          
-          # Start the Python script in the background
-          python code/orchestrator.py &
-          SCRIPT_PID=$!
-          
-          # Loop to commit and push every 5 minutes
-          while kill -0 $SCRIPT_PID 2> /dev/null; do
-            sleep 300
-            echo "⏳ Auto-committing generated code..."
-            git config --global user.name "NightCode Bot"
-            git config --global user.email "nightcode-bot@users.noreply.github.com"
-            git add output/
-            git diff --staged --quiet || (git commit -m "chore: auto-generate app in output directory" && git push)
-          done
-          
-          # Final push when script finishes
-          echo "✅ Script finished. Doing final commit..."
-          git add output/
-          git diff --staged --quiet || (git commit -m "chore: final auto-generate push" && git push)
+          git config --global user.name "NightCode Bot"
+          git config --global user.email "nightcode-bot@users.noreply.github.com"
+          python code/orchestrator.py
