@@ -16,14 +16,10 @@ MODEL_SPEC = "google/gemini-2.0-flash-exp:free"
 MODEL_ARCHITECT = "inclusionai/ling-3.0-flash-20260723:free" 
 
 MODELS_CODER = [
-    "deepseek/deepseek-chat:free",
-    "qwen/qwen-2.5-coder-32b-instruct:free",
-    "deepseek/deepseek-r1:free",
-    "google/gemini-2.0-flash-exp:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
+   "nvidia/nemotron-3-super-120b-a12b:free",
     "nvidia/nemotron-nano-9b-v2:free",
     "poolside/laguna-s-2.1:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
+    "poolside/laguna-xs-2.1:free"
     "inclusionai/ling-3.0-flash-20260723:free"
     "openai/gpt-oss-20b:free"
     "nvidia/nemotron-3.5-content-safety:free"
