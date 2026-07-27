@@ -15,18 +15,17 @@ API_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODEL_SPEC = "google/gemini-2.0-flash-exp:free"         
 MODEL_ARCHITECT = "inclusionai/ling-3.0-flash-20260723:free" 
 
+# (Add your custom free models back in here!)
 MODELS_CODER = [
-   "nvidia/nemotron-3-super-120b-a12b:free",
+    "deepseek/deepseek-chat:free",
+    "qwen/qwen-2.5-coder-32b-instruct:free",
+    "deepseek/deepseek-r1:free",
+    "google/gemini-2.0-flash-exp:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
     "nvidia/nemotron-nano-9b-v2:free",
     "poolside/laguna-s-2.1:free",
-    "poolside/laguna-xs-2.1:free"
+    "meta-llama/llama-3.3-70b-instruct:free",
     "inclusionai/ling-3.0-flash-20260723:free"
-    "openai/gpt-oss-20b:free"
-    "nvidia/nemotron-3.5-content-safety:free"
-    "nvidia/nemotron-3-embed-1b:free"
-    "google/gemma-4-26b-a4b-it:free"
-    "google/gemma-4-31b-it:free"
-    "cohere/north-mini-code:free"
 ]
 
 FAMOUS_IDEAS = [
@@ -39,6 +38,29 @@ FAMOUS_IDEAS = [
     "A simple Flappy Bird clone where you click to fly through pipes.",
     "A top-down 2D maze game where you collect coins and avoid ghosts (Pac-Man style)."
 ]
+
+def git_push():
+    """ZETA UPGRADE: Safely runs Git commands directly from Python."""
+    try:
+        # 1. Git Add
+        subprocess.run(["git", "add", "."], check=True)
+        
+        # 2. Check if there's anything to commit (prevents Git from going crazy)
+        status = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True)
+        if status.stdout.strip():
+            # 3. Git Commit
+            print("📦 Git: Committing changes...", flush=True)
+            subprocess.run(["git", "commit", "-m", "a new update"], check=True)
+            
+            # 4. Git Push
+            print("🚀 Git: Pushing to GitHub...", flush=True)
+            subprocess.run(["git", "push"], check=True)
+            print("✅ Git: Push successful!", flush=True)
+        else:
+            print("✅ Git: No changes to push.", flush=True)
+            
+    except subprocess.CalledProcessError as e:
+        print(f"⚠️ Git Error: {e}", flush=True)
 
 def call_llm(model, system_prompt, user_prompt, retries=3):
     headers = {
@@ -151,7 +173,6 @@ def save_files(target_dir, file_map):
             print(f"  ⚠️ Skipping file {filename} due to error: {e}", flush=True)
 
 def verify_project(target_dir):
-    """Returns True if verified, False if broken."""
     main_py = os.path.join(target_dir, "main.py")
     index_html = os.path.join(target_dir, "index.html")
 
@@ -245,6 +266,7 @@ def run_refinement_loop(user_vision, seed_prompt):
 
         if verify_project(target_dir):
             print(f"\n🎉 Multi-file project built successfully! Check: output/{folder_slug}/", flush=True)
+            git_push() # Push immediately after a successful build!
             return
 
         feedback = "Execution failed or structure invalid."
@@ -273,10 +295,10 @@ def run_refinement_loop(user_vision, seed_prompt):
     print("\n⚠️ Max cycles reached. Saving debug log.", flush=True)
     with open(os.path.join(target_dir, "debug.log"), "w") as f:
         f.write(f"Failed to build after {max_turns} cycles.\nLast Feedback:\n{feedback}")
+    git_push() # Push the debug log so we can see it in the morning
 
 
 def improve_project(target_dir):
-    """Phase 2: Attempts to fix a broken project."""
     debug_file = os.path.join(target_dir, "debug.log")
     if not os.path.exists(debug_file):
         return
@@ -331,13 +353,13 @@ def improve_project(target_dir):
         if verify_project(target_dir):
             print("✅ Successfully fixed! Removing debug.log.", flush=True)
             os.remove(debug_file)
+            git_push() # Push the fixed game immediately!
             return
         else:
             print("⚠️ Still broken. Will try again if time permits.", flush=True)
 
 
 def generate_arcade_lobby():
-    """THE ARCADE UPGRADE: Scans output/ and builds a menu of all games."""
     print("\n🎮 Building NightCode Arcade Lobby...", flush=True)
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     output_dir = os.path.join(repo_root, "output")
@@ -386,17 +408,16 @@ if __name__ == "__main__":
     print("🚀 NightCode Orchestrator starting.", flush=True)
     overall_start_time = time.time()
     
-    # Check if GitHub told us to run in FIX_ONLY mode (for the 12 PM shift)
     run_mode = os.getenv("RUN_MODE", "FULL_RUN")
     
     if run_mode == "FIX_ONLY":
         print("🟡 MIDNOON SHIFT: Fixing broken games for 1 hour.", flush=True)
-        phase_1_end_time = overall_start_time # Skip Phase 1 entirely
-        phase_2_end_time = overall_start_time + (60 * 60) # 1 hour
+        phase_1_end_time = overall_start_time
+        phase_2_end_time = overall_start_time + (60 * 60)
     else:
         print("🟢 NIGHT SHIFT: Generating new games for 5 hours, then 40 mins fixing.", flush=True)
-        phase_1_end_time = overall_start_time + (5 * 3600) # 5 hours for new games
-        phase_2_end_time = phase_1_end_time + (40 * 60)    # 40 mins for fixing
+        phase_1_end_time = overall_start_time + (5 * 3600)
+        phase_2_end_time = phase_1_end_time + (40 * 60)
     
     # --- PHASE 1: NEW GAMES ---
     while time.time() < phase_1_end_time:
@@ -445,5 +466,6 @@ if __name__ == "__main__":
                         
     # --- FINAL PHASE: BUILD THE ARCADE LOBBY ---
     generate_arcade_lobby()
+    git_push() # Final push for the Arcade Lobby!
     
     print("👋 NightCode Orchestrator finished its shift. Goodnight!", flush=True)
