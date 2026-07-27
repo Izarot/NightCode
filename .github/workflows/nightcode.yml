@@ -3,7 +3,7 @@ name: Run NightCode Cloud Workflow
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *"
+    - cron: "30 17 * * *" # 11:00 PM IST (17:30 UTC) every night
 
 permissions:
   contents: write
@@ -11,7 +11,7 @@ permissions:
 jobs:
   run-nightcode:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 345 # 5 hours 45 mins (stops at 4:45 AM IST)
 
     steps:
       - name: Checkout Repository
@@ -32,11 +32,15 @@ jobs:
          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          mkdir -p output
+          touch output/.gitkeep
+          
           # Start the Python script in the background
           python code/orchestrator.py &
+          SCRIPT_PID=$!
           
           # Loop to commit and push every 5 minutes
-          while true; do
+          while kill -0 $SCRIPT_PID 2> /dev/null; do
             sleep 300
             echo "⏳ Auto-committing generated code..."
             git config --global user.name "NightCode Bot"
@@ -44,3 +48,8 @@ jobs:
             git add output/
             git diff --staged --quiet || (git commit -m "chore: auto-generate app in output directory" && git push)
           done
+          
+          # Final push when script finishes
+          echo "✅ Script finished. Doing final commit..."
+          git add output/
+          git diff --staged --quiet || (git commit -m "chore: final auto-generate push" && git push)
