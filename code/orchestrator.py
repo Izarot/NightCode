@@ -7,7 +7,7 @@ import random
 import requests
 import subprocess
 
-# ZETA UPGRADE: Import the games list from our new file!
+# ZETA & IZAROT MASTERPIECE
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from games import FAMOUS_IDEAS
 
@@ -15,49 +15,6 @@ from games import FAMOUS_IDEAS
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
-
-# Dynamically fetch the live free models so we NEVER hit a 404 premium error!
-def get_free_models():
-    print("🔍 Fetching live free models from OpenRouter...", flush=True)
-    try:
-        res = requests.get("https://openrouter.ai/api/v1/models", timeout=15)
-        res.raise_for_status()
-        data = res.json()
-        
-        free_models = []
-        for model in data.get("data", []):
-            # OpenRouter sets prompt price to "0" for free models
-            if model.get("pricing", {}).get("prompt") == "0":
-                free_models.append(model["id"])
-                
-        if not free_models:
-            print("⚠️ No free models found! Falling back to known defaults.", flush=True)
-            return ["google/gemini-2.0-flash-exp:free", "meta-llama/llama-3.3-70b-instruct:free"]
-            
-        print(f"✅ Found {len(free_models)} free models available right now!", flush=True)
-        return free_models
-        
-    except Exception as e:
-        print(f"⚠️ Failed to fetch models: {e}. Using fallbacks.", flush=True)
-        return ["google/gemini-2.0-flash-exp:free", "meta-llama/llama-3.3-70b-instruct:free"]
-
-# Fetch the models dynamically at startup
-ALL_FREE_MODELS = get_free_models()
-
-# Prefer good coders if they are free, otherwise use whatever we found
-PREFERRED_CODERS = ["qwen/qwen-2.5-coder-32b-instruct", "deepseek/deepseek-r1", "deepseek/deepseek-chat", "google/gemini-2.0-flash", "meta-llama/llama-3.3"]
-MODELS_CODER = [m for m in ALL_FREE_MODELS if any(p in m for p in PREFERRED_CODERS)]
-
-# If none of the preferred ones are free, just use all the free ones we found!
-if not MODELS_CODER:
-    MODELS_CODER = ALL_FREE_MODELS
-
-MODEL_SPEC = ALL_FREE_MODELS[0] if ALL_FREE_MODELS else "google/gemini-2.0-flash-exp:free"
-MODEL_ARCHITECT = ALL_FREE_MODELS[0] if ALL_FREE_MODELS else "google/gemini-2.0-flash-exp:free"
-
-print(f"🧠 Using Spec Model: {MODEL_SPEC}", flush=True)
-print(f"🏗️ Using Architect Model: {MODEL_ARCHITECT}", flush=True)
-print(f"🤖 Coder Models lined up: {MODELS_CODER}\n", flush=True)
 
 def git_push():
     try:
@@ -74,6 +31,35 @@ def git_push():
     except subprocess.CalledProcessError as e:
         print(f"⚠️ Git Error: {e}", flush=True)
 
+def get_free_models():
+    print("🔍 Fetching live free models from OpenRouter...", flush=True)
+    try:
+        res = requests.get("https://openrouter.ai/api/v1/models", timeout=15)
+        res.raise_for_status()
+        data = res.json()
+        
+        free_models = [model["id"] for model in data.get("data", []) if model.get("pricing", {}).get("prompt") == "0"]
+                
+        if not free_models:
+            print("⚠️ No free models found! Falling back to known defaults.", flush=True)
+            return ["google/gemini-2.0-flash-exp:free", "meta-llama/llama-3.3-70b-instruct:free"]
+            
+        print(f"✅ Found {len(free_models)} free models available right now!", flush=True)
+        return free_models
+        
+    except Exception as e:
+        print(f"⚠️ Failed to fetch models: {e}. Using fallbacks.", flush=True)
+        return ["google/gemini-2.0-flash-exp:free", "meta-llama/llama-3.3-70b-instruct:free"]
+
+ALL_FREE_MODELS = get_free_models()
+PREFERRED_CODERS = ["qwen/qwen-2.5-coder", "deepseek/deepseek-r1", "deepseek/deepseek-chat", "google/gemini-2.0-flash", "meta-llama/llama-3.3"]
+MODELS_CODER = [m for m in ALL_FREE_MODELS if any(p in m for p in PREFERRED_CODERS)]
+if not MODELS_CODER:
+    MODELS_CODER = ALL_FREE_MODELS
+
+MODEL_SPEC = ALL_FREE_MODELS[0] if ALL_FREE_MODELS else "google/gemini-2.0-flash-exp:free"
+MODEL_ARCHITECT = ALL_FREE_MODELS[0] if ALL_FREE_MODELS else "google/gemini-2.0-flash-exp:free"
+
 def call_llm(model, system_prompt, user_prompt, retries=3):
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -81,7 +67,6 @@ def call_llm(model, system_prompt, user_prompt, retries=3):
         "HTTP-Referer": "https://github.com",
         "X-Title": "NightCode Orchestrator",
     }
-
     if GEMINI_API_KEY:
         headers["HTTP-Provider-Google"] = f"Bearer {GEMINI_API_KEY}"
 
@@ -114,10 +99,7 @@ def call_llm(model, system_prompt, user_prompt, retries=3):
                 print("⚠️ Received empty content structure. Retrying...", flush=True)
             elif response.status_code == 429:
                 retry_after = response.headers.get("Retry-After")
-                if retry_after and retry_after.isdigit():
-                    wait_time = int(retry_after)
-                else:
-                    wait_time = delays[min(attempt, len(delays) - 1)]
+                wait_time = int(retry_after) if retry_after and retry_after.isdigit() else delays[min(attempt, len(delays) - 1)]
                 print(f"⚠️ Rate limited by {model}. Sleeping for {wait_time}s...", flush=True)
                 time.sleep(wait_time)
                 continue
@@ -140,8 +122,7 @@ def generate_game_specification_with_llm_x(seed_prompt):
         "Your sole job is to take a basic seed concept and expand it into a detailed, "
         "actionable technical specification for a complete 2D HTML5 Canvas game. "
         "Specify explicit requirements for: player movement physics, mechanics, "
-        "visuals, and sleek HUD/UI elements. "
-        "Output ONLY the complete goal specification text."
+        "visuals, and sleek HUD/UI elements. Output ONLY the complete goal specification text."
     )
     print(f"🎯 [LLM X] Generating high-level goal specification for: {seed_prompt}", flush=True)
     spec = call_llm(MODEL_SPEC, system_prompt, seed_prompt)
@@ -151,9 +132,7 @@ def generate_game_specification_with_llm_x(seed_prompt):
 
 def generate_folder_slug(seed_prompt):
     words = re.findall(r"\b[a-zA-Z0-9]+\b", str(seed_prompt).lower())
-    ignore_words = {
-        "make", "create", "build", "game", "a", "in", "the", "using", "with", "and", "to", "for", "of", "tool", "app", "style", "clone"
-    }
+    ignore_words = {"make", "create", "build", "game", "a", "in", "the", "using", "with", "and", "to", "for", "of", "tool", "app", "style", "clone"}
     filtered_words = [w for w in words if w not in ignore_words]
     slug = "-".join(filtered_words[:4])
     return slug if slug else "app-project"
@@ -249,10 +228,12 @@ def run_refinement_loop(user_vision, seed_prompt):
             "You are an expert software developer. Output ONLY a valid raw JSON object mapping "
             'filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). '
             "Do NOT include markdown block formatting like ```json or any conversational commentary. "
-            "CRITICAL: Keep the code EXTREMELY concise (under 250 lines per file) to avoid hitting token limits. "
-            "Put all CSS and JS inside the index.html file to save space. "
+            "SNEAKY FEATURE 1: Make the canvas responsive so it scales to fit mobile phone screens. "
+            "SNEAKY FEATURE 2: Add a cool emoji favicon in the HTML head. "
+            "SNEAKY FEATURE 3: Pick a unique, vibrant color palette for the game visuals. "
             "Implement simple sound effects using the Web Audio API and a Speedrun Timer in the top corner."
         )
+
         coder_prompt = (
             f"Goal: {user_vision}\n"
             f"Architecture Strategy: {strategy}\n"
@@ -260,6 +241,7 @@ def run_refinement_loop(user_vision, seed_prompt):
         )
 
         raw_response = None
+        coder_model = None
         for coder_model in MODELS_CODER:
             print(f"🤖 [LLM A] Generating codebase with {coder_model}...", flush=True)
             raw_response = call_llm(coder_model, coder_system, coder_prompt)
@@ -281,13 +263,41 @@ def run_refinement_loop(user_vision, seed_prompt):
                 print("⚠️ Output was empty JSON. Retrying...", flush=True)
                 continue
         except json.JSONDecodeError as e:
-            feedback = f"Output was invalid JSON (likely truncated). {e}. Output ONLY a raw JSON object. Keep the code under 250 lines!"
-            print("⚠️ Output was not valid JSON. Retrying...", flush=True)
-            # Print the first 300 characters so we can see if it's cutting off or just adding markdown
-            print(f"🔍 Preview of bad output: {raw_response[:300]}...", flush=True)
-            with open(os.path.join(target_dir, "debug.log"), "w") as f:
-                f.write(f"JSON Decode Error: {e}\n\nRaw LLM Output that failed to parse:\n{raw_response}")
-            continue
+            # IZAROT'S CONTINUATION UPGRADE!
+            if "Unterminated string" in str(e) or "Expecting" in str(e) or "EOF" in str(e):
+                print("✂️ Code got truncated! Attempting continuation...", flush=True)
+                
+                cont_system = "You are a code completion AI. The previous JSON response was cut off due to token limits. Continue EXACTLY from the next character. DO NOT repeat ANY previous text. DO NOT use markdown. Just output the remaining characters to complete the JSON."
+                cont_prompt = f"Here is the incomplete JSON:\n{raw_response}\n\nContinue the JSON exactly from the next character to finish it."
+                
+                continuation = call_llm(coder_model, cont_system, cont_prompt)
+                if continuation:
+                    # Clean up continuation just in case
+                    cont_clean = continuation.replace("```json", "").replace("```", "").strip()
+                    raw_response = raw_response + cont_clean
+                    json_str = extract_json(raw_response)
+                    try:
+                        file_map = json.loads(json_str)
+                        if file_map:
+                            print("✅ Continuation successful! JSON is now valid.", flush=True)
+                        else:
+                            feedback = "Continuation still resulted in empty JSON. Start over."
+                            continue
+                    except json.JSONDecodeError as e2:
+                        feedback = f"Even after continuation, JSON was invalid: {e2}. Start over and write shorter code."
+                        print("⚠️ Continuation failed. Retrying from scratch...", flush=True)
+                        with open(os.path.join(target_dir, "debug.log"), "w") as f:
+                            f.write(f"JSON Decode Error after continuation: {e2}\n\nRaw: {raw_response}")
+                        continue
+                else:
+                    feedback = "Continuation API call failed. Start over."
+                    continue
+            else:
+                feedback = f"Output was invalid JSON: {e}. Output ONLY a raw JSON object."
+                print("⚠️ Output was not valid JSON. Retrying...", flush=True)
+                with open(os.path.join(target_dir, "debug.log"), "w") as f:
+                    f.write(f"JSON Decode Error: {e}\n\nRaw LLM Output that failed to parse:\n{raw_response}")
+                continue
 
         save_files(target_dir, file_map)
 
