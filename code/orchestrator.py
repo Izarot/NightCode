@@ -249,12 +249,10 @@ def run_refinement_loop(user_vision, seed_prompt):
             "You are an expert software developer. Output ONLY a valid raw JSON object mapping "
             'filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). '
             "Do NOT include markdown block formatting like ```json or any conversational commentary. "
-            "Keep the code as concise as possible (under 500 lines per file) to avoid token limits. "
-            "IMPORTANT: Implement simple sound effects using the Web Audio API (e.g., short beeps for shooting, jumping, or explosions). "
-            "IMPORTANT: Add a visible Speedrun Timer in the top corner of the screen that starts immediately and stops on game over."
-            "IMPORTANT: Save the player's High Score using the browser's LocalStorage so it persists when they refresh."
+            "CRITICAL: Keep the code EXTREMELY concise (under 250 lines per file) to avoid hitting token limits. "
+            "Put all CSS and JS inside the index.html file to save space. "
+            "Implement simple sound effects using the Web Audio API and a Speedrun Timer in the top corner."
         )
-
         coder_prompt = (
             f"Goal: {user_vision}\n"
             f"Architecture Strategy: {strategy}\n"
