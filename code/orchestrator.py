@@ -16,20 +16,48 @@ OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-MODEL_SPEC = "google/gemini-2.0-flash-exp:free"         
-MODEL_ARCHITECT = "inclusionai/ling-3.0-flash-20260723:free" 
+# Dynamically fetch the live free models so we NEVER hit a 404 premium error!
+def get_free_models():
+    print("🔍 Fetching live free models from OpenRouter...", flush=True)
+    try:
+        res = requests.get("https://openrouter.ai/api/v1/models", timeout=15)
+        res.raise_for_status()
+        data = res.json()
+        
+        free_models = []
+        for model in data.get("data", []):
+            # OpenRouter sets prompt price to "0" for free models
+            if model.get("pricing", {}).get("prompt") == "0":
+                free_models.append(model["id"])
+                
+        if not free_models:
+            print("⚠️ No free models found! Falling back to known defaults.", flush=True)
+            return ["google/gemini-2.0-flash-exp:free", "meta-llama/llama-3.3-70b-instruct:free"]
+            
+        print(f"✅ Found {len(free_models)} free models available right now!", flush=True)
+        return free_models
+        
+    except Exception as e:
+        print(f"⚠️ Failed to fetch models: {e}. Using fallbacks.", flush=True)
+        return ["google/gemini-2.0-flash-exp:free", "meta-llama/llama-3.3-70b-instruct:free"]
 
-MODELS_CODER = [
-    "deepseek/deepseek-chat:free",
-    "qwen/qwen-2.5-coder-32b-instruct:free",
-    "deepseek/deepseek-r1:free",
-    "google/gemini-2.0-flash-exp:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
-    "nvidia/nemotron-nano-9b-v2:free",
-    "poolside/laguna-s-2.1:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "inclusionai/ling-3.0-flash-20260723:free"
-]
+# Fetch the models dynamically at startup
+ALL_FREE_MODELS = get_free_models()
+
+# Prefer good coders if they are free, otherwise use whatever we found
+PREFERRED_CODERS = ["qwen/qwen-2.5-coder-32b-instruct", "deepseek/deepseek-r1", "deepseek/deepseek-chat", "google/gemini-2.0-flash", "meta-llama/llama-3.3"]
+MODELS_CODER = [m for m in ALL_FREE_MODELS if any(p in m for p in PREFERRED_CODERS)]
+
+# If none of the preferred ones are free, just use all the free ones we found!
+if not MODELS_CODER:
+    MODELS_CODER = ALL_FREE_MODELS
+
+MODEL_SPEC = ALL_FREE_MODELS[0] if ALL_FREE_MODELS else "google/gemini-2.0-flash-exp:free"
+MODEL_ARCHITECT = ALL_FREE_MODELS[0] if ALL_FREE_MODELS else "google/gemini-2.0-flash-exp:free"
+
+print(f"🧠 Using Spec Model: {MODEL_SPEC}", flush=True)
+print(f"🏗️ Using Architect Model: {MODEL_ARCHITECT}", flush=True)
+print(f"🤖 Coder Models lined up: {MODELS_CODER}\n", flush=True)
 
 def git_push():
     try:
