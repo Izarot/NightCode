@@ -51,7 +51,6 @@ def get_free_models():
         print(f"⚠️ Failed to fetch models: {e}. Using fallbacks.", flush=True)
         return ["google/gemini-2.0-flash-exp:free", "meta-llama/llama-3.3-70b-instruct:free"]
 
-# EVERYONE gets the same full list of free models!
 ALL_FREE_MODELS = get_free_models()
 MODELS_SPEC = ALL_FREE_MODELS.copy()
 MODELS_ARCHITECT = ALL_FREE_MODELS.copy()
@@ -113,6 +112,48 @@ def call_llm(model, system_prompt, user_prompt, retries=3):
 
     return None
 
+def update_games_list():
+    """LLM Q: Generates 100 new game ideas and rewrites games.py"""
+    print("\n🧠 [LLM Q] Expanding game idea library...", flush=True)
+    system_prompt = (
+        "You are LLM Q, a creative game designer. Your job is to generate 100 short, compact, and unique 2D HTML5 Canvas game concepts. "
+        "Examples: 'A Snake game where the snake leaves a trail of fire.', 'A Pong clone with 3 balls.'. "
+        "Output ONLY a valid raw JSON array of 100 strings. No markdown formatting, no conversational text."
+    )
+    user_prompt = "Generate 100 new game ideas now."
+    
+    models_to_try = ALL_FREE_MODELS.copy()
+    random.shuffle(models_to_try)
+    
+    for model in models_to_try:
+        response = call_llm(model, system_prompt, user_prompt)
+        if response:
+            try:
+                text = response.replace("```json", "").replace("```", "").strip()
+                start = text.find('[')
+                end = text.rfind(']')
+                if start != -1 and end != -1:
+                    new_ideas = json.loads(text[start:end+1])
+                    
+                    # Combine existing with new, and remove duplicates
+                    combined = list(dict.fromkeys(FAMOUS_IDEAS + new_ideas))
+                    
+                    # Write back to games.py
+                    games_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "games.py")
+                    with open(games_path, "w", encoding="utf-8") as f:
+                        f.write("# NightCode Game Ideas Library (Auto-updated by LLM Q)\n")
+                        f.write("FAMOUS_IDEAS = " + json.dumps(combined, indent=4))
+                        
+                    print(f"✅ Added {len(new_ideas)} new ideas! Total games: {len(combined)}", flush=True)
+                    return combined # Return the new list to use for tonight's run
+            except Exception as e:
+                print(f"⚠️ Failed to parse LLM Q response: {e}", flush=True)
+        else:
+            print(f"⚠️ {model} failed for LLM Q. Trying next...", flush=True)
+            
+    print("⚠️ Failed to update games list. Using existing list.", flush=True)
+    return FAMOUS_IDEAS
+
 def generate_game_specification_with_llm_x(seed_prompt):
     system_prompt = (
         "You are LLM X, a Game Director and Lead Systems Architect. "
@@ -123,7 +164,6 @@ def generate_game_specification_with_llm_x(seed_prompt):
     )
     print(f"🎯 [LLM X] Generating high-level goal specification for: {seed_prompt}", flush=True)
     
-    # Randomize the list so it doesn't pick the same rate-limited model first every time
     models_to_try = MODELS_SPEC.copy()
     random.shuffle(models_to_try)
     
@@ -227,7 +267,6 @@ def run_refinement_loop(user_vision, seed_prompt):
 
     print("🧠 [Architect] Creating technical file blueprint...", flush=True)
     
-    # Randomize Architect models too!
     arch_models = MODELS_ARCHITECT.copy()
     random.shuffle(arch_models)
     strategy = None
@@ -267,7 +306,6 @@ def run_refinement_loop(user_vision, seed_prompt):
             f"Previous Feedback/Error: {feedback}"
         )
 
-        # IZAROT'S MODEL ROTATION LOGIC + RANDOM SHUFFLE!
         available_models = [m for m in MODELS_CODER if m not in recent_models]
         if not available_models:
             available_models = MODELS_CODER.copy()
@@ -360,7 +398,6 @@ def run_refinement_loop(user_vision, seed_prompt):
 
         print("🕵️ [LLM B] Reviewing error...", flush=True)
         
-        # Randomize LLM B (Reviewer) as well!
         reviewer_models = MODELS_SPEC.copy()
         random.shuffle(reviewer_models)
         llm_b_response = None
@@ -418,7 +455,6 @@ def improve_project(target_dir):
     for turn in range(1, 4):
         print(f"🤖 [LLM A] Fix attempt {turn}/3...", flush=True)
         
-        # Randomize fixer models!
         models_to_try = MODELS_CODER.copy()
         random.shuffle(models_to_try)
         
@@ -554,6 +590,11 @@ def generate_arcade_lobby():
 
 if __name__ == "__main__":
     print("🚀 NightCode Orchestrator starting.", flush=True)
+    
+    # LLM Q expands the game library at the very start of the shift!
+    FAMOUS_IDEAS = update_games_list()
+    git_push() # Save the new ideas to GitHub immediately
+    
     overall_start_time = time.time()
     
     run_mode = os.getenv("RUN_MODE", "FULL_RUN")
