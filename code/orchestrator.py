@@ -281,8 +281,10 @@ def run_refinement_loop(user_vision, seed_prompt):
                 print("⚠️ Output was empty JSON. Retrying...", flush=True)
                 continue
         except json.JSONDecodeError as e:
-            feedback = f"Output was invalid JSON: {e}. Output ONLY a raw JSON object with keys as filenames and values as code strings."
+            feedback = f"Output was invalid JSON (likely truncated). {e}. Output ONLY a raw JSON object. Keep the code under 250 lines!"
             print("⚠️ Output was not valid JSON. Retrying...", flush=True)
+            # Print the first 300 characters so we can see if it's cutting off or just adding markdown
+            print(f"🔍 Preview of bad output: {raw_response[:300]}...", flush=True)
             with open(os.path.join(target_dir, "debug.log"), "w") as f:
                 f.write(f"JSON Decode Error: {e}\n\nRaw LLM Output that failed to parse:\n{raw_response}")
             continue
