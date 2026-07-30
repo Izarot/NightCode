@@ -198,10 +198,11 @@ def generate_readme(target_dir, game_vision):
         print("  📄 Saved README.md", flush=True)
 
 def run_refinement_loop(user_vision, seed_prompt):
-    max_turns = 20
+    max_turns = 24 # IZAROT'S 24 CYCLES!
     file_map = {}
     feedback = "Initial build."
     raw_response = None
+    recent_models = [] # Track models to prevent loops
 
     folder_slug = generate_folder_slug(seed_prompt)
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -231,6 +232,7 @@ def run_refinement_loop(user_vision, seed_prompt):
             "SNEAKY FEATURE 1: Make the canvas responsive so it scales to fit mobile phone screens. "
             "SNEAKY FEATURE 2: Add a cool emoji favicon in the HTML head. "
             "SNEAKY FEATURE 3: Pick a unique, vibrant color palette for the game visuals. "
+            "SNEAKY FEATURE 4: Save the player's High Score using the browser's LocalStorage so it persists when they refresh. "
             "Implement simple sound effects using the Web Audio API and a Speedrun Timer in the top corner."
         )
 
@@ -240,12 +242,21 @@ def run_refinement_loop(user_vision, seed_prompt):
             f"Previous Feedback/Error: {feedback}"
         )
 
+        # IZAROT'S MODEL ROTATION LOGIC!
+        available_models = [m for m in MODELS_CODER if m not in recent_models]
+        if not available_models:
+            available_models = MODELS_CODER # Reset if we've used all of them
+
         raw_response = None
         coder_model = None
-        for coder_model in MODELS_CODER:
+        for coder_model in available_models:
             print(f"🤖 [LLM A] Generating codebase with {coder_model}...", flush=True)
             raw_response = call_llm(coder_model, coder_system, coder_prompt)
             if raw_response:
+                # Add to recent models and keep the list at 4 to prevent 5 straight uses
+                recent_models.append(coder_model)
+                if len(recent_models) >= 4:
+                    recent_models.pop(0)
                 break
             else:
                 print(f"⚠️ {coder_model} failed completely. Trying next fallback model...", flush=True)
@@ -272,7 +283,6 @@ def run_refinement_loop(user_vision, seed_prompt):
                 
                 continuation = call_llm(coder_model, cont_system, cont_prompt)
                 if continuation:
-                    # Clean up continuation just in case
                     cont_clean = continuation.replace("```json", "").replace("```", "").strip()
                     raw_response = raw_response + cont_clean
                     json_str = extract_json(raw_response)
