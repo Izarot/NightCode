@@ -1,14 +1,10 @@
 class Bird {
   constructor(type, x, y) {
     this.type = type;
-    this.x = x;
-    this.y = y;
-    this.w = 30;
-    this.h = 30;
-    this.vx = 0;
-    this.vy = 0;
-    this.launched = false;
-    this.falling = false;
+    this.x = x; this.y = y;
+    this.w = 30; this.h = 30;
+    this.vx = 0; this.vy = 0;
+    this.launched = false; this.falling = false;
     this.rotation = 0;
     this.color = this.getColor();
     this.abilityUsed = false;
@@ -24,8 +20,7 @@ class Bird {
     }
   }
   launch(vx, vy) {
-    this.vx = vx;
-    this.vy = vy;
+    this.vx = vx; this.vy = vy;
     this.launched = true;
     sound.launch();
   }
