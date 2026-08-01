@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chromatic Shadows</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0="0 100 100"><text y=".9em" font-size="90">🌈</text></svg>">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #050510;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            display: block;
+            max-width: 100%;
+            max-height: 100%;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+        hud {
+            position: absolute;
+            pointer-events: none;
+            padding: 20px;
+            width: calc(100% - 40px);
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        hud-left { left: 0; }
+        hud-center { left: 50%; transform: translateX(-50%); }
+        hud-right { right: 0; }
+        #timer { color: #ff4757; }
+        #moves { color: #2ed573; }
+        #overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        btn {
+            background: #5352ed;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            margin: 10px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            border-radius: 30px;
+            transition: transform 0.2s;
+            pointer-events: auto;
+        }
+        btn:hover { transform: scale(1.1); }
+        #high-score-display { position: absolute; bottom: 20px; left: 20px; font-size: 0.8rem; opacity: 0.6; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div class="hud hud-left"><div id="moves">MOVES: 0</div></div>
+        <div class="hud hud-center"><div id="level-title">LEVEL 1</div></div>
+        <div class="hud hud-right"><div id="timer">00:00</div></div>
+        
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="overlay">
+            <h1 id="overlay-title">LEVEL COMPLETE</h1>
+            <button class="btn" id="restart-btn">RETRY</button>
+            <button class="btn" id="next-btn">NEXT LEVEL</button>
+        </div>
+
+        <div id="high-score-display">BEST TIME: <span id="best-time">--</span></div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
