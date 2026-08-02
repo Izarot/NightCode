@@ -1,0 +1,1 @@
+export default class Projectile{constructor(x,y,vY){this.x=x;this.y=y;this.vY=vY;this.lifetime=2500;}update(dt){this.y+=this.vY*dt;this.lifetime-=dt;}}

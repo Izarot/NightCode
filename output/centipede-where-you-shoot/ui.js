@@ -1,0 +1,1 @@
+export function updateUI(score,lives,timer){document.getElementById('score').textContent=score;document.getElementById('lives').textContent=lives;document.getElementById('timer').textContent=Math.floor(timer/1000);}
