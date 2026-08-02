@@ -33,10 +33,22 @@ button:hover{background:#7B5A4C;}
 <script>
 /* Utility */
 function now(){return performance.now();}
-function formatTime(ms){let s=Math.floor(ms/1000);let m=Math.floor(s/60);s%=60;return (m<10?'0':'')+m+':'+(s<10?'0':'')+s;}
+function formatTime(ms){
+let s=Math.floor(ms/1000);
+let m=Math.floor(s/60);
+s%=60;
+return (m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+}
 /* Audio */
 const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-function playTone(freq,dur){const osc=audioCtx.createOscillator();osc.frequency.value=freq;osc.type='sine';osc.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+dur/1000);}
+function playTone(freq,dur){
+const osc=audioCtx.createOscillator();
+osc.frequency.value=freq;
+osc.type='sine';
+osc.connect(audioCtx.destination);
+osc.start();
+osc.stop(audioCtx.currentTime+dur/1000);
+}
 function playClick(){playTone(600,0.1);}
 function playCapture(){playTone(400,0.2);}
 function playWin(){playTone(800,0.5);}
@@ -63,21 +75,159 @@ function resizeCanvas(){const rect=document.getElementById('canvasWrapper').getB
 window.addEventListener('resize',resizeCanvas);
 resizeCanvas();
 /* Init Board */
-function initBoard(){board=Array.from({length:boardSize},()=>Array(boardSize).fill(null));for(let r=0;r<boardSize;r++){for(let c=0;c<boardSize;c++){if((r+c)%2===1){if(r<3)board[r][c]={color:'black',king:false};else if(r>4)board[r][c]={color:'white',king:false};}}}currentPlayer='white';selected=null;legalMoves=[];moveHistory=[];undoCount=0;gameOver=false;document.getElementById('turn').textContent=currentPlayer.charAt(0).toUpperCase()+currentPlayer.slice(1);timerStart=performance.now();clearInterval(timerInterval);timerInterval=setInterval(()=>{document.getElementById('timer').textContent='Time: '+formatTime(performance.now()-timerStart);},500);draw();}
+function initBoard(){board=Array.from({length:boardSize},()=>Array(boardSize).fill(null));for(let r=0;r<boardSize;r++){for(let c=0;c<boardSize;c++){if((r+c)%2===1){if(r<3)board[r][c]={color:'black',king:false};else if(r>4)board[r][c]={color:'white',king:false;}}}
+currentPlayer='white';
+selected=null;
+legalMoves=[];
+moveHistory=[];
+undoCount=0;
+gameOver=false;
+document.getElementById('turn').textContent=currentPlayer.charAt(0).toUpperCase()+currentPlayer.slice(1);
+timerStart=performance.now();
+clearInterval(timerInterval);
+timerInterval=setInterval(()=>{document.getElementById('timer').textContent='Time: '+formatTime(performance.now()-timerStart);},500);
+draw();}
 initBoard();
 /* Draw */
-function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const cellSize=canvas.width/boardSize;for(let r=0;r<boardSize;r++){for(let c=0;c<boardSize;c++){const isDark=(r+c)%2===1;ctx.fillStyle=isDark?'#5D4037':'#F5E6D3';ctx.fillRect(c*cellSize,r*cellSize,cellSize,cellSize);const piece=board[r][c];if(piece){ctx.beginPath();ctx.arc(c*cellSize+cellSize/2,r*cellSize+cellSize/2,cellSize*0.4,0,2*Math.PI);ctx.fillStyle=piece.color==='white'?'#FFFFFF':'#000000';ctx.fill();ctx.strokeStyle=piece.color==='white'?'#000000':'#FFFFFF';ctx.lineWidth=2;ctx.stroke();if(piece.king){ctx.fillStyle='#FFD700';ctx.beginPath();ctx.arc(c*cellSize+cellSize/2,r*cellSize+cellSize/2,cellSize*0.2,0,2*Math.PI);ctx.fill();}}}if(selected){const [sr,sc]=selected;ctx.strokeStyle='rgba(255,255,255,0.8)';ctx.lineWidth=4;ctx.strokeRect(sc*cellSize,sr*cellSize,cellSize,cellSize);}for(const [mr,mc] of legalMoves){ctx.fillStyle='rgba(0,255,0,0.4)';ctx.beginPath();ctx.arc(mc*cellSize+cellSize/2,mr*cellSize+cellSize/2,cellSize*0.2,0,2*Math.PI);ctx.fill();}}
+function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);const cellSize=canvas.width/boardSize;for(let r=0;r<boardSize;r++){for(let c=0;c<boardSize;c++){const isDark=(r+c)%2===1;ctx.fillStyle=isDark?'#5D4037':'#F5E6D3';ctx.fillRect(c*cellSize,r*cellSize,cellSize,cellSize);const piece=board[r][c];if(piece){ctx.beginPath();ctx.arc(c*cellSize+cellSize/2,r*cellSize+cellSize/2,cellSize*0.4,0,2*Math.PI);ctx.fillStyle=piece.color==='white'?'#FFFFFF':'#000000';ctx.fill();ctx.strokeStyle=piece.color==='white'?'#000000':'#FFFFFF';ctx.lineWidth=2;ctx.stroke();if(piece.king){ctx.fillStyle='#FFD700';ctx.beginPath();ctx.arc(c*cellSize+cellSize/2,r*cellSize+cellSize/2,cellSize*0.2,0,2*Math.PI);ctx.fill();}}
+if(selected){const [sr,sc]=selected;ctx.strokeStyle='rgba(255,255,255,0.8)';ctx.lineWidth=4;ctx.strokeRect(sc*cellSize,sr*cellSize,cellSize,cellSize);}
+for(const [mr,mc] of legalMoves){ctx.fillStyle='rgba(0,255,0,0.4)';ctx.beginPath();ctx.arc(mc*cellSize+cellSize/2,mr*cellSize+cellSize/2,cellSize*0.2,0,2*Math.PI);ctx.fill();}}
+}
 /* Input */
-canvas.addEventListener('click',e=>{if(gameOver)return;const rect=canvas.getBoundingClientRect();const x=e.clientX-rect.left;const y=e.clientY-rect.top;const cellSize=canvas.width/boardSize;const col=Math.floor(x/cellSize);const row=Math.floor(y/cellSize);if(selected){const move=legalMoves.find(m=>m[0]===row&&m[1]===col);if(move){makeMove(selected[0],selected[1],row,col);selected=null;legalMoves=[];draw();if(!gameOver)aiTurn();}else{selected=null;legalMoves=[];draw();}}else{const piece=board[row][col];if(piece&&piece.color===currentPlayer){selected=[row,col];legalMoves=generateLegalMoves(row,col);draw();}}});
+canvas.addEventListener('click',e=>{
+if(gameOver)return;
+const rect=canvas.getBoundingClientRect();
+const x=e.clientX-rect.left;
+const y=e.clientY-rect.top;
+const cellSize=canvas.width/boardSize;
+const col=Math.floor(x/cellSize);
+const row=Math.floor(y/cellSize);
+if(selected){
+const move=legalMoves.find(m=>m[0]===row&&m[1]===col);
+if(move){
+makeMove(selected[0],selected[1],row,col);
+selected=null;
+legalMoves=[];
+draw();
+if(!gameOver)aiTurn();
+}
+else{
+selected=null;
+legalMoves=[];
+draw();
+}
+}
+else{
+const piece=board[row][col];
+if(piece&&piece.color===currentPlayer){
+selected=[row,col];
+legalMoves=generateLegalMoves(row,col);
+draw();
+}
+}
+});
 /* Move Generation */
-function generateLegalMoves(r,c){const piece=board[r][c];if(!piece)return[];const dirs=piece.king?[[1,1],[1,-1],[-1,1],[-1,-1]]:[[1,1],[1,-1]];const opponent=piece.color==='white'?'black':'white';let jumps=[];for(const [dr,dc] of dirs){let nr=r+dr,nc=c+dc;while(nr>=0&&nr<boardSize&&nc>=0&&nc<boardSize){if(board[nr][nc]){if(board[nr][nc].color===opponent){let jr=nr+dr,jc=nc+dc;if(jr>=0&&jr<boardSize&&jc>=0&&jc<boardSize&&board[jr][jc]==null){jumps.push([jr,jc]);}break;}else break;}else{if(jumps.length===0)break;break;}nr+=dr;nc+=dc;}}if(jumps.length>0)return jumps;let moves=[];for(const [dr,dc] of dirs){let nr=r+dr,nc=c+dc;if(nr>=0&&nr<boardSize&&nc>=0&&nc<boardSize&&board[nr][nc]==null)moves.push([nr,nc]);}return moves;}
+function generateLegalMoves(r,c){
+const piece=board[r][c];
+if(!piece)return[];
+const dirs=piece.king?[[1,1],[1,-1],[-1,1],[-1,-1]]:[[1,1],[1,-1]];
+const opponent=piece.color==='white'?'black':'white';
+let jumps=[];
+for(const [dr,dc] of dirs){
+let nr=r+dr,nc=c+dc;
+while(nr>=0&&nr<boardSize&&nc>=0&&nc<boardSize){
+if(board[nr][nc]){
+if(board[nr][nc].color===opponent){
+let jr=nr+dr,jc=nc+dc;
+if(jr>=0&&jr<boardSize&&jc>=0&&jc<boardSize&&board[jr][jc]==null){
+jumps.push([jr,jc]);
+}
+break;
+}
+else break;
+}
+else{
+if(jumps.length===0)break;
+break;
+}
+nr+=dr;
+nc+=dc;
+}
+}
+if(jumps.length>0)return jumps;
+let moves=[];
+for(const [dr,dc] of dirs){
+let nr=r+dr,nc=c+dc;
+if(nr>=0&&nr<boardSize&&nc>=0&&nc<boardSize&&board[nr][nc]==null)moves.push([nr,nc]);
+}
+return moves;
+}
 /* Make Move */
-function makeMove(sr,sc,tr,tc){const piece=board[sr][sc];board[tr][tc]=piece;board[sr][sc]=null;const dr=tr-sr,dc=tc-sc;if(Math.abs(dr)>=2){const midR=sr+dr/2,midC=sc+dc/2;board[midR][midC]=null;playCapture();moveHistory.push({from:[sr,sc],to:[tr,tc],captured:[midR,midC]});undoCount=0;}else{moveHistory.push({from:[sr,sc],to:[tr,tc],captured:[]});undoCount=0;}if((piece.color==='white'&&tr===boardSize-1)||(piece.color==='black'&&tr===0)){piece.king=true;playWin();}currentPlayer=currentPlayer==='white'?'black':'white';document.getElementById('turn').textContent=currentPlayer.charAt(0).toUpperCase()+currentPlayer.slice(1);checkGameOver();}
-function checkGameOver(){const moves=board.flatMap((row,rowIdx)=>row.map((p,colIdx)=>p?generateLegalMoves(rowIdx,colIdx):[])).flat();if(moves.length===0){gameOver=true;clearInterval(timerInterval);const finalScore=moveHistory.length;const high=parseInt(highScore)||0;if(finalScore>high){highScore=finalScore;localStorage.setItem('checkersHighScore',highScore);document.getElementById('highScoreVal').textContent=highScore;}alert(currentPlayer==='white'?'Black wins!':'White wins!');}}
+function makeMove(sr,sc,tr,tc){
+const piece=board[sr][sc];
+board[tr][tc]=piece;
+board[sr][sc]=null;
+const dr=tr-sr,dc=tc-sc;
+if(Math.abs(dr)>=2){
+const midR=sr+dr/2,midC=sc+dc/2;
+board[midR][midC]=null;
+playCapture();
+moveHistory.push({from:[sr,sc],to:[tr,tc],captured:[midR,midC]});
+undoCount=0;
+}
+else{
+moveHistory.push({from:[sr,sc],to:[tr,tc],captured:[]});
+undoCount=0;
+}
+if((piece.color==='white'&&tr===boardSize-1)||(piece.color==='black'&&tr===0)){piece.king=true;playWin();}
+currentPlayer=currentPlayer==='white'?'black':'white';
+document.getElementById('turn').textContent=currentPlayer.charAt(0).toUpperCase()+currentPlayer.slice(1);
+checkGameOver();
+}
+function checkGameOver(){const moves=board.flatMap((row,rowIdx)=>row.map((p,colIdx)=>p?generateLegalMoves(rowIdx,colIdx):[])).flat();if(moves.length===0){
+gameOver=true;
+clearInterval(timerInterval);
+const finalScore=moveHistory.length;
+const high=parseInt(highScore)||0;
+if(finalScore>high){
+highScore=finalScore;
+localStorage.setItem('checkersHighScore',highScore);
+document.getElementById('highScoreVal').textContent=highScore;
+}
+alert(currentPlayer==='white'?'Black wins!':'White wins!');
+}
+}
 /* AI */
-function aiTurn(){if(gameOver)return;setTimeout(()=>{const moves=[];for(let r=0;r<boardSize;r++)for(let c=0;c<boardSize;c++)if(board[r][c]&&board[r][c].color===currentPlayer){const m=generateLegalMoves(r,c);for(const [tr,tc] of m)moves.push({from:[r,c],to:[tr,tc]});}if(moves.length===0){gameOver=true;clearInterval(timerInterval);alert('Draw');return;}const move=moves[Math.floor(Math.random()*moves.length)];makeMove(move.from[0],move.from[1],move.to[0],move.to[1]);draw();if(!gameOver)aiTurn();},500);}
-document.getElementById('settings').addEventListener('click',e=>{if(e.target.id==='closeSettings')document.getElementById('settings').style.display='none';});
-document.getElementById('aiLevel').addEventListener('change',e=>{aiLevel=e.target.value;switch(aiLevel){case 'Easy':aiDepth=1;break;case 'Medium':aiDepth=2;break;case 'Hard':aiDepth=3;break;case 'Expert':aiDepth=4;break;}});
+function aiTurn(){if(gameOver)return;
+setTimeout(()=>{
+const moves=[];
+for(let r=0;r<boardSize;r++)for(let c=0;c<boardSize;c++)if(board[r][c]&&board[r][c].color===currentPlayer){
+const m=generateLegalMoves(r,c);
+for(const [tr,tc] of m)moves.push({from:[r,c],to:[tr,tc]});
+}
+if(moves.length===0){
+gameOver=true;
+clearInterval(timerInterval);
+alert('Draw');
+return;
+}
+const move=moves[Math.floor(Math.random()*moves.length)];
+makeMove(move.from[0],move.from[1],move.to[0],move.to[1]);
+draw();
+if(!gameOver)aiTurn();
+},500);}
+document.getElementById('settings').addEventListener('click',e=>{
+if(e.target.id==='closeSettings')document.getElementById('settings').style.display='none';
+});
+document.getElementById('aiLevel').addEventListener('change',e=>{
+aiLevel=e.target.value;
+switch(aiLevel){
+case 'Easy':aiDepth=1;break;
+case 'Medium':aiDepth=2;break;
+case 'Hard':aiDepth=3;break;
+case 'Expert':aiDepth=4;break;
+}
+});
 /* High Score display */
 document.getElementById('highScoreVal').textContent=highScore;
 </script>
