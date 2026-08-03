@@ -1,0 +1,1 @@
+class Grid{constructor(size){this.size=size;this.cells=[];for(let y=0;y<size;y++){this.cells[y]=[];for(let x=0;x<size;x++){this.cells[y][x]={type:'empty',yield:0};}}}}

@@ -1,0 +1,1 @@
+class HUD{constructor(){this.timer=Date.now();}update(){const elapsed=Date.now()-this.timer;document.getElementById('speedrun').textContent=`Time: ${Math.floor(elapsed/1000)}s`;document.getElementById('highscore').textContent=`High: ${highScore}`;}}

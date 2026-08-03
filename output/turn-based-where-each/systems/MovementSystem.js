@@ -1,0 +1,1 @@
+class MovementSystem{update(ecs){ecs.entities.forEach(unit=>{if(unit.moving){unit.x+=0.1;if(unit.x>=targetX)unit.moving=false;}});}}

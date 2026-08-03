@@ -1,0 +1,1 @@
+class TileTray{constructor(){this.tiles=['grass','water','forest'];}render(){this.tiles.forEach(t=>{drawTileIcon(t);});}}

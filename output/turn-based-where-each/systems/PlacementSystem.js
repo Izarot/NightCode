@@ -1,0 +1,1 @@
+class PlacementSystem{constructor(){this.selectedTile=null;}update(ecs){if(this.selectedTile){const mousePos=getMousePosition();const [x,y]=getGridCoords(mousePos);if(isValidPlacement(x,y)){placeTile(x,y,this.selectedTile.type);this.selectedTile=null;}}}}

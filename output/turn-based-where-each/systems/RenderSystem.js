@@ -1,0 +1,1 @@
+class RenderSystem{update(ecs){ctx.clearRect(0,0,canvas.width,canvas.height);ecs.entities.forEach(entity=>{if(entity instanceof Tile)drawTile(entity);else if(entity instanceof Unit)drawUnit(entity);});}}
