@@ -1,17 +1,17 @@
-# 🌌 PROJECT GRAVITY-SHIFT 🌌
+# 🚀 PROJECT GRAVITY-SHIFT 🚀
 
 **Flip the world. Defy the laws of physics. Don't hit the spikes.**
 
 Welcome to **Project Gravity-Shift**, a high-octane, neon-soaked minimalist platformer where "down" is merely a suggestion. Navigate through treacherous cyberpunk sectors by manipulating gravity to bypass obstacles and reach the exit portal.
 
-## 🕹️ HOW TO PLAY
+## 🔧 HOW TO PLAY
 
 ### **Movement**
-*   **`A` / `D`** or **`Left` / `Right`** $\rightarrow$ Move Left/Right
-*   **`W`** or **`Space`** $\rightarrow$ Jump
+*   **`A` / `D`** or **`Left` / `Right`** $\\rightarrow$ Move Left/Right
+*   **`W`** or **`Space`** $\\rightarrow$ Jump
 
 ### **The Gravity Mechanic**
-*   **`Shift`** or **`K`** $\rightarrow$ **REVERSE GRAVITY**
+*   **`Shift`** or **`K`** $\\rightarrow$ **REVERSE GRAVITY**
 
 > [!WARNING]
 > **WATCH YOUR ENERGY!** 
