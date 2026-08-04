@@ -1,12 +1,12 @@
-# Pixel Sail‑Racer  
+# Pixel Sail\u2011Racer  
 *Catch the wind, trim your sails, and race to the finish line!*  
 
 ## How to Play  
-- **Steer:** ← / → or A / D (or left virtual joystick)  
-- **Trim Sail In:** ↑ / W (sail‑in button)  
-- **Trim Sail Out:** ↓ / S (sail‑out button)  
+- **Steer:** \u2190 / \u2192 or A / D (or left virtual joystick)  
+- **Trim Sail In:** \u2191 / W (sail\u2011in button)  
+- **Trim Sail Out:** \u2193 / S (sail\u2011out button)  
 - **Boost (Gust):** Space or Boost button (limited resource)  
-- **Touch:** Use the on‑screen joystick to steer and the sail‑in / sail‑out buttons to adjust your sails.  
+- **Touch:** Use the on\u2011screen joystick to steer and the sail\u2011in / sail\u2011out buttons to adjust your sails.  
 
 Pass through each checkpoint in order to complete laps. Finish the race with the best time to earn points, unlock new boat skins, and climb the leaderboard.  
 
