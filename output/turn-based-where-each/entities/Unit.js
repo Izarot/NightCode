@@ -1,1 +1,8 @@
-class Unit{constructor(x,y,type){this.x=x;this.y=y;this.type=type;this.moving=false;}}
+export class Unit {
+  constructor(type, x, y) {
+    this.type = type;
+    this.x = x;
+    this.y = y;
+    this.path = [];
+  }
+}
