@@ -1,0 +1,1 @@
+const levels = [{tiles: [...], objects: [...], gravity: 'down', timeLimit: 120}];function loadLevel(levelIndex) {currentLevel = levels[levelIndex];// Level setup here}
