@@ -1,0 +1,1 @@
+class CollisionGrid{constructor(cellSize=64){this.grid=new Map();this.cellSize=cellSize;}addObject(obj){// Spatial hashing logic}queryObjects(x,y){// Return intersecting objects}}

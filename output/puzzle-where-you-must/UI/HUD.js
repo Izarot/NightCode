@@ -1,0 +1,1 @@
+function renderHUD(){// HUD rendering logic using CSS variables}

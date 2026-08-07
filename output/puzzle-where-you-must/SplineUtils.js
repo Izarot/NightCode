@@ -1,0 +1,1 @@
+function generateSpline(points,alpha=0.5){// Centripetal Catmull-Rom implementation with arc-length param return {points:points,alpha:alpha};}

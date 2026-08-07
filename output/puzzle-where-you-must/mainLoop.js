@@ -1,0 +1,1 @@
+let lastTime=0;const FIXED_DT=1/60;let accumulator=0;function frame(time){const dt=Math.min((time-lastTime)/1000,0.1);lastTime=time;accumulator+=dt;if(state==='DRAWING'){updateInput();render();}else if(state==='SIMULATING'){while(accumulator>=FIXED_DT){fixedUpdate(FIXED_DT);accumulator-=FIXED_DT;}render();}requestAnimationFrame(frame);}
