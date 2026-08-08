@@ -59,7 +59,7 @@ function gameLoop(timestamp) {
 function update(dt) {
     player.update(dt, keys, mouse, width, height, bulletManager);
     enemyManager.update(dt, player, bulletManager);
-    bulletManager.update(dt, enemyManager, player);
+    bulletManager.update(dt);
     
     if (mouse.button && bulletManager.canFire()) {
         bulletManager.fire(player.x, player.y, mouse.x, mouse.y, player.angle);
