@@ -4,7 +4,7 @@ const C = {
 };
 const $ = (id) => document.getElementById(id);
 const cvs = $('game'), ctx = cvs.getContext('2d');
-let W, H, scale, running, player, obstacles, particles, score, hiScore, startTime, animId, audioCtx;
+let W, H, scale, running, player, obstacles, particles, score, hiScore, startTime, animId, audioCtx, lastSpawnTime;
 
 function resize() {
   const ratio = 9/16; W = window.innerWidth; H = window.innerHeight;
@@ -24,7 +24,7 @@ function sfxPoint() { beep(660, 0.05, 'triangle', 0.06); beep(1320, 0.05, 'trian
 
 function reset() {
   player = { x: W*0.2, y: H/2, v: 0, r: 18*scale, trail: [], hue: 180 };
-  obstacles = []; particles = []; score = 0; startTime = performance.now();
+  obstacles = []; particles = []; score = 0; startTime = performance.now(); lastSpawnTime = performance.now();
   $('score').textContent = 'SCORE: 0'; $('timer').textContent = 'TIME: 0.00s';
   $('msg').classList.remove('visible');
 }
@@ -40,7 +40,11 @@ function update() {
   player.v += C.gravity * scale; player.y += player.v;
   player.trail.unshift({x: player.x, y: player.y, a: 1}); if (player.trail.length > 8) player.trail.pop();
 
-  if (Math.random() < 0.02) spawnObstacle();
+  const now = performance.now();
+  if (now - lastSpawnTime > C.spawnRate) {
+    spawnObstacle();
+    lastSpawnTime = now;
+  }
 
   obstacles.forEach(o => { o.x -= C.speed * scale; });
   obstacles = obstacles.filter(o => o.x + o.w > 0);
