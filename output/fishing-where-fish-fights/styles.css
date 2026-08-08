@@ -1,0 +1,16 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a12; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+.game-container { position: relative; width: 100%; max-width: 800px; aspect-ratio: 4/3; background: linear-gradient(135deg, #0d0d1a 0%, #1a0d2e 100%); border-radius: 12px; box-shadow: 0 0 40px rgba(0, 255, 255, 0.1), inset 0 0 60px rgba(255, 0, 255, 0.05); border: 2px solid rgba(0, 255, 255, 0.2); overflow: hidden; }
+#gameCanvas { display: block; width: 100%; height: 100%; }
+.ui-overlay { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; z-index: 10; pointer-events: none; }
+.timer, .score, .high-score { background: rgba(10, 10, 20, 0.85); backdrop-filter: blur(8px); padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid rgba(0, 255, 255, 0.3); color: #00ffff; text-shadow: 0 0 8px #00ffff; }
+.score { color: #ff00ff; text-shadow: 0 0 8px #ff00ff; border-color: rgba(255, 0, 255, 0.3); }
+.high-score { color: #ffff00; text-shadow: 0 0 8px #ffff00; border-color: rgba(255, 255, 0, 0.3); }
+.start-screen, .game-over { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(10, 10, 20, 0.95); backdrop-filter: blur(4px); z-index: 20; gap: 24px; }
+.start-screen h1, .game-over h2 { font-size: clamp(2.5rem, 8vw, 4rem); font-weight: 900; background: linear-gradient(90deg, #00ffff, #ff00ff, #ffff00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; text-shadow: none; letter-spacing: 4px; }
+.start-screen p { color: rgba(255,255,255,0.7); font-size: 1.1rem; }
+button { padding: 14px 40px; font-size: 1.1rem; font-weight: 700; background: linear-gradient(135deg, #00ffff, #0088ff); border: none; border-radius: 50px; color: #0a0a12; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; text-transform: uppercase; letter-spacing: 2px; }
+button:hover { transform: scale(1.05); box-shadow: 0 0 30px rgba(0, 255, 255, 0.6); }
+button:active { transform: scale(0.98); }
+.hidden { display: none !important; }
+@media (max-width: 480px) { .game-container { border-radius: 0; width: 100vw; height: 100vh; max-width: none; } .ui-overlay { top: 8px; left: 8px; right: 8px; } .timer, .score, .high-score { padding: 6px 12px; font-size: 12px; } }
