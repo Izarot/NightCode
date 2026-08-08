@@ -2,13 +2,122 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Junkyard Magnet</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🚀</text></svg>">
-<link rel="stylesheet" href="style.css">
+<title>Junkyard Magnet</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='70' font-size='60'>🧲</text></svg>">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:#0a0a1a; overflow:hidden; font-family:'Courier New',monospace; }
+canvas { display:block; max-width:100%; height:auto; margin:0 auto; background:#0a0a1a; }
+</style>
 </head>
 <body>
-<canvas id="gameCanvas"></canvas>
-<script src="game.js"></script>
+<canvas id="game"></canvas>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let w = canvas.width = window.innerWidth;
+let h = canvas.height = window.innerHeight;
+window.addEventListener('resize', ()=>{ w=canvas.width=window.innerWidth; h=canvas.height=window.innerHeight; });
+
+const player = { x:w/2, y:h/2, vx:0, vy:0, r:20, speed:200, maxSpeed:400, energy:100, carrying:0, mode:'pull', boost:false };
+const keys = {};
+const objects = [];
+const particles = [];
+let score = 0;
+let highScore = localStorage.getItem('highScore')||0;
+let timeLeft = 180;
+let gameTime = 0;
+let lastTime = 0;
+let exit = { x:w-100, y:h/2, r:30 };
+let auraAlpha = 0;
+let audioCtx;
+
+window.addEventListener('keydown', e=>{ keys[e.code]=true; if(e.code==='KeyE'||e.code==='KeyR'){ toggleMode(e.code); } });
+window.addEventListener('keyup', e=>{ keys[e.code]=false; });
+
+function toggleMode(code){ if(!audioCtx) initAudio(); playSound('click'); player.mode = code==='KeyE'?'pull':'push'; }
+
+function initAudio(){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+function playSound(type){ if(!audioCtx) return; const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain(); osc.connect(gain); gain.connect(audioCtx.destination); switch(type){ case 'click': osc.frequency.value=400; gain.gain.value=0.1; break; case 'collect': osc.frequency.value=600; gain.gain.value=0.2; break; case 'death': osc.frequency.value=150; gain.gain.value=0.3; break; } osc.start(); osc.stop(audioCtx.currentTime+0.2); }
+
+function initObjects(){ objects.length=0; for(let i=0;i<15;i++){ objects.push({ x:Math.random()*w, y:Math.random()*h, r:15, type:'crate', vx:0, vy:0, collected:false }); } }
+initObjects();
+
+function attractRepel(obj, dt){ const dx = player.x - obj.x; const dy = player.y - obj.y; let dist = Math.sqrt(dx*dx+dy*dy); if(dist < 1){ dist = 1; } const radius = player.mode==='pull'?250:300; if(dist < radius && !obj.collected){ const force = 1500 / (dist*dist); const maxForce = 300; const f = Math.min(force, maxForce); const dir = player.mode==='pull'?1:-1; const fx = (dx/dist)*f*dir; const fy = (dy/dist)*f*dir; obj.vx += fx*dt; obj.vy += fy*dt; } }
+
+function update(dt){ gameTime += dt; timeLeft = Math.max(0, 180 - gameTime);
+
+const acc = 800; const dec = 1200;
+if(keys['KeyW']) player.vy -= acc*dt;
+if(keys['KeyS']) player.vy += acc*dt;
+if(keys['KeyA']) player.vx -= acc*dt;
+if(keys['KeyD']) player.vx += acc*dt;
+if(!keys['KeyW']&&!keys['KeyS']) player.vy *= Math.pow(0.95, dt*60);
+if(!keys['KeyA']&&!keys['KeyD']) player.vx *= Math.pow(0.95, dt*60);
+
+if(keys['ShiftLeft']||keys['ShiftRight']){ player.boost = true; player.maxSpeed = 400; } else { player.boost = false; player.maxSpeed = 200; }
+
+let speed = Math.sqrt(player.vx*player.vx+player.vy*player.vy);
+if(speed > player.maxSpeed){ const ratio = player.maxSpeed/speed; player.vx *= ratio; player.vy *= ratio; }
+
+player.x += player.vx*dt; player.y += player.vy*dt;
+
+if(player.x < 0){ player.x = 0; player.vx *= -0.8; } if(player.x > w){ player.x = w; player.vx *= -0.8; }
+if(player.y < 0){ player.y = 0; player.vy *= -0.8; } if(player.y > h){ player.y = h; player.vy *= -0.8; }
+
+if((keys['KeyE']||keys['KeyR']) && player.energy > 0){ player.energy -= 5*dt; if(player.energy < 0) player.energy = 0; auraAlpha = 0.5; } else { player.energy += 2*dt; if(player.energy > 100) player.energy = 100; auraAlpha *= 0.9; }
+
+for(const obj of objects){ attractRepel(obj, dt);
+obj.x += obj.vx*dt; obj.y += obj.vy*dt;
+obj.vx *= 0.98; obj.vy *= 0.98;
+const dx = player.x - obj.x; const dy = player.y - obj.y; const dist = Math.sqrt(dx*dx+dy*dy);
+if(dist < player.r + obj.r && !obj.collected){ obj.collected = true; score += 50; playSound('collect'); if(player.carrying < 3) player.carrying++; }
+}
+
+const edx = player.x - exit.x; const edy = player.y - exit.y; const edist = Math.sqrt(edx*edx+edy*edy);
+if(edist < player.r + exit.r && timeLeft > 0 && player.energy >= 30){ completeLevel(); }
+
+if(Math.random() < 0.1){ particles.push({ x:player.x, y:player.y, vx:(Math.random()-0.5)*2, vy:(Math.random()-0.5)*2, life:1, size:3 }); }
+for(let i=particles.length-1;i>=0;i--){ const p = particles[i]; p.life -= dt; if(p.life <= 0) particles.splice(i,1); else { p.x += p.vx*dt*60; p.y += p.vy*dt*60; } }
+
+score += dt*10;
+if(score > highScore){ highScore = score; localStorage.setItem('highScore', Math.floor(highScore)); }
+}
+
+function completeLevel(){ playSound('collect'); alert('Level Complete! Score: '+Math.floor(score)+' Time: '+(180-timeLeft).toFixed(1)+'s'); resetGame(); }
+function resetGame(){ player.x=w/2; player.y=h/2; player.vx=0; player.vy=0; player.energy=100; player.carrying=0; score=0; gameTime=0; timeLeft=180; initObjects(); }
+
+function render(){ ctx.fillStyle = '#0a0a1a'; ctx.fillRect(0,0,w,h);
+
+ctx.fillStyle = '#111'; for(let i=0;i<50;i++){ ctx.fillRect(i*40-gameTime*2%40, h-100, 2, 100); }
+
+for(const obj of objects){ if(!obj.collected){ ctx.fillStyle = '#ff6b35'; ctx.beginPath(); ctx.arc(obj.x, obj.y, obj.r, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#fff'; ctx.stroke(); } }
+
+const wave = Math.sin(gameTime*5)*5; ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(exit.x, exit.y, exit.r+wave, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#fff'; ctx.stroke();
+
+if(auraAlpha > 0.01){ ctx.save(); ctx.globalAlpha = auraAlpha; const grad = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, player.mode==='pull'?250:300); grad.addColorStop(0, '#00ffff'); grad.addColorStop(1, 'transparent'); ctx.fillStyle = grad; ctx.beginPath(); ctx.arc(player.x, player.y, player.mode==='pull'?250:300, 0, Math.PI*2); ctx.fill(); ctx.restore(); }
+
+ctx.fillStyle = '#00ffff'; ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#fff'; ctx.stroke();
+ctx.fillStyle = '#ff00ff'; ctx.beginPath(); ctx.arc(player.x, player.y, player.r/2, 0, Math.PI*2); ctx.fill();
+
+for(const p of particles){ ctx.fillStyle = '#00ffff'; ctx.globalAlpha = p.life; ctx.fillRect(p.x, p.y, p.size, p.size); } ctx.globalAlpha = 1;
+
+ctx.fillStyle = '#333'; ctx.fillRect(20, 20, 200, 12);
+const energyColor = player.energy > 60 ? '#00ff00' : player.energy > 30 ? '#ffff00' : '#ff0000';
+ctx.fillStyle = energyColor; ctx.fillRect(20, 20, player.energy*2, 12);
+ctx.fillStyle = '#fff'; ctx.font = '14px monospace'; ctx.fillText('Energy: '+Math.floor(player.energy)+'%', 230, 30);
+
+ctx.fillStyle = '#fff'; ctx.font = '32px monospace'; ctx.textAlign = 'right'; ctx.fillText('Score: '+Math.floor(score), w-20, 40);
+ctx.font = '16px monospace'; ctx.fillText('High: '+Math.floor(highScore), w-20, 60);
+
+ctx.fillStyle = timeLeft < 10 ? '#ff0000' : '#00ffff'; ctx.font = '24px monospace'; ctx.textAlign = 'center'; ctx.fillText('⏱ '+timeLeft.toFixed(1), w/2, 40);
+
+ctx.fillStyle = player.mode==='pull'?'#00ff00':'#ff0000'; ctx.font = '14px monospace'; ctx.textAlign = 'left'; ctx.fillText('Mode: '+player.mode.toUpperCase(), 20, 60);
+}
+
+function loop(timestamp){ const dt = (timestamp - lastTime)/1000; lastTime = timestamp; if(dt < 0.1){ update(dt); render(); } requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+</script>
 </body>
 </html>
