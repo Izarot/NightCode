@@ -1,106 +1,62 @@
-const C = {
-  colors: { bg: '#0a0a12', player: '#00ffea', obstacle: '#ff00ff', trail: '#00ffea44', text: '#00ffea', particle: ['#00ffea', '#ff00ff', '#ffff00'] },
-  gravity: 0.45, jump: -9.5, speed: 4, gap: 140, spawnRate: 1100
-};
-const $ = (id) => document.getElementById(id);
-const cvs = $('game'), ctx = cvs.getContext('2d');
-let W, H, scale, running, player, obstacles, particles, score, hiScore, startTime, animId, audioCtx, lastSpawnTime;
-
-function resize() {
-  const ratio = 9/16; W = window.innerWidth; H = window.innerHeight;
-  if (W/H > ratio) { W = H * ratio; }
-  else { H = W / ratio; }
-  cvs.width = W * devicePixelRatio; cvs.height = H * devicePixelRatio;
-  cvs.style.width = W + 'px'; cvs.style.height = H + 'px';
-  ctx.scale(devicePixelRatio, devicePixelRatio);
-  scale = Math.min(W, H) / 400;
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+let width,height;
+function resizeCanvas(){width=window.innerWidth;height=window.innerHeight;canvas.width=width;canvas.height=height;}
+window.addEventListener('resize',resizeCanvas);
+resizeCanvas();
+const SCALE=50; // 1 unit = 50 pixels
+const GRAVITY=1.2;
+const JUMP_VELOCITY=-Math.sqrt(2*GRAVITY*3); // 3 units height
+const PLAYER_SPEED_BASE=5;
+const PLAYER_SPEED_MAX=8;
+const PHASE_DURATION=3000; // ms
+const PHASE_COOLDOWN=3000; // ms
+const colors={player:'#3498db',ghost:'#3498db88',enemy:'#2c3e50',background:'#1abc9c',healthBar:'#e74c3c',phaseMeter:'#f1c40f',text:'#ecf0f1'};
+let keys={};
+window.addEventListener('keydown',e=>{keys[e.key]=true;});
+window.addEventListener('keyup',e=>{keys[e.key]=false;});
+canvas.addEventListener('contextmenu',e=>{e.preventDefault();player.startPhase();});
+let audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+function playSound(freq,dur=0.1){let osc=audioCtx.createOscillator();osc.frequency.value=freq;osc.type='sine';osc.connect(audioCtx.destination);osc.start();osc.stop(audioCtx.currentTime+dur);}
+function playJump(){playSound(600,0.15);}
+function playHit(){playSound(200,0.2);}
+function playPhaseStart(){playSound(800,0.2);}
+function playPhaseEnd(){playSound(400,0.2);}
+function playEnemyDefeat(){playSound(1000,0.2);}
+class Player{constructor(){this.x=5;this.y=10;this.w=1;this.h=2;this.vx=0;this.vy=0;this.onGround=false;this.health=100;this.phaseState='normal';this.phaseTimer=0;this.cooldownTimer=0;this.flashAlpha=0;}
+update(dt){let target=0;if(keys['ArrowRight']||keys['d'])target=1;if(keys['ArrowLeft']||keys['a'])target=-1;if(target!==0){this.vx+=target*0.1;if(Math.abs(this.vx)>PLAYER_SPEED_MAX)this.vx=PLAYER_SPEED_MAX*Math.sign(this.vx);}else{this.vx*=0.9;if(Math.abs(this.vx)<0.01)this.vx=0;}
+this.x+=this.vx*dt;if(keys[' ' ]||keys['ArrowUp']){if(this.onGround){this.vy=JUMP_VELOCITY;this.onGround=false;playJump();}}
+this.vy+=GRAVITY*dt;this.y+=this.vy*dt;if(this.y>10){this.y=10;this.vy=0;this.onGround=true;}
+if(this.phaseState==='normal'&&this.cooldownTimer>0){this.cooldownTimer-=dt*1000;if(this.cooldownTimer<0)this.cooldownTimer=0;}
+if(this.phaseState==='phasing'){this.phaseTimer-=dt*1000;if(this.phaseTimer<=0){this.phaseState='normal';playPhaseEnd();this.checkExitOverlap();}}
+if(this.flashAlpha>0){this.flashAlpha-=dt*5; if(this.flashAlpha<0)this.flashAlpha=0;}
 }
-
-function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
-function beep(freq, dur, type='square', vol=0.1) { if (!audioCtx) return; const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.value=vol; o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime+dur); }
-function sfxJump() { beep(440, 0.08, 'sine', 0.08); beep(880, 0.05, 'sine', 0.04); }
-function sfxHit() { beep(150, 0.3, 'sawtooth', 0.15); beep(80, 0.5, 'square', 0.1); }
-function sfxPoint() { beep(660, 0.05, 'triangle', 0.06); beep(1320, 0.05, 'triangle', 0.03); }
-
-function reset() {
-  player = { x: W*0.2, y: H/2, v: 0, r: 18*scale, trail: [], hue: 180 };
-  obstacles = []; particles = []; score = 0; startTime = performance.now(); lastSpawnTime = performance.now();
-  $('score').textContent = 'SCORE: 0'; $('timer').textContent = 'TIME: 0.00s';
-  $('msg').classList.remove('visible');
+checkExitOverlap(){enemies.forEach(e=>{if(overlap(this,e))e.state='idle';});}
+startPhase(){if(this.phaseState==='normal'&&this.onGround&&this.cooldownTimer===0&&!isCollidingWithEnemy()){this.phaseState='phasing';this.phaseTimer=PHASE_DURATION;this.cooldownTimer=PHASE_COOLDOWN;playPhaseStart();this.flashAlpha=0.5;}}
+draw(){ctx.fillStyle=this.phaseState==='phasing'?colors.ghost:colors.player;ctx.fillRect(this.x*SCALE,this.y*SCALE,this.w*SCALE,this.h*SCALE);
+if(this.phaseState==='phasing'){let alpha=0.5+0.5*Math.sin(performance.now()/200);ctx.strokeStyle='rgba(255,255,255,'+alpha+')';ctx.lineWidth=4;ctx.strokeRect(this.x*SCALE,this.y*SCALE,this.w*SCALE,this.h*SCALE);}}
 }
-
-function spawnObstacle() {
-  const minGap = C.gap * scale; const maxH = H - minGap - 40*scale;
-  const topH = Math.random() * maxH + 20*scale;
-  obstacles.push({ x: W, top: topH, bottom: H - topH - minGap, passed: false, w: 60*scale });
+class Enemy{constructor(x){this.x=x;this.y=10;this.w=1;this.h=2;this.vx=2;this.state='idle';this.stunTimer=0;this.health=100;}
+update(dt){if(this.stunTimer>0){this.stunTimer-=dt*1000;if(this.stunTimer<=0)this.state='idle';}else{this.x+=this.vx*dt;if(this.x>15||this.x<5)this.vx*=-1;}}
+draw(){ctx.fillStyle=this.state==='stunned'?'#8e44ad':colors.enemy;ctx.fillRect(this.x*SCALE,this.y*SCALE,this.w*SCALE,this.h*SCALE);}}
+let player=new Player();
+let enemies=[new Enemy(8),new Enemy(12),new Enemy(18)];
+let score=0;
+let highScore=localStorage.getItem('phaseShiftHighScore')||0;
+let startTime=performance.now();
+function loop(){let now=performance.now();let dt=(now-lastTime)/1000;lastTime=now;update(dt);render();requestAnimationFrame(loop);}let lastTime=performance.now();loop();
+function update(dt){player.update(dt);enemies.forEach(e=>e.update(dt));checkCollisions();}
+function checkCollisions(){enemies.forEach(e=>{if(overlap(player,e)){if(player.phaseState==='phasing'){if(e.state!=='stunned'){e.state='stunned';e.stunTimer=1000;e.health-=10;if(e.health<=0){enemies.splice(enemies.indexOf(e),1);score+=100;playEnemyDefeat();}}}else{player.health-=10;playHit();if(player.health<=0){resetGame();}}}})
 }
-
-function update() {
-  if (!running) return;
-  player.v += C.gravity * scale; player.y += player.v;
-  player.trail.unshift({x: player.x, y: player.y, a: 1}); if (player.trail.length > 8) player.trail.pop();
-
-  const now = performance.now();
-  if (now - lastSpawnTime > C.spawnRate) {
-    spawnObstacle();
-    lastSpawnTime = now;
-  }
-
-  obstacles.forEach(o => { o.x -= C.speed * scale; });
-  obstacles = obstacles.filter(o => o.x + o.w > 0);
-
-  obstacles.forEach(o => {
-    if (!o.passed && o.x + o.w < player.x) { o.passed = true; score++; sfxPoint(); $('score').textContent = 'SCORE: ' + score; }
-    const px = player.x, py = player.y, pr = player.r;
-    if (px + pr > o.x && px - pr < o.x + o.w) {
-      if (py - pr < o.top || py + pr > H - o.bottom) { gameOver(); }
-    }
-  });
-
-  if (player.y - player.r < 0 || player.y + player.r > H) gameOver();
-
-  particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.02; p.r *= 0.95; });
-  particles = particles.filter(p => p.life > 0);
-
-  const elapsed = (performance.now() - startTime) / 1000;
-  $('timer').textContent = 'TIME: ' + elapsed.toFixed(2) + 's';
-}
-
-function draw() {
-  ctx.fillStyle = C.colors.bg; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#1a1a2e'; for(let i=0;i<W;i+=40*scale){ctx.fillRect(i,0,1*scale,H)};
-
-  player.trail.forEach((t,i) => { ctx.beginPath(); ctx.arc(t.x, t.y, player.r*(1-i/8), 0, Math.PI*2); ctx.fillStyle = C.colors.trail.replace('44', Math.floor(68*(1-i/8)).toString(16).padStart(2,'0')); ctx.fill(); });
-  ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2);
-  const grad = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, player.r);
-  grad.addColorStop(0, '#ffffff'); grad.addColorStop(1, C.colors.player); ctx.fillStyle = grad; ctx.fill();
-  ctx.shadowColor = C.colors.player; ctx.shadowBlur = 15; ctx.fill(); ctx.shadowBlur = 0;
-
-  obstacles.forEach(o => {
-    ctx.fillStyle = C.colors.obstacle; ctx.shadowColor = C.colors.obstacle; ctx.shadowBlur = 10;
-    ctx.fillRect(o.x, 0, o.w, o.top); ctx.fillRect(o.x, H - o.bottom, o.w, o.bottom);
-    ctx.shadowBlur = 0;
-  });
-
-  particles.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fillStyle = p.c; ctx.globalAlpha = p.life; ctx.fill(); ctx.globalAlpha = 1; });
-}
-
-function loop() { update(); draw(); animId = requestAnimationFrame(loop); }
-
-function jump() { if (!running) start(); else { player.v = C.jump * scale; sfxJump(); } }
-function start() { initAudio(); running = true; reset(); loop(); }
-function gameOver() {
-  running = false; cancelAnimationFrame(animId); sfxHit();
-  for(let i=0;i<20;i++) particles.push({x:player.x,y:player.y,vx:(Math.random()-1)*8,vy:(Math.random()-1)*8,r:Math.random()*6+2,c:C.colors.particle[Math.floor(Math.random()*3)],life:1});
-  if (score > hiScore) { hiScore = score; localStorage.setItem('neonDashHi', hiScore); $('hi').textContent = 'BEST: ' + hiScore; }
-  $('msg').innerHTML = `GAME OVER<br>SCORE: ${score}<br>TAP TO RESTART`; $('msg').classList.add('visible');
-}
-
-window.addEventListener('resize', resize);
-window.addEventListener('click', jump);
-window.addEventListener('keydown', e => { if(e.code==='Space'){e.preventDefault(); jump();} });
-
-resize();
-hiScore = parseInt(localStorage.getItem('neonDashHi') || '0');
-$('hi').textContent = 'BEST: ' + hiScore;
-$('msg').classList.add('visible');
+function resetGame(){player=new Player();enemies=[new Enemy(8),new Enemy(12),new Enemy(18)];score=0;startTime=performance.now();}
+function render(){ctx.fillStyle=colors.background;ctx.fillRect(0,0,width,height);player.draw();enemies.forEach(e=>e.draw());drawHUD();if(player.flashAlpha>0){ctx.fillStyle='rgba(255,255,255,'+player.flashAlpha+')';ctx.fillRect(0,0,width,height);}}
+function drawHUD(){ctx.fillStyle=colors.healthBar;ctx.fillRect(20,20,200,20);ctx.fillStyle=colors.text;ctx.fillRect(20,20,200*(player.health/100),20);ctx.fillStyle=colors.text;ctx.font='16px Arial';ctx.fillText('Health',20,60);
+let cx=240,cy=30,r=15;ctx.beginPath();ctx.arc(cx,cy,r,0,-2*Math.PI*(player.cooldownTimer/PHASE_COOLDOWN));ctx.strokeStyle=colors.phaseMeter;ctx.lineWidth=3;ctx.stroke();ctx.fillStyle=colors.text;ctx.fillText('Phase',cx-15,cy+5);
+ctx.fillStyle=colors.text;ctx.fillText('Phase: '+(player.cooldownTimer/1000).toFixed(1)+'s',280,30);
+ctx.fillStyle=colors.text;ctx.fillText('Score: '+score,20,90);
+ctx.fillStyle=colors.text;ctx.fillText('High: '+highScore,20,110);
+let elapsed=(performance.now()-startTime)/1000;ctx.fillStyle=colors.text;ctx.fillText('Time: '+elapsed.toFixed(1)+'s',width-120,30);
+if(score>highScore){highScore=score;localStorage.setItem('phaseShiftHighScore',highScore);}}
+function overlap(a,b){return a.x+a.w>b.x&&a.x<a.x+b.w&&a.y+a.h>b.y&&a.y<a.y+b.h;}
+function isCollidingWithEnemy(){return enemies.some(e=>overlap(player,e));}
+window.addEventListener('keydown',e=>{if(e.key==='e'||e.key==='E'){player.startPhase();}});
