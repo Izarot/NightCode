@@ -19,17 +19,17 @@ The goal is simple: **Destroy targets. Get high scores. Don't die.**
 | **Restart** | `R` | — |
 
 ### 💡 Pro Tips
-*   **Chain Reactions:** Bullets bounce off each other! Use this to hit multiple targets with a single shot to skyrocket your multiplier.
-*   **Watch the Bosses:** Every 5 levels, a massive Boss appears. You'll need precision and speed to take them down.
-*   **Grab Power-ups:** Look out for *Rapid Fire*, *Piercing*, and *Chain Shot* to turn your turret into a weapon of mass destruction.
+* **Chain Reactions:** Bullets bounce off each other! Use this to hit multiple targets with a single shot to skyrocket your multiplier.
+* **Watch the Bosses:** Every 5 levels, a massive Boss appears. You'll need precision and speed to take them down.
+* **Grab Power-ups:** Look out for *Rapid Fire*, *Piercing*, and *Chain Shot* to turn your turret into a weapon of mass destruction.
 
 ---
 
-## 🛠️ Tech Stack
-*   **Engine:** Custom Physics + Vanilla Canvas API
-*   **Language:** TypeScript
-*   **Bundler:** Vite + Rollup
-*   **Testing:** Vitest & Cypress
+## 📠️ Tech Stack
+* **Engine:** Custom Physics + Vanilla Canvas API
+* **Language:** TypeScript
+* **Bundler:** Vite + Rollup
+* **Testing:** Vitest & Cypress
 
 ---
 
