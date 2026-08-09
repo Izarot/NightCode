@@ -60,7 +60,7 @@ function updateGameLogic() {
         initLevel(currentLevel);
         startTime = performance.now();
       } else {
-        alert(`Level Complete! Time: ${elapsed.toFixed(2)}s`);
+        alert('Level Complete! Time: ' + elapsed.toFixed(2) + 's');
       }
     }, 500);
   }

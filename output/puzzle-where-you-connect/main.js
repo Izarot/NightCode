@@ -61,9 +61,9 @@ function draw() {
 }
 
 function drawUI() {
-  document.getElementById('levelDisplay').textContent = `Level ${currentLevel + 1}/${levels.length}`;
-  document.getElementById('timerDisplay').textContent = `Time: ${elapsed.toFixed(2)}s`;
-  document.getElementById('progressBar').style.width = `${getProgress()}%`;
+  document.getElementById('levelDisplay').textContent = 'Level ' + (currentLevel + 1) + '/' + levels.length;
+  document.getElementById('timerDisplay').textContent = 'Time: ' + elapsed.toFixed(2) + 's';
+  document.getElementById('progressBar').style.width = getProgress() + '%';
 }
 
 // Start game
