@@ -1,18 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Ocean Cleanup Quest</title>
-  <link rel="manifest" href="manifest.json" />
-  <style>
-    html,body{margin:0;padding:0;background:#000;overflow:hidden;font-family:sans-serif}
-    #gameCanvas{display:block;width:100vw;height:100vw;max-width:100%;background:#000}
-    .hud{position:absolute;top:0;left:0;width:100%;pointer-events:none}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosmic Catch</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎣%3C/text%3E%3C/svg%3E">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a1a2f; color: #00ffff; font-family: 'Courier New', monospace; overflow: hidden; }
+        #gameContainer { width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        canvas { background: #0a1a2f; display: block; }
+        .hidden { display: none; }
+        .button { background: rgba(0, 255, 255, 0.2); border: 1px solid #00ffff; color: #00ffff; padding: 8px 16px; margin: 10px; cursor: pointer; border-radius: 4px; font-family: inherit; }
+        .button:hover { background: rgba(0, 255, 255, 0.4); }
+        #menu, #gameOver { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0,0,0,0.7); padding: 20px; border-radius: 8px; }
+        #hud { position: absolute; top: 10px; left: 10px; color: #00ffff; font-size: 16px; }
+        #timer { position: absolute; top: 10px; right: 10px; }
+        #tugGauge { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 200px; height: 20px; background: rgba(0,0,0,0.5); border: 1px solid #00ffff; border-radius: 10px; overflow: hidden; }
+        #tugFill { height: 100%; background: linear-gradient(to right, #ff00ff, #00ffff); width: 0%; }
+        #lineLengthBar { position: absolute; bottom: 20px; right: 20px; width: 200px; height: 20px; background: rgba(0,0,0,0.5); border: 1px solid #00ffff; border-radius: 10px; overflow: hidden; }
+        #lineFill { height: 100%; background: #00ffff; width: 0%; }
+        #upgradePanel { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.7); border: 1px solid #00ffff; border-radius: 8px; padding: 10px; min-width: 200px; }
+        .upgradeItem { margin: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+        .upgradeItem button { background: rgba(255,0,255,0.3); border: 1px solid #ff00ff; color: #ff00ff; padding: 4px 8px; border-radius: 4px; }
+        #inventory { position: absolute; top: 10px; right: 10px; }
+        .inventoryItem { display: inline-block; margin: 5px; width: 30px; height: 30px; background: rgba(0,255,255,0.2); border: 1px solid #00ffff; border-radius: 4px; text-align: center; line-height: 30px; font-size: 14px; }
+    </style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="1280" height="720"></canvas>
-  <script src="src/main.js"></script>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+    </div>
+    <div id="menu" class="hidden">
+        <h1>Cosmic Catch</h1>
+        <p>Neon-lit cosmic fishing adventure</p>
+        <button id="startButton" class="button">Start Game</button>
+        <button id="instructionsButton" class="button">How to Play</button>
+    </div>
+    <div id="instructions" class="hidden">
+        <h2>How to Play</h2>
+        <p><strong>Cast:</strong> Drag to set angle & power</p>
+        <p><strong>Reel:</strong> Hold to pull line back</p>
+        <p><strong>Catch:</strong> Release before tug meter fills</p>
+        <p><strong>Move:</strong> WASD/Arrows to drift vessel</p>
+        <p><strong>Quick Cast:</strong> Spacebar</p>
+        <button id="backButton" class="button">Back</button>
+    </div>
+    <div id="gameOver" class="hidden">
+        <h1>Game Over</h1>
+        <p>Score: <span id="finalScore"></span></p>
+        <p>High Score: <span id="highScore"></span></p>
+        <button id="restartButton" class="button">Play Again</button>
+    </div>
+    <div id="hud">
+        Score: <span id="score">0</span><br>
+        <div id="tugGauge"><div id="tugFill"></div></div><br>
+        Line: <div id="lineLengthBar"><div id="lineFill"></div></div>
+    </div>
+    <div id="timer">Time: <span id="timeValue">0s</span></div>
+    <div id="upgradePanel">
+        <h3>Upgrades</h3>
+        <div id="upgradeList"></div>
+    </div>
+    <div id="inventory"></div>
+    <script type="module" src="/src/main.js"></script>
 </body>
 </html>

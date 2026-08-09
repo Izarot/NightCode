@@ -1,10 +1,23 @@
-import { Game } from './core/Game.js';
+import { Game } from './game.js';
+import { StateManager } from './state.js';
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const game = new Game(canvas, ctx);
-function loop(){
-  game.update();
-  game.render();
-  requestAnimationFrame(loop);
+
+// Resize canvas to fit window
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 }
-requestAnimationFrame(loop);
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+const game = new Game(canvas, ctx);
+const stateManager = new StateManager(game);
+
+// Start with menu state
+stateManager.changeState('menu');
+
+game.setStateManager(stateManager);
+game.start();
