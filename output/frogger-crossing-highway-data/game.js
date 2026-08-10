@@ -21,8 +21,15 @@ const COLORS = {
 };
 
 // Audio Engine (Web Audio API)
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioCtx;
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
 function playSound(freq, type, duration) {
+    if (!audioCtx) return;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = type;
@@ -114,10 +121,12 @@ function gameOver() {
         localStorage.setItem('df_highscore', highScore);
     }
     playSound(150, 'awtooth', 0.5);
+    clearInterval(timerInterval);
 }
 
 // Input Handling
 window.addEventListener('keydown', e => {
+    initAudio();
     if (gameState!== 'PLAYING') {
         if (gameState === 'MENU' || gameState === 'GAMEOVER') {
             score = 0;
@@ -139,6 +148,10 @@ window.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight' || e.key === 'd') { player.targetX += TILE_SIZE; moved = true; }
 
     if (moved) {
+        // Clamp movement
+        player.targetX = Math.max(0, Math.min(canvas.width - TILE_SIZE, player.targetX));
+        player.targetY = Math.max(0, Math.min(canvas.height - TILE_SIZE, player.targetY));
+        
         player.x = player.targetX;
         player.y = player.targetY;
         playSound(440, 'ine', 0.1);
@@ -147,12 +160,6 @@ window.addEventListener('keydown', e => {
 });
 
 function checkCollision() {
-    // Bounds
-    if (player.x < 0) player.x = 0;
-    if (player.y < 0) player.y = 0;
-    if (player.x >= canvas.width) player.x = canvas.width - TILE_SIZE;
-    if (player.y >= canvas.height) player.y = canvas.height - TILE_SIZE;
-
     // Win Condition
     if (player.y < TILE_SIZE) {
         score += 100;
@@ -165,9 +172,10 @@ function checkCollision() {
         if (player.x < obs.x + obs.w && player.x + TILE_SIZE > obs.x &&
             player.y < obs.y + obs.h && player.y + TILE_SIZE > obs.y) {
             lives--;
-            playSound(100, 'quare', 0.3);
-            if (lives <= 0) gameOver();
-            else {
+            playSound(100, 'awtooth', 0.3);
+            if (lives <= 0) {
+                gameOver();
+            } else {
                 player.x = 10 * TILE_SIZE;
                 player.y = 29 * TILE_SIZE;
                 player.targetX = 10 * TILE_SIZE;
@@ -220,10 +228,11 @@ function draw() {
     // UI
     ctx.fillStyle = '#fff';
     ctx.font = '20px Courier New';
+    ctx.textAlign = 'left';
     ctx.fillText(`SCORE: ${score}`, 20, 30);
     ctx.fillText(`HIGH: ${highScore}`, 20, 55);
     ctx.fillText(`TIME: ${timer}`, canvas.width / 2 - 30, 30);
-    ctx.fillText(`LIVES: ${'🐸'.repeat(lives)}`, canvas.width - 150, 30);
+    ctx.fillText(`LIVES: ${'🐸'.repeat(Math.max(0, lives))}`, canvas.width - 150, 30);
 
     if (gameState === 'MENU') {
         ctx.fillStyle = 'rgba(0,0,0,0.7)';

@@ -3,8 +3,8 @@
 ## How to Play
 
 🐸 **Move** the Data Frog with arrow keys, WASD, or touch swipes.  
-💨 **Double-tap** up to **Data Leap** over a single packet (cooldown: 3s).  
-🛡️ Collect **Power-ups** (Shield, Speed Boost, Freeze) to survive longer!  
+💪 **Double-tap** up to **Data Leap** over a single packet (cooldown: 3s).  
+✨ Collect **Power-ups** (Shield, Speed Boost, Freeze) to survive longer!  
 🏁 Reach the **Data Hub** before time runs out to complete the level.  
 ⚠️ Avoid **data packets**, **firewalls**, and **glitches**—collision = game over!  
 
