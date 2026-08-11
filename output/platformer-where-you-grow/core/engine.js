@@ -1,0 +1,1 @@
+export class Game{constructor(){this.state='play';}update(dt){}render(){}}
