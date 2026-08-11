@@ -1,93 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chromatic Shadows</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0="0 100 100"><text y=".9em" font-size="90">🌈</text></svg>">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #050510;
-            color: #fff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            overflow: hidden;
-            touch-action: none;
-        }
-        #game-container {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        canvas {
-            display: block;
-            max-width: 100%;
-            max-height: 100%;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-        }
-        hud {
-            position: absolute;
-            pointer-events: none;
-            padding: 20px;
-            width: calc(100% - 40px);
-            display: flex;
-            justify-content: space-between;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(255,255,255,0.5);
-        }
-        hud-left { left: 0; }
-        hud-center { left: 50%; transform: translateX(-50%); }
-        hud-right { right: 0; }
-        #timer { color: #ff4757; }
-        #moves { color: #2ed573; }
-        #overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-        }
-        btn {
-            background: #5352ed;
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            margin: 10px;
-            font-size: 1.2rem;
-            cursor: pointer;
-            border-radius: 30px;
-            transition: transform 0.2s;
-            pointer-events: auto;
-        }
-        btn:hover { transform: scale(1.1); }
-        #high-score-display { position: absolute; bottom: 20px; left: 20px; font-size: 0.8rem; opacity: 0.6; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Chromatic Velocity</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{background:#121212;color:#fff;font-family:'Segoe UI',sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    #gameCanvas{display:block;max-width:100%;max-height:100vh;touch-action:none}
+    #uiOverlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:1rem}
+    .hud{display:flex;gap:1rem;font-family:monospace;font-size:1.2rem}
+    .hud div{background:rgba(0,0,0,0.6);padding:0.3rem 0.6rem;border-radius:4px;min-width:80px;text-align:center}
+    .menu{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;background:rgba(18,18,18,0.95);padding:2rem;border-radius:12px;border:2px solid #444;max-width:90vw}
+    .menu h1{margin-bottom:1rem;font-size:2.5rem;background:linear-gradient(90deg,#ff5555,#55ff55,#5555ff,#ffff55);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .menu p{margin:0.5rem 0;font-size:1.1rem;opacity:0.8}
+    .btn{background:linear-gradient(135deg,#ff5555,#cc0000);border:none;color:#fff;padding:0.8rem 2rem;font-size:1.2rem;border-radius:6px;cursor:pointer;margin:0.5rem;transition:transform 0.1s}
+    .btn:active{transform:scale(0.95)}
+    .btn.secondary{background:linear-gradient(135deg,#5555ff,#0000cc)}
+    .joystick-area{position:absolute;bottom:1rem;left:1rem;width:120px;height:120px;pointer-events:auto}
+    .color-btn{position:absolute;bottom:1rem;right:1rem;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.2);border:2px solid #fff;color:#fff;font-size:1.5rem;display:flex;align-items:center;justify-content:center;pointer-events:auto}
+    @media (max-width:600px){.hud{font-size:0.9rem}.hud div{padding:0.2rem 0.4rem;min-width:60px}}
+  </style>
 </head>
 <body>
-    <div id="game-container">
-        <div class="hud hud-left"><div id="moves">MOVES: 0</div></div>
-        <div class="hud hud-center"><div id="level-title">LEVEL 1</div></div>
-        <div class="hud hud-right"><div id="timer">00:00</div></div>
-        
-        <canvas id="gameCanvas"></canvas>
-
-        <div id="overlay">
-            <h1 id="overlay-title">LEVEL COMPLETE</h1>
-            <button class="btn" id="restart-btn">RETRY</button>
-            <button class="btn" id="next-btn">NEXT LEVEL</button>
-        </div>
-
-        <div id="high-score-display">BEST TIME: <span id="best-time">--</span></div>
+  <canvas id="gameCanvas"></canvas>
+  <div id="uiOverlay">
+    <div class="hud">
+      <div>LIVES: <span id="lives">3</span></div>
+      <div>SCORE: <span id="score">0</span></div>
+      <div>COMBO: <span id="combo">x1</span></div>
+      <div>TIME: <span id="timer">0.00</span></div>
+      <div>BEST: <span id="best">0</span></div>
     </div>
-    <script src="game.js"></script>
+    <div class="joystick-area" id="joystick"></div>
+    <button class="color-btn" id="colorBtn">🎨</button>
+  </div>
+  <div class="menu" id="startMenu">
+    <h1>CHROMATIC VELOCITY</h1>
+    <p>Match colors to survive. WASD/Arrows to move, Space/Tap to shift color.</p>
+    <button class="btn" id="startBtn">START RUN</button>
+  </div>
+  <div class="menu" id="gameOverMenu" style="display:none">
+    <h1>RUN ENDED</h1>
+    <p>Final Score: <span id="finalScore">0</span></p>
+    <p>Time: <span id="finalTime">0.00</span>s</p>
+    <button class="btn" id="retryBtn">RETRY</button>
+    <button class="btn secondary" id="quitBtn">QUIT</button>
+  </div>
+  <script>
+    // Game constants
+    const COLORS = ['#FF5555','#55FF55','#5555FF','#FFFF55'];
+    const LOGICAL_W = 800, LOGICAL_H = 450;
+    const DRAG = 0.98;
+    const COLOR_COOLDOWN = 200;
+    const MAX_LIVES = 3;
+    
+    // State
+    let state = 'menu'; // menu, playing, gameover
+    let score = 0, combo = 1, lives = MAX_LIVES;
+    let highScore = parseInt(localStorage.getItem('cv_high')||'0',10);
+    let startTime = 0, elapsed = 0;
+    let screenShake = 0;
+    
+    // Entities
+    const player = {x:LOGICAL_W/2,y:LOGICAL_H/2,vx:0,vy:0,radius:18,colorIdx:0,colorCd:0};
+    const obstacles = [];
+    const particles = [];
+    
+    // Input
+    const keys = {};
+    let joystickActive = false, joystickStart = {x:0,y:0}, joystickCurrent = {x:0,y:0};
+    
+    // Audio
+    const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    function beep(freq,type,dur,vol=0.1){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.value=freq;o.type=type;g.gain.value=vol;o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}
+    function sfxMatch(){beep(880,'sine',0.08,0.15);beep(1320,'sine',0.08,0.1);}
+    function sfxHit(){beep(120,'sawtooth',0.15,0.2);}
+    function sfxShift(){beep(440,'triangle',0.05,0.1);}
+    
+    // Canvas setup
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    function resize(){const r=Math.min(window.innerWidth/LOGICAL_W,window.innerHeight/LOGICAL_H);canvas.width=LOGICAL_W*r;canvas.height=LOGICAL_H*r;canvas.style.width=LOGICAL_W*r+'px';canvas.style.height=LOGICAL_H*r+'px';}
+    window.addEventListener('resize',resize);resize();
+    
+    // Helpers
+    function rand(min,max){return Math.random()*(max-min)+min;}
+    function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min;}
+    function spawnObstacle(){const side=randInt(0,3);let x,y,vx,vy;const speed=3+score*0.02;if(side===0){x=rand(0,LOGICAL_W);y=-20;vx=rand(-1,1);vy=speed}else if(side===1){x=LOGICAL_W+20;y=rand(0,LOGICAL_H);vx=-speed;vy=rand(-1,1)}else if(side===2){x=rand(0,LOGICAL_W);y=LOGICAL_H+20;vx=rand(-1,1);vy=-speed}else{x=-20;y=rand(0,LOGICAL_H);vx=speed;vy=rand(-1,1)}const type=randInt(0,2);obstacles.push({x,y,vx,vy,radius:16+rand(0,10),colorIdx:randInt(0,3),type,life:0,trail:[]});}
+    function spawnParticles(x,y,color){for(let i=0;i<12;i++){const ang=rand(0,Math.PI*2),spd=rand(2,6);particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,color,life:1,decay:rand(0.02,0.04)});}}
+    function resetGame(){score=0;combo=1;lives=MAX_LIVES;player.x=LOGICAL_W/2;player.y=LOGICAL_H/2;player.vx=player.vy=0;player.colorIdx=0;obstacles.length=0;particles.length=0;startTime=performance.now();elapsed=0;screenShake=0;}
+    
+    // Input handlers
+    window.addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Space'&&state==='playing')shiftColor();});
+    window.addEventListener('keyup',e=>{keys[e.code]=false;});
+    
+    const joystickEl=document.getElementById('joystick');
+    joystickEl.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];joystickActive=true;joystickStart.x=t.clientX;joystickStart.y=t.clientY;joystickCurrent.x=t.clientX;joystickCurrent.y=t.clientY;},{passive:false});
+    joystickEl.addEventListener('touchmove',e=>{e.preventDefault();if(!joystickActive)return;const t=e.touches[0];joystickCurrent.x=t.clientX;joystickCurrent.y=t.clientY;},{passive:false});
+    joystickEl.addEventListener('touchend',()=>{joystickActive=false;});
+    
+    document.getElementById('colorBtn').addEventListener('touchstart',e=>{e.preventDefault();if(state==='playing')shiftColor();},{passive:false});
+    
+    function shiftColor(){if(player.colorCd>0)return;player.colorIdx=(player.colorIdx+1)%COLORS.length;player.colorCd=COLOR_COOLDOWN;sfxShift();}
+    
+    // Menu buttons
+    document.getElementById('startBtn').onclick=()=>{state='playing';document.getElementById('startMenu').style.display='none';resetGame();};
+    document.getElementById('retryBtn').onclick=()=>{state='playing';document.getElementById('gameOverMenu').style.display='none';resetGame();};
+    document.getElementById('quitBtn').onclick=()=>{state='menu';document.getElementById('gameOverMenu').style.display='none';document.getElementById('startMenu').style.display='flex';};
+    
+    // Update
+    function update(dt){
+      if(state!=='playing')return;
+      elapsed=(performance.now()-startTime)/1000;
+      
+      // Player input
+      let ax=0,ay=0;
+      if(keys['ArrowUp']||keys['KeyW'])ay=-1;
+      if(keys['ArrowDown']||keys['KeyS'])ay=1;
+      if(keys['ArrowLeft']||keys['KeyA'])ax=-1;
+      if(keys['ArrowRight']||keys['KeyD'])ax=1;
+      if(joystickActive){const dx=joystickCurrent.x-joystickStart.x,dy=joystickCurrent.y-joystickStart.y;const dist=Math.hypot(dx,dy);if(dist>5){ax=dx/dist;ay=dy/dist;}}
+      const accel=800;
+      player.vx+=ax*accel*dt;player.vy+=ay*accel*dt;
+      player.vx*=DRAG;player.vy*=DRAG;
+      const maxSpeed=400;const spd=Math.hypot(player.vx,player.vy);if(spd>maxSpeed){player.vx=player.vx/spd*maxSpeed;player.vy=player.vy/spd*maxSpeed;}
+      player.x+=player.vx*dt;player.y+=player.vy*dt;
+      player.x=Math.max(player.radius,Math.min(LOGICAL_W-player.radius,player.x));
+      player.y=Math.max(player.radius,Math.min(LOGICAL_H-player.radius,player.y));
+      if(player.colorCd>0)player.colorCd-=dt*1000;
+      
+      // Spawn obstacles
+      if(Math.random()<0.02+score*0.0001)spawnObstacle();
+      
+      // Update obstacles
+      for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];o.trail.unshift({x:o.x,y:o.y});if(o.trail.length>8)o.trail.pop();o.life+=dt;
+        if(o.type===1){o.vx+=Math.sin(o.life*5)*30*dt;}
+        else if(o.type===2){const dx=player.x-o.x,dy=player.y-o.y;const dist=Math.hypot(dx,dy);if(dist>0){o.vx+=dx/dist*50*dt;o.vy+=dy/dist*50*dt;}}
+        o.x+=o.vx*dt;o.y+=o.vy*dt;
+        // Remove if far off screen
+        if(o.x<-100||o.x>LOGICAL_W+100||o.y<-100||o.y>LOGICAL_H+100){obstacles.splice(i,1);continue;}
+        // Collision
+        const dx=player.x-o.x,dy=player.y-o.y;const dist=Math.hypot(dx,dy);
+        if(dist<player.radius+o.radius){
+          if(player.colorIdx===o.colorIdx){
+            score+=10*combo;combo=Math.min(10,combo+1);sfxMatch();spawnParticles(o.x,o.y,COLORS[o.colorIdx]);obstacles.splice(i,1);
+          }else{
+            lives--;combo=1;sfxHit();screenShake=150;obstacles.splice(i,1);
+            if(lives<=0){state='gameover';document.getElementById('finalScore').textContent=score;document.getElementById('finalTime').textContent=elapsed.toFixed(2);document.getElementById('gameOverMenu').style.display='flex';if(score>highScore){highScore=score;localStorage.setItem('cv_high',highScore);}}
+          }
+        }
+      }
+      
+      // Particles
+      for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life-=p.decay;if(p.life<=0)particles.splice(i,1);}
+      
+      // Screen shake decay
+      if(screenShake>0)screenShake-=dt*1000;
+    }
+    
+    // Render
+    function render(){
+      const scale=canvas.width/LOGICAL_W;
+      ctx.setTransform(scale,0,0,scale,0,0);
+      if(screenShake>0){ctx.translate(rand(-screenShake/100,screenShake/100)*2,rand(-screenShake/100,screenShake/100)*2);}
+      
+      // Background grid
+      ctx.fillStyle='#121212';ctx.fillRect(0,0,LOGICAL_W,LOGICAL_H);
+      ctx.strokeStyle='rgba(255,255,255,0.03)';ctx.lineWidth=1;
+      const gridSize=40;const offset=(elapsed*50)%gridSize;
+      for(let x=-gridSize;x<LOGICAL_W+gridSize;x+=gridSize){ctx.beginPath();ctx.moveTo(x+offset,0);ctx.lineTo(x+offset,LOGICAL_H);ctx.stroke();}
+      for(let y=-gridSize;y<LOGICAL_H+gridSize;y+=gridSize){ctx.beginPath();ctx.moveTo(0,y+offset);ctx.lineTo(LOGICAL_W,y+offset);ctx.stroke();}
+      
+      // Obstacles
+      for(const o of obstacles){
+        // Trail
+        ctx.strokeStyle=COLORS[o.colorIdx];ctx.lineWidth=3;ctx.globalAlpha=0.3;
+        ctx.beginPath();ctx.moveTo(o.x,o.y);
+        for(const t of o.trail){ctx.lineTo(t.x,t.y);}
+        ctx.stroke();ctx.globalAlpha=1;
+        // Shape
+        ctx.fillStyle=COLORS[o.colorIdx];ctx.shadowColor=COLORS[o.colorIdx];ctx.shadowBlur=15;
+        if(o.type===0){ctx.beginPath();ctx.arc(o.x,o.y,o.radius,0,Math.PI*2);ctx.fill();}
+        else if(o.type===1){ctx.beginPath();ctx.moveTo(o.x,o.y-o.radius);ctx.lineTo(o.x+o.radius,o.y);ctx.lineTo(o.x,o.y+o.radius);ctx.lineTo(o.x-o.radius,o.y);ctx.closePath();ctx.fill();}
+        else{ctx.beginPath();for(let j=0;j<6;j++){const a=j*Math.PI/3;ctx.lineTo(o.x+Math.cos(a)*o.radius,o.y+Math.sin(a)*o.radius);}ctx.closePath();ctx.fill();}
+        ctx.shadowBlur=0;
+      }
+      
+      // Player
+      ctx.fillStyle=COLORS[player.colorIdx];ctx.shadowColor=COLORS[player.colorIdx];ctx.shadowBlur=25;
+      ctx.beginPath();ctx.arc(player.x,player.y,player.radius,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
+      // Color indicator ring
+      ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(player.x,player.y,player.radius+4,0,Math.PI*2);ctx.stroke();
+      
+      // Particles
+      for(const p of particles){ctx.fillStyle=p.color;ctx.globalAlpha=p.life;ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;
+      
+      // Reset transform
+      ctx.setTransform(scale,0,0,scale,0,0);
+      
+      // HUD update
+      document.getElementById('score').textContent=score;
+      document.getElementById('combo').textContent='x'+combo;
+      document.getElementById('lives').textContent=lives;
+      document.getElementById('timer').textContent=elapsed.toFixed(2);
+      document.getElementById('best').textContent=highScore;
+    }
+    
+    // Game loop
+    let last=0;
+    function loop(ts){const dt=Math.min((ts-last)/1000,0.05);last=ts;update(dt);render();requestAnimationFrame(loop);}
+    requestAnimationFrame(loop);
+  </script>
 </body>
 </html>
