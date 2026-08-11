@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Breakout</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>🚀</text></svg>">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #050510;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            touch-action: none;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 800px;
+            max-height: 600px;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.2);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            background: #0A0A23;
+        }
+        ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        hud-top {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 0 0 10px #00FFFF;
+        }
+        #timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-family: monospace;
+            color: #FF00FF;
+        }
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: auto;
+        }
+        btn {
+            padding: 15px 30px;
+            font-size: 24px;
+            background: #00FFFF;
+            border: none;
+            color: #000;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-weight: bold;
+            transition: transform 0.1s;
+        }
+        btn:active { transform: scale(0.95); }
+        h1 { font-size: 48px; margin: 0; color: #00FFFF; text-shadow: 0 0 20px #00FFFF; }
+        high-score { color: #FF00FF; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="ui-layer">
+            <div class="hud-top">
+                <div id="score-display">SCORE: 0</div>
+                <div id="lives-display">❤️❤️❤️</div>
+            </div>
+            <div id="timer">00:00.00</div>
+        </div>
+        <div id="overlay">
+            <h1 id="overlay-title">NEON BREAKOUT</h1>
+            <div id="high-score-display" class="high-score">HIGH SCORE: 0</div>
+            <button id="start-btn" class="btn">START GAME</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
