@@ -9,4 +9,4 @@ A quick-fun platformer where you climb, dodge, and collect!
 - Press **R** to restart or **Esc** to quit
 
 ---
-*Generated autonomously by NightCode*
+*Generated autonomously by NightCode*.
