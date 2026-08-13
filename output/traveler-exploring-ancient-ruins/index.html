@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Dash</title>
+  <link rel="icon" href="data:,🎮" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #0d0d1a; color: #fff; }
+    #gameContainer { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+    canvas { width: 100%; height: 100%; max-width: 800px; max-height: 600px; background: #1a1a2e; display: block; image-rendering: pixelated; }
+    .overlay { position: absolute; top: 10px; left: 10px; font-size: 18px; color: #00f3ff; text-shadow: 0 0 8px #00f3ff; }
+    .hidden { display: none; }
+    button { padding: 10px 20px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; background: #00f3ff; color: #0d0d1a; font-weight: bold; }
+    button:hover { background: #00d4e6; }
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div id="uiOverlay" class="overlay">
+      <div>Score: <span id="score">0</span></div>
+      <div>High Score: <span id="highScore">0</span></div>
+      <div>Time: <span id="timer">0.00</span>s</div>
+    </div>
+    <div id="menu" style="position:absolute; text-align:center;">
+      <h1 style="color:#00f3ff; text-shadow:0 0 10px #00f3ff; margin-bottom:20px;">NEON DASH</h1>
+      <button id="startBtn">Start Game</button>
+      <p style="margin-top:15px; color:#ff00ea;">Use Arrow Keys to move. Avoid obstacles!</p>
+    </div>
+    <div id="gameOver" class="hidden" style="position:absolute; text-align:center; color:#ff00ea;">
+      <h2>GAME OVER</h2>
+      <p id="finalScore">Score: 0</p>
+      <p id="finalTime">Time: 0.00s</p>
+      <button id="restartBtn">Restart</button>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
