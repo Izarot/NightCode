@@ -1,0 +1,1 @@
+class WebAudio {static createOscillator(freq){const osc = this.audioContext.createOscillator();osc.type = 'sine';osc.frequency.value = freq;osc.connect(this.audioContext.destination);osc.start();return osc;}static playSound(buffer){const source = this.audioContext.createBufferSource();source.buffer = buffer;source.connect(this.audioContext.destination);source.start();}}

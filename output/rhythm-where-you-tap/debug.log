@@ -1,0 +1,340 @@
+JSON Decode Error: Extra data: line 1 column 40 (char 39)
+
+Raw LLM Output that failed to parse:
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - User wants a complete HTML5 Canvas rhythm game called "Tunnel Rhythm Runner"
+   - They provided an extremely detailed specification
+   - They explicitly requested: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."})"
+   - They said: "Do NOT include markdown block formatting like ```json or any conversational commentary."
+   - They mentioned "SNEAKY FEATURE 1-4" and various features
+   - They also gave a previous feedback/error: "Even after continuation, JSON was invalid: Expecting property name enclosed in double quotes: line 1 column 3 (char 2). Start over and write shorter code."
+
+2.  **Deconstruct the Requirements:**
+   - Need to output a JSON object
+   - Keys are filenames, values are complete code contents
+   - Must be valid JSON
+   - Must not use markdown formatting
+   - Must include the game implementation
+   - Should be concise/short given the "write shorter code" feedback
+
+   The challenge: Fitting a complete game into a single JSON response with reasonable file sizes. I need to create a minimal but functional Tunnel Rhythm Runner with the core features mentioned.
+
+   Key features to include:
+   - HTML canvas game
+   - Rhythm-based obstacle avoidance
+   - Lane system (3 lanes)
+   - Jump mechanics
+   - Beat detection
+   - Obstacles (walls, spikes)
+   - Scoring/combo
+   - Health system
+   - LocalStorage high score
+   - Emoji favicon
+   - Responsive canvas
+   - Simple sound effects using Web Audio API
+   - Speedrun timer
+   - HUD elements
+
+   Given the constraint of "shorter code", I'll create a compact but complete implementation. I'll use minimal assets (I'll embed simple SVG data URLs or use canvas drawing instead of external images). I'll use Web Audio API for basic tones. I'll implement the game logic in a single JS file for simplicity, with HTML and CSS embedded or in separate files.
+
+   Let me plan the files:
+   - `index.html` - Main HTML with canvas, favicon
+   - `game.js` - All game logic, rendering, input, audio
+   - `styles.css` - Basic styling (optional, can go in HTML)
+
+   Actually, to keep it as a JSON object mapping filenames to code, I'll have:
+   - `index.html`
+   - `game.js`
+   - Maybe `styles.css` but I can put CSS in HTML or make it minimal.
+
+   Let me think about how to make this work within reasonable JSON size. I'll use:
+   - Data URLs for any graphics (or just draw with canvas)
+   - Web Audio API for sound generation (OscillatorNode)
+   - Keyboard/touch input
+   - LocalStorage for high score
+   - Responsive canvas
+
+   I'll keep the code concise but functional. Let me structure the JSON.
+
+   Actually, looking at the constraint: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."})". So I need to output just the JSON, no markdown, no commentary.
+
+   Let me create a minimal but complete implementation. I'll aim for maybe 3 files: index.html, game.js, and maybe a minimal styles.css or just inline styles in HTML.
+
+   Let me draft the code mentally:
+
+   `index.html`:
+   - Canvas element
+   - Meta tags
+   - Link to favicon (emoji favicon - I'll use an emoji character as favicon data URI or just a simple data URI)
+   - Script tag for game.js
+   - Body styles for responsive canvas
+
+   `game.js`:
+   - Initialize canvas, resize handling
+   - Game state machine
+   - Beat detection using BPM
+   - Lane system (3 lanes)
+   - Player avatar with jump physics
+   - Obstacle pool
+   - Collision detection
+   - Scoring/combo
+   - Health system
+   - LocalStorage high score
+   - Sound effects via Web Audio API
+   - Speedrun timer
+   - HUD drawing
+   - Game loop
+
+   This is quite a lot of code, but I'll try to compress it while keeping it functional. I'll use concise variable names, combine where possible, and use canvas drawing extensively.
+
+   Let me think about the structure more carefully. Given the "shorter code" feedback, I should make it as compact as possible while implementing the core features.
+
+   Key decisions:
+   - Use a single game.js file with everything
+   - HTML will have the canvas and minimal setup
+   - No external assets - everything drawn or generated procedurally
+   - Sound generated via Web Audio API oscillators
+   - Input: keyboard (arrows/space) and touch
+   - Beat: simple BPM timing, no actual audio analysis
+   - Obstacles: move left, random types
+   - Visuals: simple colors, shapes
+
+   Let me start drafting. I'll write the JSON carefully, making sure all strings are properly escaped (especially newlines, quotes). I'll use template literals or just careful formatting.
+
+   Actually, since I'm outputting raw JSON, I need to be extremely careful with escaping. I'll write the code contents as strings within JSON. I need to escape all double quotes inside the code, and handle newlines properly (I can use \n or actual newlines if the JSON parser handles it, but safest is to use \n and avoid unescaped newlines in strings).
+
+   Wait, JSON strings cannot contain literal newlines; they must be escaped as \n. But some JSON parsers accept raw newlines in strings if they're just whitespace, but to be safe I'll use \n.
+
+   Let me plan the files:
+
+   1. `index.html` - Contains canvas, meta, favicon (emoji data URI), and script include
+   2. `game.js` - All the game logic
+
+   I'll try to keep game.js under maybe 800-1000 lines of actual code, but compressed. Actually, given the constraints, maybe I should make it even smaller. Let me think of a minimal viable implementation.
+
+   Let me reconsider: The user wants a complete Tunnel Rhythm Runner game. But also said "Start over and write shorter code." So I need to balance completeness with brevity.
+
+   I'll create a compact but functional game. Let me outline the game.js logic:
+
+   ```javascript
+   // minimal Tunnel Rhythm Runner
+   // ... I'll write it properly
+   ```
+
+   Actually, let me just start writing the JSON structure and fill in the code. I'll be very careful with escaping.
+
+   Let me think about the favicon feature: "Add a cool emoji favicon in the HTML head." I'll use a data URI emoji, e.g., `🚀` or `🎮`. Data URI format: `data:image/svg+xml;base64,...` or just use `manifest` but simpler: `<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%200%20100%20100%22><text y=%2250%22 font-size=%2250%22>🎮</text></svg>">`. I'll use a simple emoji data URI or just a PNG base64, but SVG with emoji is easiest.
+
+   Actually, simplest: `<link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiPgogPHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIHJ4PSI1MCIgcnk9IjUwIiBmaWxsPSIjMDAwIi8+CiAgPC9zdmc+">` but that's for a square. I'll just use a text emoji as data URI: `data:image/svg+xml;charset=UTF-8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%200%20100%20100%22><text y=%2250%22 font-size=%2260%22>🎮</text></svg>`. I'll embed that in HTML.
+
+   Now, let me think about the code structure. I'll try to make game.js relatively short by using a single loop, minimal classes, and procedural generation.
+
+   Given the complexity, maybe I should split into two files: index.html and game.js. I'll keep it to two files to reduce JSON size and complexity.
+
+   Let me draft the actual code content mentally, then format as JSON strings.
+
+   index.html:
+   ```html
+   <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Tunnel Rhythm Runner</title><link rel="icon" href="data:image/svg+xml;charset=UTF-8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%200%20100%20100%22><text y=%2250%22 font-size=%2260%22>🎮</text></svg>"><style>body{margin:0;overflow:hidden;background:#111}<canvas id=c></canvas></style></head><body><script src="game.js"></script></body></html>
+   ```
+
+   Wait, the data URI has special characters that need encoding in JSON. The `"` inside the SVG needs to be `\"` in JSON, and the `%22` etc. will be fine. But in the JSON string, I need to escape the double quotes properly. Actually, it's easier to use a base64 encoded SVG or a simple emoji character directly as the favicon href? Browsers accept `href="🎮"`? Not really. Better to use a data URI with base64.
+
+   Let me use a simple base64: `data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/5+hHgAFgwJ/l5X5AAAAAElFTkSuQmCC` but that's a transparent PNG. I can just use an emoji as text favicon with `<title>` but the requirement says "emoji favicon in the HTML head". I'll use a minimal SVG data URI.
+
+   Actually, to avoid escaping hell, I'll just put the emoji inside a `<link rel="icon" href="data:image/svg+xml;base64,...">` and compute the base64. But I can't compute base64 in the response. I'll just use a simple approach: `<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22%3E%3Ctext%20y=%2250%22%20font-size=%2250%22%3E🎮%3C/text%3E%3C/svg%3E">` - the `%3C` and `%3E` are URL-encoded `<` and `>`, and `%22` is `"`. In the JSON string, I'll need to handle this carefully.
+
+   Maybe easier: just use a standard emoji as the favicon file reference? But the requirement says "Add a cool emoji favicon in the HTML head." I can just use `<link rel="icon" href="data:image/svg+xml;charset=UTF-8,%F0%9F%8E%AE">` - the UTF-8 encoded emoji. But in JSON string, I need to escape or not. Actually, raw UTF-8 characters are allowed in JSON strings (RFC 7159), so I can just include the actual emoji character. Let me test mentally: `%F0%9F%8E%AE` is the URL encoding of 🎮. In JSON, I can just write the actual emoji character 🎮, and it's valid JSON as long as the file is saved as UTF-8. Since I'm outputting raw JSON text, I can include the literal emoji character. That's the simplest.
+
+   So: `<link rel="icon" href="🎮">` - wait, does that work? Browsers might not accept just an emoji as href. Better to use `data:` URI with the emoji encoded, or use a real favicon path. Given the constraint, I'll use a data URI with base64 of a minimal SVG. I'll just hardcode a small base64 string. Let me think of a way that's easy to escape.
+
+   Actually, I'll skip the data URI and just use `<link rel="icon" href="favicon.ico">` but that requires a file. Since I only have the JSON, I'll embed a minimal SVG data URI. I'll use base64: `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjMDAwIiB5PSI1MCIgd2lkdGg9IjEwMCIgcng9IjUwIiBmaWxsPSJub25lIiB8LCB0ZXh0LWFsaW1hdGlvbj0gdmVyaWZ5IDwtY2Vzc2lvbiA+PHRleHQgtb3RpdmVyPjx0ZXh0IHN0eWxlPSJzdHJva2U6I3B4Ij5Qcm9kdWNlIGRldlJlc3BvbnNlPC90ZXh0Pjwvc3ZnPg==` - but I don't know if that decodes to an emoji. Let me just use a known emoji base64. Actually, I can use a yellow circle: `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEcd+4K4A...` this is getting messy.
+
+   Let me reconsider: The requirement is "Add a cool emoji favicon in the HTML head." I can just add `<meta name="theme-color" content="#ff0000">` and use a simple `<link rel="shortcut icon" href="data:image/svg+xml;charset=UTF-8,%F0%9F%94%A5">` but the `%` signs need to be handled. In JSON string, I can just put the raw UTF-8 bytes as the emoji character. Many browsers accept `href="🎮"` actually, though it's non-standard. To be safe, I'll use a data URI with the emoji as a text content in SVG, and I'll encode the SVG part carefully.
+
+   You know what, let me just use a simple approach: I'll put the emoji as the favicon using a minimal data URI that I know works. I'll use: `data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHg9IjAiIHk9IjAiIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9VW5peC8lMjMlMjMlMjNodHRwLmNvbW1hbmQubmV0L2ltYWdlcyUyMiUzRSIgc3R5bGU9ImZpbGw6I2ZmZyIgcGF0aD0iQXJpYWwsIEV4cG9ydGVfTWF4JyBmaWxsPSIjZmZmIj5Qcm9kdWNlIGZpbGw8L3N2Zz4=` - this decodes to an SVG with a circle. Not an emoji, but "cool" enough. Actually, let me just use a known emoji SVG base64. I recall that `😀` base64 SVG data URI exists. But I'm spending too much time on this.
+
+   Let me simplify: I'll just add `<link rel="icon" href="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22%3E%3Ccircle%20cx=%2250%22%20cy=%2250%22%20r=%2240%22%20fill=%22%23f0f%22/%3E%3Ctext%20x=%2250%22%20y=%%2250%%22%20text-anchor=%22middle%22%20fill=%22%23fff%22%3E🎮%3C/text%3E%3C/svg%3E">` - but I need to URL-encode the `%22` etc. In JSON string, I'll have literal characters. This is a nightmare.
+
+   Alternative: I'll just put a simple `<title>🎮 Tunnel Rhythm Runner</title>` and use a standard favicon path or omit it, but the requirement is specific. Let me re-read: "SNEAKY FEATURE 2: Add a cool emoji favicon in the HTML head." I'll just add a `<link rel="icon" href="data:image/svg+xml;base64,....">` with a base64-encoded minimal SVG that looks cool. I'll compute a simple one: a magenta circle with 🎮 text. Actually, I can use a data URI that's just `data:image/gif;base64,R0lGODdh...` but that's a GIF.
+
+   Let me take a step back. The JSON output will have the HTML string. I can include the favicon link with a data URI that has the emoji as a PNG base64. I can find a small emoji PNG base64 online mentally? Not really.
+
+   Maybe I should just use `<link rel="icon" href="🎮">` and hope browsers handle it, or use `href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAABPYF/1AAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAOwwAADsMBx2+oZAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlI1jGZS4gSGFnJz67AAAAAWJREFUeJxdk0FyAkAIhdD7S0fF6AWBhkMxGMhLXIsG0iWzWN6wH6IECAANgWJTCm6AAAAAElFTkSuQmCC"` - that's a transparent PNG. I can just use that as the favicon; it'll show as the default Chrome icon, not an emoji. But the requirement says "emoji favicon". Maybe I can use `<meta>` with emoji description, but no.
+
+   Okay, I'll just use a data URI with an SVG that has an emoji character in it, and I'll carefully construct the JSON string. Let me use base64 of a minimal SVG with emoji. I'll search my knowledge: The SVG base64 for an emoji favicon... I think I can just write the JSON with the emoji character directly in the href attribute value, like `href="🎮"`. Many modern browsers support this as a text-based favicon. It's not standard but works in Chrome/Firefox. I'll take that risk. It's the simplest.
+
+   Actually, let me check: `href="🎮"` in HTML link tag. Yes, it works in some browsers, shows the emoji as favicon. I'll use that. In JSON, the emoji character is just a Unicode character, perfectly valid in a JSON string. So I'll write: `"<link rel=\"icon\" href=\"🎮\">"` inside the HTML string. That's easy.
+
+   Wait, JSON string needs to escape the double quotes, but the emoji is fine. So: `"<link rel=\\\"icon\\\" href=\\\"🎮\\\">"` - no, in the JSON string value, I just need to escape the double quotes that delimit the JSON string. The HTML content inside the JSON string will have its own quotes. I need to be careful.
+
+   Let me plan the JSON structure properly.
+
+   I'll have two files:
+   - `index.html`
+   - `game.js`
+
+   The JSON will look like:
+   ```json
+   {"index.html": "<!DOCTYPE html>...", "game.js": "..."}
+   ```
+
+   Inside the HTML string, I need to escape all double quotes as `\"`, and newlines as `\n` or keep as actual newlines? JSON specification allows raw newlines in strings only if they are whitespace, but it's safer to use `\n`. However, many JSON generators output pretty-printed with actual newlines inside strings? No, JSON strings cannot contain literal unescaped newlines. They must be `\n`. So I'll use `\n` throughout, and escape `"` as `\"`.
+
+   This will make the strings long but valid.
+
+   Let me draft the game.js code mentally, trying to keep it compact.
+
+   Game.js will have:
+   - Canvas setup
+   - Resize handling
+   - Game state
+   - Beat tracking
+   - Lane system
+   - Player jump physics
+   - Obstacle pool
+   - Collision
+   - Scoring
+   - Health
+   - LocalStorage high score
+   - Sound effects via Web Audio API
+   - Timer
+   - Draw loop
+   - Input handling
+
+   I'll write it in a condensed style. Let me outline the code:
+
+   ```javascript
+   //Tunnel Rhythm Runner
+   const C={W:960,H:540,BPM:120,LANES:3,G:0.5,V0:-8};
+   let canvas,ctx,W,H,dt,last,t=0,beat=0,score=0,combo=0,maxCombo=0,health=3;
+   let highScore=parseInt(localStorage.getItem('tsHigh'))||0;
+   let lanes=[C.W/3,C.W/1.5,C.W/1.2]; // x positions for 3 lanes
+   let player={x:lanes[1],y:0,vy:0,ground:0,jumping:false};
+   let obstacles=[],pool=new Array(30).fill().map(()=>({x:0,y:0,w:0,h:0,type:'',active:beat:false}));
+   let beatsPerMeasure=4; // not needed
+   let gameOver=false;
+   // sound context
+   let ctxAudio= new (window.AudioContext||window.webkitAudioContext)();
+   function playSFX(type){ // generate simple oscillator
+     let o=ctxAudio.createOscillator(); let g=ctxAudio.createGain();
+     o.connect(g); g.connect(ctxAudio.destination);
+     switch(type){
+       case 'tap': o.frequency.value=880; o.type='sine'; g.gain.value=0.1; o.start(); o.stop(ctxAudio.currentTime+0.1); break;
+       case 'perfect': o.frequency.value=1397; g.gain.value=0.15; o.start(); o.stop(ctxAudio.currentTime+0.15); break;
+       case 'good': o.frequency.value=659; g.gain.value=0.1; o.start(); o.stop(ctxAudio.currentTime+0.1); break;
+       case 'hit': o.frequency.value=220; o.type='square'; g.gain.value=0.2; o.start(); o.stop(ctxAudio.currentTime+0.2); break;
+       case 'lose': o.frequency.value=110; g.gain.value=0.1; o.start(); o.stop(ctxAudio.currentTime+0.5); break;
+     }
+   }
+   // beat detection
+   function updateBeat(nt){ let i=nt-last; if(i>=60000/C.BPM){ beat++; last=nt; } }
+   // lane change
+   function changeLane(dir){ let target=player.x+dir*lanes[1]; let nearest=lanes[Math.max(0,Math.min(C.LANES-1,Math.round((target)/lanes[1]))])); player.x=nearest; playSFX('tap'); }
+   // jump
+   function doJump(){ if(!player.jumping){ player.vy=C.V0; player.jumping=true; } }
+   // obstacle spawn
+   function spawnObstacle(){ // pick random type, lane, position }
+   // collision
+   function checkCollision(){ // AABB }
+   // update
+   function update(nt){ updateBeat(nt); if(!gameOver){ // move obstacles, update player physics, check collisions, spawn } }
+   // draw
+   function draw(){ ctx.clearRect(0,0,W,H); // draw tunnel, player, obstacles, HUD }
+   // input
+   window.addEventListener('keydown',e=>{ if(e.key===' '||e.key==='ArrowUp') doJump(); if(e.key==='ArrowLeft') changeLane(-1); if(e.key==='ArrowRight') changeLane(1); });
+   window.addEventListener('touchstart',e=>{ e.preventDefault(); doJump(); changeLane(0); });
+   // loop
+   function loop(){ let nt=performance.now(); update(nt); draw(); requestAnimationFrame(loop); }
+   loop();
+   ```
+
+   This is pseudocode. I need to flesh it out into actual valid JS, but compressed.
+
+   Given the complexity of writing a full game in this format, and the "shorter code" feedback, I'll aim for a minimal but playable game. I'll combine some systems, use simple shapes, and keep it under maybe 150 lines of actual code (compressed).
+
+   Let me think about how to structure the JSON output. I'll output:
+   ```json
+   {"index.html": "...", "game.js": "..."}
+   ```
+
+   I need to make sure the code is correct and functional. Let me actually write the code carefully.
+
+   First, index.html. I'll keep it minimal:
+   - doctype, html, head, meta viewport, title, link favicon (emoji), style for body/canvas, script tag.
+   - canvas element.
+
+   For the favicon, I'll use `href="🎮"` as discussed. In the JSON string, the emoji will be a literal character. I need to make sure the JSON string doesn't break. The emoji 🎮 is U+1F396. In JSON, it's fine as a Unicode character. I just need to make sure the surrounding quotes are escaped properly.
+
+   Let me draft the HTML string content:
+
+   ```
+   <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Tunnel Rhythm Runner</title><link rel="icon" href="🎮"><style>body{margin:0;background:#0d0d0d;overflow:hidden}<canvas id="c"></canvas>#c{display:block;width:100vw;height:100vh}</style></head><body></body><script src="game.js"></script></html>
+   ```
+
+   Wait, the `<link rel="icon" href="🎮">` - the href value contains an emoji. In the HTML string within JSON, I'll write it as `href="🎮"`. The double quotes around 🎮 need to be escaped in JSON because the whole thing is a JSON string value. So it becomes `href=\"🎮\"` inside the JSON string. But wait, the JSON string is already delimited by outer double quotes. So inside, I escape the inner double quotes with `\"`. So the HTML will have `href="🎮"` but in JSON it's `href=\"🎮\"`. That's correct.
+
+   But the emoji itself: is it okay in a JSON string? Yes, JSON allows Unicode characters in strings, as long as the encoding is UTF-8. The output here is text, so it'll be UTF-8 encoded. The emoji is fine.
+
+   Now, game.js. I'll write a compact but functional implementation.
+
+   Let me think about the game mechanics carefully to make it work within the constraints.
+
+   Core loop:
+   - BPM 120 → beat every 500ms
+   - 3 lanes, equally spaced
+   - Player starts center lane
+   - Tap/space: if on center lane, jump; else change lane
+   - Jump: vy = -8, gravity 0.5, reset when y >= 0
+   - Obstacles spawn every 2 beats, move left at 4 px/frame
+   - Types: wall (full lane), spike (needs jump)
+   - Collision: AABB
+   - Timing window: ±150ms of beat for successful dodge? Actually spec says: "If tap timing within ±150ms of beat → successful dodge (no damage). Else → hit." But also early/late windows for perfect/good/miss. I'll simplify: tap on beat within window = perfect (score bonus), tap off beat = hit (health loss). Actually, the spec has a combo system with perfect/good/miss. I'll implement a simplified version: tap within ±50ms = perfect (+20 pts, combo x2), ±50-150ms = good (+10 pts, combo x1), else miss/health penalty. But the spec says "If tap timing within ±150ms of beat → successful dodge (no damage)." That seems like for lane changes/jumps, timing relative to beat determines if it's a dodge or hit. I'll implement: when player taps, check distance to nearest beat. If ≤150ms, it's a successful dodge (no damage, maybe score bonus). Else health -1.
+
+   Actually, re-reading spec: "Collision Response: On overlap with obstacle: • If tap timing within ±150ms of beat → successful dodge (no damage). • Else → hit: health –1, screen flash red, play hit SFX." So the tap timing relative to the beat that spawned the obstacle determines dodge/hit. But the input system also has "Input Latency Compensation: Store input timestamp; compare to nearest beat timestamp during update; allow ±150ms window." So I'll track the last tap timestamp, and when collision occurs, check if tap was within ±150ms of the current beat or the beat when obstacle was scheduled. For simplicity, I'll just check if the tap was within ±150ms of any recent beat.
+
+   I'll simplify further: The game is rhythm-based; obstacles appear on beats. Player must tap on the beat to dodge. If they tap within ±150ms of the beat, it's a successful dodge (no damage, score bonus). If they tap outside that window or not at all when obstacle reaches them, it's a hit.
+
+   Let me design the beat system:
+   - `beatInterval = 60000 / BPM` (500ms for 120 BPM)
+   - `lastBeat` timestamp
+   - `beatCounter` increments every beatInterval
+   - Obstacles spawn on certain beat counts (e.g., every 2 beats)
+   - Player input timestamp stored `lastTap`
+   - When collision: if `Math.abs(lastTap - currentBeatTimestamp) <= 150` → successful dodge, else hit.
+
+   For scoring:
+   - Base 10 per successful tap
+   - Combo: increments on successful dodge, resets on hit
+   - Multiplier: 1 + floor(combo/10)*0.1, capped at 2.0
+   - Perfect: maybe if tap exactly on beat? I'll add: if within ±50ms → perfect +20 points, combo x2. If ±50-150ms → good +10 points, combo x1. Else miss.
+
+   Health: starts at 3. Hits reduce health. Visual hearts.
+
+   Speedrun timer: top corner, counts up from 0, displays time survived.
+
+   LocalStorage high score: save highest score.
+
+   Let me now write the actual game.js code. I'll try to keep it under ~400 lines compressed.
+
+   Due to the extreme constraint of this format, I'll write a minimal but complete implementation. I'll use a single variable for everything, minimal functions, inline where possible.
+
+   Let me start writing the game.js content as a string. I need to be very careful with escaping.
+
+   Actually, I realize how immense this task is. Writing a full HTML5 Canvas game in a JSON string is extremely long. The user said "Start over and write shorter code." So I need to be very concise.
+
+   Let me think of a way to make the code very short, maybe using a game engine lite, or just raw canvas with minimal code.
+
+   I can use a few tricks:
+   - Use `setInterval` instead of `requestAnimationFrame` for simpler timing? But spec says use rAF.
+   - Combine update and draw.
+   - Use minimal variables.
+   - No external assets - draw everything with canvas API.
+   - Sound: just oscillators triggered on events.
+
+   Let me draft a very compact game.js:
+
+   ```javascript
+   (()=>{const C={W:960,H:540,B:120,L:3,G:0.5,V:-8,S:4};let c=document.createElement('canvas');c.width=C.W;c.height=C.H;document.body.append(c);let ctx=c.getContext('2d');let W=c.width,H=c.height;let beatInt=6e4/C.B;let lastBeat=0,beat=0,score=0,combo=0,maxC=0,h=3,hs=parseInt(localStorage.tsH)||0;let lp=0;let lanes=[W/3,W/1.5,W/1.2];let px=lanes[1],py=0,pvy=
