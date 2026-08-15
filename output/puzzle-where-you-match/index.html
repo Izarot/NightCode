@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Chromatic Velocity</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23FF5555'/%3E%3Ctext x='50' y='58' font-size='36' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E⚡%3C/text%3E%3C/svg%3E">
   <style>
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     body{background:#121212;color:#fff;font-family:'Segoe UI',sans-serif;overflow:hidden;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center}
@@ -74,7 +74,7 @@
     
     // Audio
     const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-    function beep(freq,type,dur,vol=0.1){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.value=freq;o.type=type;g.gain.value=vol;o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}
+    function beep(freq,type,dur,vol=0.1){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.value=freq;o.type=type;g.gain.value=vol;o.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+dur);}
     function sfxMatch(){beep(880,'sine',0.08,0.15);beep(1320,'sine',0.08,0.1);}
     function sfxHit(){beep(120,'sawtooth',0.15,0.2);}
     function sfxShift(){beep(440,'triangle',0.05,0.1);}
