@@ -1,0 +1,1 @@
+export const loadAssets = () => {const audioContext = new (window.AudioContext || window.webkitAudioContext)();const pumpSound = audioContext.createBufferSource();fetch('pump.wav').then(res => res.arrayBuffer()).then(buf => audioContext.decodeAudioData(buf, (data) => {pumpSound.buffer = data;}));};

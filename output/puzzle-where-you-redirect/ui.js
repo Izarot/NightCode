@@ -1,0 +1,1 @@
+export const drawHUD = (ctx) => {ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';ctx.fillRect(0, 0, canvas.width, 50);ctx.fillStyle = 'white';ctx.font = '24px Roboto';ctx.fillText(`Time: ${timer.toLocaleTimeString()}`, 10, 30);ctx.fillText(`Moves: ${moves}/10`, 10, 60);};export const updateTimer = () => {timer++;};
