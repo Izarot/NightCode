@@ -12,7 +12,7 @@
 - Boss battles every 3 waves
 - Local multiplayer support
 
-## 🏆 Scoring
+## 🍬 Scoring
 - Destroy asteroids: +10 points
 - Collect candy: +5 points
 - Defeat bosses: +100 points
