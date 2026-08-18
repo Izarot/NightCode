@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mosaic Unveiled</title>
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; }
+    canvas { display: block; }
+    .ui { position: absolute; top: 0; left: 0; z-index: 10; }
+    .top-bar { display: flex; justify-content: space-between; padding: 10px; background: rgba(255, 255, 255, 0.9); }
+    .top-bar .level { font-size: 18px; }
+    .top-bar .timer { font-size: 18px; }
+    .top-bar .hint { cursor: pointer; }
+    .bottom-palette { position: absolute; bottom: 0; left: 0; width: 100%; display: flex; justify-content: space-between; padding: 10px; background: rgba(255, 255, 255, 0.9); }
+    .palette-tile { width: 40px; height: 40px; border: 1px solid #ccc; cursor: pointer; }
+    .palette-tile:hover { border-color: #333; }
+    .right-panel { position: absolute; right: 0; top: 0; width: 200px; padding: 10px; background: rgba(255, 255, 255, 0.9); }
+    .progress-bar { height: 20px; background: #ccc; }
+    .progress-fill { height: 100%; background: #4caf50; }
+    .reveal-button { margin-top: 10px; padding: 5px 10px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div class="ui">
+    <div class="top-bar">
+      <div class="level">Level 1/50</div>
+      <div class="timer">00:00</div>
+      <div class="hint" id="hintBtn">Hint</div>
+    </div>
+    <div class="bottom-palette" id="palette"></div>
+    <div class="right-panel">
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+      </div>
+      <button class="reveal-button" id="revealBtn">Reveal Solution</button>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
