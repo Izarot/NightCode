@@ -142,7 +142,7 @@
     for (const o of obstacles) {
       if (o.x > plane.x + 300 && o.x < plane.x + 700) {
         ctx.fillStyle = '#ffd23f'; ctx.font='20px Segoe UI'; ctx.textAlign='center';
-        ctx.fillText('⚠️', o.x+o.w/2, o.y-10);
+        ctx.fillText('\u26a0\ufe0f', o.x+o.w/2, o.y-10);
       }
     }
     ctx.restore();

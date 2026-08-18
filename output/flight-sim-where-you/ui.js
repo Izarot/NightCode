@@ -37,7 +37,7 @@ function drawUI(ctx, W, H, state) {
     ctx.fillStyle='#fff'; ctx.font='18px Segoe UI';
     ctx.fillText('Press SPACE / Tap to launch', W/2, H/2+10);
     ctx.font='13px Segoe UI'; ctx.fillStyle='#aaa';
-    ctx.fillText('WASD / Arrows to fly • SPACE to flap • Shift+Space to dive', W/2, H/2+40);
+    ctx.fillText('WASD / Arrows to fly \u2022 SPACE to flap \u2022 Shift+Space to dive', W/2, H/2+40);
   }
   if (status==='CRASHED' || status==='LANDED') {
     ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,0,W,H);
