@@ -1,0 +1,12 @@
+export const GRAVITY = 0.5;
+export const TERMINAL_VELOCITY = 15;
+export const JUMP_FORCE = -12;
+export const MAX_SPEED = 4;
+export const ACCELERATION = 0.6;
+export const AIR_CONTROL = 0.7;
+export const GROUND_FRICTION = 0.85;
+export const COYOTE_TIME = 8;
+export const JUMP_BUFFER = 8;
+export const WALL_SLIDE_SPEED = 2;
+export const WALL_JUMP_FORCE = 10;
+export const DOUBLE_JUMP_FORCE = -8.4; // 70% of JUMP_FORCE
