@@ -242,16 +242,16 @@ ctx.fillStyle=COL.text;ctx.font='14px Courier New';ctx.textAlign='left';ctx.fill
 ctx.fillStyle=COL.text;ctx.textAlign='center';ctx.font='bold 18px Courier New';ctx.fillText('SCORE: '+score.toLocaleString()+' | TIME: '+fmtTime(elapsed),W/2,28);
 
 // Speedrun timer top corner
-ctx.fillStyle='#ffcc00';ctx.textAlign='right';ctx.font='bold 14px Courier New';ctx.fillText('⏱ '+fmtTime(elapsed),W-12,20);
+ctx.fillStyle='#ffcc00';ctx.textAlign='right';ctx.font='bold 14px Courier New';ctx.fillText('\u23f1 '+fmtTime(elapsed),W-12,20);
 
 // Ammo top right
-ctx.fillStyle=COL.text;ctx.textAlign='right';ctx.font='14px Courier New';ctx.fillText('AMMO: ∞',W-12,42);
+ctx.fillStyle=COL.text;ctx.textAlign='right';ctx.font='14px Courier New';ctx.fillText('AMMO: \u221e',W-12,42);
 
 // Dash cd
 ctx.fillStyle=COL.text;ctx.textAlign='left';ctx.fillText('DASH: '+(player.dashCd>0?player.dashCd.toFixed(1)+'s':'READY'),12,70);
 
 // Overcharge indicator
-if(player.over>0){ctx.fillStyle=COL.orb;ctx.textAlign='center';ctx.font='bold 20px Courier New';ctx.globalAlpha=0.5+Math.sin(performance.now()/100)*0.5;ctx.fillText('⚡ OVERCHARGE '+player.over.toFixed(1)+'s',W/2,55);ctx.globalAlpha=1;}
+if(player.over>0){ctx.fillStyle=COL.orb;ctx.textAlign='center';ctx.font='bold 20px Courier New';ctx.globalAlpha=0.5+Math.sin(performance.now()/100)*0.5;ctx.fillText('\u26a1 OVERCHARGE '+player.over.toFixed(1)+'s',W/2,55);ctx.globalAlpha=1;}
 if(player.rapid>0){ctx.fillStyle=COL.rapid;ctx.textAlign='center';ctx.font='bold 14px Courier New';ctx.fillText('RAPID '+player.rapid.toFixed(1)+'s',W/2,75);}
 if(player.shield>0){ctx.fillStyle=COL.shield;ctx.textAlign='center';ctx.font='bold 14px Courier New';ctx.fillText('SHIELD '+player.shield.toFixed(1)+'s',W/2,92);}
 
