@@ -1,0 +1,1 @@
+// FragmentData component - handled in World.js for brevity
