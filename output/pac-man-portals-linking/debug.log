@@ -1,0 +1,521 @@
+JSON Decode Error: Extra data: line 6 column 1 (char 62)
+
+Raw LLM Output that failed to parse:
+We are given a detailed specification for a game called "Portal-Pac". We need to output a JSON object mapping filenames to their complete code contents. The user wants a single HTML file with embedded JavaScript and CSS? Or multiple files? The architecture strategy suggests multiple files, but the user says "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". We can provide multiple files. However, the previous error was about invalid JSON due to control characters. We must ensure the JSON is valid and not too long. The user also said "write shorter code". So we need to produce a minimal but functional implementation that meets the core requirements.
+
+We need to include:
+- index.html
+- game.js (or multiple JS files)
+- Maybe CSS? But we can embed CSS in HTML.
+
+We must implement:
+- Responsive canvas scaling to mobile.
+- Emoji favicon.
+- Unique vibrant color palette.
+- High score saved in localStorage.
+- Simple sound effects using Web Audio API.
+- Speedrun timer in top corner.
+
+We also need to implement the game mechanics described: player movement, portals, dots, power pellets, ghosts, scoring, lives, etc. But given the complexity, we need to write a simplified version that still captures the essence.
+
+We'll create a single HTML file with embedded JavaScript and CSS to avoid multiple files and JSON escaping issues. But the user expects a JSON mapping filenames to code. We can provide two files: index.html and game.js (or just index.html with everything). However, the architecture strategy suggests multiple files. But to keep JSON simple and avoid control characters, we can provide a single file: index.html containing all code. That would be easier.
+
+But the user said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". So we can do:
+
+{
+  "index.html": "<!DOCTYPE html>...",
+  "game.js": "..."
+}
+
+But we must ensure the JSON is valid. We'll write the code in a way that doesn't contain problematic control characters. We'll escape newlines and quotes properly in the JSON string. However, the JSON object we output will be raw, not a string. The assistant's output is the JSON object itself. So we need to output a JSON object with keys as filenames and values as strings containing the file content. The strings must be properly escaped for JSON. Since we are writing the response directly, we must ensure the JSON is valid. We can write the code with actual newlines and quotes, but when embedded in JSON, they need to be escaped. However, the instruction says "Output ONLY a valid raw JSON object". That means we should output the JSON object as text, with proper escaping. But as an AI, we can output the JSON with the strings containing the code, and the system will handle it? Actually, the user expects the assistant to output a JSON object. In the chat, we can output a JSON object with the code as string values. We must be careful to escape any backslashes, newlines, quotes, etc. But we can write the code in a way that is JSON-safe by using template literals? No, we are writing the JSON directly. The easiest is to write a single file index.html with everything, and then the JSON object will have one key. That reduces escaping complexity.
+
+Let's create a single index.html file that includes HTML, CSS, and JavaScript. We'll implement a simplified version of Portal-Pac.
+
+We'll need to implement:
+- Canvas setup, responsive.
+- Game loop.
+- Maze: we can hardcode a simple maze with portals.
+- Player movement with coyote time.
+- Portal teleportation.
+- Dots and power pellets.
+- Ghosts with simple AI (maybe just random or chase).
+- Score, lives, high score (localStorage).
+- Timer (speedrun timer).
+- Sound effects using Web Audio API (generate simple tones).
+- Emoji favicon.
+- Vibrant color palette.
+
+Given the complexity, we'll write a minimal but functional game. We'll use a grid of 20x15 cells, each 32px. Maze layout as a 2D array.
+
+We'll implement:
+- Player: position, direction, speed.
+- Input handling.
+- Collision with walls.
+- Portal pairs: two pairs (left-right, top-bottom).
+- Dots on all path cells.
+- Power pellets at specific locations.
+- Ghosts: 4 ghosts with simple movement (random or chase).
+- Power pellet effect: ghosts become vulnerable.
+- Scoring.
+- Lives.
+- High score saved to localStorage.
+- Timer counting up (speedrun timer).
+- Sound: chomp, power pellet, death, portal.
+
+We'll use Web Audio API to create simple oscillator sounds.
+
+We'll write the code in a single HTML file.
+
+Let's outline the HTML structure:
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal-Pac</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+  <style>
+    /* CSS for responsive canvas */
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="hud">...</div>
+  <script>
+    // Game code
+  </script>
+</body>
+</html>
+
+We'll embed the HUD in the canvas drawing to avoid extra DOM elements.
+
+Now, we need to write the JavaScript. We'll keep it in one script tag.
+
+We must ensure the JSON output is valid. We'll output:
+
+{
+  "index.html": "<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Portal-Pac</title>\n  <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>\">\n  <style>\n    ...\n  </style>\n</head>\n<body>\n  <canvas id=\"gameCanvas\"></canvas>\n  <script>\n    ...\n  </script>\n</body>\n</html>"
+}
+
+But we must escape the string properly for JSON. Since we are writing the JSON directly, we need to escape backslashes, newlines, double quotes, etc. However, the assistant's output is the JSON object. In the chat, we can write the JSON with actual newlines and quotes, but the JSON parser will require escaping. Actually, the user expects a raw JSON object. In the previous attempts, the assistant output a JSON object with code strings that contained unescaped characters, causing invalid JSON. To avoid that, we can write the code as a string with escaped newlines (\n) and escaped quotes (\"). But that's tedious. Alternatively, we can output a JSON object with the code as a string that is already escaped. But we are writing the response as text. The system will take our output as the final answer. We must ensure it's valid JSON.
+
+We can use a trick: write the JSON with the code in a template literal style? No, JSON doesn't support template literals. We must escape.
+
+Given the complexity, perhaps we can output a JSON with a single key "index.html" and the value being a string with the HTML content, but we must escape it. Since we are an AI, we can generate the escaped string by replacing " with \", \ with \\, newline with \n, etc. But doing that manually in the response is error-prone.
+
+Alternatively, we can output the JSON with the code as a string that contains the raw code, but we must ensure the JSON is valid. The platform might parse our output as JSON. In many similar tasks, the assistant outputs a JSON object with the code as strings, and the strings are written with actual newlines and quotes, but the JSON is still valid because the assistant's output is not parsed by a JSON parser? Actually, the user says "Output ONLY a valid raw JSON object". That means the entire response must be a valid JSON object. So we must produce a JSON object that can be parsed by a JSON parser. Therefore, we must escape the strings.
+
+We can write a script to escape, but we are the AI. We'll do it manually by being careful.
+
+We'll write the HTML content with double quotes escaped, and newlines as \n. But we can also use single quotes in HTML attributes to avoid double quotes. However, the JSON string must be in double quotes. So we can use single quotes inside the HTML for attributes, and then we don't need to escape double quotes as much. But we still need to escape any double quotes inside the JavaScript. We'll use single quotes for JS strings as well.
+
+Let's plan the HTML/JS code with single quotes for strings.
+
+We'll write the JSON object now.
+
+We'll create the HTML string with \n for newlines. We'll write it in the response as a JSON object.
+
+We'll do:
+
+{
+  "index.html": "<!DOCTYPE html>\n<html>\n<head>\n  <meta charset='UTF-8'>\n  <meta name='viewport' content='width=device-width, initial-scale=1.0'>\n  <title>Portal-Pac</title>\n  <link rel='icon' href='data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><text y=\".9em\" font-size=\"90\">🎮</text></svg>'>\n  <style>\n    * { margin: 0; padding: 0; box-sizing: border-box; }\n    body { background: #1a1a2e; overflow: hidden; font-family: 'Arial', sans-serif; }\n    canvas { display: block; width: 100%; height: 100vh; touch-action: none; }\n    #hud { position: absolute; top: 10px; left: 10px; right: 10px; color: #fff; font-size: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; }\n    .hud-item { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; }\n  </style>\n</head>\n<body>\n  <canvas id='gameCanvas'></canvas>\n  <div id='hud'>\n    <div class='hud-item'>Score: <span id='score'>0</span></div>\n    <div class='hud-item'>High: <span id='highScore'>0</span></div>\n    <div class='hud-item'>Time: <span id='timer'>0.00</span></div>\n    <div class='hud-item'>Lives: <span id='lives'>3</span></div>\n  </div>\n  <script>\n    // Game code here\n  </script>\n</body>\n</html>"
+}
+
+But we need to include the actual game code inside the script tag. That will be long. We'll write the game code as a string with escaped newlines and quotes. We'll use single quotes in JS to avoid escaping double quotes. But we must escape single quotes inside the JSON string? The JSON string is delimited by double quotes, so single quotes are fine. However, we have single quotes in the HTML (like in the style). That's okay because the JSON string uses double quotes. But we have double quotes in the SVG data URI. We'll escape those double quotes as \".
+
+We'll write the game code in a separate variable? No, we embed directly.
+
+Given the length, we might exceed the token limit. But we need to produce a complete game. We'll write a condensed version.
+
+Let's write the game code in a separate step, then embed.
+
+We'll create the game code now.
+
+We'll implement:
+
+- Constants: cellSize, gridWidth, gridHeight, colors.
+- Maze layout as array of strings.
+- Player object.
+- Ghosts array.
+- Dots and power pellets arrays.
+- Portal pairs.
+- Input handling.
+- Game loop: update, draw.
+- Sound effects using AudioContext.
+- High score from localStorage.
+- Timer.
+
+We'll write the JS code with single quotes.
+
+We'll then embed it into the HTML string.
+
+We'll need to escape backslashes in the JS code (like in regex) but we can avoid regex.
+
+Let's write the JS code as a string with \n for newlines. We'll do it in the JSON.
+
+But writing the entire JS code as a single string in the JSON is messy. However, we can do it.
+
+Alternatively, we can output two files: index.html and game.js. Then the JSON has two keys. The game.js string will contain the JS code. That might be easier because we don't have to escape the script tag. But we still need to escape the JS code for JSON.
+
+We'll do two files: index.html (with minimal HTML, linking game.js) and game.js. But the user might expect a single HTML file? The architecture strategy suggests multiple files. We'll do two files.
+
+But the HTML will need to load game.js. We'll put the script tag with src="game.js". However, if we provide both files, the user can run them. But the JSON mapping must include both.
+
+We'll do:
+
+{
+  "index.html": "...",
+  "game.js": "..."
+}
+
+In index.html, we'll have <script src="game.js"></script>. But then the game.js must be in the same directory. That's fine.
+
+We'll write index.html with minimal content, and game.js with all the game logic.
+
+Let's write index.html first:
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Portal-Pac</title>
+  <link rel='icon' href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎮</text></svg>'>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; overflow: hidden; font-family: Arial, sans-serif; }
+    canvas { display: block; width: 100%; height: 100vh; touch-action: none; }
+    #hud { position: absolute; top: 10px; left: 10px; right: 10px; color: #fff; font-size: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; }
+    .hud-item { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <canvas id='gameCanvas'></canvas>
+  <div id='hud'>
+    <div class='hud-item'>Score: <span id='score'>0</span></div>
+    <div class='hud-item'>High: <span id='highScore'>0</span></div>
+    <div class='hud-item'>Time: <span id='timer'>0.00</span></div>
+    <div class='hud-item'>Lives: <span id='lives'>3</span></div>
+  </div>
+  <script src='game.js'></script>
+</body>
+</html>
+
+Now game.js:
+
+We'll write the entire game in game.js.
+
+We'll need to handle responsive canvas: resize event, set canvas width/height to window.innerWidth/Height, but maintain aspect ratio? The spec says responsive to mobile phone screens. We'll scale the game to fit the screen while maintaining the grid aspect ratio. We'll use a fixed grid size (e.g., 20x15 cells) and scale the canvas to fill the screen, but keep the game logic in virtual coordinates. We'll use a virtual resolution (e.g., 640x480) and scale the canvas CSS to 100% width/height, but the canvas drawing buffer will be set to the virtual resolution? Actually, for crisp rendering, we can set canvas width/height to the virtual resolution and use CSS to stretch it. But for mobile, we want it to fill the screen. We'll set canvas width/height to window.innerWidth/innerHeight, and then scale the drawing context accordingly. But the maze grid is fixed in cells. We'll compute cellSize based on the smaller dimension.
+
+Simpler: set canvas width/height to the window size, and compute cellSize = min(canvas.width / gridWidth, canvas.height / gridHeight). Then center the maze.
+
+We'll do that.
+
+Now, the game code.
+
+We'll define:
+
+const gridWidth = 20;
+const gridHeight = 15;
+let cellSize;
+let maze = []; // 2D array of tile types: 0=empty, 1=wall, 2=dot, 3=powerPellet, 4=portal
+// We'll create a simple maze with walls around and some internal walls.
+
+We'll hardcode a maze layout as an array of strings.
+
+We'll also define portal pairs: each portal has an id and two positions.
+
+We'll implement player movement with coyote time.
+
+We'll implement ghosts with simple AI: they move randomly but can chase player when in line of sight? For simplicity, we'll make them move randomly but avoid walls, and they can use portals.
+
+We'll implement dots and power pellets.
+
+We'll implement scoring, lives, high score, timer.
+
+We'll implement sound effects using AudioContext.
+
+We'll write the code in a single IIFE or just global.
+
+Let's write the game.js code.
+
+We'll be careful with escaping for JSON. We'll write the JS code with single quotes, and escape any backslashes and double quotes. Since the JSON string will be in double quotes, we must escape double quotes in the JS code. We'll avoid double quotes in JS code by using single quotes. But we have double quotes in the SVG data URI in HTML, but that's in HTML, not JS. In JS, we might have strings with double quotes? We'll use single quotes.
+
+We'll also need to escape newline characters as \n in the JSON string. But we can write the JS code with actual newlines in the JSON string? The JSON standard requires that strings have escaped newlines (\n). However, many JSON parsers accept literal newlines in strings? Actually, JSON strings cannot contain unescaped literal newlines. They must be escaped as \n. So we must replace all newlines in the JS code with \n. That's a lot. But we can write the JSON with the JS code as a string with \n. We'll do that by writing the JS code in a template and then manually escaping? As an AI, we can generate the escaped string by replacing newlines with \n and double quotes with \", and backslashes with \\.
+
+We'll do that in our mind. We'll write the JS code as a single line with \n separators. But that's huge. Alternatively, we can output the JSON with the JS code as a string that contains actual newlines, but the JSON would be invalid. The user said "valid raw JSON object". So we must escape.
+
+Given the complexity, perhaps we can output a single HTML file with the script inline, and then we only have one file to escape. But still need to escape the entire HTML string.
+
+Maybe we can output the JSON with the code as a string that uses \n for newlines. We'll write the HTML string with \n. We'll do it step by step.
+
+We'll write the HTML string with \n for newlines. We'll also escape any double quotes inside the HTML. In the HTML, we used single quotes for attributes, so double quotes only appear in the SVG data URI. We'll escape those double quotes as \".
+
+Let's construct the HTML string:
+
+"<!DOCTYPE html>\n<html>\n<head>\n  <meta charset='UTF-8'>\n  <meta name='viewport' content='width=device-width, initial-scale=1.0'>\n  <title>Portal-Pac</title>\n  <link rel='icon' href='data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><text y=\".9em\" font-size=\"90\">🎮</text></svg>'>\n  <style>\n    * { margin: 0; padding: 0; box-sizing: border-box; }\n    body { background: #1a1a2e; overflow: hidden; font-family: Arial, sans-serif; }\n    canvas { display: block; width: 100%; height: 100vh; touch-action: none; }\n    #hud { position: absolute; top: 10px; left: 10px; right: 10px; color: #fff; font-size: 20px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; }\n    .hud-item { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; }\n  </style>\n</head>\n<body>\n  <canvas id='gameCanvas'></canvas>\n  <div id='hud'>\n    <div class='hud-item'>Score: <span id='score'>0</span></div>\n    <div class='hud-item'>High: <span id='highScore'>0</span></div>\n    <div class='hud-item'>Time: <span id='timer'>0.00</span></div>\n    <div class='hud-item'>Lives: <span id='lives'>3</span></div>\n  </div>\n  <script src='game.js'></script>\n</body>\n</html>"
+
+Now the game.js string. We'll write the JS code with single quotes and escape double quotes and backslashes. We'll also replace newlines with \n.
+
+We'll write the JS code now in a separate block, then escape.
+
+Let's write the JS code in a readable form first, then we'll convert to a JSON string.
+
+JS code:
+
+// Game constants
+const GRID_WIDTH = 20;
+const GRID_HEIGHT = 15;
+const PLAYER_SPEED = 5; // cells per second
+const GHOST_SPEED = 4;
+const COYOTE_TIME = 0.15;
+const PORTAL_COOLDOWN = 0.5;
+const POWER_PELLET_DURATION = 5;
+
+// Colors
+const COLORS = {
+  wall: '#424242',
+  path: '#f5f5f5',
+  dot: '#ffffff',
+  powerPellet: '#ffeb3b',
+  player: '#ffeb3b',
+  ghosts: ['#e53935', '#ec407a', '#00bcd4', '#ff9800'],
+  vulnerableGhost: '#303f9f',
+  portal: ['#303f9f', '#8e24aa'],
+  text: '#ffffff'
+};
+
+// Maze layout: 0=empty, 1=wall, 2=dot, 3=powerPellet, 4=portal
+const MAZE_LAYOUT = [
+  '11111111111111111111',
+  '1........1.........1',
+  '1.111.1.1.1.1111.1.1',
+  '1.1...1...1...1..1.1',
+  '1.1.1.111.111.1.1.11',
+  '1...1.....1...1...P1',
+  '111.111.111.111.1111',
+  '1.........1......1.1',
+  '1.1111.111.11111.1.1',
+  '1.1...1...1...1..1.1',
+  '1.1.1.111.111.1.1.11',
+  '1...1.....1...1...P1',
+  '111.111.111.111.1111',
+  '1.........1......1.1',
+  '11111111111111111111'
+];
+// Note: P represents portal. We'll replace with portal IDs.
+
+// We'll parse the maze layout into a grid.
+let grid = [];
+let portals = {}; // portalId -> {x,y, pairedId}
+let portalPairs = {}; // portalId -> paired portalId
+let dots = [];
+let powerPellets = [];
+let player = { x: 1, y: 1, dir: {x:0,y:0}, nextDir: {x:0,y:0}, coyote: 0, portalCooldown: 0, invulnerable: 0 };
+let ghosts = [];
+let score = 0;
+let highScore = parseInt(localStorage.getItem('portalPacHighScore')) || 0;
+let lives = 3;
+let gameTime = 0;
+let gameRunning = true;
+let powerPelletTimer = 0;
+let audioCtx = null;
+
+// Initialize audio context on user interaction
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+}
+
+// Sound functions
+function playSound(freq, duration, type='square', volume=0.1) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.value = volume;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+function playChomp() { playSound(500, 0.1); }
+function playPowerPellet() { playSound(800, 0.3); }
+function playDeath() { playSound(200, 0.5, 'sawtooth', 0.2); }
+function playPortal() { playSound(600, 0.2, 'sine', 0.15); }
+function playGhostEaten() { playSound(1000, 0.2); }
+
+// Initialize game
+function init() {
+  // Parse maze
+  grid = [];
+  portals = {};
+  portalPairs = {};
+  dots = [];
+  powerPellets = [];
+  let portalCount = 0;
+  for (let y = 0; y < GRID_HEIGHT; y++) {
+    const row = MAZE_LAYOUT[y];
+    grid[y] = [];
+    for (let x = 0; x < GRID_WIDTH; x++) {
+      const char = row[x];
+      if (char === '1') {
+        grid[y][x] = 1; // wall
+      } else if (char === '.') {
+        grid[y][x] = 0; // empty path
+        dots.push({x, y, collected: false});
+      } else if (char === 'P') {
+        grid[y][x] = 4; // portal
+        const portalId = 'p' + portalCount++;
+        portals[portalId] = {x, y, id: portalId};
+        // We'll pair portals later
+      } else {
+        grid[y][x] = 0;
+      }
+    }
+  }
+  // Pair portals: assume they appear in order, pair first with second, third with fourth, etc.
+  const portalIds = Object.keys(portals);
+  for (let i = 0; i < portalIds.length; i += 2) {
+    if (i+1 < portalIds.length) {
+      portalPairs[portalIds[i]] = portalIds[i+1];
+      portalPairs[portalIds[i+1]] = portalIds[i];
+    }
+  }
+  // Add power pellets at specific positions (hardcoded)
+  const pelletPositions = [{x:2, y:2}, {x:17, y:2}, {x:10, y:7}];
+  pelletPositions.forEach(pos => {
+    if (grid[pos.y][pos.x] === 0) {
+      grid[pos.y][pos.x] = 3;
+      powerPellets.push({x: pos.x, y: pos.y, collected: false});
+      // Remove dot if any
+      dots = dots.filter(d => !(d.x === pos.x && d.y === pos.y));
+    }
+  });
+
+  // Player start position (find first empty cell)
+  for (let y = 0; y < GRID_HEIGHT; y++) {
+    for (let x = 0; x < GRID_WIDTH; x++) {
+      if (grid[y][x] === 0) {
+        player.x = x;
+        player.y = y;
+        player.dir = {x:0, y:0};
+        player.nextDir = {x:0, y:0};
+        player.coyote = 0;
+        player.portalCooldown = 0;
+        player.invulnerable = 0;
+        break;
+      }
+    }
+  }
+
+  // Ghosts start positions
+  ghosts = [
+    {x: 9, y: 7, color: COLORS.ghosts[0], dir: {x:0,y:0}, vulnerable: false, home: {x:9,y:7}},
+    {x: 10, y: 7, color: COLORS.ghosts[1], dir: {x:0,y:0}, vulnerable: false, home: {x:10,y:7}},
+    {x: 9, y: 8, color: COLORS.ghosts[2], dir: {x:0,y:0}, vulnerable: false, home: {x:9,y:8}},
+    {x: 10, y: 8, color: COLORS.ghosts[3], dir: {x:0,y:0}, vulnerable: false, home: {x:10,y:8}}
+  ];
+
+  score = 0;
+  lives = 3;
+  gameTime = 0;
+  powerPelletTimer = 0;
+  gameRunning = true;
+  updateHUD();
+}
+
+// Update HUD elements
+function updateHUD() {
+  document.getElementById('score').textContent = score;
+  document.getElementById('highScore').textContent = highScore;
+  document.getElementById('timer').textContent = gameTime.toFixed(2);
+  document.getElementById('lives').textContent = lives;
+}
+
+// Check if a cell is walkable (not wall)
+function isWalkable(x, y) {
+  if (x < 0 || x >= GRID_WIDTH || y < 0 || y >= GRID_HEIGHT) return false;
+  return grid[y][x] !== 1;
+}
+
+// Get portal at position
+function getPortalAt(x, y) {
+  for (const id in portals) {
+    if (portals[id].x === x && portals[id].y === y) return id;
+  }
+  return null;
+}
+
+// Player movement
+function updatePlayer(dt) {
+  // Coyote time
+  if (player.coyote > 0) player.coyote -= dt;
+  if (player.portalCooldown > 0) player.portalCooldown -= dt;
+  if (player.invulnerable > 0) player.invulnerable -= dt;
+
+  // Try to change direction if nextDir is set and walkable
+  const nextX = player.x + player.nextDir.x;
+  const nextY = player.y + player.nextDir.y;
+  if (isWalkable(nextX, nextY) || grid[nextY][nextX] === 4) {
+    player.dir = {x: player.nextDir.x, y: player.nextDir.y};
+  }
+
+  // Move player
+  const moveX = player.x + player.dir.x * PLAYER_SPEED * dt;
+  const moveY = player.y + player.dir.y * PLAYER_SPEED * dt;
+
+  // Check collision with walls
+  const targetX = Math.round(moveX);
+  const targetY = Math.round(moveY);
+  // We'll do simple grid-based movement: move one cell at a time when aligned.
+  // For simplicity, we'll use a timer to move cell by cell.
+  // But the spec says smooth movement. We'll implement smooth movement with collision detection.
+  // However, due to time, we'll do discrete cell movement with interpolation for rendering.
+  // Let's do a simpler approach: player moves continuously, but we check the next cell in direction.
+  // We'll keep player position as float, and when the player enters a new cell, we check for dots, portals, etc.
+  // This is getting complex. Given the time, we'll implement a simpler discrete movement: player moves one cell per key press? But spec says continuous.
+  // We'll do continuous movement with grid collision.
+
+  // We'll use a different approach: player has a target cell, and moves towards it.
+  // But to keep code short, we'll do discrete movement with a move timer.
+  // Let's change: player moves at constant speed, but we check the next cell in the direction of movement.
+  // We'll keep player position in pixels? Better to keep in cells with sub-cell precision.
+
+  // Given the complexity, we'll implement a basic version: player moves one cell per frame? No.
+
+  // We'll implement a simple version: player moves at PLAYER_SPEED cells per second, but we update position continuously.
+  // We'll check the cell the player is currently in (rounded) and the next cell in the direction.
+  // If the next cell is a wall, stop.
+  // This is similar to the spec.
+
+  // We'll keep player.x, player.y as float (cell coordinates).
+  // Each frame, we add velocity.
+  // Then we check the cell at (Math.floor(player.x), Math.floor(player.y)) for dots, etc.
+  // For wall collision, we check the cell we are trying to enter.
+
+  // Let's do it properly.
+
+  // Compute next cell coordinates based on direction
+  const nextCellX = Math.floor(player.x + player.dir.x * 0.5); // 0.5 to detect when crossing cell boundary
+  const nextCellY = Math.floor(player.y + player.dir.y * 0.5);
+  // Actually, we need to check the cell in the direction of movement.
+  // We'll check the cell at (player.x + player.dir.x, player.y + player.dir.y) rounded? 
+
+  // Due to time constraints, we'll simplify: use a grid-based movement where the player moves from cell to cell instantly? But spec says smooth.
+
+  // We'll implement a simple version: player moves at constant speed, but we only check collisions at cell centers.
+  // We'll keep a move timer.
+
+  // I think we need to deliver a working game, even if simplified. Let's do discrete movement: player moves one cell per key press, but with coyote time? That's not continuous.
+
+  // Given the time, I'll write a simplified but functional game with discrete movement (like classic Pac-Man) but with smooth animation between cells.
+
+  // We'll have player.targetX, player.targetY, and player.moving flag.
+  // When a direction key is pressed, if the adjacent cell is walkable, set target and start moving.
+  // Player moves at
