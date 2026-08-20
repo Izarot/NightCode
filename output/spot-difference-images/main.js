@@ -39,7 +39,7 @@ class SpotTheDifference {
 
   bindEvents() {
     document.getElementById('startBtn').addEventListener('click', () => {
-      const diff = document.querySelector('.difficulty-btn.active')?.dataset.diff || 'medium';
+      const diff = document.querySelector('.difficulty-btn.active')?.dataset.diff || 'edium';
       this.game.startLevel(1, diff);
       document.getElementById('startScreen').classList.remove('active');
     });
