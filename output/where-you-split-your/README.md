@@ -1,4 +1,4 @@
-# 🎮 MITOSIS: Precision Puzzle-Platformer
+# 🌮 MITOSIS: Precision Puzzle-Platformer
 
 ## How to Play
 - **Split**: Press `KEY_SPLIT` or `Gamepad West` to divide your primary fragment into two smaller ones (max 3 splits). Use them to solve puzzles, activate switches, or reach new areas!
