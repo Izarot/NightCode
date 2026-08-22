@@ -1,0 +1,184 @@
+JSON Decode Error after continuation: Expecting ',' delimiter: line 1 column 7295 (char 7294)
+
+Raw: I'll create a complete 2D platformer game called "Symphonic Leap" with all the specified features. Let me build this comprehensive game with responsive canvas, Web Audio API integration, and all the audio-driven mechanics.<tool_call>{"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Symphonic Leap</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext x='50%' y='50%' font-size='60' text-anchor='middle' font-family='Arial' font-weight='bold'%3E🎵%3C/text%3E%3C/svg%3E\">\n    <style>\n        * { margin: 0; padding: 0; box-sizing: border-box; }\n        body { \n            background: linear-gradient(135deg, #0a0a2a 0%, #1a0a3a 100%);\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            overflow: hidden;\n            color: #fff;\n        }\n        #gameContainer { position: relative; width: 100vw; height: 100vh; }\n        #gameCanvas { \n            display: block;\n            width: 100%;\n            height: 100%;\n            background: #0a0a2a;\n            border: 2px solid #4a00e5;\n            box-shadow: 0 0 30px rgba(74, 0, 229, 0.5);\n        }\n        #uiOverlay {\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            pointer-events: none;\n            z-index: 10;\n        }\n        .hud-top {\n            position: absolute;\n            top: 10px;\n            left: 10px;\n            right: 10px;\n            display: flex;\n            justify-content: space-between;\n            align-items: center;\n            padding: 10px 20px;\n            background: rgba(0, 0, 30, 0.7);\n            border-radius: 15px;\n            border: 1px solid #4a00e5;\n            backdrop-filter: blur(5px);\n        }\n        .hud-bottom {\n            position: absolute;\n            bottom: 10px;\n            left: 10px;\n            right: 10px;\n            padding: 15px 20px;\n            background: rgba(0, 0, 30, 0.7);\n            border-radius: 15px;\n            border: 1px solid #4a00e5;\n            display: none;\n            flex-direction: column;\n            gap: 10px;\n        }\n        .hud-bottom.active { display: flex; }\n        .music-indicator {\n            display: flex;\n            align-items: center;\n            gap: 8px;\n        }\n        .note-icon {\n            font-size: 24px;\n            animation: pulse 1s infinite;\n        }\n        .note-icon.active { color: #00ff88; animation: pulse 1s infinite; }\n        .note-icon.inactive { color: #666666; }\n        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }\n        .score-display { font-size: 18px; font-weight: bold; color: #00ffff; }\n        .health { display: flex; gap: 5px; }\n        .heart { color: #ff4444; font-size: 24px; }\n        .jump-meter-container { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 5px; }\n        .jump-meter { height: 20px; background: linear-gradient(90deg, #00ff88, #00cc6a); border-radius: 10px; }\n        .powerup-display { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 10px; text-align: center; }\n        .timer { font-size: 14px; color: #ffaa00; font-weight: bold; }\n        .speedrun-timer { \n            position: absolute;\n            top: 10px;\n            right: 10px;\n            background: rgba(0,0,30,0.8);\n            padding: 10px 20px;\n            border-radius: 10px;\n            border: 1px solid #ffaa00;\n            font-size: 20px;\n            font-weight: bold;\n            color: #ffaa00;\n            box-shadow: 0 0 15px rgba(255, 170, 0, 0.5);\n        }\n        .prompt {\n            position: absolute;\n            bottom: 50px;\n            left: 50%;\n            transform: translateX(-50%);\n            background: rgba(0,0,0,0.8);\n            color: #ffaa00;\n            padding: 15px 30px;\n            border-radius: 10px;\n            border: 2px solid #ffaa00;\n            font-size: 18px;\n            text-align: center;\n            animation: fadeInOut 3s ease-in-out infinite;\n            display: none;\n        }\n        .prompt.visible { display: block; }\n        @keyframes fadeInOut { 0%, 100% { opacity: 0; } 10%, 90% { opacity: 1; } }\n        #startScreen, #gameOverScreen, #victoryScreen {\n            position: absolute;\n            top: 0; left: 0;\n            width: 100%; height: 100%;\n            background: rgba(0,0,30,0.95);\n            display: flex;\n            flex-direction: column;\n            justify-content: center;\n            align-items: center;\n            z-index: 20;\n            gap: 20px;\n        }\n        .screen-title { font-size: 48px; margin-bottom: 20px; color: #4a00e5; }\n        .screen-title span { color: #00ffff; }\n        button {\n            padding: 15px 40px;\n            font-size: 18px;\n            background: linear-gradient(135deg, #4a00e5, #8a2be2);\n            border: none;\n            border-radius: 10px;\n            color: white;\n            cursor: pointer;\n            font-weight: bold;\n            transition: all 0.3s;\n        }\n        button:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(74, 0, 229, 0.7); }\n        .high-score { font-size: 24px; color: #ffaa00; margin-top: 10px; }\n        .hidden { display: none; }\n    </style>\n</head>\n<body>\n    <div id=\"gameContainer\">\n        <canvas id=\"gameCanvas\"></canvas>\n        <div id=\"uiOverlay\">\n            <div class=\"hud-top\">\n                <div class=\"music-indicator\">\n                    <span class=\"note-icon inactive\" id=\"noteIcon\">🎵</span>\n                    <span id=\"musicStatus\">MUSIC: OFF</span>\n                </div>\n                <div class=\"score-display\">\n                    <span>Level: </span><span id=\"levelNum\">1</span> | \n                    <span>Score: </span><span id=\"scoreNum\">0</span>\n                </div>\n                <div class=\"health\">\n                    <span class=\"heart\">❤️</span>\n                    <span class=\"heart\">❤️</span>\n                    <span class=\"heart\">❤️</span>\n                </div>\n            </div>\n            <div class=\"speedrun-timer\" id=\"speedrunTimer\">⏱ 00:00</div>\n            <div class=\"prompt\" id=\"prompt\">Jump When Music Plays!</div>\n            <div class=\"hud-bottom\" id=\"hudBottom\">\n                <div class=\"jump-meter-container\">\n                    <div class=\"jump-meter\" id=\"jumpMeter\" style=\"width: 100%;\"></div>\n                </div>\n                <div class=\"powerup-display\">\n                    <span id=\"powerupText\">Double Jump: READY</span>\n                </div>\n            </div>\n        </div>\n    </div>\n    <div id=\"startScreen\">\n        <div class=\"screen-title\">Symphonic<span>Leap</span></div>\n        <p style=\"color: #aaa; margin-bottom: 20px; max-width: 500px; text-align: center;\">\n            Master the rhythm! Jump only when the music plays. Navigate through 8 levels of increasing complexity.\n        </p>\n        <button onclick=\"startGame()\">START GAME</button>\n        <div class=\"high-score\">High Score: <span id=\"highScoreDisplay\">0</span></div>\n    </div>\n    <div id=\"gameOverScreen" class="hidden">\n        <div class=\"screen-title">GAME OVER</div>\n        <div class=\"high-score\">Final Score: <span id=\"finalScore\">0</span></div>\n        <div class=\"high-score\">High Score: <span id=\"gameOverHighScore\">0</span></div>\n        <button onclick=\"restartGame()\">PLAY AGAIN</button>\n    </div>\n    <div id=\"victoryScreen" class="hidden">\n        <div class=\"screen-title">VICTORY!</div>\n        <div class=\"high-score\">Final Score: <span id=\"victoryScore\">0</span></div>\n        <div class=\"high-score\">High Score: <span id=\"victoryHighScore\">0</span></div>\n        <button onclick=\"restartGame()\">PLAY AGAIN</button>\n    </div>\n    <script src=\"game.js\"></script>\n</body>\n</html>"
+  },
+  "game.js": "// Symphonic Leap - Complete Game Implementation\n\nconst canvas = document.getElementById('gameCanvas');\nconst ctx = canvas.getContext('2d');\nlet scale = 1;\nlet offsetX = 0;\nlet offsetY = 0;\n\n// Game State\nlet gameState = 'start';\nlet score = 0;\nlet level = 1;\nlet health = 3;\nlet highScore = localStorage.getItem('symphonicHighScore') || 0;\nlet speedrunStartTime = 0;\nlet speedrunTime = 0;\n\n// Player\nconst player = {\n    x: 100, y: 0, width: 40, height: 60,\n    vx: 0, vy: 0,\n    onGround: false, jumpCooldown: 0, isDashing: false,\n    dashTimer: 0, canDoubleJump: false, doubleJumpUsed: false,\n    color: '#ff00ff', sprite: null\n};\n\n// Physics\nconst gravity = 0.5;\nconst friction = 0.8;\nconst moveSpeed = 3;\nconst airControl = 1.5;\nconst jumpHeight = 150;\nconst dashSpeed = 8;\n\n// Music System\nconst audioContext = new (window.AudioContext || window.webkitAudioContext)();\nlet musicGainNode = null;\nlet musicPlaying = false;\nlet musicTimer = 0;\nlet musicDuration = 5; // seconds\nlet beatPulse = 0;\nlet currentTrack = null;\n\n// Platforms\nlet platforms = [];\nlet enemies = [];\nlet hazards = [];\nlet soundEmitters = [];\nlet silenceZones = [];\nlet powerUps = [];\nlet particles = [];\n\n// Input\nconst keys = {};\nlet jumpPressed = false;\n\n// Responsive Canvas\nfunction resizeCanvas() {\n    const maxWidth = window.innerWidth;\n    const maxHeight = window.innerHeight;\n    const aspectRatio = 16/9;\n    \n    if (maxWidth / maxHeight > aspectRatio) {\n        scale = maxHeight / 600;\n        offsetX = (maxWidth - 1600 * scale) / 2;\n        offsetY = 0;\n    } else {\n        scale = maxWidth / 1600;\n        offsetX = 0;\n        offsetY = (maxHeight - 900 * scale) / 2;\n    }\n    \n    canvas.width = maxWidth;\n    canvas.height = maxHeight;\n}\n\nwindow.addEventListener('resize', resizeCanvas);\nresizeCanvas();\n\n// Audio Functions\nfunction createOscillator(frequency, duration, type = 'sine') {\n    const oscillator = audioContext.createOscillator();\n    const gainNode = audioContext.createGain();\n    \n    oscillator.connect(gainNode);\n    gainNode.connect(audioContext.destination);\n    \n    oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);\n    oscillator.type = type;\n    \n    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);\n    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);\n\n    oscillator.start();\n    oscillator.stop(audioContext.currentTime + duration);\n}\n\nfunction playJumpSound() {\n    if (musicPlaying) {\n        createOscillator(261.63, 0.2, 'sawtooth'); // C4\n    }\n}\n\nfunction playDashSound() {\n    if (musicPlaying) {\n        createOscillator(523.25, 0.15, 'square'); // C5\n    }\n}\n\nfunction playCollectSound() {\n    createOscillator(659.25, 0.3, 'triangle'); // E5\n}\n\nfunction playDeathSound() {\n    createOscillator(110, 0.5, 'sawtooth'); // A2\n}\n\nfunction playVictorySound() {\n    createOscillator(523.25, 0.2); // C5\n    setTimeout(() => createOscillator(659.25, 0.2), 100);\n    setTimeout(() => createOscillator(783.99, 0.3), 200);\n}\n\nfunction startMusic() {\n    if (musicPlaying) return;\n    \n    musicPlaying = true;\n    musicTimer = 0;\n    \n    if (!musicGainNode) {\n        musicGainNode = audioContext.createGain();\n        musicGainNode.connect(audioContext.destination);\n    }\n    \n    // Create background music using oscillators\n    function playMusicLoop() {\n        if (!musicPlaying) return;\n        \n        const now = audioContext.currentTime;\n        const osc = audioContext.createOscillator();\n        const gain = audioContext.createGain();\n        \n        osc.type = 'sawtooth';\n        osc.frequency.setValueAtTime(220, now); // A3\n        \n        gain.gain.setValueAtTime(0.15, now);\n        gain.gain.exponentialRampToValueAtTime(0.01, now + musicDuration);\n        \n        osc.connect(gain);\n        gain.connect(musicGainNode);\n        musicGainNode.connect(audioContext.destination);\n        \n        osc.start(now);\n        osc.stop(now + musicDuration);\n        \n        osc.onended = playMusicLoop;\n    }\n    \n    playMusicLoop();\n    updateNoteIcon();\}\n\nfunction stopMusic() {\n    musicPlaying = false;\n    if (musicGainNode) {\n        musicGainNode.disconnect();\n    }\n    updateNoteIcon();\n}\n\nfunction updateNoteIcon() {\n    const noteIcon = document.getElementById('noteIcon');\n    const musicStatus = document.getElementById('musicStatus');\n    \n    if (musicPlaying) {\n        noteIcon.className = 'note-icon active';\n        musicStatus.textContent = 'MUSIC: ON';\n    } else {\n        noteIcon.className = 'note-icon inactive';\n        musicStatus.textContent = 'MUSIC: OFF';\n    }\n}\n\n// Level Design\nfunction createLevel(levelNum) {\n    platforms = [];\n    enemies = [];\n    hazards = [];\n    soundEmitters = [];\n    silenceZones = [];\n    powerUps = [];\n    particles = [];\n    \n    const levelWidth = 2000;\n    const levelHeight = 600;\n    \n    // Ground\n    for (let i = 0; i < 20; i++) {\n        platforms.push({\n            x: i * 100, y: 550, width: 95, height: 20,\n            type: 'ground', color: '#4a00e5', pulse: 0\n        });\n    }\n    \n    // Platforms based on level\n    if (levelNum >= 1) {\n        platforms.push({x: 200, y: 450, width: 150, height: 20, type: 'platform', color: '#00ffff', pulse: 0});\n        platforms.push({x: 400, y: 350, width: 150, height: 20, type: 'platform', color: '#ff00ff', pulse: 0});\n    }\n    \n    if (levelNum >= 2) {\n        platforms.push({x: 600, y: 400, width: 100, height: 20, type: 'platform', color: '#00ff88', pulse: 0});\n        platforms.push({x: 750, y: 300, width: 100, height: 20, type: 'platform', color: '#ffaa00', pulse: 0});\n        platforms.push({x: 900, y: 200, width: 100, height: 20, type: 'platform', color: '#ff0000', pulse: 0});\n    }\n    \n    if (levelNum >= 3) {\n        // Moving platforms\n        platforms.push({\n            x: 1100, y: 450, width: 120, height: 20, type: 'moving', color: '#00ffff',\n            pulse: 0, moveRange: 100, moveSpeed: 1, offset: 0\n        });\n        platforms.push({\n            x: 1300, y: 350, width: 120, height: 20, type: 'moving', color: '#ff00ff',\n            pulse: 0, moveRange: 150, moveSpeed: 1.5, offset: 0\n        });\n    }\n    \n    if (levelNum >= 4) {\n        // Sound emitters\n        soundEmitters.push({x: 1500, y: 500, radius: 30, active: false});\n        platforms.push({x: 1500, y: 450, width: 100, height: 20, type: 'platform', color: '#00ff88', pulse: 0});\n        platforms.push({x: 1650, y: 350, width: 100, height: 20, type: 'platform', color: '#ffaa00', pulse: 0});\n    }\n    \n    if (levelNum >= 5) {\n        // Silence zones\n        silenceZones.push({x: 1800, y: 550, width: 200, height: 50});\n        platforms.push({x: 1800, y: 450, width: 100, height: 20, type: 'platform', color: '#ff0000', pulse: 0});\n        platforms.push({x: 1950, y: 350, width: 100, height: 20, type: 'platform', color: '#ff0000', pulse: 0});\n    }\n    \n    if (levelNum >= 6) {\n        // Enemies\n        enemies.push({x: 2100, y: 470, width: 30, height: 30, vx: 1, color: '#ff0000', type: 'patrol'});\n        enemies.push({x: 2200, y: 370, width: 30, height: 30, vx: -1, color: '#ff0000', type: 'patrol'});\n        platforms.push({x: 2050, y: 450, width: 100, height: 20, type: 'platform', color: '#ff00ff', pulse: 0});\n    }\n    \n    if (levelNum >= 7) {\n        // Power-ups\n        powerUps.push({x: 2400, y: 380, width: 20, height: 20, type: 'doubleJump', color: '#00ffff'});\n        powerUps.push({x: 2500, y: 280, width: 20, height: 20, type: 'jumpBoost', color: '#ffaa00'});\n        platforms.push({x: 2350, y: 450, width: 150, height: 20, type: 'platform', color: '#00ff88', pulse: 0});\n    }\n    \n    if (levelNum >= 8) {\n        // Boss area\n        platforms.push({x: 2700, y: 500, width: 200, height: 20, type: 'platform', color: '#4a00e5', pulse: 0});\n        platforms.push({x: 2900, y: 400, width: 200, height: 20, type: 'platform', color: '#4a00e5', pulse: 0});\n        enemies.push({x: 2800, y: 470, width: 50, height: 50, vx: 0, vy: 0, color: '#8a2be2', type: 'boss', phase: 0});\n    }\n    \n    // Goal\n    platforms.push({x: levelWidth - 150, y: 550, width: 100, height: 20, type: 'goal', color: '#00ff00', pulse: 0});\n}\n\n// Initialize Game\nfunction initGame() {\n    player.x = 100;\n    player.y = 300;\n    player.vx = 0;\n    player.vy = 0;\n    player.onGround = false;\n    player.jumpCooldown = 0;\n    player.isDashing = false;\n        player.dashTimer = 0;\n    player.canDoubleJump = false;\n    player.doubleJumpUsed = false;\n    health = 3;\n    score = 0;\n    level = 1;\n    musicPlaying = false;\n    musicTimer = 0;\n    speedrunTime = 0;\n    speedrunStartTime = 0;\n    \n    createLevel(1);\n    \n    document.getElementById('levelNum').textContent = level;\n    document.getElementById('scoreNum').textContent = score;\n    document.getElementById('highScoreDisplay').textContent = highScore;\n    document.getElementById('gameOverScreen').classList.add('hidden');\n    document.getElementById('victoryScreen').classList.add('hidden');\n    document.getElementById('startScreen').classList.remove('hidden');\n}\n\n// Game Loop\nfunction gameLoop() {\n    update();\n    draw();\n    requestAnimationFrame(gameLoop);\n}\n\nfunction update() {\n    if (gameState !== 'playing') return;\n    \n    // Update speedrun timer\n    if (speedrunStartTime > 0) {\n        speedrunTime = (Date.now() - speedrunStartTime) / 1000;\n        const minutes = Math.floor(speedrunTime / 60);\n        const seconds = Math.floor(speedrunTime % 60);\n        document.getElementById('speedrunTimer').textContent = `⏱ ${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;\n    }\n    \n    // Music timer\n    if (musicPlaying) {\n        musicTimer += 1/60;\n        if (musicTimer >= musicDuration) {\n            stopMusic();\n        }\n    }\n    \n    // Player input\n    if (keys['ArrowLeft'] || keys['a']) {\n        player.vx = -moveSpeed;\n    } else if (keys['ArrowRight'] || keys['d']) {\n        player.vx = moveSpeed;\n    } else {\n        player.vx *= friction;\n        if (Math.abs(player.vx) < 0.1) player.vx = 0;\n    }\n    \n    // Jumping\n    if (jumpPressed && musicPlaying && player.onGround) {\n        player.vy = -Math.sqrt(2 * gravity * jumpHeight);\n        player.onGround = false;\n        playJumpSound();\n        jumpPressed = false;\n        player.jumpCooldown = 0;\n    }\n    \n    // Dash\n    if (keys[' '] && musicPlaying && player.onGround) {\n        if (!player.isDashing) {\n            player.isDashing = true;\n            player.dashTimer = 15;\n            player.vx = keys['ArrowLeft'] || keys['a'] ? -dashSpeed : (keys['ArrowRight'] || keys['d'] ? dashSpeed : 0);\n            playDashSound();\n        }\n    }\n    \n    // Double jump\n    if (keys[' '] && musicPlaying && !player.onGround && player.canDoubleJump && !player.doubleJumpUsed) {\n        player.vy = -Math.sqrt(2 * gravity * jumpHeight * 1.2);\n        player.doubleJumpUsed = true;\n        playJumpSound();\n    }\n    \n    // Apply gravity\n    if (!player.onGround) {\n        player.vy += gravity;\n    }\n    \n    // Update position\n    player.x += player.vx;\n    player.y += player.vy;\n    \n    // Update dash timer\n    if (player.isDashing) {\n        player.dashTimer--;\n        if (player.dashTimer <= 0) {\n            player.isDashing = false;\n            player.vx = 0;\n        }\n    }\n    \n    // Update jump cooldown\n    if (player.jumpCooldown > 0) player.jumpCooldown--;\n    \n    // Check silence zones\n    let inSilenceZone = false;\n    for (const zone of silenceZones) {\n        if (player.x + player.width > zone.x && player.x < zone.x + zone.width &&\n            player.y + player.height > zone.y && player.y < zone.y + zone.height) {\n            inSilenceZone = true;\n            break;\n        }\n    }\n    \n    // Check sound emitters\n    for (const emitter of soundEmitters) {\n        const dist = Math.sqrt(Math.pow(player.x - emitter.x, 2) + Math.pow(player.y - emitter.y, 2));\n        if (dist < emitter.radius) {\n            if (!musicPlaying) {\n                startMusic();\n            }\n            emitter.active = true;\n        } else {\n            emitter.active = false;\n        }\n    }\n    \n    // Auto-start music when moving\n    if (!musicPlaying && (Math.abs(player.vx) > 0.1 || Math.abs(player.vy) > 0.1)) {\n        musicTimer = 0;\n        if (musicTimer >= 1) {\n            startMusic();\n        }\n    }\n    \n    // Collision detection\n    player.onGround = false;\n    for (const platform of platforms) {\n        if (player.x + player.width > platform.x && player.x < platform.x + platform.width &&\n            player.y + player.height > platform.y && player.y + player.height < platform.y + platform.height) {\n            player.y = platform.y - player.height;\n            player.vy = 0;\n            player.onGround = true;\n            player.jumpCooldown = 30;\n            if (platform.type !== 'goal') {\n                player.canDoubleJump = true;\n                player.doubleJumpUsed = false;\n            }\n        }\n    }\n    \n    // Enemy collision\n    for (const enemy of enemies) {\n        if (player.x + player.width > enemy.x && player.x < enemy.x + enemy.width &&\n            player.y + player.height > enemy.y && player.y < enemy.y + enemy.height) {\n            if (player.vy > 0 && player.y + player.height - player.vy <= enemy.y) {\n                // Jump on enemy\n                player.vy = -10;\n                enemies.splice(enemies.indexOf(enemy), 1);\n                score += 100;\n            } else {\n                // Hit by enemy\n                health--;\n                playDeathSound();\n                if (health <= 0) {\n                    endGame('gameOver');\n                } else {\n                    player.x = 100;\n                    player.y = 300;\n                    player.vx = 0;\n                    player.vy = 0;\n                }\n            }\n        }\n    }\n    \n        // Hazard collision\n    for (const hazard of hazards) {\n        if (player.x + player.width > hazard.x && player.x < hazard.x + hazard.width &&\n            player.y + player.height > hazard.y && player.y < hazard.y + hazard.height) {\n            health--;\n            playDeathSound();\n            if (health <= 0) {\n                endGame('gameOver');\n            } else {\n                player.x = 100;\n                player.y = 300;\n                player.vx = 0;\n                player.vy = 0;\n            }\n        }\n    }\n    \n    // Power-up collection\n    for (let i = powerUps.length - 1; i >= 0; i--) {\n        const pu = powerUps[i];\n        if (player.x + player.width > pu.x && player.x < pu.x + pu.width &&\n            player.y + player.height > pu.y && player.y < pu.y + pu.height) {\n            if (pu.type === 'doubleJump') {\n                player.canDoubleJump = true;\n                player.doubleJumpUsed = false;\n            }\n            playCollectSound();\n            score += 200;\n            powerUps.splice(i, 1);\n        }\n    }\n    \n    // Update particles\n    for (let i = particles.length - 1; i >= 0; i--) {\n        const p = particles[i];\n        p.x += p.vx;\n        p.y += p.vy;\n        p.life--;\n        if (p.life <= 0) particles.splice(i, 1);\n    }\n    \5;
+    }
+    
+    // Check level completion
+    for (const platform of platforms) {
+        if (platform.type === 'goal' && 
+            player.x + player.width > platform.x && player.x < platform.x + platform.width &&
+            player.y + player.height > platform.y && player.y < platform.y + platform.height) {
+            completeLevel();
+            break;
+        }
+    }
+    
+    // Update prompt
+    if (musicPlaying && Math.random() < 0.02) {
+        document.getElementById('prompt').classList.add('visible');
+        setTimeout(() => {
+            document.getElementById('prompt').classList.remove('visible');
+        }, 2000);
+    }
+}
+
+function completeLevel() {
+    score += level * 100;
+    level++;
+    if (level > 8) {
+        endGame('victory');
+    } else {
+        createLevel(level);
+        player.x = 100;
+        player.y = 300;
+        player.vx = 0;
+        player.vy = 0;
+        document.getElementById('levelNum').textContent = level;
+        stopMusic();
+    }
+}
+
+function endGame(result) {
+    gameState = 'gameOver';
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('symphonicHighScore', highScore);
+    }
+    
+    if (result === 'gameOver') {
+        document.getElementById('finalScore').textContent = score;
+        document.getElementById('gameOverHighScore').textContent = highScore;
+        document.getElementById('gameOverScreen').classList.remove('hidden');
+    } else {
+        playVictorySound();
+        document.getElementById('victoryScore').textContent = score;
+        document.getElementById('victoryHighScore').textContent = highScore;
+        document.getElementById('victoryScreen').classList.remove('hidden');
+    }
+}
+
+function startGame() {
+    gameState = 'playing';
+    document.getElementById('startScreen').classList.add('hidden');
+    speedrunStartTime = Date.now();
+    createLevel(level);
+}
+
+function restartGame() {
+    gameState = 'playing';
+    level = 1;
+    initGame();
+    createLevel(1);
+    document.getElementById('gameOverScreen').classList.add('hidden');
+    document.getElementById('victoryScreen').classList.add('hidden');
+    speedrunStartTime = Date.now();
+}
+
+// Drawing Functions
+function draw() {
+    // Clear canvas
+    ctx.fillStyle = '#0a0a2a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    if (gameState === 'playing') {
+        // Draw platforms
+        for (const platform of platforms) {
+            if (platform.type === 'moving') {
+                platform.offset += platform.moveSpeed * 0.02;
+                platform.x = platform.x + Math.sin(platform.offset) * 2;
+            }
+            
+            if (platform.type === 'ground') {
+                platform.pulse = Math.sin(musicTimer * 2) * 0.5 + 0.5;
+            }
+            
+            ctx.fillStyle = platform.color;
+            ctx.globalAlpha = 0.8 + platform.pulse * 0.2;
+            ctx.fillRect(platform.x * scale + offsetX, platform.y * scale + offsetY, 
+                        platform.width * scale, platform.height * scale);
+            ctx.globalAlpha = 1;
+        }
+        
+        // Draw enemies
+        for (const enemy of enemies) {
+            if (enemy.type === 'patrol') {
+                enemy.x += enemy.vx;
+                if (enemy.x < 100 || enemy.x > 2300) enemy.vx *= -1;
+            } else if (enemy.type === 'boss') {
+                enemy.phase = (enemy.phase + 0.05) % (Math.PI * 2);
+                enemy.x = 2800 + Math.cos(enemy.phase) * 50;
+            }
+            
+            ctx.fillStyle = enemy.color;
+            ctx.fillRect(enemy.x * scale + offsetX, enemy.y * scale + offsetY,
+                        enemy.width * scale, enemy.height * scale);
+        }
+        
+        // Draw hazards
+        for (const hazard of hazards) {
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(hazard.x * scale + offsetX, hazard.y * scale + offsetY,
+                        hazard.width * scale, hazard.height * scale);
+        }
+        
+        // Draw sound emitters
+        for (const emitter of soundEmitters) {
+            ctx.beginPath();
+            ctx.arc(emitter.x * scale + offsetX, emitter.y * scale + offsetY, 
+                   emitter.radius * scale, 0, Math.PI * 2);
+            ctx.fillStyle = emitter.active ? '#00ff88' : '#4a00e5';
+            ctx.globalAlpha = 0.5;
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+        
+        // Draw silence zones
+        for (const zone of silenceZones) {
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+            ctx.fillRect(zone.x * scale + offsetX, zone.y * scale + offsetY,
+                        zone.width * scale, zone.height * scale);
+        }
+        
+        // Draw power-ups
+        for (const pu of powerUps) {
+            ctx.fillStyle = pu.color;
+            ctx.fillRect(pu.x * scale + offsetX, pu.y * scale + offsetY,
+                        pu.width * scale, pu.height * scale);
+        }
+        
+        // Draw player
+        ctx.fillStyle = player.color;
+        ctx.fillRect(player.x * scale + offsetX, player.y * scale + offsetY,
+                    player.width * scale, player.height * scale);
+        
+        // Draw particles
+        for (const p of particles) {
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life / 60;
+            ctx.fillRect(p.x * scale + offsetX, p.y * scale + offsetY,
+                        p.size * scale, p.size * scale);
+            ctx.globalAlpha = 1;
+        }
+    }
+}
+
+// Input Handling
+document.addEventListener('keydown', (e) => {
+    keys[e.key] = true;
+    if (e.key === ' ') {
+        jumpPressed = true;
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    keys[e.key] = false;
+});
+
+// Start the game
+initGame();
+gameLoop();
+"
+}
+}

@@ -1,229 +1,216 @@
+// Symphonic Leap - Audio-Driven Platformer
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const timerEl = document.getElementById('timer');
-const scoreEl = document.getElementById('score');
-const highscoreEl = document.getElementById('high-score');
+let w = canvas.width = window.innerWidth;
+let h = canvas.height = window.innerHeight;
+window.addEventListener('resize', ()=>{w=canvas.width=window.innerWidth;h=canvas.height=window.innerHeight});
 
-// Configuration
-const CONFIG = {
-    width: 1920,
-    height: 1080,
-    gravity: 0.6,
-    jumpForce: -14,
-    speed: 0.6,
-    friction: 0.85,
-    maxSpeed: 7,
-    colors: {
-        bg: '#1a1a2e', 
-        main: '#16213e', 
-        fg: '#0f3460',
-        playerBG: '#ff00ff', // Magenta
-        playerMain: '#00ffff', // Cyan
-        accent: '#e94560'
-    }
+// Color Palette
+const COLORS = {
+  bg: '#0d0220',
+  player: '#00fff2',
+  platform: '#7fff00',
+  hazard: '#ff2a6d',
+  emitter: '#ff9e00',
+  silence: '#8888aa',
+  text: '#ffffff',
+  pulse: '#bb86ff'
 };
 
-// Audio Engine
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function playSound(freq, type, duration) {
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = type;
-    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    osc.start();
-    osc.stop(audioCtx.currentTime + duration);
+// Audio Context
+let audioCtx;
+let musicGain;
+let isMusicPlaying = false;
+let musicTimeout;
+let jumpBuffer, dashBuffer, collectBuffer;
+
+function initAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  musicGain = audioCtx.createGain();
+  musicGain.connect(audioCtx.destination);
+  musicGain.gain.value = 0.3;
+  loadSounds();
+}
+
+function loadSounds(){
+  const ctx = audioCtx;
+  function makeTone(freq, dur){
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type='sine'; o.frequency.value=freq;
+    o.connect(g); g.connect(ctx.destination);
+    g.gain.setValueAtTime(0.001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+dur);
+    o.start(); o.stop(ctx.currentTime+dur);
+  }
+  jumpBuffer = ()=>makeTone(220,0.2);
+  dashBuffer = ()=>makeTone(110,0.1);
+  collectBuffer = ()=>makeTone(440,0.15);
+}
+
+function startMusic(){ 
+  if(!audioCtx) initAudio();
+  isMusicPlaying=true; 
+  clearTimeout(musicTimeout);
+  musicTimeout=setTimeout(stopMusic, 8000);
+  updateMusicIcon();
+}
+function stopMusic(){ 
+  isMusicPlaying=false; 
+  clearTimeout(musicTimeout);
+  updateMusicIcon();
+}
+function updateMusicIcon(){
+  document.getElementById('musicIcon').textContent = isMusicPlaying?'🎶':'🔇';
 }
 
 // Game State
-let gameState = {
-    running: true,
-    score: 0,
-    highScore: localStorage.getItem('layerShift_highScore') || 0,
-    layer: 1, // 0: Background, 1: Main, 2: Foreground
-    startTime: Date.now(),
-    lastSwitch: 0
-};
+let player, platforms, emitters, silenceZones, hazards, collectibles;
+let score=0, level=1, hearts=3, jumpMeter=100, powerTimer=0;
+let speedrunStart=performance.now();
+let highScore = localStorage.getItem('symphonicHighScore')||0;
+let keys={};
+let gameOver=false;
 
-class Particle {
-    constructor(x, y, color) {
-        this.x = x; this.y = y;
-        this.vx = (Math.random() - 0.5) * 10;
-        this.vy = (Math.random() - 0.5) * 10;
-        this.life = 1.0;
-        this.color = color;
-    }
-    update() {
-        this.x += this.vx; this.y += this.vy;
-        this.life -= 0.05;
-    }
-    draw(ctx) {
-        ctx.globalAlpha = this.life;
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, 6, 6);
-        ctx.globalAlpha = 1.0;
-    }
+function resetGame(){
+  player = {x:100,y:h-150,vx:0,vy:0,onGround:false,canDash:false};
+  platforms=[]; emitters=[]; silenceZones=[]; hazards=[]; collectibles=[];
+  score=0; level=1; hearts=3; jumpMeter=100; powerTimer=0;
+  speedrunStart=performance.now();
+  buildLevel(1);
+  stopMusic();
 }
 
-class Player {
-    constructor() {
-        this.x = 300; this.y = 500;
-        this.vx = 0; this.vy = 0;
-        this.w = 40; this.h = 60;
-        this.grounded = false;
-    }
-    update(platforms) {
-        this.vy += CONFIG.gravity;
-        this.x += this.vx;
-        this.checkCollision(platforms, 'x');
-        this.y += this.vy;
-        this.grounded = false;
-        this.checkCollision(platforms, 'y');
-        
-        this.vx *= CONFIG.friction;
-        if (Math.abs(this.vx) < 0.1) this.vx = 0;
-    }
-    checkCollision(platforms, axis) {
-        for (let p of platforms) {
-            if (p.layer!== gameState.layer) continue;
-            if (this.x < p.x + p.w && this.x + this.w > p.x &&
-                this.y < p.y + p.h && this.y + this.h > p.y) {
-                if (axis === 'x') {
-                    if (this.vx > 0) this.x = p.x - this.w;
-                    else if (this.vx < 0) this.x = p.x + p.w;
-                    this.vx = 0;
-                } else {
-                    if (this.vy > 0) {
-                        this.y = p.y - this.h;
-                        this.grounded = true;
-                        this.vy = 0;
-                    } else {
-                        this.y = p.y + p.h;
-                        this.vy = 0;
-                    }
-                }
-            }
-        }
-    }
-    draw(ctx) {
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = gameState.layer === 1? CONFIG.colors.playerMain : CONFIG.colors.playerBG;
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(this.x, this.y, this.w, this.h);
-        ctx.shadowBlur = 0;
-    }
+function buildLevel(n){
+  // Ground
+  platforms.push({x:0,y:h-60,w:w,hh:60});
+  // Platforms
+  for(let i=0;i<5;i++){
+    platforms.push({x:200+i*180,y:h-200-i*30,w:120,hh:20});
+  }
+  // Emitter
+  emitters.push({x:300,y:h-260,w:40,hh:40});
+  // Silence zone
+  silenceZones.push({x:w-200,y:h-120,w:100,hh:60});
+  // Hazards
+  hazards.push({x:500,y:h-200,w:30,hh:30});
+  // Collectible
+  collectibles.push({x:400,y:h-280,r:10,collected:false});
 }
 
-const player = new Player();
-const platforms = [
-    {x: 0, y: 1000, w: 1920, h: 120, layer: 1}, // Floor
-    {x: 500, y: 800, w: 300, h: 40, layer: 1}, 
-    {x: 200, y: 600, w: 300, h: 40, layer: 0}, // BG platform
-    {x: 1200, y: 700, w: 300, h: 40, layer: 2}, // FG platform
-    {x: 800, y: 450, w: 200, h: 40, layer: 1},
-    {x: 400, y: 300, w: 200, h: 40, layer: 2},
-    {x: 1400, y: 400, w: 200, h: 40, layer: 0}
-];
-let particles = [];
+function update(){
+  if(gameOver) return;
+  // Movement
+  if(keys['ArrowLeft']||keys['a']) player.vx=-4;
+  else if(keys['ArrowRight']||keys['d']) player.vx=4;
+  else player.vx*=0.8;
+  // Jump
+  if((keys[' ']||keys['ArrowUp']||keys['w'])&&isMusicPlaying&&player.onGround&&jumpMeter>0){
+    player.vy=-15; player.onGround=false; jumpBuffer(); jumpMeter-=20;
+  }
+  // Dash
+  if((keys[' ']||keys['ArrowUp']||keys['w'])&&isMusicPlaying&&!player.onGround&&player.canDash){
+    player.vx+=(keys['ArrowLeft']||keys['a'])?-8:(keys['ArrowRight']||keys['d'])?8:0;
+    player.canDash=false; dashBuffer();
+  }
+  // Gravity
+  player.vy+=0.5;
+  player.y+=player.vy;
+  player.x+=player.vx;
+  // Bounds
+  if(player.x<0)player.x=0; if(player.x>w-40)player.x=w-40;
+  if(player.y>h-60){player.y=h-60;player.vy=0;player.onGround=true;player.canDash=true;}
+  // Collisions
+  handleCollisions();
+  // Music meter regen
+  if(isMusicPlaying) jumpMeter=Math.min(100,jumpMeter+0.5);
+  // Power timer
+  if(powerTimer>0) powerTimer--;
+  // Score
+  score+=1;
+  // Speedrun
+  const elapsed = ((performance.now()-speedrunStart)/1000).toFixed(2);
+  document.getElementById('timer').textContent='⏱ '+elapsed;
+  // High score
+  if(score>highScore){highScore=score;localStorage.setItem('symphonicHighScore',highScore);}
+  // Win
+  if(score>2000){alert('You Win! High Score: '+highScore);resetGame();}
+}
 
-function switchLayer() {
-    if (Date.now() - gameState.lastSwitch < 300) return;
-    gameState.layer = (gameState.layer + 1) % 3;
-    gameState.lastSwitch = Date.now();
-    playSound(gameState.layer * 200 + 200, 'ine', 0.2);
-    
-    // Burst
-    for(let i=0; i<12; i++) {
-        particles.push(new Particle(player.x + 20, player.y + 30, 
-            gameState.layer === 1? CONFIG.colors.playerMain : CONFIG.colors.playerBG));
+function handleCollisions(){
+  // Platforms
+  for(let p of platforms){
+    if(rectOverlap(player,p)){
+      if(player.vy>0&&player.y<p.y){player.y=p.y-player.vy;player.vy=0;player.onGround=true;player.canDash=true;}
+      else if(player.vy<0)player.vy=0;
     }
+  }
+  // Emitters
+  for(let e of emitters){
+    if(rectOverlap(player,e)){startMusic();}
+  }
+  // Silence zones
+  for(let z of silenceZones){
+    if(rectOverlap(player,z)){stopMusic();}
+  }
+  // Hazards
+  for(let hz of hazards){
+    if(rectOverlap(player,hz)){hearts--;if(hearts<=0){gameOver=true;document.getElementById('hearts').textContent='💀';}
+      player.y=h-150;player.vy=0;}
+  }
+  // Collectibles
+  for(let c of collectibles){
+    if(!c.collected&&dist(player.x+20,player.y+20,c.x,c.y)<c.r+20){c.collected=true;score+=500;collectBuffer();powerTimer=300;}
+  }
 }
 
-function update() {
-    if (!gameState.running) return;
+function rectOverlap(a,b){
+  return a.x<b.x+b.w&&a.x+40>b.x&&a.y<b.y+b.hh&&a.y+40>b.y;
+}
+function dist(x1,y1,x2,y2){return Math.hypot(x1-x2,y1-y2);}
 
-    player.update(platforms);
-
-    // Bounds check
-    if (player.y > CONFIG.height) {
-        player.x = 300; player.y = 500; player.vx = 0; player.vy = 0;
-    }
-
-    // Timer
-    const elapsed = (Date.now() - gameState.startTime) / 1000;
-    const m = Math.floor(elapsed / 60).toString().padStart(2, '0');
-    const s = (elapsed % 60).toFixed(2).padStart(5, '0');
-    timerEl.innerText = `${m}:${s}`;
-
-    particles = particles.filter(p => p.life > 0);
-    particles.forEach(p => p.update());
+function draw(){
+  ctx.fillStyle=COLORS.bg; ctx.fillRect(0,0,w,h);
+  // Platforms
+  ctx.fillStyle=COLORS.platform;
+  for(let p of platforms) ctx.fillRect(p.x,p.y,p.w,p.hh);
+  // Emitters
+  ctx.fillStyle=COLORS.emitter;
+  for(let e of emitters) ctx.fillRect(e.x,e.y,e.w,e.hh);
+  // Silence zones
+  ctx.fillStyle=COLORS.silence;
+  for(let z of silenceZones) ctx.fillRect(z.x,z.y,z.w,z.hh);
+  // Hazards
+  ctx.fillStyle=COLORS.hazard;
+  for(let hz of hazards) ctx.fillRect(hz.x,hz.y,hz.w,hz.hh);
+  // Collectibles
+  for(let c of collectibles){
+    if(!c.collected){ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,Math.PI*2);ctx.fill();}
+  }
+  // Player
+  ctx.fillStyle=COLORS.player;
+  ctx.fillRect(player.x,player.y,40,40);
+  // Jump meter bar
+  ctx.fillStyle='#444'; ctx.fillRect(0,h-30,w,10);
+  ctx.fillStyle=isMusicPlaying?'#0f0':'#555'; ctx.fillRect(0,h-30,jumpMeter*4,10);
 }
 
-function draw() {
-    // Clear
-    ctx.fillStyle = CONFIG.colors.bg;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Draw Layers
-    [0, 1, 2].forEach(l => {
-        ctx.globalAlpha = l === gameState.layer? 1.0 : 0.2;
-        ctx.fillStyle = l === 0? '#2c3e50' : l === 1? '#34495e' : '#d35400';
-        
-        platforms.filter(p => p.layer === l).forEach(p => {
-            ctx.fillRect(p.x, p.y, p.w, p.h);
-        });
-    });
-    ctx.globalAlpha = 1.0;
-
-    particles.forEach(p => p.draw(ctx));
-    player.draw(ctx);
-}
-
-function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
+function loop(){
+  update(); draw();
+  document.getElementById('score').textContent='Score: '+score;
+  document.getElementById('levelInfo').textContent='Level '+level;
+  document.getElementById('hearts').textContent='❤️'.repeat(hearts);
+  document.getElementById('jumpMeter').textContent='Jump: '+Math.round(jumpMeter)+'%';
+  document.getElementById('powerTimer').textContent=powerTimer>0?'Power: '+Math.round(powerTimer/60)+'s':'';
+  requestAnimationFrame(loop);
 }
 
 // Input
-const keys = {};
-window.addEventListener('keydown', e => {
-    keys[e.code] = true;
-    if (e.code === 'Space') switchLayer();
-});
-window.addEventListener('keyup', e => keys[e.code] = false);
-window.addEventListener('mousedown', () => switchLayer());
+window.addEventListener('keydown',e=>{keys[e.key]=true;});
+window.addEventListener('keyup',e=>{keys[e.key]=false;});
 
-// Mobile Touch Support
-window.addEventListener('touchstart', (e) => {
-    if (e.touches[0].clientX < window.innerWidth / 2) {
-        // Handle movement logic if needed
-    } else {
-        switchLayer();
-    }
-});
-
-// Resize
-function resize() {
-    canvas.width = CONFIG.width;
-    canvas.height = CONFIG.height;
-}
-window.addEventListener('resize', resize);
-resize();
-
-// Input Loop for movement
-setInterval(() => {
-    if (keys['ArrowLeft']) player.vx -= CONFIG.speed;
-    if (keys['ArrowRight']) player.vx += CONFIG.speed;
-    if (keys['ArrowUp'] && player.grounded) {
-        player.vy = CONFIG.jumpForce;
-        player.grounded = false;
-        playSound(400, 'quare', 0.1);
-    }
-}, 16);
-
-highscoreEl.innerText = `BEST: ${gameState.highScore}`;
+// Init
+resetGame();
 loop();
