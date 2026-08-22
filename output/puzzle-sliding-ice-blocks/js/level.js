@@ -1,4 +1,1 @@
-export async function loadLevel(num){
-  const res = await fetch(`levels/level${num}.json`);
-  return res.json();
-}
+window.levelData={player:{x:100,y:100},blocks:[{x:200,y:100}],targets:[{x:300,y:100}]};
