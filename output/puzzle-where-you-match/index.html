@@ -1,205 +1,517 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ORBITALIS</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23FF5D73'/%3E%3Cpath d='M50 15 L85 85 L15 85 Z' fill='%23FFE9A8'/%3E%3C/svg%3E">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: linear-gradient(180deg, #0B1020, #131A33); }
-    canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
-    .hud { position: absolute; top: 0; left: 0; right: 0; padding: 10px; pointer-events: none; }
-    .top-left { position: absolute; top: 10px; left: 10px; color: white; font-family: monospace; }
-    .top-right { position: absolute; top: 10px; right: 10px; }
-    .bottom { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; pointer-events: auto; }
-    button { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; padding: 8px 12px; color: white; cursor: pointer; }
-    .timer { position: absolute; top: 10px; right: 10px; color: #4ADE80; font-family: monospace; }
-  </style>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>ORBITALIS</title>
+ <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%23FF5D73'/%3E%3Cpath d='M50 15 L58 45 L88 45 L62 65 L70 95 L50 75 L30 95 L38 65 L12 45 L42 45 Z' fill='%23FFE9A8'/%3E%3C/svg%3E">
+ <style>
+ * { margin: 0; padding: 0; box-sizing: border-box; }
+ html, body { width: 100%; height: 100%; overflow: hidden; background: linear-gradient(to bottom, #0B1020, #131A33); }
+ canvas { display: block; touch-action: none; }
+ .hud { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
+ .text { font-family: 'Segoe UI', Arial, sans-serif; text-align: center; color: #fff; }
+ #levelInfo { position: absolute; top: 10px; left: 10px; font-size: 14px; }
+ #score { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: 18px; font-weight: bold; }
+ #pauseBtn { position: absolute; top: 10px; right: 10px; width: 44px; height: 44px; background: #2A3558; border-radius: 50%; cursor: pointer; pointer-events: auto; }
+ #moves { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 16px; }
+ #buttons { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+ .btn { padding: 8px 16px; background: #2A3558; border: none; border-radius: 4px; color: #fff; cursor: pointer; pointer-events: auto; }
+ #timer { position: absolute; top: 10px; right: 60px; font-size: 14px; }
+ </style>
 </head>
 <body>
-  <canvas id="game"></canvas>
-  <div class="hud"><div class="top-left" id="levelInfo">LEVEL 01</div><div class="timer" id="timer">00:00</div><div class="top-right"><button id="pauseBtn">⏸</button></div></div>
-  <div class="bottom"><button id="undoBtn">↩</button><button id="restartBtn">⟳</button><button id="hintBtn">💡</button><button id="soundBtn">🔊</button></div>
-  <script>
-    const canvas = document.getElementById('game');
-    const ctx = canvas.getContext('2d');
-    let dpr = Math.min(window.devicePixelRatio, 2);
-    let W, H, RB, S = 8;
-    let rings = [];
-    let selected = 0;
-    let dragging = null;
-    let lastTime = 0;
-    let accumulator = 0;
-    let dt = 1/120;
-    let angle = Array(5).fill(0);
-    let locked = Array(5).fill().map(() => Array(12).fill(null));
-    let moves = 0, par = 5;
-    let highScore = 0;
-    let soundEnabled = true;
-    let timer = 0;
-    let running = true;
-    const shapes = ['△', '□', '⬟', '⬡', '●'];
-    const colors = ['#FF5D73', '#FFC145', '#4ADE80', '#38BDF8', '#C084FC'];
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    
-    function resize() {
-      W = window.innerWidth; H = window.innerHeight;
-      canvas.width = W * dpr;
-      canvas.height = H * dpr;
-      canvas.style.width = W + 'px';
-      canvas.style.height = H + 'px';
-      ctx.scale(dpr, dpr);
-      RB = Math.min(W, H) * 0.44;
-    }
-    
-    function initRings() {
-      for (let r = 0; r < 5; r++) {
-        rings[r] = {
-          radius: RB * (0.26 + 0.155 * r),
-          angle: Math.random() * 2 * Math.PI / S * 10,
-          target: null,
-          velocity: 0,
-          dragging: false,
-          drift: false
-        };
-      }
-    }
-    
-    function genLevel() {
-      const solved = [];
-      for (let i = 0; i < S; i++) solved.push(i % 5);
-      for (let r = 0; r < 5; r++) {
-        angle[r] = (Math.floor(Math.random() * S) + 1) * 2 * Math.PI / S;
-      }
-      moves = 0;
-      timer = 0;
-    }
-    
-    function draw() {
-      ctx.fillStyle = 'radial-gradient(circle at 50% 50%, #0B1020, #131A33)';
-      ctx.fillRect(0, 0, W, H);
-      
-      ctx.save();
-      ctx.translate(W/2, H/2);
-      
-      for (let r = 0; r < 5; r++) {
-        const ring = rings[r];
-        ctx.beginPath();
-        ctx.arc(0, 0, ring.radius + 3);
-        ctx.strokeStyle = '#2A3558';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-      }
-      
-      for (let r = 0; r < 5; r++) {
-        const ring = rings[r];
-        for (let s = 0; s < S; s++) {
-          const a = ring.angle + s * 2 * Math.PI / S;
-          const x = Math.cos(a) * ring.radius;
-          const y = Math.sin(a) * ring.radius;
-          const shape = (s + r + Math.floor(angle[r] * S / (2*Math.PI))) % S;
-          const shapeType = shapes[shape % shapes.length];
-          const color = colors[shape % colors.length];
-          
-          ctx.fillStyle = color;
-          ctx.font = '24px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(shapeType, x, y);
-        }
-      }
-      
-      ctx.restore();
-    }
-    
-    function update(dt) {
-      if (!running) return;
-      timer += dt;
-      for (let r = 0; r < 5; r++) {
-        if (rings[r].dragging) {
-          const mx = (pointer.x - W/2) * dpr;
-          const my = (pointer.y - H/2) * dpr;
-          const a = Math.atan2(my, mx);
-          rings[r].angle = a;
-        }
-      }
-    }
-    
-    let pointer = {x: 0, y: 0, down: false};
-    canvas.addEventListener('pointerdown', e => {
-      pointer.x = e.clientX;
-      pointer.y = e.clientY;
-      pointer.down = true;
-      const cx = W/2, cy = H/2;
-      const dx = pointer.x - cx, dy = pointer.y - cy;
-      const dist = Math.sqrt(dx*dx + dy*dy);
-      for (let r = 4; r >= 0; r--) {
-        if (dist >= rings[r].radius - 15 && dist <= rings[r].radius + 15) {
-          dragging = r;
-          rings[r].dragging = true;
-          rings[r].velocity = 0;
-          return;
-        }
-      }
-    });
-    
-    canvas.addEventListener('pointermove', e => {
-      pointer.x = e.clientX;
-      pointer.y = e.clientY;
-    });
-    
-    canvas.addEventListener('pointerup', e => {
-      if (dragging !== null) {
-        rings[dragging].dragging = false;
-        const snap = 2 * Math.PI / S;
-        const target = Math.round(rings[dragging].angle / snap) * snap;
-        rings[dragging].angle = target;
-        playSnap();
-        moves++;
-      }
-      dragging = null;
-    });
-    
-    function playSnap() {
-      if (!soundEnabled) return;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.value = 200 + Math.random() * 100;
-      gain.gain.value = 0.1;
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.1);
-    }
-    
-    function loop(ts) {
-      const now = ts / 1000;
-      const frameDt = now - lastTime;
-      lastTime = now;
-      accumulator += frameDt;
-      
-      while (accumulator >= dt) {
-        update(dt);
-        accumulator -= dt;
-      }
-      
-      draw();
-      
-      const mins = Math.floor(timer / 60);
-      const secs = Math.floor(timer % 60);
-      document.getElementById('timer').textContent = 
-        mins.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
-      
-      requestAnimationFrame(loop);
-    }
-    
-    window.addEventListener('resize', resize);
-    resize();
-    initRings();
-    genLevel();
-    requestAnimationFrame(loop);
-  </script>
+ <canvas id="game"></canvas>
+ <div class="hud">
+ <div id="levelInfo">LEVEL 01 — "FIRST SPARK"</div>
+ <div id="score">SCORE: 0</div>
+ <div id="timer">TIME: 00:00</div>
+ <div id="pauseBtn" onclick="togglePause()">⏸</div>
+ <div id="moves">MOVES: 0 / PAR: 0</div>
+ <div id="buttons">
+ <button class="btn" onclick="undo()">UNDO</button>
+ <button class="btn" onclick="restart()">RESTART</button>
+ <button class="btn" onclick="hint()">HINT</button>
+ <button class="btn" onclick="toggleSound()">🔊</button>
+ </div>
+ </div>
+ <script>
+(() => {
+ const canvas = document.getElementById('game');
+ const ctx = canvas.getContext('2d');
+ let W, H, dpr = Math.min(window.devicePixelRatio, 2);
+ let RB, hubR, ringR = [], slots = 8, S = 8;
+ let rings = [], locked = [], combo = 0, score = 0;
+ let moves = 0, par = 0, level = 1;
+ let dragging = -1, dragStart = 0, dragAngle = 0;
+ let selected = 0, lastFrame = 0, accumulator = 0;
+ let timer = 0, running = true, paused = false;
+ let audioCtx, masterGain, sfxGain, musicGain, soundOn = true;
+ let save = JSON.parse(localStorage.getItem('orbitalis.save.v1') || '{}');
+ const shapes = ['triangle', 'square', 'pentagon', 'hexagon', 'circle'];
+ const colors = { triangle: '#FF5D73', square: '#FFC145', pentagon: '#4ADE80', hexagon: '#38BDF8', circle: '#C084FC', void: '#64748B' };
+ const levelNames = ['FIRST SPARK', 'TIDAL LOCK', 'CRYSTAL GARDEN', 'SYMMETRY', 'DRIFT', 'ANCHOR POINT', 'COUPLED', 'OSCILLATION', 'CORE AWAKENING', 'SYMPHONY'];
+ 
+ function resize() {
+ W = canvas.clientWidth = window.innerWidth;
+ H = canvas.clientHeight = window.innerHeight;
+ canvas.width = W * dpr;
+ canvas.height = H * dpr;
+ ctx.scale(dpr, dpr);
+ RB = Math.min(W, H) * 0.44;
+ hubR = RB * 0.12;
+ ringR = [];
+ for (let r = 0; r < 5; r++) ringR[r] = RB * (0.26 + 0.155 * r);
+ }
+ 
+ function initAudio() {
+ try {
+ audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+ masterGain = audioCtx.createGain();
+ sfxGain = audioCtx.createGain();
+ musicGain = audioCtx.createGain();
+ sfxGain.connect(masterGain);
+ musicGain.connect(masterGain);
+ masterGain.connect(audioCtx.destination);
+ masterGain.gain.value = 1;
+ sfxGain.gain.value = soundOn ? 0.7 : 0;
+ musicGain.gain.value = soundOn ? 0.3 : 0;
+ } catch(e) {}
+ }
+ 
+ function playSound(type, opts = {}) {
+ if (!soundOn || !audioCtx) return;
+ const osc = audioCtx.createOscillator();
+ const gain = audioCtx.createGain();
+ const filter = audioCtx.createBiquadFilter();
+ osc.type = 'sawtooth';
+ filter.type = 'lowpass';
+ filter.frequency.value = opts.freq || 400;
+ osc.connect(filter);
+ filter.connect(gain);
+ gain.connect(sfxGain);
+ gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+ gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (opts.dur || 0.1));
+ osc.frequency.setValueAtTime(filter.frequency.value, audioCtx.currentTime);
+ if (opts.pitch) osc.frequency.exponentialRampToValueAtTime(osc.frequency.value * opts.pitch, audioCtx.currentTime + opts.dur/2);
+ osc.start();
+ osc.stop(audioCtx.currentTime + (opts.dur || 0.1));
+ }
+ 
+ function genLevel() {
+ const levelData = loadLevel(level);
+ moves = 0;
+ timer = 0;
+ score = 0;
+ combo = 0;
+ locked = new Array(S).fill(false);
+ rings = [];
+ for (let r = 0; r < levelData.rings; r++) {
+ const ring = { angle: 0, target: 0, settled: true, drift: false, driftDir: 1, coupled: null, anchor: false };
+ ring.tokens = [];
+ for (let s = 0; s < S; s++) ring.tokens[s] = levelData.tokens[r][s];
+ rings.push(ring);
+ }
+ document.getElementById('levelInfo').textContent = `LEVEL ${level} — "${levelNames[(level-1) % levelNames.length]}"`;
+ document.getElementById('moves').textContent = `MOVES: ${moves} / PAR: ${levelData.par}`;
+ par = levelData.par;
+ document.getElementById('score').textContent = `SCORE: ${score}`;
+ }
+ 
+ function loadLevel(lvl) {
+ const seed = lvl * 12345;
+ const ringsCount = Math.min(5, 2 + Math.floor((lvl-1)/10));
+ const slotsCount = [6, 8, 8, 10, 12][Math.min(4, Math.floor((lvl-1)/10))];
+ S = slotsCount;
+ const solution = [];
+ for (let s = 0; s < S; s++) solution[s] = shapes[s % shapes.length];
+ const tokens = [];
+ for (let r = 0; r < ringsCount; r++) {
+ tokens[r] = [];
+ for (let s = 0; s < S; s++) tokens[r][s] = solution[s];
+ }
+ for (let r = 0; r < ringsCount; r++) {
+ const rot = ((seed / (r+1)) | 0) % S;
+ const shifted = [];
+ for (let s = 0; s < S; s++) shifted[s] = tokens[r][(s - rot + S) % S];
+ tokens[r] = shifted;
+ }
+ return { rings: ringsCount, tokens, par: Math.max(2, Math.min(40, 5 + (lvl%15))) };
+ }
+ 
+ function draw() {
+ ctx.fillStyle = 'radial-gradient(circle at 50% 50%, #0B1020, #131A33)';
+ ctx.fillRect(0, 0, W, H);
+ ctx.save();
+ ctx.translate(W/2, H/2);
+ 
+ for (let s = 0; s < S; s++) {
+ const ang = s * 2 * Math.PI / S;
+ ctx.beginPath();
+ ctx.arc(RB * 1.02, RB * 1.02, 4, 0, 2 * Math.PI);
+ ctx.fillStyle = locked[s] ? '#FFE9A8' : '#FFD700';
+ ctx.fill();
+ }
+ 
+ for (let r = 0; r < rings.length; r++) {
+ const ring = rings[r];
+ const radius = ringR[r];
+ ctx.beginPath();
+ ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+ ctx.strokeStyle = '#2A3558';
+ ctx.lineWidth = 3;
+ ctx.stroke();
+ 
+ for (let s = 0; s < S; s++) {
+ if (locked[s]) continue;
+ const ang = (ring.angle + s * 2 * Math.PI / S) % (2 * Math.PI);
+ const x = Math.cos(ang) * radius;
+ const y = Math.sin(ang) * radius;
+ drawToken(x, y, ring.tokens[s], r, s, ang);
+ }
+ }
+ 
+ ctx.beginPath();
+ ctx.arc(0, 0, hubR, 0, 2 * Math.PI);
+ ctx.fillStyle = '#FFE9A8';
+ ctx.fill();
+ 
+ ctx.restore();
+ }
+ 
+ function drawToken(x, y, type, ringIdx, slotIdx, ang) {
+ const size = 16;
+ ctx.save();
+ ctx.translate(x, y);
+ ctx.rotate(ang);
+ 
+ if (type === 'void') {
+ ctx.strokeStyle = colors.void;
+ ctx.lineWidth = 2;
+ ctx.setLineDash([4, 4]);
+ ctx.beginPath();
+ ctx.arc(0, 0, size/2, 0, 2 * Math.PI);
+ ctx.stroke();
+ ctx.setLineDash([]);
+ } else {
+ ctx.fillStyle = colors[type];
+ ctx.strokeStyle = lighten(colors[type], 20);
+ ctx.lineWidth = 2;
+ 
+ if (type === 'triangle') {
+ ctx.beginPath();
+ ctx.moveTo(0, -size/2);
+ ctx.lineTo(-size/2, size/2);
+ ctx.lineTo(size/2, size/2);
+ ctx.closePath();
+ ctx.fill();
+ ctx.stroke();
+ } else if (type === 'square') {
+ ctx.fillStyle = colors[type];
+ ctx.fillRect(-size/2, -size/2, size, size);
+ ctx.strokeStyle = lighten(colors[type], 20);
+ ctx.strokeRect(-size/2, -size/2, size, size);
+ } else if (type === 'pentagon') {
+ ctx.beginPath();
+ for (let i = 0; i < 5; i++) {
+ const a = i * 2 * Math.PI / 5 - Math.PI/2;
+ const px = Math.cos(a) * size/2;
+ const py = Math.sin(a) * size/2;
+ if (i === 0) ctx.moveTo(px, py);
+ else ctx.lineTo(px, py);
+ }
+ ctx.closePath();
+ ctx.fill();
+ ctx.stroke();
+ } else if (type === 'hexagon') {
+ ctx.beginPath();
+ for (let i = 0; i < 6; i++) {
+ const a = i * 2 * Math.PI / 6 - Math.PI/2;
+ const px = Math.cos(a) * size/2;
+ const py = Math.sin(a) * size/2;
+ if (i === 0) ctx.moveTo(px, py);
+ else ctx.lineTo(px, py);
+ }
+ ctx.closePath();
+ ctx.fill();
+ ctx.stroke();
+ } else if (type === 'circle') {
+ ctx.beginPath();
+ ctx.arc(0, 0, size/2, 0, 2 * Math.PI);
+ ctx.fill();
+ ctx.stroke();
+ }
+ }
+ ctx.restore();
+ }
+ 
+ function lighten(c, amt) {
+ const rgb = c.match(/\w{2}\w{2}\w{2}/);
+ if (!rgb) return c;
+ let r = parseInt(rgb[0], 16) + amt;
+ let g = parseInt(rgb[1], 16) + amt;
+ let b = parseInt(rgb[2], 16) + amt;
+ r = Math.min(255, Math.max(0, r));
+ g = Math.min(255, Math.max(0, g));
+ b = Math.min(255, Math.max(0, b));
+ return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+ }
+ 
+ function update(dt) {
+ if (paused) return;
+ timer += dt;
+ const mins = Math.floor(timer / 60);
+ const secs = Math.floor(timer % 60);
+ document.getElementById('timer').textContent = `TIME: ${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+ 
+ for (let r = 0; r < rings.length; r++) {
+ if (rings[r].drift && rings[r].settled) {
+ rings[r].angle += rings[r].driftDir * 0.15 * dt;
+ }
+ }
+ 
+ checkMatches();
+ }
+ 
+ function checkMatches() {
+ for (let r = 0; r < rings.length; r++) {
+ const ring = rings[r];
+ if (ring.settled) continue;
+ let matchLen = 1;
+ for (let s = 1; s < S; s++) {
+ const prev = (ring.tokens[(s - 1 + S) % S] === 'void') ? null : ring.tokens[(s - 1 + S) % S];
+ const curr = (ring.tokens[s] === 'void') ? null : ring.tokens[s];
+ if (prev && curr && prev === curr) {
+ matchLen++;
+ } else {
+ if (matchLen >= 3) {
+ const start = (s - matchLen + S) % S;
+ for (let i = 0; i < matchLen; i++) {
+ const idx = (start + i + S) % S;
+ ring.tokens[idx] = 'void';
+ }
+ score += Math.pow(10, combo++) * matchLen;
+ playSound('match', { freq: 440 + matchLen * 110, dur: 0.15 * matchLen });
+ document.getElementById('score').textContent = `SCORE: ${score}`;
+ }
+ matchLen = 1;
+ }
+ }
+ if (matchLen >= 3) {
+ const start = (S - matchLen + S) % S;
+ for (let i = 0; i < matchLen; i++) {
+ const idx = (start + i + S) % S;
+ ring.tokens[idx] = 'void';
+ }
+ score += Math.pow(10, combo++) * matchLen;
+ playSound('match', { freq: 440 + matchLen * 110, dur: 0.15 * matchLen });
+ document.getElementById('score').textContent = `SCORE: ${score}`;
+ }
+ ring.settled = true;
+ for (let s = 0; s < S; s++) {
+ if (ring.tokens[s] !== 'void') ring.settled = false;
+ }
+ }
+ 
+ let allSettled = true;
+ for (let r = 0; r < rings.length; r++) {
+ if (!rings[r].settled) allSettled = false;
+ }
+ 
+ if (allSettled) {
+ const levelData = loadLevel(level);
+ let won = true;
+ for (let r = 0; r < rings.length; r++) {
+ for (let s = 0; s < S; s++) {
+ if (rings[r].tokens[s] !== levelData.tokens[r][s]) won = false;
+ }
+ }
+ if (won) {
+ score += 1000 * Math.pow(2, level - 1);
+ document.getElementById('score').textContent = `SCORE: ${score}`;
+ playSound('win', { freq: 880, dur: 0.3 });
+ level++;
+ if (level > 10) {
+ alert('CONGRATULATIONS! YOU COMPLETED ALL LEVELS!');
+ level = 1;
+ }
+ genLevel();
+ } else {
+ for (let r = 0; r < rings.length; r++) {
+ rings[r].settled = true;
+ }
+ }
+ }
+ }
+ 
+ function mouseDown(e) {
+ if (paused) return;
+ const rect = canvas.getBoundingClientRect();
+ const mx = (e.clientX - rect.left) / dpr;
+ const my = (e.clientY - rect.top) / dpr;
+ const dx = mx - W/2;
+ const dy = my - H/2;
+ const dist = Math.sqrt(dx * dx + dy * dy);
+ if (dist > RB * 1.1) return;
+ dragging = 0;
+ dragStart = Math.atan2(dy, dx);
+ dragAngle = dragStart;
+ }
+ 
+ function mouseMove(e) {
+ if (dragging < 0 || paused) return;
+ const rect = canvas.getBoundingClientRect();
+ const mx = (e.clientX - rect.left) / dpr;
+ const my = (e.clientY - rect.top) / dpr;
+ const dx = mx - W/2;
+ const dy = my - H/2;
+ const newAngle = Math.atan2(dy, dx);
+ const delta = ((newAngle - dragStart + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+ for (let r = 0; r < rings.length; r++) {
+ rings[r].angle += delta;
+ rings[r].angle = ((rings[r].angle + Math.PI * 2) % (Math.PI * 2));
+ }
+ dragAngle = newAngle;
+ }
+ 
+ function mouseUp(e) {
+ if (dragging < 0 || paused) return;
+ moves++;
+ document.getElementById('moves').textContent = `MOVES: ${moves} / PAR: ${par}`;
+ for (let r = 0; r < rings.length; r++) {
+ rings[r].settled = false;
+ }
+ dragging = -1;
+ playSound('rotate', { freq: 220, dur: 0.1 });
+ }
+ 
+ function touchStart(e) {
+ if (paused) return;
+ const touch = e.touches[0];
+ const rect = canvas.getBoundingClientRect();
+ const mx = (touch.clientX - rect.left) / dpr;
+ const my = (touch.clientY - rect.top) / dpr;
+ const dx = mx - W/2;
+ const dy = my - H/2;
+ const dist = Math.sqrt(dx * dx + dy * dy);
+ if (dist > RB * 1.1) return;
+ dragging = 0;
+ dragStart = Math.atan2(dy, dx);
+ dragAngle = dragStart;
+ }
+ 
+ function touchMove(e) {
+ if (dragging < 0 || paused) return;
+ const touch = e.touches[0];
+ const rect = canvas.getBoundingClientRect();
+ const mx = (touch.clientX - rect.left) / dpr;
+ const my = (touch.clientY - rect.top) / dpr;
+ const dx = mx - W/2;
+ const dy = my - H/2;
+ const newAngle = Math.atan2(dy, dx);
+ const delta = ((newAngle - dragStart + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+ for (let r = 0; r < rings.length; r++) {
+ rings[r].angle += delta;
+ rings[r].angle = ((rings[r].angle + Math.PI * 2) % (Math.PI * 2));
+ }
+ dragAngle = newAngle;
+ }
+ 
+ function touchEnd(e) {
+ if (dragging < 0 || paused) return;
+ moves++;
+ document.getElementById('moves').textContent = `MOVES: ${moves} / PAR: ${par}`;
+ for (let r = 0; r < rings.length; r++) {
+ rings[r].settled = false;
+ }
+ dragging = -1;
+ playSound('rotate', { freq: 220, dur: 0.1 });
+ }
+ 
+ function togglePause() {
+ paused = !paused;
+ document.getElementById('pauseBtn').textContent = paused ? '▶' : '⏸';
+ if (!audioCtx) initAudio();
+ musicGain.gain.value = paused ? 0 : (soundOn ? 0.3 : 0);
+ }
+ 
+ function undo() {
+ if (save.history && save.history.length > 0) {
+ const prev = save.history.pop();
+ rings = prev.rings;
+ moves = prev.moves;
+ timer = prev.timer;
+ score = prev.score;
+ combo = prev.combo;
+ document.getElementById('moves').textContent = `MOVES: ${moves} / PAR: ${par}`;
+ document.getElementById('score').textContent = `SCORE: ${score}`;
+ document.getElementById('timer').textContent = `TIME: ${Math.floor(timer/60).toString().padStart(2,'0')}:${Math.floor(timer%60).toString().padStart(2,'0')}`;
+ }
+ }
+ 
+ function restart() {
+ moves = 0;
+ timer = 0;
+ score = 0;
+ combo = 0;
+ genLevel();
+ }
+ 
+ function hint() {
+ if (rings.length > 0) {
+ const ring = rings[Math.floor(Math.random() * rings.length)];
+ const targetAng = Math.random() * 2 * Math.PI;
+ ring.target = targetAng;
+ playSound('hint', { freq: 660, dur: 0.2 });
+ }
+ }
+ 
+ function toggleSound() {
+ soundOn = !soundOn;
+ sfxGain.gain.value = soundOn ? 0.7 : 0;
+ musicGain.gain.value = soundOn ? 0.3 : 0;
+ document.getElementById('buttons').children[3].textContent = soundOn ? '🔊' : '🔇';
+ }
+ 
+ function gameLoop(timestamp) {
+ if (!lastFrame) lastFrame = timestamp;
+ const dt = (timestamp - lastFrame) / 1000;
+ lastFrame = timestamp;
+ accumulator += dt;
+ while (accumulator >= 1/60) {
+ update(1/60);
+ accumulator -= 1/60;
+ }
+ draw();
+ if (running) requestAnimationFrame(gameLoop);
+ }
+ 
+ function saveState() {
+ if (!save.history) save.history = [];
+ save.history.push({
+ rings: JSON.parse(JSON.stringify(rings)),
+ moves: moves,
+ timer: timer,
+ score: score,
+ combo: combo
+ });
+ if (save.history.length > 50) save.history.shift();
+ localStorage.setItem('orbitalis.save.v1', JSON.stringify(save));
+ }
+ 
+ canvas.addEventListener('mousedown', mouseDown);
+ canvas.addEventListener('mousemove', mouseMove);
+ canvas.addEventListener('mouseup', mouseUp);
+ canvas.addEventListener('mouseleave', mouseUp);
+ canvas.addEventListener('touchstart', touchStart);
+ canvas.addEventListener('touchmove', touchMove);
+ canvas.addEventListener('touchend', touchEnd);
+ 
+ resize();
+ window.addEventListener('resize', resize);
+ genLevel();
+ gameLoop(0);
+})();
+ </script>
 </body>
 </html>
