@@ -1,0 +1,427 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 1 column 30 (char 29)
+
+Raw: Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - User wants a complete implementation of a "Rotating Labyrinth" game based on a detailed specification.
+   - They mention "SNEAKY FEATURES": responsive canvas, emoji favicon, vibrant color palette, LocalStorage high score, Web Audio API sound effects, speedrun timer.
+   - They want specific deliverables: index.html, style.css, main.js, maze.js, player.js, objective.js, hud.js, assets/, README.md.
+   - They had a previous error: "JSON was invalid: Expecting value: line 1 column 1 (char 0)" - so they want just a raw JSON object mapping filenames to code contents, no markdown formatting, no conversational commentary.
+   - They also say "Start over and write shorter code." - so I need to produce a concise but functional implementation that covers the core requirements, without over-engineering, and output strictly as raw JSON.
+
+2.  **Identify Constraints & Requirements:**
+   - Output must be a valid raw JSON object: `{"filename": "code content", ...}`
+   - No markdown blocks, no ```json, no conversational text.
+   - Must include the sneaky features: responsive canvas, emoji favicon, vibrant color palette, LocalStorage high score, Web Audio API sound effects, speedrun timer.
+   - Core gameplay: rotating maze, player movement, objectives, scoring, etc.
+   - Deliverables listed: index.html, style.css, main.js, maze.js, player.js, objective.js, hud.js, assets/ (maybe just references), README.md.
+   - "Shorter code" - I need to compress the implementation into minimal but functional code. I'll need to pack a lot into each file, but keep it concise.
+
+   - Key features to implement:
+     - HTML canvas 800x600 logical, responsive via CSS
+     - Emoji favicon
+     - Color palette: pick vibrant ones
+     - LocalStorage high score
+     - Web Audio API sound effects (simple oscillators or preloaded short buffers - but to keep code short, I'll use simple OscillatorNode patterns or just console.beep-like fallback, but I'll include simple AudioContext setup)
+     - Speedrun timer in top corner
+     - Maze generation: recursive backtracker, 20x15 grid, 40px cells
+     - Rotation: continuous, pivot center
+     - Player physics: acceleration, friction, collision with walls (SAT simplified to AABB after inverse rotation)
+     - Objectives: collect keys, timer, scoring
+     - HUD: score, lives, objective timer
+     - Difficulty scaling
+     - Touch support basics
+
+   - Given the "shorter code" constraint, I'll need to heavily compress. Maybe use a single main.js with modules inline, or separate files as requested but with minimal code. I'll follow the file list but keep each file's content short enough to fit in JSON values.
+
+   - Let me plan each file's minimal content:
+
+   `index.html`: Basic HTML5, canvas, favicon with emoji, links to css/js. Minimal UI divs.
+   `style.css`: Body/Canvas responsive scaling, UI styling minimal.
+   `main.js`: Entry point, init, game loop, AudioContext setup, LocalStorage high score handling.
+   `maze.js`: Recursive backtracker generation, wall rendering, rotation logic.
+   `player.js`: Physics, movement, collision.
+   `objective.js`: Spawn objectives, timer, scoring.
+   `hud.js`: Draw HUD elements.
+   `assets/`: I can either include base64 sprites or just mention paths; to keep JSON size reasonable, I'll omit actual asset files or put minimal placeholder data. The spec says assets/ folder for sprite sheets and audio, but I can include simple procedural drawing instead of sprite sheets to keep code self-contained. Or I can include very small base64 icons. Given "shorter code", I'll use canvas drawing primitives instead of external assets. I'll note assets folder exists but code generates visuals procedurally.
+   `README.md`: Brief instructions.
+
+   - Wait, the user said: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). Do NOT include markdown block formatting like ```json or any conversational commentary."
+   - So I need to output just the JSON, no surrounding text, no markdown.
+   - They also said "Start over and write shorter code." So I need to make the code concise.
+
+   Let me design each file's code to be minimal but functional. I'll use JS that runs in browser, no build steps. I'll procedural-draw everything to avoid asset files. I'll include simple AudioContext oscillators for SFX. I'll use localStorage for high score. I'll implement the core loop.
+
+   Let me outline each file's content mentally, then write the JSON.
+
+   **index.html:**
+   ```html
+   <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Rotating Labyrinth</title><link rel="shortcut icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🗺️</text></svg>"> <style>/* inline minimal CSS for canvas scaling */ canvas{width:100%;height:auto;display:block;background:#11272f}</style></head><body><canvas id="c"></canvas><div id="hud"><div id="obj">Collect: 0/3</div><div id="timer">30:00</div><div id="score">0</div></div></body></html>
+   ```
+   Wait, I need to keep it very minimal. The favicon with emoji: I can use a data URI with a text emoji in SVG. Or just `<link rel="icon" href="data:image/png;base64,..."` but that's long. I'll use the SVG text approach.
+
+   Actually, to keep JSON value short, I'll put essential HTML only.
+
+   **style.css:** Minimal, maybe inline in HTML to reduce files. But user wants separate files. I'll keep CSS very short.
+
+   **main.js:** Will set up everything. Maybe I can put most logic in main.js and keep others minimal. But they requested separate files. I'll make each file self-contained but concise.
+
+   Let me think about the "shorter code" request. Maybe I can combine some functionalities into fewer files, but they listed specific deliverables. I'll provide each file with minimal code that works together.
+
+   I'll write each file's code to be ~50-100 lines max.
+
+   Let me start coding each file's content in my mind, then output JSON.
+
+   **maze.js:**
+   - Generate 20x15 grid using recursive backtracker (recursive division or DFS).
+   - Store walls as booleans per cell.
+   - Rotation: keep angle theta, apply transform when drawing.
+   - Export functions: generateMaze(), drawMaze(ctx, theta), getCellAt(worldX, worldY) after inverse rotation.
+
+   **player.js:**
+   - Position, velocity.
+   - Input handling (keys/touch).
+   - Acceleration/friction.
+   - Move(): apply input, rotate input by -theta, translate to maze space, check collisions with SAT simplified: check next position, if overlap, push out based on penetration depth.
+   - Export class Player.
+
+   **objective.js:**
+   - Types: collect, reach, avoid.
+   - Timer, scoring.
+   - Spawn keys/exit/hazard.
+   - Check completion.
+
+   **hud.js:**
+   - Draw score, timer, objective text, lives.
+
+   **main.js:**
+   - Initialize AudioContext.
+   - Game loop with requestAnimationFrame.
+   - Rotation update.
+   - LocalStorage high score.
+   - Tie all together.
+
+   Given the complexity, I'll need to be very concise. Maybe I can write compact but functional code. Let me try to write actual code snippets that are minimal.
+
+   I'll produce JSON where each value is the full source code for that file. I'll make sure it's valid JSON (escape quotes properly). Since I'm outputting raw JSON, I need to be careful with newlines and quotes. I'll use proper escaping.
+
+   Let me draft each file's code compactly.
+
+   **index.html:**
+   ```html
+   <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Rotating Labyrinth</title><style>body{margin:0;overflow:hidden;background:#1a1a2e}canvas{width:100%;height:auto;display:block}</style><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50%' font-size='45'%3E🗺️%3C/text%3E%3C/svg%3E"> </head><body><canvas id="c"></canvas><div id="hud" style="position:fixed;top:10px;left:10px;color:#fff;pointer-events:none;z-index:10"><div id="obj">Collect: 0/3</div><div id="timer">30:00</div><div id="score">0</div></div></body></html>
+   ```
+
+   **style.css:** Not needed separately if inline, but user wants style.css. I'll make a very short one.
+
+   Actually, maybe I should combine CSS in HTML's style tag, but they listed style.css as a deliverable. I'll make style.css contain the responsive scaling and UI stuff, and reference it in HTML. But to keep JSON concise, I'll put CSS in style.css and have HTML link to it.
+
+   Let me reconsider the file list: index.html, style.css, main.js, maze.js, player.js, objective.js, hud.js, assets/, README.md. I'll include assets as a folder note, but since JSON maps filenames to code, I can have "assets": {} or include a minimal placeholder. Or I can put a small base64 icon in HTML. I'll just have assets as an empty object or a note. The user said "assets/ – sprite sheets (player, key, exit, hazard), audio files." I'll probably omit actual asset files and use procedural drawing, so assets folder can be empty or I'll include a minimal .js for asset loading. To keep it shorter, I'll set "assets": {} or include a simple preload function that creates simple canvas drawings.
+
+   Given the complexity, maybe I should output a JSON where each file's content is as short as possible while keeping the game functional. I'll write compact code.
+
+   Let me start writing each file's code. I'll use modern JS, minimal lines.
+
+   I need to ensure the JSON is valid. I'll construct it carefully.
+
+   Let me draft each code block:
+
+   **index.html:**
+   ```html
+   <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Rotating Labyrinth</title><link rel="stylesheet" href="style.css"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50%' font-size='45'%3E🗺️%3C/text%3E%3C/svg%3E"></head><body><canvas id="c"></canvas><div id="hud" class="hud"><div id="obj" class="hud-el">Collect: 0/3</div><div id="timer" class="hud-el">30:00</div><div id="score" class="hud-el">0</div></div><script src="main.js"></script></body></html>
+   ```
+
+   **style.css:**
+   ```css
+   body{margin:0;background:#111;overflow:hidden}canvas{width:100%;height:auto;display:block;background:#1a1a2e}.hud{position:fixed;top:10px;left:10px;color:#fff;pointer-events:none;z-index:10}.hud .hud-el{margin-bottom:8px;font:16px sans-serif;background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:4px}.hud-el#timer{top:10px;right:10px;position:fixed;background:rgba(0,0,0,0.7);left:auto;padding:2px 6px;font:14px monospace}.hud-el#score{left:10px;margin-top:8px}
+   ```
+
+   Wait, I need to be careful with CSS specificity and making it work. I'll simplify.
+
+   **main.js:** This will be the biggest. I'll include AudioContext, game loop, rotation, maze generation, player, objectives, HUD update, localStorage high score.
+
+   **maze.js:** Generation and drawing.
+
+   **player.js:** Physics.
+
+   **objective.js:** Objective management.
+
+   **hud.js:** HUD drawing.
+
+   Given the "shorter code" request, maybe I can merge some functionalities. But I'll stick to the file list.
+
+   Let me think about how to make each file truly minimal yet functional. I'll use a single global game object, and each module exports or initializes parts.
+
+   Actually, since this is all in-browser and modules are loaded via script tags, I can have each file define functions and variables in global scope, or use IIFE. I'll keep it simple: each file just defines what's needed, and main.js includes them via script tags or imports. But in the JSON, I just need code content; the user will handle loading order. I'll make sure each file's code is self-contained and can be concatenated or loaded in order.
+
+   To make it easier, I'll have main.js require the others, but since it's raw JSON, I'll just put the code as is. I'll use simple function definitions.
+
+   Let me start drafting each file's actual code. I'll aim for ~80 lines max per file, total ~500 lines.
+
+   **maze.js:**
+   ```js
+   const CELL=40, COLS=20, ROWS=15; let maze=[], theta=0; function generate(){ let g=Array(ROWS).fill().map((_,r)=>Array(COLS).fill({n:e,s:w,e:!1,w:!1})); function carve(r,c){ let dirs=[[0,1],[1,0],[0,-1],[-1,0]]; shuffle(dirs); for(let[dX,dY]of dirs){ let nr=r+dX,nc=c+dY; if(nr>=0&&nr<ROWS&&nc>=0&&nc<COLS&&g[nr][nc].n===undefined){ if(dX===1) g[r][c].e=!0,g[nr][nc].w=!0; else if(dX===-1) g[r][c].w=!0,g[nr][nc].e=!0; else if(dY===1) g[r][c].s=!0,g[nr][nc].n=!0; else g[r][c].n=!0,g[nr][nc].s=!0; carve(nr,nc); } } } carve(0,0); maze=g; } function draw(ctx){ ctx.save(); ctx.translate(400,300); ctx.rotate(theta); ctx.lineWidth=2; for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ let cell=maze[r][c]; let x=c*CELL,y=r*CELL; if(cell.w) ctx.beginPath(),ctx.moveTo(x,y),ctx.lineTo(x+CELL,y),ctx.stroke(); if(cell.e) ctx.beginPath(),ctx.moveTo(x+CELL,y),ctx.lineTo(x+CELL,y+CELL),ctx.stroke(); } ctx.restore(); } function setTheta(t){ theta=t%(Math.PI*2); } export {generate,draw,setTheta};
+   ```
+
+   Hmm, need to include shuffle. I'll inline a simple shuffle or use sorted order. To keep shorter, I'll use a deterministic order instead of random shuffle, or just use a simple recursive backtracker without shuffle, which still produces a maze but deterministic. Or I'll just use a basic DFS with fixed direction order. That's shorter.
+
+   Actually, I can use a standard recursive backtracker with a simple stack and no randomness, or use `Math.random()<0.5`. I'll keep it very basic.
+
+   Let me redesign maze.js more compactly:
+
+   ```js
+   const C=40,N=15,M=20; let W=[]; function G(){ W=Array(N).fill().map((_,r)=>Array(M).fill({n:0,s:0,e:0,w:0})); function C(r,c){ let d=[[0,1],[1,0],[0,-1],[-1,0]]; for(let[i,j]of d){ let nr=r+i,nc=c+j; if(nr>=0&&nr<N&&nc>=0&&nc<M&&W[nr][nc].n===0){ W[r][c].e=W[nr][nc].w=1; W[nr][nc].s=W[r][c].n=1; C(nr,nc); } } } C(0,0); } function D(ctx){ ctx.save(); ctx.translate(400,300); ctx.rotate(theta); ctx.lineWidth=2; ctx.strokeStyle="#555"; for(let r=0;r<N;r++) for(let c=0;c<M;c++){ let w=W[r][c]; if(w.w) { ctx.beginPath(); ctx.moveTo(c*C,r*C); ctx.lineTo(c*C+r*C?wait... } } ctx.restore(); } function setT(t){ theta=t; } return {G,D,setT};
+   ```
+
+   This is getting messy. Let me think differently. Maybe I can write the entire game in a single main.js file to satisfy "shorter code" and then have other files be very thin wrappers. But the user explicitly listed deliverables. I'll provide all files, but make each very short, maybe even have main.js include the logic of others via inline functions, and other files just define a single function or class.
+
+   Given the time and complexity, I'll produce a JSON where each file's code is minimal but the game works. I'll use a technique: put all core logic in main.js, and have other files just declare what's needed, or I'll have main.js require() the others as strings and eval. But that's not clean.
+
+   Alternative: I'll output JSON where each file content is a complete module. I'll keep code concise by using small functions, no classes if possible, or minimal classes.
+
+   Let me reconsider the "shorter code" directive. Maybe the user wants me to not overthink and just produce a working but compact implementation. I'll aim for a playable minimal game.
+
+   I'll write the JSON output now. I need to ensure valid JSON: keys are filenames, values are strings of code. I'll escape newlines as \n and quotes as \". Actually, in JSON, raw newlines are allowed inside strings if I use proper formatting, but to be safe I'll keep strings as single-line with \n for line breaks, or I can use actual newlines if the JSON parser handles it, but typically when outputting raw JSON in text, it's better to have proper escaping. The user said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". I'll produce a JSON object where each value is a string that may contain newlines; I'll just use actual newlines within the JSON string, but I need to make sure the whole output is valid JSON. I'll use standard JSON with \n escaped, or I can output it with actual newlines if I'm careful. To avoid issues, I'll escape newlines as `\n` and quotes as `\"`.
+
+   Let me plan the exact content for each file, write them as compact strings, then assemble JSON.
+
+   I'll start with index.html:
+
+   ```html
+   <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Rotating Labyrinth</title><style>body{margin:0;background:#111;overflow:hidden}canvas{width:100%;height:auto;display:block}#hud{position:fixed;top:10px;left:10px;color:#fff;pointer-events:none;z-index:10;font:14px sans-serif;background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:4px;margin-bottom:8px}#timer{position:fixed;top:10px;right:10px;background:rgba(0,0,0,0.7);padding:2px 6px;font:12px monospace;border-radius:3px}</style><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50%' font-size='45'%3E🗺️%3C/text%3E%3C/svg%3E"></head><body><canvas id="c"></canvas><div id="hud">Collect: 0/3<span id="timer">30:00</span><span id="score">0</span></div><script src="maze.js"></script><script src="player.js"></script><script src="objective.js"></script><script src="hud.js"></script><script src="main.js"></script></body></html>
+   ```
+
+   style.css: I'll make it separate but minimal. Actually, I can put CSS in index.html style tag, but they want style.css. I'll make style.css contain the CSS, and index.html link to it. I'll adjust index.html to link, and style.css content accordingly.
+
+   Let me redefine:
+
+   **style.css:**
+   ```css
+   body{margin:0;background:#111;overflow:hidden}canvas{width:100%;height:auto;display:block}#hud{position:fixed;top:10px;left:10px;color:#fff;pointer-events:none;z-index:10;font:14px sans-serif;background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:4px;margin-bottom:8px}#timer{position:fixed;top:10px;right:10px;background:rgba(0,0,0,0.7);padding:2px 6px;font:12px monospace;border-radius:3px}
+   ```
+
+   **main.js:** Will be the core. I'll write a compact game loop.
+
+   Given the extreme brevity needed, maybe I can write a complete minimal rotating labyrinth in ~300 lines total across files. Let me try to design the actual code logic minimally.
+
+   I'll use procedural drawing, no sprite sheets. Player is a colored square. Objective is another square/color. Maze is lines. Sounds are OscillatorNode beeps.
+
+   Let me draft main.js with everything inline, and other files just have minimal exports that main.js requires. But since JSON maps filenames to code, I'll have each file's code be valid on its own, but they'll be loaded in order. I'll use simple function names that don't conflict.
+
+   Actually, to simplify, I'll have each file define a single init function or class, and main.js will call them in order. I'll make sure dependencies are handled.
+
+   Let me think of a different approach: I'll output JSON where each file's content is a self-contained module. I'll use IIFE patterns or simple function definitions. I'll keep variable names short.
+
+   Given the time constraint and the need to output valid JSON, I'll produce the JSON now. I'll write each file's code concisely.
+
+   Let me start writing the actual code strings in my mind, then format JSON.
+
+   I'll produce:
+
+   {
+     "index.html": "...",
+     "style.css": "...",
+     "main.js": "...",
+     "maze.js": "...",
+     "player.js": "...",
+     "objective.js": "...",
+     "hud.js": "...",
+     "assets": {},
+     "README.md": "..."
+   }
+
+   But the user listed assets/ folder, not assets.json. I'll include "assets/": {} or maybe "assets": {} as a placeholder. Or I can include a minimal .js in assets, but the folder itself. I'll just put "assets": {} .
+
+   README.md: Brief instructions.
+
+   Let me draft each code block now. I'll keep it very minimal.
+
+   **index.html:**
+   `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Rotating Labyrinth</title><link rel="stylesheet" href="style.css"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50%' font-size='45'%3E🗺️%3C/text%3E%3C/svg%3E"></head><body><canvas id="c"></canvas><div id="hud">Collect: <span id="objCount">0</span>/3 <span id="timer">30:00</span> Score: <span id="score">0</span></div><script src="maze.js"></script><script src="player.js"></script><script src="objective.js"></script><script src="hud.js"></script><script src="main.js"></script></body></html>`
+
+   **style.css:**
+   `body{margin:0;background:#111;overflow:hidden}canvas{width:100%;height:auto;display:block}#hud{position:fixed;top:10px;left:10px;color:#fff;pointer-events:none;z-index:10;font:14px sans-serif;background:rgba(0,0,0,0.5);padding:4px 8px;border-radius:4px;margin-bottom:8px}#timer{position:fixed;top:10px;right:10px;background:rgba(0,0,0,0.7);padding:2px 6px;font:12px monospace;border-radius:3px}`
+
+   **main.js:** This needs to set up everything. I'll write a compact game loop. Let me design it.
+
+   I'll use a single `init()` function that sets up canvas, AudioContext, maze, player, objectives, HUD, and starts requestAnimationFrame loop.
+
+   To keep it short, I'll minimize variables, use global scope.
+
+   Let me draft main.js code:
+
+   ```js
+   c=document.getElementById("c"); ctx=c.getContext("2d"); c.width=800; c.height=600; 
+   function $(s){return document.getElementById(s)}
+   let W=[]; let theta=0; let rotSpeed=Math.PI/180; // 1 deg per frame? 
+   // Actually, I'll use time-based.
+   let t0=Date.now(); 
+   let score=0; let lives=3; let objTime=30; let objType="collect"; let objProgress=0; 
+   let keys=0; let needKeys=1; 
+   // Audio
+   let ctxA= new (window.AudioContext||window.webkitAudioContext)(); 
+   function playSFX(type){ let o=ctxA.createOscillator(); let g=ctxA.createGain(); o.connect(g); g.connect(ctxA.destination); o.frequency.value=type==="step"?200:400; g.gain.value=0.1; o.start(); o.stop(ctxA.currentTime+0.1); }
+   // Maze generation (simple recursive backtracker)
+   (()=>{ let N=15,M=20; W=Array(N).fill().map((_,r)=>Array(M).fill({n:0,s:0,e:0,w:0})); function carve(r,c){ let dirs=[[0,1],[1,0],[0,-1],[-1,0]]; for(let d of dirs){ let [dx,dy]=d; let nr=r+dy,nc=c+dx; if(nr>=0&&nr<N&&nc>=0&&nc<M&&W[nr][nc].n===0){ if(dy===1) W[r][c].s=W[nr][nc].n=1; else if(dy===-1) W[r][c].n=W[nr][nc].s=1; if(dx===1) W[r][c].e=W[nr][nc].w=1; else if(dx===-1) W[r][c].w=W[nr][nc].e=1; carve(nr,nc); } } } carve(0,0); })();
+   // Player
+   let px=100, py=100, vx=0, vy=0, acc=800, fric=0.85, speed=200;
+   function updatePlayer(dt){ let input={x:0,y:0}; if(keydown["ArrowUp"]||keydown["W"]) input.y=-1; if(keydown["ArrowDown"]||keydown["S"]) input.y=1; if(keydown["ArrowLeft"]||keydown["A"]) input.x=-1; if(keydown["ArrowRight"]||keydown["D"]) input.x=1; let len=Math.hypot(input.x,input.y); if(len){ input.x/=len; input.y/=len; } // rotate input by -theta let cx=input.x*Math.cos(theta)+input.y*Math.sin(theta); let cy=-input.x*Math.sin(theta)+input.y*Math.cos(theta); // accelerate vx+=cx*acc*dt; vy+=cy*acc*dt; // friction vx*=Math.pow(fric,dt); vy*=Math.pow(fric,dt); // clamp let speedHyp=Math.hypot(vx,vy); if(speedHyp>speed){ vx*=speed/speedHyp; vy*=speed/speedHyp; } // inverse rotate player pos into maze space... actually collision later } 
+   // ... this is getting long. I need to compress further.
+
+   Maybe I should reconsider: The user said "Start over and write shorter code." Perhaps I should output a very minimal viable game, maybe even a single file, but they listed deliverables. I'll try to make each file very short, maybe 30-40 lines, and rely on the fact that the user can expand. I'll focus on core features: responsive canvas, rotation, player movement, objective timer, localStorage high score, emoji favicon, sound effects.
+
+   Given the complexity of writing full functional code for all modules in a short span, and the need to output valid JSON, I'll produce a JSON where each file's code is a minimal skeleton that implements the core, and I'll make sure the game is playable at a basic level.
+
+   Let me try a different strategy: I'll write a single main.js that contains all logic, and have the other files be almost empty or just include comments referencing main.js. But the user expects each file to have code. I'll make each file contain the necessary code, but I'll heavily compress.
+
+   Maybe I can use a technique where I put all code in main.js, and maze.js, player.js etc just have a single line that imports or requires main. But in browser, that doesn't work without a bundler. I'll use script tags order.
+
+   I'll output JSON with each file's content as a valid JS module that sets up what's needed. I'll use short names and minimal logic.
+
+   Let me start writing the JSON. I'll draft each code string now.
+
+   I'll make index.html as designed.
+
+   style.css as designed.
+
+   main.js: I'll write a compact loop that handles rotation, player movement with simple AABB collision after inverse rotation, objective timer, scoring, localStorage high sound.
+
+   maze.js: Minimal maze generation using recursive backtracker, wall drawing with rotation.
+
+   player.js: Minimal player class with update and draw.
+
+   objective.js: Minimal objective spawning and checking.
+
+   hud.js: Minimal HUD drawing.
+
+   assets: {}
+
+   README.md: Minimal readme.
+
+   Let me write each code block now, keeping them extremely short. I'll use global variables and simple functions.
+
+   I need to output the JSON immediately. I'll construct it carefully.
+
+   Let me write the code contents now. I'll be very concise.
+
+   **main.js** (I'll try to make it ~100 lines):
+   ```js
+   c=document.getElementById("c");ctx=c.getContext("2d");c.width=800;c.height=600;let R=600,C=800;let th=0,rs=Math.PI/180;let t0=Date.now();let score=0,lives=3,objT=30,objT0=objT,objType="collect",objP=0,keys=0,need=1;let ka={};window.addEventListener("keydown",e=>ka[e.code]=true);window.addEventListener("keyup",e=>ka[e.code]=false);let W=[];(function G(){let N=15,M=20;W=Array(N).fill().map((_,r)=>Array(M).fill({n:0,s:0,e:0,w:0}));function C(r,c){let d=[[0,1],[1,0],[0,-1],[-1,0]];for(let[dx,dy]of d){let nr=r+dy,nc=c+dx;if(nr>=0&&nr<N&&nc>=0&&nc<M&&W[nr][nc].n===0){if(dy===1)W[r][c].s=W[nr][nc].n=1;if(dy===-1)W[r][c].n=W[nr][nc].s;if(dx===1)W[r][c].e=W[nr][nc].w=1;if(dx===-1)W[r][c].w=W[nr][nc].e;C(nr,nc)}};C(0,0)})();let px=100,py=100,vx=0,vy=0;let acc=800,fric=0.85,sp=200;let objTmr=objT,objSt=0;let sx=400,sy=300;function playSFX(t){try{let o=ctxA.createOscillator(),g=ctxA.createGain();if(!ctxA)ctxA=new AudioContext;o.connect(g);g.connect(ctxA.destination);if(t==="collect"){o.frequency.valueOkay, the user wants me to continue the JSON from where it was cut off. The previous message shows a "thinking process" section, but the actual request is to continue the JSON output. The user provided an incomplete JSON and wants me to finish it exactly from the next character, without repeating any previous text, no markdown, just the remaining characters to complete the JSON.
+
+Looking at the conversation history, the user said: "Here is the incomplete JSON: [then there's a thinking process section] 1. Analyze User Input: ... 2. Identify Constraints & Requirements: ... I need to output ONLY a valid raw JSON object mapping filenames to their complete code contents..."
+
+But the user's message actually starts with "Here is the incomplete JSON:" followed by a thinking process. Wait, let me re-read the user's message carefully.
+
+The user message is: "Here is the incomplete JSON: Here's a thinking process: [long thinking process]"
+
+Actually, looking at the structure, it seems the user pasted a thinking process section, and then wants me to continue the JSON. But the thinking process itself contains analysis and plans. The actual "incomplete JSON" might be embedded or the user wants me to output the JSON now.
+
+Wait, re-reading: "Here is the incomplete JSON: Here's a thinking process:" - this seems like the user is providing context that includes a thinking process, and then wants me to output the JSON continuation. But the thinking process is quite long and seems to be the AI's internal thought process that was exposed.
+
+Actually, I think what happened is the user tried to get a JSON response but got a thinking process instead, and now wants me to actually output the JSON. The message says "Here is the incomplete JSON: Here's a thinking process:" which might mean the previous response was cut off or was a thinking process that the user wants me to complete as JSON.
+
+The key instruction: "You are a code completion AI. The previous JSON response was cut off due to token limits. Continue EXACTLY from the next character. DO NOT repeat ANY previous text. DO NOT use markdown. Just output the remaining characters to complete the JSON."
+
+So I need to output just the raw JSON that completes the task. The user wants a complete implementation of a "Rotating Labyrinth" game as JSON mapping filenames to code contents.
+
+Given that the previous response was a thinking process (probably my own or the system's), and the user wants me to now output the actual JSON, I should produce the JSON object mapping filenames to code.
+
+But I need to figure out what the "next character" is. The user says "Continue EXACTLY from the next character." This implies there was a previous JSON that was cut off, and I need to continue from where it left off. However, in this conversation, I don't see a prior JSON that was cut off - I see a thinking process that was generated.
+
+Perhaps the user is simulating a scenario where there was an incomplete JSON, and now I need to provide the completion. The instruction "Start over and write shorter code" suggests I should produce a fresh, concise JSON.
+
+Given the ambiguity, I'll interpret this as: the user wants me to output the complete JSON for the Rotating Labyrinth game as specified, without any preceding text, markdown, or conversational commentary. I should just output the JSON object.
+
+I'll create a valid JSON object mapping the requested filenames to concise code contents that implement the Rotating Labyrinth game with the specified features: responsive canvas, emoji favicon, vibrant color palette, LocalStorage high score, Web Audio API sound effects, speedrun timer.
+
+I need to make sure it's valid JSON and covers all deliverables: index.html, style.css, main.js, maze.js, player.js, objective.js, hud.js, assets/, README.md.
+
+I'll keep the code very short as requested "write shorter code".
+
+Let me draft the JSON. I'll use minimal but functional code for each file.
+
+First, let me plan each file's content very minimally:
+
+1. index.html: Basic HTML5 with canvas, favicon (emoji), links to CSS/JS, HUD div
+2. style.css: Minimal CSS for responsive canvas and HUD
+3. main.js: Entry point, init, game loop, AudioContext, LocalStorage handling
+4. maze.js: Maze generation (recursive backtracker) and drawing with rotation
+5. player.js: Player physics, movement, collision
+6. objective.js: Objective timer, scoring, completion check
+7. hud.js: HUD drawing functions
+8. assets/: I'll put an empty object or minimal placeholder
+9. README.md: Brief instructions
+
+To keep code short, I'll use procedural drawing, simple collision, and pack logic into few lines.
+
+Let me write each file's code concisely.
+
+For index.html, I'll include the emoji favicon using data URI.
+
+For style.css, I'll keep it minimal.
+
+For the JS files, I'll use global functions and minimal setup.
+
+I need to output just the JSON, no explanations.
+
+Let me construct the JSON now. I'll be very careful with escaping.
+
+Since the output must be raw JSON only, I'll output something like:
+
+{"index.html":"...","style.css":"...","main.js":"...","maze.js":"...","player.js":"...","objective.js":"...","hud.js":"...","assets":{...},"README.md":"..."}
+
+But I need to include the code contents as strings. I'll use double quotes and escape any internal double quotes.
+
+To make it shorter, I might combine some functionalities, but I'll follow the file list.
+
+Let me draft each code block mentally, then format as JSON.
+
+Actually, given the complexity of writing full functional code in minimal lines within JSON strings (which requires escaping), I'll aim for very compact code. Maybe I can use template literals or just simple scripts.
+
+I'll produce the JSON now. Let me write each file's content.
+
+**index.html**:
+html
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Rotating Labyrinth</title><style>body{margin:0;background:#0d0d24;overflow:hidden}canvas{width:100%;height:auto;display:block}#hud{position:fixed;top:10px;left:10px;color:#fff;pointer-events:none;z-index:10;font:14px sans-serif;background:rgba(0,0,0,0.6);padding:4px 8px;border-radius:4px;margin-bottom:8px}#timer{position:fixed;top:10px;right:10px;background:rgba(0,0,0,0.7);padding:2px 6px;font:12px monospace;border-radius:3px}</style><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50%' font-size='45'%3E🗺️%3C/text%3E%3C/svg%3E"></head><body><canvas id="c"></canvas><div id="hud">Collect: <span id="objCount">0</span>/3 <span id="timer">30:00</span> Score: <span id="score">0</span></div><script src="maze.js"></script><script src="player.js"></script><script src="objective.js"></script><script src="hud.js"></script><script src="main.js"></script></body></html>
+
+
+But in JSON, I need to escape the newlines and quotes. Actually, I can have the JSON value as a string with \n for newlines, or I can output it with actual newlines if the JSON is pretty-printed, but to be safe I'll escape quotes and use \n.
+
+However, the user said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). Do NOT include markdown block formatting like  or any conversational commentary."
+
+So I should output just the JSON object, with values as strings. I'll need to escape double quotes inside the strings as \", and newlines as \n or actual newlines? In JSON specification, strings can contain actual newline characters if properly encoded, but many parsers expect \n. To be safe, I'll use \n for line breaks and escape quotes.
+
+But the user might be pasting this into a context where the JSON is read as-is. I'll try to minimize escaping by using single quotes inside the code? No, JSON requires double quotes for keys and string values. I'll have to escape double quotes.
+
+This is going to be messy. Maybe I can keep the code contents very simple to reduce the need for escaping, or use a format where the code doesn't contain many quotes. But HTML and JS will have quotes.
+
+Alternative: I can output the JSON with the code contents using template literals or just the raw text, but I have to follow JSON rules.
+
+Perhaps I can output the JSON in a way that the strings are multi-line with \n escaped. I'll do that.
+
+Let me draft each string value carefully.
+
+Actually, maybe I can simplify by having the code contents not contain double quotes? That's impossible for HTML/JS. I'll just escape them.
+
+Let me think of a different approach: The user might accept the JSON with the code as raw strings where I've replaced " with \". I'll do that.
+
+Given the token limits and the need to output just the remaining characters, I'll produce the JSON now.
+
+Let me start constructing it. I'll write each file's code as concisely as possible.
+
+I'll begin with index.html value:
+
+"<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1.0\"><title>Rotating Labyrinth</title><style>body{margin:0;background:#0d0d24;overflow:hidden}canvas{width:100%;height:auto;display:block}#hud{position:fixed;top:10px;left:10px;color:#fff;pointer-events:none;z-index:10;font:14px sans-serif;background:rgba(0,0,0,0.6);padding:4px 8px;border-radius:4px;margin-bottom:8px}#timer{position:fixed;top:10px;right:10px;background:rgba(0,0,0,0.7);padding:2px 6px;font:12px monospace;border-radius:3px}</style><link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50%' font-size='45'%3E🗺️%3C/text%3E%3C/svg%3E\"></head><body><canvas id=\"c\"></canvas><div id=\"hud\">Collect: <span id=\"objCount\">0</span>/3 <span id=\"timer\">30:00</span> Score: <span id=\"score\">0</span></div><script src=\"maze.js\"></script><script src=\"player.js\"></script><script src=\"objective.js\"></script><script src=\"hud.js\"></script><script src=\"main.js\"></script></body></html>"
+
+That's long but okay.
+
+style.css value: I can actually put the CSS inline in index.html style tag, but the user wants style.css as a separate file. I'll make style.css content minimal.
+
+"body{margin:0;background:#0d0d24;overflow:hidden}canvas{width:100%;height:auto;display:block}#hud{position:fixed;top:10px;left:10px;color:#fff;pointer-events:none;z-index:10;font:14px sans-serif;background:rgba(0,0,0,0.6);padding:4px 8px;border-radius:4px;margin-bottom:8px}#timer{position:fixed;top:10px;right:10px;background:rgba(0,0,0,0.7);padding:2px 6px;font:12px monospace;border-radius:3px}"
+
+main.js: I need to write the game logic. This will be the longest. I'll make it compact.
+
+Let me draft main.js code minimally:
+
+js
+c=document.getElementById("c");ctx=c.getContext("2d");c.width=800;c.height=600;let th=0,rs=Math.PI/180*0.5;let t0=Date.now();let s=0,l=3,ot=30,ot0=ot,pc=0,ky=0;let ka={};addEventListener("keydown",e=>ka[e.code]=true);addEventListener("keyup",e=>ka[e.code]=false);let W=[];(🗿)
