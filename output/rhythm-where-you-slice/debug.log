@@ -1,0 +1,476 @@
+JSON Decode Error after continuation: Invalid control character at: line 2 column 1097 (char 1098)
+
+Raw: {
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Rhythm Slice</title>\n  <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>\">\n  <style>\n    * { margin: 0; padding: 0; box-sizing: border-box; }\n    body { background: #000; overflow: hidden; font-family: 'Roboto', sans-serif; }\n    canvas { display: block; margin: auto; background: #111; }\n    @media (max-width: 768px) { canvas { width: 100vw; height: 100vh; } }\n  </style>\n</head>\n<body>\n  <canvas id=\"gameCanvas\"></canvas>\n  <script>\n    const canvas = document.getElementById('gameCanvas');\n    const ctx = canvas.getContext('2d');\n\n    // Config\n    const LANE_COUNT = 4;\n    const LANE_COLORS = ['#ff4444', '#44ff44', '#4444ff', '#ffff44'];\n    const NOTE_RADIUS = 20;\n    const SLICE_RADIUS = 40;\n    const SLICE_DURATION = 200;\n    const PERFECT_WINDOW = 30;\n   const GOOD_WINDOW = 60;
+    const MISS_WINDOW = 100;
+    const NOTE_SPEED = 0.5;
+    const SPAWN_INTERVAL = 1000;
+    const SLICE_COOLDOWN = 150;
+
+    // Game state
+    let notes = [];
+    let slices = [];
+    let score = 0;
+    let combo = 0;
+    let maxCombo = 0;
+    let lastSpawn = 0;
+    let lastSliceTime = {};
+    let gameTime = 0;
+    let isPlaying = false;
+    let animationId = null;
+
+    // Audio context for sound effects
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playTone(freq, duration, type = 'sine', volume = 0.1) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = freq;
+      osc.type = type;
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playSliceSound(lane) {
+      const freqs = [440, 554, 659, 880];
+      playTone(freqs[lane], 0.1, 'square', 0.15);
+    }
+
+    function playHitSound(quality) {
+      if (quality === 'perfect') playTone(880, 0.1, 'sine', 0.2);
+      else if (quality === 'good') playTone(660, 0.1, 'sine', 0.15);
+    }
+
+    function playMissSound() {
+      playTone(220, 0.2, 'sawtooth', 0.1);
+    }
+
+    // Resize canvas
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Lane positions
+    function getLaneX(lane) {
+      const width = canvas.width / (window.devicePixelRatio || 1);
+      return (width / (LANE_COUNT + 1)) * (lane + 1);
+    }
+
+    const LANE_Y = (() => {
+      const height = canvas.height / (window.devicePixelRatio || 1);
+      return height * 0.85;
+    })();
+
+    // Note class
+    class Note {
+      constructor(lane) {
+        this.lane = lane;
+        this.x = getLaneX(lane);
+        this.y = -NOTE_RADIUS;
+        this.hit = false;
+        this.missed = false;
+        this.spawnTime = gameTime;
+      }
+
+      update(dt) {
+        this.y += NOTE_SPEED * dt;
+        const height = canvas.height / (window.devicePixelRatio || 1);
+        if (this.y > LANE_Y + MISS_WINDOW && !this.hit && !this.missed) {
+          this.missed = true;
+          combo = 0;
+          playMissSound();
+        }
+      }
+
+      draw() {
+        if (this.hit || this.missed) return;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, NOTE_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = LANE_COLORS[this.lane];
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        // Inner glow
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, NOTE_RADIUS * 0.6, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.fill();
+      }
+
+      checkHit(sliceY) {
+        const dist = Math.abs(this.y - sliceY);
+        if (dist <= PERFECT_WINDOW) return 'perfect';
+        if (dist <= GOOD_WINDOW) return 'good';
+        return null;
+      }
+    }
+
+    // Slice effect class
+    class SliceEffect {
+      constructor(lane, x, y) {
+        this.lane = lane;
+        this.x = x;
+        this.y = y;
+        this.radius = 0;
+        this.maxRadius = SLICE_RADIUS;
+        this.duration = SLICE_DURATION;
+        this.elapsed = 0;
+      }
+
+      update(dt) {
+        this.elapsed += dt;
+        this.radius = (this.elapsed / this.duration) * this.maxRadius;
+      }
+
+      draw() {
+        if (this.elapsed >= this.duration) return false;
+        const progress = this.elapsed / this.duration;
+        const alpha = 1 - progress;
+        
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.strokeStyle = LANE_COLORS[this.lane].replace(')', `, ${alpha})`).replace('rgb', 'rgba');
+        ctx.lineWidth = 4 * (1 - progress * 0.5);
+        ctx.stroke();
+        
+        // Inner ring
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.5})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        return true;
+      }
+    }
+
+    // Spawn notes
+    function spawnNote() {
+      const lane = Math.floor(Math.random() * LANE_COUNT);
+      notes.push(new Note(lane));
+    }
+
+    // Handle slice input
+    function handleSlice(lane) {
+      const now = Date.now();
+      if (lastSliceTime[lane] && now - lastSliceTime[lane] < SLICE_COOLDOWN) return;
+      lastSliceTime[lane] = now;
+
+      const x = getLaneX(lane);
+      const y = LANE_Y;
+      slices.push(new SliceEffect(lane, x, y));
+      playSliceSound(lane);
+
+      // Check for hits
+      let hitSomething = false;
+      for (const note of notes) {
+        if (note.lane === lane && !note.hit && !note.missed) {
+          const quality = note.checkHit(y);
+          if (quality) {
+            note.hit = true;
+            hitSomething = true;
+            combo++;
+            maxCombo = Math.max(maxCombo, combo);
+            const points = quality === 'perfect' ? 100 : 50;
+            score += points * Math.min(combo, 10);
+            playHitSound(quality);
+            showHitText(x, y - 50, quality === 'perfect' ? 'PERFECT!' : 'GOOD!', quality);
+            break;
+          }
+        }
+      }
+      if (!hitSomething) {
+        combo = 0;
+      }
+    }
+
+    // Hit text effects
+    const hitTexts = [];
+    function showHitText(x, y, text, quality) {
+      hitTexts.push({
+        x, y,
+        text,
+        color: quality === 'perfect' ? '#ffff00' : '#00ffff',
+        life: 1000,
+        elapsed: 0
+      });
+    }
+
+    // Update hit texts
+    function updateHitTexts(dt) {
+      for (let i = hitTexts.length - 1; i >= 0; i--) {
+        const ht = hitTexts[i];
+        ht.elapsed += dt;
+        ht.y -= 0.5 * dt;
+        if (ht.elapsed >= ht.life) hitTexts.splice(i, 1);
+      }
+    }
+
+    function drawHitTexts() {
+      for (const ht of hitTexts) {
+        const alpha = 1 - ht.elapsed / ht.life;
+        ctx.font = 'bold 24px Roboto';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = ht.color.replace(')', `, ${alpha})`).replace('rgb', 'rgba');
+        ctx.strokeStyle = `rgba(0,0,0,${alpha})`;
+        ctx.lineWidth = 4;
+        ctx.strokeText(ht.text, ht.x, ht.y);
+        ctx.fillText(ht.text, ht.x, ht.y);
+      }
+    }
+
+    // Draw lane indicators
+    function drawLanes() {
+      const width = canvas.width / (window.devicePixelRatio || 1);
+      const height = canvas.height / (window.devicePixelRatio || 1);
+      
+      // Lane lines
+      for (let i = 0; i < LANE_COUNT; i++) {
+        const x = getLaneX(i);
+        ctx.beginPath();
+        ctx.moveTo(x, height * 0.7);
+        ctx.lineTo(x, height);
+        ctx.strokeStyle = LANE_COLORS[i] + '80';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([10, 10]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      // Hit line
+      ctx.beginPath();
+      ctx.moveTo(0, LANE_Y);
+      ctx.lineTo(width, LANE_Y);
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Lane keys
+      const keys = ['D', 'F', 'J', 'K'];
+      for (let i = 0; i < LANE_COUNT; i++) {
+        const x = getLaneX(i);
+        ctx.font = 'bold 20px Roboto';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = LANE_COLORS[i];
+        ctx.fillText(keys[i], x, LANE_Y + 40);
+      }
+    }
+
+    // Draw UI
+    function drawUI() {
+      const width = canvas.width / (window.devicePixelRatio || 1);
+      const height = canvas.height / (window.devicePixelRatio || 1);
+      
+      // Score
+      ctx.font = 'bold 36px Roboto';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#fff';
+      ctx.fillText(`Score: ${score}`, 20, 50);
+      
+      // Combo
+      if (combo > 0) {
+        ctx.font = 'bold 28px Roboto';
+        ctx.fillStyle = combo >= 10 ? '#ff4444' : '#ffff00';
+        ctx.fillText(`Combo: ${combo}`, 20, 90);
+      }
+    }
+
+    // Main game loop
+    function gameLoop(timestamp) {
+      if (!isPlaying) return;
+      
+      const dt = timestamp - (gameLoop.lastTime || timestamp);
+      gameLoop.lastTime = timestamp;
+      gameTime += dt;
+
+      // Spawn notes
+      if (gameTime - lastSpawn > SPAWN_INTERVAL) {
+        spawnNote();
+        lastSpawn = gameTime;
+        // Increase difficulty over time
+        if (SPAWN_INTERVAL > 400) {
+          // SPAWN_INTERVAL is const, so we can't modify it
+        }
+      }
+
+      // Update notes
+      for (let i = notes.length - 1; i >= 0; i--) {
+        notes[i].update(dt);
+        if (notes[i].y > LANE_Y + 200 && (notes[i].hit || notes[i].missed)) {
+          notes.splice(i, 1);
+        }
+      }
+
+      // Update slices
+      for (let i = slices.length - 1; i >= 0; i--) {
+        slices[i].update(dt);
+        if (!slices[i].draw()) slices.splice(i, 1);
+      }
+
+      // Update hit texts
+      updateHitTexts(dt);
+
+      // Draw everything
+      const width = canvas.width / (window.devicePixelRatio || 1);
+      const height = canvas.height / (window.devicePixelRatio || 1);
+      
+      ctx.clearRect(0, 0, width, height);
+      
+      // Background grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.02)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < width; x += 50) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < height; y += 50) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      drawLanes();
+      
+      // Draw notes
+      for (const note of notes) note.draw();
+      
+      // Draw slices
+      for (const slice of slices) slice.draw();
+      
+      drawHitTexts();
+      drawUI();
+
+      animationId = requestAnimationFrame(gameLoop);
+    }
+
+    // Input handling
+    const keyToLane = {
+      'KeyD': 0, 'KeyF': 1, 'KeyJ': 2, 'KeyK': 3,
+      'ArrowLeft': 0, 'ArrowDown': 1, 'ArrowUp': 2, 'ArrowRight': 3
+    };
+
+    function handleKeyDown(e) {
+      if (keyToLane[e.code] !== undefined) {
+        e.preventDefault();
+        handleSlice(keyToLane[e.code]);
+      }
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleGame();
+      }
+    }
+
+    function handleTouch(e) {
+      e.preventDefault();
+      const width = canvas.width / (window.devicePixelRatio || 1);
+      const touchX = e.touches[0].clientX;
+      const laneWidth = width / LANE_COUNT;
+      const lane = Math.min(Math.floor(touchX / laneWidth), LANE_COUNT - 1);
+      handleSlice(lane);
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    canvas.addEventListener('touchstart', handleTouch, { passive: false });
+
+    function toggleGame() {
+      if (isPlaying) {
+        isPlaying = false;
+        cancelAnimationFrame(animationId);
+        showMenu();
+      } else {
+        isPlaying = true;
+        hideMenu();
+        resetGame();
+        gameLoop.lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+      }
+    }
+
+    function resetGame() {
+      notes = [];
+      slices = [];
+      hitTexts.length = 0;
+      score = 0;
+      combo = 0;
+      maxCombo = 0;
+      lastSpawn = 0;
+      lastSliceTime = {};
+      gameTime = 0;
+    }
+
+    function showMenu() {
+      document.getElementById('menu').style.display = 'flex';
+      document.getElementById('finalScore').textContent = score;
+      document.getElementById('maxCombo').textContent = maxCombo;
+    }
+
+    function hideMenu() {
+      document.getElementById('menu').style.display = 'none';
+    }
+
+    // Create menu HTML
+    const menuHTML = `
+      <div id="menu" style="
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.9); display: flex; flex-direction: column;
+        align-items: center; justify-content: center; z-index: 100;
+        font-family: 'Roboto', sans-serif; color: #fff;
+      ">
+        <h1 style="font-size: 48px; margin-bottom: 10px; background: linear-gradient(90deg, #ff4444, #44ff44, #4444ff, #ffff44); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Rhythm Slice</h1>
+        <p style="font-size: 18px; opacity: 0.7; margin-bottom: 30px;">Slice the beats at the perfect moment!</p>
+        <div style="margin-bottom: 30px; text-align: center;">
+          <div style="display: inline-block; background: #222; padding: 10px 20px; border-radius: 8px; margin: 5px; border: 2px solid #ff4444;"><kbd style="font-size: 16px;">D</kbd></div>
+          <div style="display: inline-block; background: #222; padding: 10px 20px; border-radius: 8px; margin: 5px; border: 2px solid #44ff44;"><kbd style="font-size: 16px;">F</kbd></div>
+          <div style="display: inline-block; background: #222; padding: 10px 20px; border-radius: 8px; margin: 5px; border: 2px solid #4444ff;"><kbd style="font-size: 16px;">J</kbd></div>
+          <div style="display: inline-block; background: #222; padding: 10px 20px; border-radius: 8px; margin: 5px; border: 2px solid #ffff44;"><kbd style="font-size: 16px;">K</kbd></div>
+        </div>
+        <p style="opacity: 0.5; margin-bottom: 20px;">Or tap the 4 lanes on mobile</p>
+        <button id="startBtn" style="
+          padding: 15px 40px; font-size: 24px; background: linear-gradient(90deg, #ff4444, #ffff44);
+          border: none; border-radius: 30px; color: #000; font-weight: bold; cursor: pointer;
+          box-shadow: 0 0 20px rgba(255,255,0,0.5); transition: transform 0.1s;
+        ">Start Game (Space)</button>
+        <div id="stats" style="margin-top: 30px; display: none;">
+          <p>Score: <span id="finalScore">0</span></p>
+          <p>Max Combo: <span id="maxCombo">0</span></p>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', menuHTML);
+
+    document.getElementById('startBtn').addEventListener('click', toggleGame);
+    document.getElementById('startBtn').addEventListener('mousedown', () => {
+      document.getElementById('startBtn').style.transform = 'scale(0.95)';
+    });
+    document.getElementById('startBtn').addEventListener('mouseup', () => {
+      document.getElementById('startBtn').style.transform = 'scale(1)';
+    });
+    document.getElementById('startBtn').addEventListener('mouseleave', () => {
+      document.getElementById('startBtn').style.transform = 'scale(1)';
+    });
+
+    // Show menu initially
+    showMenu();
+  </script>
+</body>
+</html>"
+}
