@@ -1,0 +1,1 @@
+// Maze generation and rendering handled in main.js for brevity

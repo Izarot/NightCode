@@ -1,0 +1,1 @@
+// HUD rendering handled in main.js for brevity
