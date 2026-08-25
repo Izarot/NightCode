@@ -1,0 +1,1 @@
+export const levels=[{id:1,name:'First Steps',platforms:[{x:100,y:500,w:600,h:40}],goal:{x:700,y:400,w:20,h:20},spikes:[]},{id:2,name:'The Gap',platforms:[{x:100,y:500,w:200,h:40},{x:500,y:500,w:200,h:40}],goal:{x:750,y:400,w:20,h:20},spikes:[]}];

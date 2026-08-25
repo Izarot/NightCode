@@ -1,0 +1,354 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 24456 (char 24455)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n    <title>ECHO CLIMBER</title>\n    <link rel=\"stylesheet\" href=\"style.css\">\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧗</text></svg>\">\n</head>\n<body>\n    <div id=\"game-container\">\n        <canvas id=\"gameCanvas\"></canvas>\n        <div id=\"hud\">\n            <div id=\"level-info\">Level <span id=\"level-num\">1</span>: <span id=\"level-name\">First Steps</span></div>\n            <div id=\"timer\">00:00.00</div>\n            <div id=\"clone-counter\">Echoes: <span id=\"clone-count\">0</span></div>\n            <div id=\"high-score\">Best: <span id=\"best-time\">--:--</span></div>\n        </div>\n        <div id=\"controls-hint\">[R] Restart | [Space/W] Jump | [A/D] Move</div>\n        <div id=\"menu\" class=\"screen\">\n            <h1>🧗 ECHO CLIMBER</h1>\n            <p>Leave echoes of yourself as platforms to climb!</p>\n            <button id=\"start-btn\">START GAME</button>\n            <div class=\"menu-controls\">\n                <p><strong>Controls:</strong></p>\n                <p>A/D or ←/→ : Move</p>\n                <p>W/Space/↑ : Jump (creates echo!)</p>\n                <p>R : Reset Level</p>\n            </div>\n        </div>\n        <div id=\"level-complete\" class=\"screen hidden\">\n            <h1>✨ Level Complete! ✨</h1>\n            <p>Time: <span id=\"complete-time\">00:00</span></p>\n            <p>Echoes used: <span id=\"echoes-used\">0</span></p>\n            <button id=\"next-btn\">NEXT LEVEL</button>\n        </div>\n        <div id=\"game-complete\" class=\"screen hidden\">\n            <h1>🏆 YOU WIN! 🏆</h1>\n            <p>Total Time: <span id=\"total-time\">00:00</span></p>\n            <p>Total Echoes: <span id=\"total-echoes\">0</span></p>\n            <p id=\"new-record\" class=\"hidden\">🎉 NEW RECORD! 🎉</p>\n            <button id=\"restart-btn\">PLAY AGAIN</button>\n        </div>\n        <div id=\"mobile-controls\" class=\"hidden\">\n            <button id=\"left-btn\">◀</button>\n            <button id=\"jump-btn\">⬆ JUMP</button>\n            <button id=\"right-btn\">▶</button>\n        </div>\n    </div>\n    <script src=\"game.js\"></script>\n</body>\n</html>", "style.css": "* {\n    margin: 0;\n    padding: 0;\n    box-sizing: border-box;\n}\n\nbody {\n    background: #0f0f1a;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    min-height: 100vh;\n    font-family: 'Segoe UI', system-ui, sans-serif;\n    overflow: hidden;\n}\n\n#game-container {\n    position: relative;\n    width: 100%;\n    max-width: 800px;\n    aspect-ratio: 4/3;\n    background: #1a1a2e;\n    border-radius: 8px;\n    box-shadow: 0 0 40px rgba(0, 217, 255, 0.3);\n    overflow: hidden;\n}\n\n#gameCanvas {\n    width: 100%;\n    height: 100%;\n    display: block;\n}\n\n#hud {\n    position: absolute;\n    top: 0;\n    left: 0;\n    right: 0;\n    padding: 15px 20px;\n    display: flex;\n    justify-content: space-between;\n    align-items: flex-start;\n    pointer-events: none;\n    color: white;\n    font-family: 'Courier New', monospace;\n    font-size: 14px;\n    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);\n}\n\n#level-info {\n    background: rgba(0,0,0,0.5);\n    padding: 8px 12px;\n    border-radius: 4px;\n}\n\n#timer {\n    background: rgba(0,0,0,0.5);\n    padding: 8px 12px;\n    border-radius: 4px;\n    font-size: 18px;\n    color: #00d9ff;\n}\n\n#clone-counter {\n    background: rgba(0,0,0,0.5);\n    padding: 8px 12px;\n    border-radius: 4px;\n}\n\n#clone-count {\n    color: #00d9ff;\n    font-weight: bold;\n    transition: color 0.2s, transform 0.2s;\n    display: inline-block;\n}\n\n#clone-count.pulse {\n    color: #f1c40f;\n    transform: scale(1.3);\n}\n\n#high-score {\n    background: rgba(0,0,0,0.5);\n    padding: 8px 12px;\n    border-radius: 4px;\n    font-size: 12px;\n}\n\n#best-time {\n    color: #f1c40f;\n}\n\n#controls-hint {\n    position: absolute;\n    bottom: 10px;\n    right: 15px;\n    color: rgba(255,255,255,0.5);\n    font-size: 11px;\n    font-family: monospace;\n    pointer-events: none;\n}\n\n.screen {\n    position: absolute;\n    inset: 0;\n    display: flex;\n    flex-direction: column;\n    justify-content: center;\n    align-items: center;\n    background: rgba(26, 26, 46, 0.95);\n    color: white;\n    text-align: center;\n    padding: 20px;\n}\n\n.screen.hidden {\n    display: none;\n}\n\n.screen h1 {\n    font-size: 2.5rem;\n    margin-bottom: 15px;\n    background: linear-gradient(135deg, #ff6b6b, #00d9ff);\n    -webkit-background-clip: text;\n    -webkit-text-fill-color: transparent;\n    background-clip: text;\n}\n\n.screen p {\n    margin-bottom: 10px;\n    color: #aaa;\n}\n\n.screen button {\n    margin-top: 20px;\n    padding: 15px 40px;\n    font-size: 1.2rem;\n    background: linear-gradient(135deg, #ff6b6b, #ff8e8e);\n    border: none;\n    border-radius: 8px;\n    color: white;\n    cursor: pointer;\n    font-weight: bold;\n    transition: transform 0.2s, box-shadow 0.2s;\n}\n\n.screen button:hover {\n    transform: scale(1.05);\n    box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);\n}\n\n.menu-controls {\n    margin-top: 30px;\n    background: rgba(0,0,0,0.3);\n    padding: 20px;\n    border-radius: 8px;\n}\n\n.menu-controls p {\n    margin: 5px 0;\n}\n\n#new-record {\n    color: #f1c40f !important;\n    font-size: 1.5rem;\n    animation: pulse 0.5s infinite alternate;\n}\n\n@keyframes pulse {\n    from { opacity: 0.7; transform: scale(1); }\n    to { opacity: 1; transform: scale(1.1); }\n}\n\n#mobile-controls {\n    position: absolute;\n    bottom: 60px;\n    left: 0;\n    right: 0;\n    display: flex;\n    justify-content: space-between;\n    padding: 0 20px;\n    pointer-events: none;\n}\n\n#mobile-controls button {\n    width: 70px;\n    height: 70px;\n    border-radius: 50%;\n    background: rgba(255,255,255,0.2);\n    border: 2px solid rgba(255,255,255,0.4);\n    color: white;\n    font-size: 1.5rem;\n    pointer-events: auto;\n    touch-action: manipulation;\n}\n\n#jump-btn {\n    width: 100px !important;\n    background: rgba(0, 217, 255, 0.4) !important;\n    border-color: #00d9ff !important;\n}\n\n@media (max-width: 600px) {\n    #hud {\n        font-size: 11px;\n        padding: 10px;\n    }\n    #timer {\n        font-size: 14px;\n    }\n    #controls-hint {\n        display: none;\n    }\n    .screen h1 {\n        font-size: 1.8rem;\n    }\n    .screen button {\n        padding: 12px 30px;\n        font-size: 1rem;\n    }\n}\n\n@media (min-width: 601px) {\n    #mobile-controls {\n        display: none !important;\n    }\n}", "game.js": "// ECHO CLIMBER - Main Game File\n(function() {\n    'use strict';\n\n    // === CONSTANTS ===\n    const CANVAS_WIDTH = 800;\n    const CANVAS_HEIGHT = 600;\n    const PLAYER_WIDTH = 32;\n    const PLAYER_HEIGHT = 48;\n    const RUN_SPEED = 280;\n    const JUMP_VELOCITY = -420;\n    const GRAVITY = 980;\n    const MAX_FALL_SPEED = 600;\n    const COYOTE_TIME = 80;\n    const JUMP_BUFFER = 100;\n    const MAX_CLONES = 50;\n    const MAX_PARTICLES = 100;\n\n    // Colors\n    const COLORS = {\n        background: '#1a1a2e',\n        player: '#ff6b6b',\n        playerOutline: '#cc5555',\n        clone: '#00d9ff',\n        cloneGlow: 'rgba(0, 217, 255, 0.3)',\n        platform: '#2d3436',\n        platformEdge: '#3d4446',\n        spike: '#e74c3c',\n        goal: '#f1c40f',\n        goalGlow: 'rgba(241, 196, 15, 0.5)',\n        text: '#ffffff'\n    };\n\n    // === AUDIO SYSTEM ===\n    class AudioManager {\n        constructor() {\n            this.ctx = null;\n            this.enabled = true;\n            try {\n                this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n            } catch(e) {\n                this.enabled = false;\n            }\n        }\n\n        play(type) {\n            if (!this.enabled || !this.ctx) return;\n            if (this.ctx.state === 'suspended') this.ctx.resume();\n            \n            const osc = this.ctx.createOscillator();\n            const gain = this.ctx.createGain();\n            osc.connect(gain);\n            gain.connect(this.ctx.destination);\n            \n            const now = this.ctx.currentTime;\n            \n            switch(type) {\n                case 'jump':\n                    osc.frequency.setValueAtTime(300, now);\n                    osc.frequency.exponentialRampToValueAtTime(500, now + 0.1);\n                    gain.gain.setValueAtTime(0.15, now);\n                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);\n                    osc.type = 'sine';\n                    osc.start(now);\n                    osc.stop(now + 0.1);\n                    break;\n                case 'clone':\n                    osc.frequency.setValueAtTime(600, now);\n                    osc.frequency.exponentialRampToValueAtTime(900, now + 0.15);\n                    gain.gain.setValueAtTime(0.12, now);\n                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);\n                    osc.type = 'triangle';\n                    osc.start(now);\n                    osc.stop(now + 0.15);\n                    break;\n                case 'death':\n                    osc.frequency.setValueAtTime(400, now);\n                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);\n                    gain.gain.setValueAtTime(0.2, now);\n                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);\n                    osc.type = 'sawtooth';\n                    osc.start(now);\n                    osc.stop(now + 0.3);\n                    break;\n                case 'goal':\n                    osc.frequency.setValueAtTime(523, now);\n                    osc.frequency.setValueAtTime(659, now + 0.1);\n                    osc.frequency.setValueAtTime(784, now + 0.2);\n                    gain.gain.setValueAtTime(0.15, now);\n                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);\n                    osc.type = 'sine';\n                    osc.start(now);\n                    osc.stop(now + 0.4);\n                    break;\n            }\n        }\n    }\n\n    // === LEVELS DATA ===\n    const LEVELS = [\n        {\n            id: 1,\n            name: \"First Steps\",\n            spawn: { x: 100, y: 500 },\n            platforms: [\n                { x: 50, y: 550, w: 200, h: 30 },\n                { x: 300, y: 450, w: 150, h: 30 },\n                { x: 500, y: 350, w: 150, h: 30 },\n                { x: 350, y: 250, w: 150, h: 30 },\n                { x: 550, y: 150, w: 200, h: 30 }\n            ],\n            spikes: [],\n            goal: { x: 700, y: 100, w: 50, h: 50 }\n        },\n        {\n            id: 2,\n            name: \"The Gap\",\n            spawn: { x: 80, y: 450 },\n            platforms: [\n                { x: 30, y: 500, w: 180, h: 30 },\n                { x: 550, y: 500, w: 220, h: 30 },\n                { x: 350, y: 380, w: 100, h: 30 }\n            ],\n            spikes: [],\n            goal: { x: 700, y: 450, w: 50, h: 50 }\n        },\n        {\n            id: 3,\n            name: \"The Tower\",\n            spawn: { x: 400, y: 520 },\n            platforms: [\n                { x: 300, y: 560, w: 200, h: 30 },\n                { x: 150, y: 460, w: 120, h: 20 },\n                { x: 500, y: 380, w: 120, h: 20 },\n                { x: 200, y: 300, w: 120, h: 20 },\n                { x: 480, y: 220, w: 120, h: 20 },\n                { x: 300, y: 140, w: 200, h: 20 }\n            ],\n            spikes: [],\n            goal: { x: 450, y: 90, w: 50, h: 50 }\n        },\n        {\n            id: 4,\n            name: \"Spike Alley\",\n            spawn: { x: 80, y: 420 },\n            platforms: [\n                { x: 30, y: 470, w: 150, h: 30 },\n                { x: 280, y: 470, w: 80, h: 30 },\n                { x: 460, y: 470, w: 80, h: 30 },\n                { x: 620, y: 470, w: 150, h: 30 },\n                { x: 340, y: 350, w: 120, h: 20 },\n                { x: 550, y: 250, w: 150, h: 30 }\n            ],\n            spikes: [\n                { x: 200, y: 490, w: 60, h: 20 },\n                { x: 380, y: 490, w: 60, h: 20 },\n                { x: 560, y: 490, w: 40, h: 20 }\n            ],\n            goal: { x: 650, y: 200, w: 50, h: 50 }\n        },\n        {\n            id: 5,\n            name: \"The Choice\",\n            spawn: { x: 80, y: 420 },\n            platforms: [\n                { x: 30, y: 470, w: 150, h: 30 },\n                { x: 30, y: 350, w: 80, h: 20 },\n                { x: 30, y: 230, w: 80, h: 20 },\n                { x: 30, y: 110, w: 150, h: 20 },\n                { x: 300, y: 500, w: 200, h: 30 },\n                { x: 600, y: 400, w: 170, h: 30 },\n                { x: 600, y: 280, w: 170, h: 30 }\n            ],\n            spikes: [\n                { x: 220, y: 520, w: 60, h: 20 },\n                { x: 520, y: 520, w: 60, h: 20 }\n            ],\n            goal: { x: 700, y: 230, w: 50, h: 50 }\n        }\n    ];\n\n    // === PARTICLE SYSTEM ===\n    class Particle {\n        constructor(x, y, color, vx, vy, life, size) {\n            this.x = x;\n            this.y = y;\n            this.color = color;\n            this.vx = vx;\n            this.vy = vy;\n            this.life = life;\n            this.maxLife = life;\n            this.size = size;\n        }\n\n        update(dt) {\n            this.x += this.vx * dt;\n            this.y += this.vy * dt;\n            this.vy += 200 * dt;\n            this.life -= dt;\n        }\n\n        draw(ctx) {\n            const alpha = this.life / this.maxLife;\n            ctx.globalAlpha = alpha;\n            ctx.fillStyle = this.color;\n            ctx.beginPath();\n            ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);\n            ctx.fill();\n            ctx.globalAlpha = 1;\n        }\n    }\n\n    class ParticleSystem {\n        constructor() {\n            this.particles = [];\n        }\n\n        emit(x, y, count, color, spread = 150) {\n            for (let i = 0; i < count && this.particles.length < MAX_PARTICLES; i++) {\n                const angle = Math.random() * Math.PI * 2;\n                const speed = Math.random() * spread + 50;\n                this.particles.push(new Particle(\n                    x, y, color,\n                    Math.cos(angle) * speed,\n                    Math.sin(angle) * speed - 50,\n                    0.4 + Math.random() * 0.2,\n                    4 + Math.random() * 3\n                ));\n            }\n        }\n\n        update(dt) {\n            this.particles = this.particles.filter(p => {\n                p.update(dt);\n                return p.life > 0;\n            });\n        }\n\n        draw(ctx) {\n            this.particles.forEach(p => p.draw(ctx));\n        }\n    }\n\n    // === PLAYER ===\n    class Player {\n        constructor(x, y) {\n            this.x = x;\n            this.y = y;\n            this.vx = 0;\n            this.vy = 0;\n            this.width = PLAYER_WIDTH;\n            this.height = PLAYER_HEIGHT;\n            this.grounded = false;\n            this.coyoteTimer = 0;\n            this.jumpBufferTimer = 0;\n            this.facingRight = true;\n            this.jumpFlash = 0;\n            this.trail = [];\n        }\n\n        update(dt, input, game) {\n            // Horizontal movement\n            this.vx = 0;\n            if (input.left) {\n                this.vx = -RUN_SPEED;\n                this.facingRight = false;\n            }\n            if (input.right) {\n                this.vx = RUN_SPEED;\n                this.facingRight = true;\n            }\n\n            // Trail effect\n            if (Math.abs(this.vx) > 100 || Math.abs(this.vy) > 100) {\n                this.trail.push({ x: this.x, y: this.y, alpha: 0.4 });\n                if (this.trail.length > 3) this.trail.shift();\n            }\n            this.trail.forEach(t => t.alpha -= dt * 2);\n            this.trail = this.trail.filter(t => t.alpha > 0);\n\n            // Coyote time\n            if (this.grounded) {\n                this.coyoteTimer = COYOTE_TIME;\n            } else {\n                this.coyoteTimer -= dt * 1000;\n            }\n\n            // Jump buffer\n            if (input.jumpPressed) {\n                this.jumpBufferTimer = JUMP_BUFFER;\n            } else {\n                this.jumpBufferTimer -= dt * 1000;\n            }\n\n            // Jump\n            if (this.jumpBufferTimer > 0 && this.coyoteTimer > 0) {\n                this.vy = JUMP_VELOCITY;\n                this.coyoteTimer = 0;\n                this.jumpBufferTimer = 0;\n                this.grounded = false;\n                this.jumpFlash = 0.15;\n                game.audio.play('jump');\n                game.spawnClone();\n            }\n\n            // Variable jump height\n            if (!input.jump && this.vy < 0) {\n                this.vy += GRAVITY * dt * 1.5;\n            }\n\n            // Gravity\n            this.vy += GRAVITY * dt;\n            if (this.vy > MAX_FALL_SPEED) this.vy = MAX_FALL_SPEED;\n\n            // Apply velocity\n            this.x += this.vx * dt;\n            this.y += this.vy * dt;\n\n            // Flash timer\n            if (this.jumpFlash > 0) this.jumpFlash -= dt;\n\n            // Bounds\n            if (this.x < 0) this.x = 0;\n            if (this.x + this.width > CANVAS_WIDTH) this.x = CANVAS_WIDTH - this.width;\n\n            // Reset grounded\n            this.grounded = false;\n        }\n\n        draw(ctx, time) {\n            // Trail\n            this.trail.forEach(t => {\n                ctx.globalAlpha = t.alpha;\n                ctx.fillStyle = COLORS.player;\n                ctx.beginPath();\n                ctx.roundRect(t.x, t.y, this.width, this.height, 6);\n                ctx.fill();\n            });\n            ctx.globalAlpha = 1;\n\n            // Jump flash\n            if (this.jumpFlash > 0) {\n                ctx.fillStyle = 'white';\n                ctx.beginPath();\n                ctx.roundRect(this.x - 2, this.y - 2, this.width + 4, this.height + 4, 8);\n                ctx.fill();\n            }\n\n            // Body\n            ctx.fillStyle = COLORS.player;\n            ctx.strokeStyle = COLORS.playerOutline;\n            ctx.lineWidth = 3;\n            ctx.beginPath();\n            ctx.roundRect(this.x, this.y, this.width, this.height, 6);\n            ctx.fill();\n            ctx.stroke();\n\n            // Eyes\n            const eyeOffset = this.facingRight ? 8 : -2;\n            ctx.fillStyle = 'white';\n            ctx.beginPath();\n            ctx.arc(this.x + 10 + eyeOffset, this.y + 16, 5, 0, Math.PI * 2);\n            ctx.arc(this.x + 22 + eyeOffset, this.y + 16, 5, 0, Math.PI * 2);\n            ctx.fill();\n\n            // Pupils\n            ctx.fillStyle = '#333';\n            ctx.beginPath();\n            ctx.arc(this.x + 11 + eyeOffset + (this.facingRight ? 1.5 : -1.5), this.y + 16, 2.5, 0, Math.PI * 2);\n            ctx.arc(this.x + 23 + eyeOffset + (this.facingRight ? 1.5 : -1.5), this.y + 16, 2.5, 0, Math.PI * 2);\n            ctx.fill();\n        }\n\n        getBounds() {\n            return {\n                x: this.x,\n                y: this.y,\n                width: this.width,\n                height: this.height\n            };\n        }\n    }\n\n    // === CLONE ===\n    class Clone {\n        constructor(x, y) {\n            this.x = x;\n            this.y = y;\n            this.width = PLAYER_WIDTH;\n            this.height = PLAYER_HEIGHT;\n            this.age = 0;\n            this.pulsePhase = Math.random() * Math.PI * 2;\n        }\n\n        update(dt) {\n            this.age += dt;\n            this.pulsePhase += dt * 3;\n        }\n\n        draw(ctx, time) {\n            const pulse = Math.sin(this.pulsePhase) * 0.1 + 0.9;\n            const opacity = this.age < 2 ? 0.9 : 0.8;\n            \n            // Glow\n            ctx.shadowColor = COLORS.clone;\n            ctx.shadowBlur = 15 * pulse;\n            \n            ctx.globalAlpha = opacity;\n            ctx.fillStyle = COLORS.clone;\n            ctx.beginPath();\n            ctx.roundRect(this.x, this.y, this.width, this.height, 6);\n            ctx.fill();\n            \n            // Inner glow\n            const gradient = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.height);\n            gradient.addColorStop(0, 'rgba(255,255,255,0.3)');\n            gradient.addColorStop(1, 'rgba(0,0,0,0.2)');\n            ctx.fillStyle = gradient;\n            ctx.beginPath();\n            ctx.roundRect(this.x, this.y, this.width, this.height, 6);\n            ctx.fill();\n            \n            ctx.shadowBlur = 0;\n            ctx.globalAlpha = 1;\n        }\n    }\n\n    // === MAIN GAME ===\n    class Game {\n        constructor() {\n            this.canvas = document.getElementById('gameCanvas');\n            this.ctx = this.canvas.getContext('2d');\n            this.canvas.width = CANVAS_WIDTH;\n            this.canvas.height = CANVAS_HEIGHT;\n\n            this.audio = new AudioManager();\n            this.particles = new ParticleSystem();\n            \n            this.state = 'MENU';\n            this.currentLevel = 0;\n            this.player = null;\n            this.clones = [];\n            this.platforms = [];\n            this.spikes = [];\n            this.goal = null;\n            \n            this.input = {\n                left: false,\n                right: false,\n                jump: false,\n                jumpPressed: false\n            };\n            \n            this.screenShake = 0;\n            this.screenFlash = null;\n            this.screenFlashTimer = 0;\n            \n            this.timer = 0;\n            this.totalTime = 0;\n            this.totalEchoes = 0;\n            \n            this.bestTime = localStorage.getItem('echoClimberBest');\n            this.updateBestDisplay();\n            \n            this.lastTime = 0;\n            this.setupInput();\n            this.setupUI();\n            this.checkMobile();\n            this.loop(0);\n        }\n\n        checkMobile() {\n            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 600;\n            if (isMobile) {\n                document.getElementById('mobile-controls').classList.remove('hidden');\n            }\n        }\n\n        setupInput() {\n            document.addEventListener('keydown', (e) => {\n                if (e.code === 'ArrowLeft' || e.code === 'KeyA') {\n                    this.input.left = true;\n                    e.preventDefault();\n                }\n                if (e.code === 'ArrowRight' || e.code === 'KeyD') {\n                    this.input.right = true;\n                    e.preventDefault();\n                }\n                if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {\n                    if (!this.input.jump) this.input.jumpPressed = true;\n                    this.input.jump = true;\n                    e.preventDefault();\n                }\n                if (e.code === 'KeyR' && this.state === 'PLAYING') {\n                    this.resetLevel();\n                }\n            });\n\n            document.addEventListener('keyup', (e) => {\n                if (e.code === 'ArrowLeft' || e.code === 'KeyA') this.input.left = false;\n                if (e.code === 'ArrowRight' || e.code === 'KeyD') this.input.right = false;\n                if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') this.input.jump = false;\n            });\n\n            // Mobile controls\n            const leftBtn = document.getElementById('left-btn');\n            const rightBtn = document.getElementById('right-btn');\n            const jumpBtn = document.getElementById('jump-btn');\n\n            const handleTouch = (el, action) => {\n                el.addEventListener('touchstart', (e) => { e.preventDefault(); action(true); }, { passive: false });
+                el.addEventListener('touchend', (e) => { e.preventDefault(); action(false); }, { passive: false });
+            };
+
+            handleTouch(leftBtn, (active) => this.input.left = active);
+            handleTouch(rightBtn, (active) => this.input.right = active);
+            handleTouch(jumpBtn, (active) => {
+                if (active && !this.input.jump) this.input.jumpPressed = true;
+                this.input.jump = active;
+            });
+        }
+
+        setupUI() {
+            document.getElementById('start-btn').addEventListener('click', () => this.startGame());
+            document.getElementById('next-btn').addEventListener('click', () => this.nextLevel());
+            document.getElementById('restart-btn').addEventListener('click', () => this.restartGame());
+        }
+
+        startGame() {
+            this.state = 'PLAYING';
+            this.currentLevel = 0;
+            this.totalTime = 0;
+            this.totalEchoes = 0;
+            this.loadLevel(this.currentLevel);
+            document.getElementById('menu').classList.add('hidden');
+        }
+
+        loadLevel(index) {
+            const level = LEVELS[index];
+            this.player = new Player(level.spawn.x, level.spawn.y);
+            this.clones = [];
+            this.platforms = level.platforms;
+            this.spikes = level.spikes;
+            this.goal = level.goal;
+            this.timer = 0;
+
+            document.getElementById('level-num').textContent = level.id;
+            document.getElementById('level-name').textContent = level.name;
+            document.getElementById('clone-count').textContent = '0';
+        }
+
+        resetLevel() {
+            this.loadLevel(this.currentLevel);
+        }
+
+        nextLevel() {
+            this.currentLevel++;
+            if (this.currentLevel >= LEVELS.length) {
+                this.gameComplete();
+            } else {
+                this.loadLevel(this.currentLevel);
+                document.getElementById('level-complete').classList.add('hidden');
+            }
+        }
+
+        spawnClone() {
+            if (this.clones.length >= MAX_CLONES) return;
+            if (this.player.vy > 0) return;
+
+            const clone = new Clone(this.player.x, this.player.y);
+            this.clones.push(clone);
+            this.totalEchoes++;
+            this.particles.emit(
+                this.player.x + this.player.width / 2,
+                this.player.y + this.player.height / 2,
+                15,
+                COLORS.clone
+            );
+            this.audio.play('clone');
+
+            const cloneCount = document.getElementById('clone-count');
+            cloneCount.textContent = this.clones.length;
+            cloneCount.classList.add('pulse');
+            setTimeout(() => cloneCount.classList.remove('pulse'), 200);
+        }
+
+        levelComplete() {
+            this.state = 'COMPLETE';
+            this.audio.play('goal');
+
+            this.totalTime += this.timer;
+
+            document.getElementById('complete-time').textContent = this.formatTime(this.timer);
+            document.getElementById('echoes-used').textContent = this.clones.length;
+            document.getElementById('level-complete').classList.remove('hidden');
+
+            this.particles.emit(
+                this.goal.x + this.goal.w / 2,
+                this.goal.y + this.goal.h / 2,
+                30,
+                COLORS.goal,
+                200
+            );
+        }
+
+        gameComplete() {
+            this.state = 'WIN';
+
+            document.getElementById('total-time').textContent = this.formatTime(this.totalTime);
+            document.getElementById('total-echoes').textContent = this.totalEchoes;
+
+            const recordEl = document.getElementById('new-record');
+            if (!this.bestTime || this.totalTime < parseFloat(this.bestTime)) {
+                localStorage.setItem('echoClimberBest', this.totalTime);
+                this.bestTime = this.totalTime;
+                recordEl.classList.remove('hidden');
+                this.updateBestDisplay();
+            } else {
+                recordEl.classList.add('hidden');
+            }
+
+            document.getElementById('level-complete').classList.add('hidden');
+            document.getElementById('game-complete').classList.remove('hidden');
+        }
+
+        restartGame() {
+            document.getElementById('game-complete').classList.add('hidden');
+            document.getElementById('menu').classList.remove('hidden');
+            this.state = 'MENU';
+        }
+
+        updateBestDisplay() {
+            const bestEl = document.getElementById('best-time');
+            if (this.bestTime) {
+                bestEl.textContent = this.formatTime(parseFloat(this.bestTime));
+            }
+        }
+
+        formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toFixed(2).padStart(5, '0')}`;
+        }
+
+        checkCollisions() {
+            const playerBounds = this.player.getBounds();
+
+            // Platform collisions
+            const allPlatforms = [...this.platforms, ...this.clones.map(c => ({
+                x: c.x,
+                y: c.y,
+                width: c.width,
+                height: c.height
+            }))];
+
+            for (const plat of allPlatforms) {
+                if (this.aabbCollision(playerBounds, plat)) {
+                    // Vertical collision
+                    const overlapTop = (playerBounds.y + playerBounds.height) - plat.y;
+                    const overlapBottom = (plat.y + plat.height) - playerBounds.y;
+                    const overlapLeft = (playerBounds.x + playerBounds.width) - plat.x;
+                    const overlapRight = (plat.x + plat.width) - playerBounds.x;
+
+                    const minOverlap = Math.min(overlapTop, overlapBottom, overlapLeft, overlapRight);
+
+                    if (minOverlap === overlapTop && this.player.vy >= 0) {
+                        this.player.y = plat.y - this.player.height;
+                        this.player.vy = 0;
+                        this.player.grounded = true;
+                    } else if (minOverlap === overlapBottom && this.player.vy < 0) {
+                        this.player.y = plat.y + plat.height;
+                        this.player.vy = 0;
+                    } else if (minOverlap === overlapLeft) {
+                        this.player.x = plat.x - this.player.width;
+                    } else if (minOverlap === overlapRight) {
+                        this.player.x = plat.x + plat.width;
+                    }
+                }
+            }
+
+            // Spike collisions
+            for (const spike of this.spikes) {
+                const spikeHitbox = { x: spike.x + 5, y: spike.y + 5, width: spike.w - 10, height: spike.h - 5 };
+                if (this.aabbCollision(playerBounds, spikeHitbox)) {
+                    this.playerDeath();
+                    return;
+                }
+            }
+
+            // Fall death
+            if (this.player.y > CANVAS_HEIGHT + 100) {
+                this.playerDeath();
+            }
+
+            // Goal collision
+            if (this.aabbCollision(playerBounds, this.goal)) {
+                this.levelComplete();
+            }
+        }
+
+        aabbCollision(a, b) {
+            return a.x < b.x + (b.width || b.w) &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + (b.height || b.h) &&
+                   a.y + a.height > b.y;
+        }
+
+        playerDeath() {
+            this.audio.play('death');
+            this.screenShake = 0.3;
+            this.screenFlash = '#ff0000';
+            this.screenFlashTimer = 0.1;
+            this.particles.emit(
+                this.player.x + this.player.width / 2,
+                this.player.y + this.player.height / 2,
+                20,
+                COLORS.player
+            );
+            this.resetLevel();
+        }
+
+        update(dt) {
+            if (this.state !== 'PLAYING') return;
+
+            this.timer += dt;
+            document.getElementById('timer').textContent = this.formatTime(this.timer);
+
+            this.player.update(dt, this.input, this);
+            this.input.jumpPressed = false;
+
+            this.clones.forEach(c => c.update(dt));
+            this.particles.update(dt);
+
+            this.checkCollisions();
+
+            if (this.screenShake > 0) this.screenShake -= dt;
+            if (this.screenFlashTimer > 0) this.screenFlashTimer -= dt;
+        }
+
+        draw(time) {
+            const ctx = this.ctx;
+
+            // Screen shake
+            ctx.save();
+            if (this.screenShake > 0) {
+                const shakeX = (Math.random() - 0.5) * this.screenShake * 20;
+                const shakeY = (Math.random() - 0.5) * this.screenShake * 20;
+                ctx.translate(shakeX, shakeY);
+            }
+
+            // Background
+            ctx.fillStyle = COLORS.background;
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+            // Background grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < CANVAS_WIDTH; x += 40) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, CANVAS_HEIGHT);
+                ctx.stroke();
+            }
+            for (let y = 0; y < CANVAS_HEIGHT; y += 40) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(CANVAS_WIDTH, y);
+                ctx.stroke();
+            }
+
+            // Draw platforms
+            this.platforms.forEach(p => this.drawPlatform(p));
+
+            // Draw spikes
+            this.spikes.forEach(s => this.drawSpike(s));
+
+            // Draw goal
+            if (this.goal) this.drawGoal(time);
+
+            // Draw clones
+            this.clones.forEach(c => c.draw(ctx, time));
+
+            // Draw player
+            if (this.player) this.player.draw(ctx, time);
+
+            // Draw particles
+            this.particles.draw(ctx);
+
+            // Screen flash
+            if (this.screenFlashTimer > 0 && this.screenFlash) {
+                ctx.fillStyle = this.screenFlash;
+                ctx.globalAlpha = this.screenFlashTimer * 3;
+                ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                ctx.globalAlpha = 1;
+            }
+
+            ctx.restore();
+        }
+
+        drawPlatform(p) {
+            const ctx = this.ctx;
+            ctx.fillStyle = COLORS.platform;
+            ctx.beginPath();
+            ctx.roundRect(p.x, p.y, p.w, p.h, 4);
+            ctx.fill();
+
+            ctx.fillStyle = COLORS.platformEdge;
+            ctx.fillRect(p.x, p.y, p.w, 3);
+        }
+
+        drawSpike(s) {
+            const ctx = this.ctx;
+            ctx.fillStyle = COLORS.spike;
+            ctx.beginPath();
+            ctx.moveTo(s.x, s.y + s.h);
+            ctx.lineTo(s.x + s.w / 2, s.y);
+            ctx.lineTo(s.x + s.w, s.y + s.h);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        drawGoal(time) {
+            const ctx = this.ctx;
+            const pulse = Math.sin(time / 200) * 0.2 + 0.8;
+
+            ctx.shadowColor = COLORS.goal;
+            ctx.shadowBlur = 20 * pulse;
+            ctx.fillStyle = COLORS.goal;
+            ctx.beginPath();
+            ctx.arc(
+                this.goal.x + this.goal.w / 2,
+                this.goal.y + this.goal.h / 2,
+                this.goal.w / 2,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('★', this.goal.x + this.goal.w / 2, this.goal.y + this.goal.h / 2);
+        }
+
+        loop(time) {
+            const dt = Math.min((time - this.lastTime) / 1000, 0.1);
+            this.lastTime = time;
+
+            this.update(dt);
+            this.draw(time / 1000);
+
+            requestAnimationFrame((t) => this.loop(t));
+        }
+    }
+
+    // Start the game
+    window.addEventListener('load', () => {
+        new Game();
+    });
+})();
