@@ -89,7 +89,7 @@ export class Renderer {
     // Health hearts
     ctx.textAlign = 'right';
     for (let i = 0; i < 5; i++) {
-      ctx.fillText(i < health ? '❤️' : '🖤', canvas.width - 20 - i * 30, 100);
+      ctx.fillText(i < health ? '❤️' : '🩸', canvas.width - 20 - i * 30, 100);
     }
   }
 }
