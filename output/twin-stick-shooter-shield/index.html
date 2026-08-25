@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>NEON REFLECT</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{background:#0a0a12;overflow:hidden;font-family:'Orbitron',sans-serif;color:#0ff}
+    #gameCanvas{display:block;touch-action:none}
+    #ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+    .hud{position:absolute;padding:10px 15px;background:rgba(10,10,20,.8);border:2px solid #0ff;border-radius:8px;box-shadow:0 0 20px #0ff4,inset 0 0 20px #0ff2}
+    #topLeft{top:10px;left:10px;display:flex;flex-direction:column;gap:8px}
+    #topRight{top:10px;right:10px;text-align:right}
+    #bottomCenter{bottom:10px;left:50%;transform:translateX(-50%)}
+    .bar{width:200px;height:18px;background:#111;border:2px solid #0ff;border-radius:4px;overflow:hidden;position:relative}
+    .bar::after{content:'';position:absolute;top:0;left:0;height:100%;background:linear-gradient(90deg,#0ff,#0f0);transition:width .1s;box-shadow:0 0 10px #0ff}
+    .bar.low::after{background:linear-gradient(90deg,#f0f,#ff0);animation:pulse 1s infinite}
+    @keyframes pulse{50%{opacity:.5}}
+    .label{font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:.7}
+    #score{font-size:24px;font-weight:700;text-shadow:0 0 10px #0ff}
+    #timer{font-size:18px;font-variant-numeric:tabular-nums;color:#ff0;text-shadow:0 0 10px #ff0}
+    #combo{font-size:14px;color:#f0f;min-height:20px}
+    #weaponInfo{font-size:12px;opacity:.8}
+    .menu{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,10,20,.95);border:3px solid #0ff;border-radius:16px;padding:40px;text-align:center;min-width:300px;box-shadow:0 0 40px #0ff8,inset 0 0 40px #0ff2;display:none;z-index:100}
+    .menu h2{font-size:28px;margin-bottom:20px;background:linear-gradient(90deg,#0ff,#f0f,#ff0);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .menu button{background:transparent;border:2px solid #0ff;color:#0ff;padding:12px 30px;margin:8px;font-size:16px;border-radius:6px;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:1px}
+    .menu button:hover{background:#0ff;color:#000;box-shadow:0 0 20px #0ff}
+    .menu button:active{transform:scale(.95)}
+    .stat{font-size:16px;margin:10px 0;color:#ff0}
+    .stat span{color:#0ff}
+    @media (max-width:600px){.bar{width:160px;height:14px}.hud{padding:8px 12px}.menu{padding:20px;min-width:280px}}
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="ui">
+    <div id="topLeft" class="hud">
+      <div><span class="label">Hull</span><div id="healthBar" class="bar"><div style="width:100%"></div></div></div>
+      <div><span class="label">Shield</span><div id="shieldBar" class="bar"><div style="width:100%"></div></div></div>
+    </div>
+    <div id="topRight" class="hud">
+      <div id="score">SCORE: 0</div>
+      <div id="timer">TIME: 00:00.00</div>
+      <div id="combo"></div>
+    </div>
+    <div id="bottomCenter" class="hud"><div id="weaponInfo">PLASMA CANNON • AUTO</div></div>
+  </div>
+  <div id="pauseMenu" class="menu"><h2>PAUSED</h2><button id="resumeBtn">Resume</button><br><button id="restartBtn">Restart</button></div>
+  <div id="gameOverMenu" class="menu"><h2>SYSTEM FAILURE</h2><div class="stat">Final Score: <span id="finalScore">0</span></div><div class="stat">Time Survived: <span id="finalTime">00:00.00</span></div><div class="stat">High Score: <span id="highScore">0</span></div><button id="replayBtn">Reinitialize</button></div>
+  <div id="upgradeMenu" class="menu"><h2>UPGRADE AVAILABLE</h2><div id="upgradeOptions"></div></div>
+  <script src="game.js"></script>
+</body>
+</html>
