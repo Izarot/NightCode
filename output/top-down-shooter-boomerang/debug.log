@@ -1,0 +1,407 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 24735 (char 24734)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n    <title>Project Boomerang</title>\n    <link href=\"https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap\" rel=\"stylesheet\">\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪃</text></svg>\">\n    <style>\n        * { margin: 0; padding: 0; box-sizing: border-box; }\n        html, body {\n            width: 100%; height: 100%; overflow: hidden;\n            background: #0a0a1a;\n            font-family: 'Orbitron', monospace;\n        }\n        #gameContainer {\n            position: relative;\n            width: 100%; height: 100%;\n            display: flex; justify-content: center; align-items: center;\n        }\n        #gameCanvas {\n            background: #0d0d2b;\n            cursor: crosshair;\n            image-rendering: pixelated;\n        }\n        #loadingOverlay {\n            position: absolute;\n            top: 0; left: 0; width: 100%; height: 100%;\n            background: #0a0a1a;\n            display: flex; justify-content: center; align-items: center;\n            color: #00ffcc;\n            font-size: 24px;\n            z-index: 10;\n        }\n        @media (max-width: 768px) {\n            #gameCanvas { max-width: 100%; max-height: 100%; }\n        }\n    </style>\n</head>\n<body>\n    <div id=\"gameContainer\">\n        <canvas id=\"gameCanvas\"></canvas>\n        <div id=\"loadingOverlay\">LOADING...</div>\n    </div>\n    <script type=\"module\" src=\"game.js\"></script>\n</body>\n</html>", "game.js": "const GAME_WIDTH = 1280, GAME_HEIGHT = 720;\nconst COLORS = { bg: '#0d0d2b', grid: '#1a1a4a', player: '#00ffcc', boomerang: '#ff00aa', enemy: '#ff4444', shooter: '#4488ff', dasher: '#aa44ff', shielded: '#ffcc00', boss: '#44ff44', ui: '#00ffcc', danger: '#ff3366', white: '#ffffff' };\n\nclass AudioEngine {\n    constructor() {\n        this.ctx = null;\n        this.masterGain = null;\n        this.initialized = false;\n    }\n    init() {\n        if (this.initialized) return;\n        this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n        this.masterGain = this.ctx.createGain();\n        this.masterGain.connect(this.ctx.destination);\n        this.masterGain.gain.value = 0.3;\n        this.initialized = true;\n    }\n    playTone(freq, type, duration, volume = 0.5) {\n        if (!this.initialized) return;\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.connect(gain);\n        gain.connect(this.masterGain);\n        osc.frequency.value = freq;\n        osc.type = type;\n        gain.gain.setValueAtTime(volume, this.ctx.currentTime);\n        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);\n        osc.start();\n        osc.stop(this.ctx.currentTime + duration);\n    }\n    throwSound() { this.playTone(800, 'sine', 0.1, 0.3); this.playTone(600, 'square', 0.05, 0.1); }\n    hitSound() { this.playTone(200, 'sawtooth', 0.1, 0.4); }\n    explosionSound() { this.playTone(100, 'sawtooth', 0.3, 0.5); this.playTone(50, 'square', 0.4, 0.3); }\n    damageSound() { this.playTone(150, 'sawtooth', 0.2, 0.5); this.playTone(80, 'square', 0.3, 0.4); }\n    pickupSound() { this.playTone(600, 'sine', 0.1, 0.3); setTimeout(() => this.playTone(800, 'sine', 0.15, 0.3), 100); }\n    dashSound() { this.playTone(400, 'sine', 0.15, 0.4); this.playTone(500, 'square', 0.1, 0.2); }\n    bossAlertSound() { for (let i = 0; i < 3; i++) setTimeout(() => this.playTone(300 + i * 100, 'square', 0.2, 0.4), i * 200); }\n}\n\nclass Storage {\n    static save(key, val) { try { localStorage.setItem('boomerang_' + key, JSON.stringify(val)); } catch(e) {} }\n    static load(key, def = null) { try { return JSON.parse(localStorage.getItem('boomerang_' + key)) ?? def; } catch(e) { return def; } }\n}\n\nclass Particle {\n    constructor() { this.active = false; }\n    init(x, y, vx, vy, color, life, size = 3) {\n        this.x = x; this.y = y; this.vx = vx; this.vy = vy;\n        this.color = color; this.life = life; this.maxLife = life; this.size = size;\n        this.active = true;\n    }\n    update(dt) {\n        if (!this.active) return;\n        this.x += this.vx * dt; this.y += this.vy * dt;\n        this.vx *= 0.98; this.vy *= 0.98;\n        this.life -= dt;\n        if (this.life <= 0) this.active = false;\n    }\n    draw(ctx) {\n        if (!this.active) return;\n        const alpha = this.life / this.maxLife;\n        ctx.globalAlpha = alpha;\n        ctx.fillStyle = this.color;\n        ctx.beginPath();\n        ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);\n        ctx.fill();\n        ctx.globalAlpha = 1;\n    }\n}\n\nclass ParticlePool {\n    constructor(size = 200) {\n        this.pool = Array.from({ length: size }, () => new Particle());\n    }\n    emit(x, y, count, color, speed = 100, life = 0.5, size = 3) {\n        let emitted = 0;\n        for (const p of this.pool) {\n            if (!p.active && emitted < count) {\n                const angle = Math.random() * Math.PI * 2;\n                const spd = speed * (0.5 + Math.random() * 0.5);\n                p.init(x, y, Math.cos(angle) * spd, Math.sin(angle) * spd, color, life, size);\n                emitted++;\n            }\n        }\n    }\n    update(dt) { this.pool.forEach(p => p.update(dt)); }\n    draw(ctx) { this.pool.forEach(p => p.draw(ctx)); }\n}\n\nclass Input {\n    constructor(canvas) {\n        this.keys = {};\n        this.mouse = { x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2, down: false };\n        this.prevKeys = {};\n        window.addEventListener('keydown', e => { this.keys[e.code] = true; e.preventDefault(); });\n        window.addEventListener('keyup', e => { this.keys[e.code] = false; });\n        canvas.addEventListener('mousemove', e => {\n            const rect = canvas.getBoundingClientRect();\n            const scaleX = GAME_WIDTH / rect.width;\n            const scaleY = GAME_HEIGHT / rect.height;\n            this.mouse.x = (e.clientX - rect.left) * scaleX;\n            this.mouse.y = (e.clientY - rect.top) * scaleY;\n        });\n        canvas.addEventListener('mousedown', e => { this.mouse.down = true; });\n        canvas.addEventListener('mouseup', e => { this.mouse.down = false; });\n        canvas.addEventListener('touchstart', e => {\n            e.preventDefault(); const t = e.touches[0];\n            const rect = canvas.getBoundingClientRect();\n            this.mouse.x = (t.clientX - rect.left) * (GAME_WIDTH / rect.width);\n            this.mouse.y = (t.clientY - rect.top) * (GAME_HEIGHT / rect.height);\n            this.mouse.down = true;\n        });\n        canvas.addEventListener('touchmove', e => {\n            e.preventDefault(); const t = e.touches[0];\n            const rect = canvas.getBoundingClientRect();\n            this.mouse.x = (t.clientX - rect.left) * (GAME_WIDTH / rect.width);\n            this.mouse.y = (t.clientY - rect.top) * (GAME_HEIGHT / rect.height);\n        });\n        canvas.addEventListener('touchend', () => { this.mouse.down = false; });\n    }\n    justPressed(code) { return this.keys[code] && !this.prevKeys[code]; }\n    update() { this.prevKeys = { ...this.keys }; }\n}\n\nclass Boomerang {\n    constructor(game) {\n        this.game = game;\n        this.reset();\n        this.enhancement = null;\n        this.enhancementTimer = 0;\n        this.trailTimer = 0;\n    }\n    reset() {\n        this.active = false;\n        this.x = 0; this.y = 0;\n        this.vx = 0; this.vy = 0;\n        this.angle = 0;\n        this.returning = false;\n        this.distance = 0;\n        this.maxRange = 350;\n        this.speed = 450;\n        this.hitEnemies = new Set();\n    }\n    throw(x, y, angle) {\n        this.active = true;\n        this.x = x; this.y = y;\n        this.angle = angle;\n        this.returning = false;\n        this.distance = 0;\n        this.hitEnemies.clear();\n        this.maxRange = this.enhancement === 'rapid' ? 262 : 350;\n        this.speed = this.enhancement === 'rapid' ? 675 : 450;\n        const spread = this.enhancement === 'split' ? 0.26 : 0;\n        if (spread > 0 && !this.game.extraBoomerang) {\n            this.game.spawnExtraBoomerang(x, y, angle + spread, this.enhancement);\n            this.game.spawnExtraBoomerang(x, y, angle - spread, this.enhancement);\n        }\n        this.updateVelocity();\n        this.game.audio.throwSound();\n    }\n    updateVelocity() {\n        this.vx = Math.cos(this.angle) * this.speed;\n        this.vy = Math.sin(this.angle) * this.speed;\n    }\n    update(dt) {\n        if (!this.active) return;\n        if (this.returning) {\n            const dx = this.game.player.x - this.x;\n            const dy = this.game.player.y - this.y;\n            const targetAngle = Math.atan2(dy, dx);\n            let diff = targetAngle - this.angle;\n            while (diff > Math.PI) diff -= Math.PI * 2;\n            while (diff < -Math.PI) diff += Math.PI * 2;\n            if (this.enhancement === 'homing') this.angle += diff * 10 * dt;\n            else this.angle += diff * 5 * dt;\n            this.updateVelocity();\n        }\n        this.x += this.vx * dt;\n        this.y += this.vy * dt;\n        this.distance += this.speed * dt;\n        this.angle += 15 * dt;\n        if (!this.returning && this.distance >= this.maxRange) {\n            this.returning = true;\n            this.speed *= 0.6;\n            this.updateVelocity();\n        }\n        if (this.returning) {\n            const dx = this.game.player.x - this.x;\n            const dy = this.game.player.y - this.y;\n            if (Math.sqrt(dx * dx + dy * dy) < 20) {\n                this.active = false;\n                this.game.boomerangThrown = false;\n            }\n        }\n        this.x = Math.max(20, Math.min(GAME_WIDTH - 20, this.x));\n        this.y = Math.max(20, Math.min(GAME_HEIGHT - 20, this.y));\n        this.trailTimer += dt;\n        if (this.trailTimer > 0.02) {\n            this.trailTimer = 0;\n            const col = this.returning ? COLORS.boomerang : COLORS.player;\n            this.game.particles.emit(this.x, this.y, 1, col, 30, 0.3, 4);\n        }\n    }\n    draw(ctx) {\n        if (!this.active) return;\n        ctx.save();\n        ctx.translate(this.x, this.y);\n        ctx.rotate(this.angle);\n        ctx.fillStyle = this.returning ? COLORS.boomerang : COLORS.player;\n        ctx.strokeStyle = COLORS.white;\n        ctx.lineWidth = 2;\n        ctx.beginPath();\n        ctx.moveTo(15, 0);\n        ctx.lineTo(-10, -10);\n        ctx.lineTo(-5, 0);\n        ctx.lineTo(-10, 10);\n        ctx.closePath();\n        ctx.fill();\n        ctx.stroke();\n        if (this.enhancement === 'explosive') {\n            ctx.fillStyle = '#ff6600';\n            ctx.beginPath();\n            ctx.arc(0, 0, 5, 0, Math.PI * 2);\n            ctx.fill();\n        }\n        ctx.restore();\n    }\n}\n\nclass Player {\n    constructor(game) {\n        this.game = game;\n        this.x = GAME_WIDTH / 2;\n        this.y = GAME_HEIGHT / 2;\n        this.radius = 12;\n        this.speed = 220;\n        this.hp = 100;\n        this.maxHp = 100;\n        this.lives = 3;\n        this.angle = 0;\n        this.invulnerable = 0;\n        this.dashCooldown = 0;\n        this.dashDuration = 0;\n        this.dashUnlocked = false;\n        this.dashDistance = 0;\n        this.throwCooldown = 0;\n        this.extraLifeAwarded = false;\n        this.flashTimer = 0;\n        this.afterimages = [];\n    }\n    update(dt) {\n        const input = this.game.input;\n        let dx = 0, dy = 0;\n        if (input.keys['KeyW'] || input.keys['ArrowUp']) dy -= 1;\n        if (input.keys['KeyS'] || input.keys['ArrowDown']) dy += 1;\n        if (input.keys['KeyA'] || input.keys['ArrowLeft']) dx -= 1;\n        if (input.keys['KeyD'] || input.keys['ArrowRight']) dx += 1;\n        if (dx !== 0 || dy !== 0) {\n            const len = Math.sqrt(dx * dx + dy * dy);\n            dx /= len; dy /= len;\n        }\n        if (this.dashDuration > 0) {\n            this.dashDuration -= dt;\n            if (this.afterimages.length < 5) this.afterimages.push({ x: this.x, y: this.y, alpha: 0.5 });\n        } else {\n            this.x += dx * this.speed * dt;\n            this.y += dy * this.speed * dt;\n        }\n        this.afterimages = this.afterimages.filter(a => { a.alpha -= dt * 3; return a.alpha > 0; });\n        this.x = Math.max(30, Math.min(GAME_WIDTH - 30, this.x));\n        this.y = Math.max(30, Math.min(GAME_HEIGHT - 30, this.y));\n        this.angle = Math.atan2(input.mouse.y - this.y, input.mouse.x - this.x);\n        if (this.invulnerable > 0) this.invulnerable -= dt;\n        if (this.dashCooldown > 0) this.dashCooldown -= dt;\n        if (this.throwCooldown > 0) this.throwCooldown -= dt;\n        this.flashTimer -= dt;\n        if (this.dashUnlocked && (input.justPressed('Space') || input.justPressed('ShiftLeft') || input.justPressed('ShiftRight')) && this.dashCooldown <= 0 && this.dashDuration <= 0) {\n            if (dx !== 0 || dy !== 0) {\n                this.dashDuration = 0.1;\n                this.x += dx * 100;\n                this.y += dy * 100;\n                this.dashDistance += 100;\n                this.dashCooldown = 2;\n                this.invulnerable = 0.2;\n                this.game.audio.dashSound();\n            }\n        }\n        if (input.mouse.down && this.throwCooldown <= 0 && !this.game.boomerangThrown) {\n            this.game.throwBoomerang();\n            this.throwCooldown = 0.4;\n        }\n        if (!this.game.boomerangThrown) {\n            this.game.boomerang.x = this.x + Math.cos(this.angle) * 25;\n            this.game.boomerang.y = this.y + Math.sin(this.angle) * 25;\n        }\n    }\n    takeDamage(amount) {\n        if (this.invulnerable > 0) return;\n        this.hp -= amount;\n        this.invulnerable = 0.5;\n        this.flashTimer = 0.1;\n        this.game.audio.damageSound();\n        this.game.screenShake = 5;\n        this.game.damageNumbers.push({ x: this.x, y: this.y - 20, value: amount, life: 1 });\n        if (this.hp <= 0) {\n            this.hp = this.maxHp;\n            this.lives--;\n            this.game.audio.damageSound();\n            this.game.particles.emit(this.x, this.y, 20, COLORS.danger, 150, 0.5, 4);\n            if (this.lives <= 0) this.game.gameOver();\n        }\n    }\n    draw(ctx) {\n        this.afterimages.forEach(a => {\n            ctx.globalAlpha = a.alpha * 0.5;\n            ctx.fillStyle = COLORS.player;\n            ctx.beginPath();\n            ctx.arc(a.x, a.y, this.radius, 0, Math.PI * 2);\n            ctx.fill();\n        });\n        ctx.globalAlpha = 1;\n        if (this.invulnerable > 0 && Math.floor(this.invulnerable * 20) % 2 === 0) return;\n        ctx.save();\n        ctx.translate(this.x, this.y);\n        ctx.rotate(this.angle);\n        ctx.fillStyle = this.flashTimer > 0 ? COLORS.white : COLORS.player;\n        ctx.strokeStyle = COLORS.white;\n        ctx.lineWidth = 2;\n        ctx.beginPath();\n        ctx.moveTo(15, 0);\n        ctx.lineTo(-10, -12);\n        ctx.lineTo(-5, 0);\n        ctx.lineTo(-10, 12);\n        ctx.closePath();\n        ctx.fill();\n        ctx.stroke();\n        ctx.restore();\n    }\n}\n\nclass Enemy {\n    constructor(game, type, x, y) {\n        this.game = game;\n        this.type = type;\n        this.x = x; this.y = y;\n        this.vx = 0; this.vy = 0;\n        this.hitCooldown = 0;\n        this.shootCooldown = 0;\n        this.dashTimer = 0;\n        this.flashTimer = 0;\n        this.shieldAngle = 0;\n        this.angle = 0;\n        this.dead = false;\n        this.hp = 50;\n        this.maxHp = 50;\n        this.points = 100;\n        this.radius = 12;\n        this.damage = 10;\n        this.speed = 80;\n        this.setupType();\n    }\n    setupType() {\n        switch (this.type) {\n            case 'grunt':\n                this.hp = this.maxHp = 50; this.points = 100; this.radius = 12; this.damage = 10; this.speed = 80; this.color = COLORS.enemy;\n                break;\n            case 'shooter':\n                this.hp = this.maxHp = 40; this.points = 250; this.radius = 14; this.damage = 15; this.speed = 60; this.color = COLORS.shooter; this.shootCooldown = 1;\n                break;\n            case 'dasher':\n                this.hp = this.maxHp = 75; this.points = 300; this.radius = 13; this.damage = 25; this.speed = 50; this.color = COLORS.dasher; this.dashTimer = 1.5;\n                break;\n            case 'shielded':\n                this.hp = this.maxHp = 100; this.points = 500; this.radius = 18; this.damage = 15; this.speed = 50; this.color = COLORS.shielded;\n                break;\n        }\n    }\n    update(dt) {\n        if (this.dead) return;\n        const px = this.game.player.x, py = this.game.player.y;\n        const dx = px - this.x, dy = py - this.y;\n        const dist = Math.sqrt(dx * dx + dy * dy);\n        this.angle = Math.atan2(dy, dx);\n        this.hitCooldown -= dt;\n        this.flashTimer -= dt;\n        switch (this.type) {\n            case 'grunt':\n                if (dist > 5) { this.vx = (dx / dist) * this.speed; this.vy = (dy / dist) * this.speed; }\n                break;\n            case 'shooter':\n                if (dist < 200) { this.vx = -(dx / dist) * this.speed; this.vy = -(dy / dist) * this.speed; }\n                else if (dist > 250) { this.vx = (dx / dist) * this.speed; this.vy = (dy / dist) * this.speed; }\n                else { this.vx *= 0.9; this.vy *= 0.9; }\n                this.shootCooldown -= dt;\n                if (this.shootCooldown <= 0) {\n                    this.shootCooldown = 2;\n                    this.game.projectiles.push(new Projectile(this.x, this.y, this.angle, 250, 15));\n                }\n                break;\n            case 'dasher':\n                this.dashTimer -= dt;\n                if (this.dashTimer <= 0) {\n                    this.dashTimer = 1.5;\n                    const angle = Math.random() * Math.PI * 2;\n                    this.x += Math.cos(angle) * 150;\n                    this.y += Math.sin(angle) * 150;\n                    this.flashTimer = 0.3;\n                }\n                if (dist > 5) { this.vx = (dx / dist) * this.speed; this.vy = (dy / dist) * this.speed; }\n                break;\n            case 'shielded':\n                this.shieldAngle = this.angle;\n                if (dist > 5) { this.vx = (dx / dist) * this.speed; this.vy = (dy / dist) * this.speed; }\n                break;\n        }\n        this.x += this.vx * dt;\n        this.y += this.vy * dt;\n        this.x = Math.max(20, Math.min(GAME_WIDTH - 20, this.x));\n        this.y = Math.max(20, Math.min(GAME_HEIGHT - 20, this.y));\n        if (this.hitCooldown <= 0 && dist < this.radius + this.game.player.radius) {\n            this.game.player.takeDamage(this.damage);\n            this.hitCooldown = 1;\n        }\n    }\n    takeDamage(amount) {\n        if (this.type === 'shielded') {\n            const angleToPlayer = Math.atan2(this.game.player.y - this.y, this.game.player.x - this.x);\n            let diff = angleToPlayer - this.shieldAngle;\n            while (diff > Math.PI) diff -= Math.PI * 2;\n            while (diff < -Math.PI) diff += Math.PI * 2;\n            if (Math.abs(diff) < Math.PI / 2) return;\n        }\n        this.hp -= amount;\n        this.flashTimer = 0.1;\n        if (this.hp <= 0) this.die();\n    }\n    die() {\n        this.dead = true;\n        this.game.score += this.points;\n        this.game.enemiesKilled++;\n        this.game.scorePopups.push({ x: this.x, y: this.y, text: '+' + this.points, life: 1 });\n        this.game.particles.emit(this.x, this.y, 10, this.color, 120, 0.4, 4);\n        this.game.audio.hitSound();\n        if (Math.random() < 0.15) this.game.pickups.push(new Pickup(this.game, this.x, this.y));\n        if (this.game.score >= 25000 && !this.game.player.dashUnlocked) this.game.player.dashUnlocked = true;\n        if (this.game.score >= 50000 && !this.game.player.extraLifeAwarded) {\n            this.game.player.lives++;\n            this.game.player.extraLifeAwarded = true;\n            this.game.scorePopups.push({ x: this.x, y: this.y - 30, text: 'EXTRA LIFE!', life: 2, color: COLORS.player });\n        }\n    }\n    draw(ctx) {\n        if (this.dead) return;\n        ctx.save();\n        ctx.translate(this.x, this.y);\n        ctx.rotate(this.angle);\n        ctx.fillStyle = this.flashTimer > 0 ? COLORS.white : this.color;\n        ctx.strokeStyle = COLORS.white;\n        ctx.lineWidth = 2;\n        switch (this.type) {\n            case 'grunt':\n                ctx.beginPath();\n                ctx.moveTo(12, 0);\n                ctx.lineTo(-10, -10);\n                ctx.lineTo(-10, 10);\n                ctx.closePath();\n                ctx.fill();\n                ctx.stroke();\n                break;\n            case 'shooter':\n                ctx.fillRect(-12, -12, 24, 24);\n                ctx.strokeRect(-12, -12, 24, 24);\n                ctx.fillStyle = '#000';\n                ctx.fillRect(4, -3, 8, 6);\n                break;\n            case 'dasher':\n                ctx.beginPath();\n                ctx.moveTo(0, -13);\n                ctx.lineTo(13, 0);\n                ctx.lineTo(0, 13);\n                ctx.lineTo(-13, 0);\n                ctx.closePath();\n                ctx.fill();\n                ctx.stroke();\n                if (this.dashTimer < 0.3) { ctx.globalAlpha = 0.5; ctx.fillStyle = COLORS.white; }\n                break;\n            case 'shielded':\n                ctx.beginPath();\n                for (let i = 0; i < 8; i++) {\n                    const a = (i / 8) * Math.PI * 2;\n                    const r = 18;\n                    if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);\n                    else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);\n                }\n                ctx.closePath();\n                ctx.fill();\n                ctx.stroke();\n                ctx.strokeStyle = COLORS.player;\n                ctx.lineWidth = 4;\n                ctx.beginPath();\n                ctx.arc(0, 0, 22, -Math.PI * 0.6, Math.PI * 0.6);\n                ctx.stroke();\n                break;\n        }\n        ctx.restore();\n    }\n}\n\nclass Boss {\n    constructor(game) {\n        this.game = game;\n        this.x = GAME_WIDTH / 2;\n        this.y = 100;\n        this.hp = 2000;\n        this.maxHp = 2000;\n        this.radius = 50;\n        this.phase = 1;\n        this.attackTimer = 0;\n        this.slamTimer = 0;\n        this.rotation = 0;\n        this.dead = false;\n        this.active = true;\n    }\n    update(dt) {\n        if (!this.active || this.dead) return;\n        this.rotation += dt;\n        const px = this.game.player.x, py = this.game.player.y;\n        const dx = px - this.x, dy = py - this.y;\n        const dist = Math.sqrt(dx * dx + dy * dy);\n        if (dist > 200) {\n            this.x += (dx / dist) * 80 * dt;\n            this.y += (dy / dist) * 80 * dt;\n        }\n        this.x = Math.max(80, Math.min(GAME_WIDTH - 80, this.x));\n        this.y = Math.max(80, Math.min(GAME_HEIGHT - 80, this.y));\n        this.attackTimer -= dt;\n        this.slamTimer -= dt;\n        if (this.attackTimer <= 0) {\n            this.attackTimer = 1.5;\n            for (let i = -2; i <= 2; i++) {\n                const angle = Math.atan2(dy, dx) + i * 0.3;\n                this.game.projectiles.push(new Projectile(this.x, this.y, angle, 200, 20));\n            }\n        }\n        if (this.slamTimer <= 0 && dist < 150) {\n            this.slamTimer = 3;\n            this.game.screenShake = 10;\n            this.game.audio.explosionSound();\n            this.game.particles.emit(this.x, this.y, 30, COLORS.boss, 200, 0.6, 6);\n            if (dist < 100) this.game.player.takeDamage(40);\n        }\n        if (Math.random() < 0.005) {\n            const ex = 100 + Math.random() * (GAME_WIDTH - 200);\n            const ey = 100 + Math.random() * (GAME_HEIGHT - 200);\n            this.game.enemies.push(new Enemy(this.game, 'grunt', ex, ey));\n        }\n    }\n    takeDamage(amount) {\n        if (!this.active) return;\n        this.hp -= amount;\n        if (this.hp <= 0) this.die();\n    }\n    die() {\n        this.dead =true;
+        this.game.score += 5000;
+        this.game.particles.emit(this.x, this.y, 50, COLORS.boss, 200, 0.8, 8);
+        this.game.audio.explosionSound();
+        this.game.screenShake = 15;
+        this.game.scorePopups.push({ x: this.x, y: this.y, text: '+5000', life: 2, color: COLORS.boss });
+        this.game.scorePopups.push({ x: this.x, y: this.y - 40, text: 'BOSS DEFEATED!', life: 3, color: COLORS.player });
+        this.game.victory = true;
+        this.game.victoryTimer = 3;
+    }
+    draw(ctx) {
+        if (!this.active || this.dead) return;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rotation);
+        ctx.fillStyle = COLORS.boss;
+        ctx.strokeStyle = COLORS.white;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const angle = (i / 6) * Math.PI * 2;
+            const r = this.radius;
+            if (i === 0) ctx.moveTo(Math.cos(angle) * r, Math.sin(angle) * r);
+            else ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.arc(-15, -10, 8, 0, Math.PI * 2);
+        ctx.arc(15, -10, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = COLORS.danger;
+        ctx.beginPath();
+        ctx.arc(-15, -10, 4, 0, Math.PI * 2);
+        ctx.arc(15, -10, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+class Projectile {
+    constructor(x, y, angle, speed, damage) {
+        this.x = x; this.y = y;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.radius = 6;
+        this.damage = damage;
+        this.active = true;
+    }
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        if (this.x < 0 || this.x > GAME_WIDTH || this.y < 0 || this.y > GAME_HEIGHT) this.active = false;
+        const dx = this.x - this.game.player.x;
+        const dy = this.y - this.game.player.y;
+        if (Math.sqrt(dx * dx + dy * dy) < this.radius + this.game.player.radius) {
+            this.game.player.takeDamage(this.damage);
+            this.active = false;
+            this.game.particles.emit(this.x, this.y, 5, COLORS.danger, 80, 0.3, 3);
+        }
+    }
+    draw(ctx) {
+        ctx.fillStyle = COLORS.danger;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+class Pickup {
+    constructor(game, x, y) {
+        this.game = game;
+        this.x = x; this.y = y;
+        this.type = ['hp', 'rapid', 'split', 'homing', 'explosive'][Math.floor(Math.random() * 5)];
+        this.radius = 10;
+        this.bobTimer = 0;
+        this.active = true;
+    }
+    update(dt) {
+        this.bobTimer += dt;
+        const dx = this.game.player.x - this.x;
+        const dy = this.game.player.y - this.y;
+        if (Math.sqrt(dx * dx + dy * dy) < this.radius + this.game.player.radius) {
+            this.active = false;
+            switch (this.type) {
+                case 'hp':
+                    this.game.player.hp = Math.min(this.game.player.maxHp, this.game.player.hp + 30);
+                    this.game.scorePopups.push({ x: this.x, y: this.y, text: '+30 HP', life: 1, color: COLORS.player });
+                    break;
+                case 'rapid': this.game.boomerang.enhancement = 'rapid'; this.game.boomerang.enhancementTimer = 10; break;
+                case 'split': this.game.boomerang.enhancement = 'split'; this.game.boomerang.enhancementTimer = 10; break;
+                case 'homing': this.game.boomerang.enhancement = 'homing'; this.game.boomerang.enhancementTimer = 10; break;
+                case 'explosive': this.game.boomerang.enhancement = 'explosive'; this.game.boomerang.enhancementTimer = 10; break;
+            }
+            this.game.audio.pickupSound();
+            this.game.particles.emit(this.x, this.y, 8, COLORS.player, 100, 0.4, 3);
+        }
+    }
+    draw(ctx) {
+        const bob = Math.sin(this.bobTimer * 5) * 3;
+        ctx.save();
+        ctx.translate(this.x, this.y + bob);
+        ctx.fillStyle = { hp: COLORS.player, rapid: COLORS.boomerang, split: COLORS.dasher, homing: COLORS.shooter, explosive: '#ff6600' }[this.type];
+        ctx.strokeStyle = COLORS.white;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 10px Orbitron';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText({ hp: '+', rapid: 'R', split: 'S', homing: 'H', explosive: 'E' }[this.type], 0, 0);
+        ctx.restore();
+    }
+}
+
+class UI {
+    constructor(game) { this.game = game; }
+    draw(ctx) {
+        ctx.fillStyle = COLORS.ui;
+        ctx.font = '16px Orbitron';
+        ctx.textAlign = 'left';
+        ctx.fillText('SCORE: ' + this.game.score, 20, 30);
+        ctx.fillText('ENEMIES: ' + this.game.enemiesKilled, 20, 55);
+        ctx.fillStyle = COLORS.white;
+        ctx.fillText('WAVE: ' + this.game.wave, 20, 80);
+        const hpBarW = 200, hpBarH = 20;
+        ctx.fillStyle = '#333';
+        ctx.fillRect(GAME_WIDTH - hpBarW - 20, 20, hpBarW, hpBarH);
+        ctx.fillStyle = this.game.player.hp > 30 ? COLORS.player : COLORS.danger;
+        ctx.fillRect(GAME_WIDTH - hpBarW - 20, 20, hpBarW * (this.game.player.hp / this.game.player.maxHp), hpBarH);
+        ctx.strokeStyle = COLORS.white;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(GAME_WIDTH - hpBarW - 20, 20, hpBarW, hpBarH);
+        ctx.fillStyle = COLORS.white;
+        ctx.textAlign = 'center';
+        ctx.fillText('HP: ' + this.game.player.hp, GAME_WIDTH - hpBarW / 2 - 20, 35);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = COLORS.player;
+        ctx.fillText('LIVES: ' + '♥'.repeat(this.game.player.lives), GAME_WIDTH - 20, 30);
+        ctx.textAlign = 'left';
+        if (this.game.boomerang.enhancement) {
+            ctx.fillStyle = COLORS.boomerang;
+            ctx.fillText('ENHANCED: ' + this.game.boomerang.enhancement.toUpperCase() + ' (' + Math.ceil(this.game.boomerang.enhancementTimer) + 's)', 20, GAME_HEIGHT - 20);
+        }
+        if (this.game.player.dashUnlocked) {
+            ctx.fillStyle = this.game.player.dashCooldown > 0 ? '#666' : COLORS.player;
+            ctx.textAlign = 'right';
+            ctx.fillText('DASH [SPACE]: ' + (this.game.player.dashCooldown > 0 ? Math.ceil(this.game.player.dashCooldown) + 's' : 'READY'), GAME_WIDTH - 20, GAME_HEIGHT - 20);
+        }
+        if (this.game.boss && this.game.boss.active && !this.game.boss.dead) {
+            ctx.fillStyle = COLORS.danger;
+            ctx.font = 'bold 20px Orbitron';
+            ctx.textAlign = 'center';
+            ctx.fillText('⚠ BOSS ⚠', GAME_WIDTH / 2, 60);
+            const bw = 400;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(GAME_WIDTH / 2 - bw / 2, 70, bw, 15);
+            ctx.fillStyle = COLORS.boss;
+            ctx.fillRect(GAME_WIDTH / 2 - bw / 2, 70, bw * (this.game.boss.hp / this.game.boss.maxHp), 15);
+            ctx.strokeStyle = COLORS.white;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(GAME_WIDTH / 2 - bw / 2, 70, bw, 15);
+        }
+        if (this.game.showHelp) {
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150, 400, 300);
+            ctx.strokeStyle = COLORS.ui;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(GAME_WIDTH / 2 - 200, GAME_HEIGHT / 2 - 150, 400, 300);
+            ctx.fillStyle = COLORS.ui;
+            ctx.font = 'bold 20px Orbitron';
+            ctx.textAlign = 'center';
+            ctx.fillText('CONTROLS', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 120);
+            ctx.font = '14px Orbitron';
+            ctx.textAlign = 'left';
+            const help = ['WASD/Arrows: Move', 'Mouse: Aim', 'Click: Throw Boomerang', 'Space/Shift: Dash', '', 'Press H to close'];
+            help.forEach((line, i) => ctx.fillText(line, GAME_WIDTH / 2 - 170, GAME_HEIGHT / 2 - 80 + i * 25));
+        }
+    }
+}
+
+class Game {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.canvas.width = GAME_WIDTH;
+        this.canvas.height = GAME_HEIGHT;
+        this.input = new Input(this.canvas);
+        this.audio = new AudioEngine();
+        this.particles = new ParticlePool(300);
+        this.ui = new UI(this);
+        this.player = new Player(this);
+        this.boomerang = new Boomerang(this);
+        this.enemies = [];
+        this.projectiles = [];
+        this.pickups = [];
+        this.damageNumbers = [];
+        this.scorePopups = [];
+        this.extraBoomerang = false;
+        this.screenShake = 0;
+        this.score = 0;
+        this.enemiesKilled = 0;
+        this.wave = 1;
+        this.waveTimer = 0;
+        this.bossSpawned = false;
+        this.boss = null;
+        this.victory = false;
+        this.gameOverFlag = false;
+        this.showHelp = true;
+        this.boomerangThrown = false;
+        this.lastTime = 0;
+        this.running = true;
+        this.victoryTimer = 0;
+        this.init();
+    }
+    init() {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) overlay.style.display = 'none';
+        window.addEventListener('keydown', e => {
+            if (e.code === 'KeyH') this.showHelp = !this.showHelp;
+            if (e.code === 'Enter' && this.gameOverFlag) this.restart();
+            if (e.code === 'Enter' && this.victory) this.restart();
+        });
+        this.audio.init();
+        this.canvas.addEventListener('click', () => this.audio.init());
+        this.canvas.addEventListener('touchstart', () => this.audio.init());
+        this.lastTime = performance.now();
+        requestAnimationFrame(t => this.loop(t));
+    }
+    restart() {
+        this.score = 0; this.enemiesKilled = 0; this.wave = 1; this.waveTimer = 0;
+        this.bossSpawned = false; this.boss = null; this.victory = false; this.gameOverFlag = false;
+        this.enemies = []; this.projectiles = []; this.pickups = [];
+        this.damageNumbers = []; this.scorePopups = [];
+        this.player = new Player(this); this.boomerang = new Boomerang(this);
+        this.extraBoomerang = false; this.boomerangThrown = false;
+    }
+    loop(timestamp) {
+        if (!this.running) return;
+        const dt = Math.min((timestamp - this.lastTime) / 1000, 0.05);
+        this.lastTime = timestamp;
+        this.update(dt);
+        this.draw();
+        requestAnimationFrame(t => this.loop(t));
+    }
+    update(dt) {
+        if (this.gameOverFlag || this.victory) {
+            if (this.victoryTimer > 0) this.victoryTimer -= dt;
+            this.particles.update(dt);
+            return;
+        }
+        this.input.update();
+        this.player.update(dt);
+        this.boomerang.update(dt);
+        this.enemies.forEach(e => e.update(dt));
+        this.projectiles.forEach(p => p.update(dt));
+        this.pickups.forEach(p => p.update(dt));
+        this.particles.update(dt);
+        this.enemies = this.enemies.filter(e => !e.dead);
+        this.projectiles = this.projectiles.filter(p => p.active);
+        this.pickups = this.pickups.filter(p => p.active);
+        if (this.boomerang.active) {
+            this.enemies.forEach(e => {
+                if (!this.boomerang.hitEnemies.has(e)) {
+                    const dx = e.x - this.boomerang.x, dy = e.y - this.boomerang.y;
+                    if (Math.sqrt(dx * dx + dy * dy) < e.radius + 15) {
+                        this.boomerang.hitEnemies.add(e);
+                        if (this.boomerang.enhancement === 'explosive') {
+                            this.particles.emit(e.x, e.y, 20, '#ff6600', 150, 0.4, 5);
+                            this.audio.explosionSound();
+                            this.enemies.forEach(other => {
+                                const odx = other.x - e.x, ody = other.y - e.y;
+                                if (Math.sqrt(odx * odx + ody * ody) < 80) other.takeDamage(30);
+                            });
+                        }
+                        e.takeDamage(25);
+                    }
+                }
+            });
+        }
+        this.damageNumbers.forEach(d => { d.y -= 30 * dt; d.life -= dt; });
+        this.damageNumbers = this.damageNumbers.filter(d => d.life > 0);
+        this.scorePopups.forEach(s => { s.y -= 40 * dt; s.life -= dt; });
+        this.scorePopups = this.scorePopups.filter(s => s.life > 0);
+        if (this.boomerang.enhancementTimer > 0) this.boomerang.enhancementTimer -= dt;
+        if (this.boomerang.enhancementTimer <= 0) this.boomerang.enhancement = null;
+        this.waveTimer += dt;
+        if (this.wave === 1 && this.waveTimer > 30) this.wave = 2;
+        if (this.wave === 2 && this.waveTimer > 60) this.wave = 3;
+        if (this.wave === 3 && this.waveTimer > 90) this.wave = 4;
+        if (this.wave === 4 && this.waveTimer > 120 && !this.bossSpawned) {
+            this.bossSpawned = true;
+            this.boss = new Boss(this);
+            this.audio.bossAlertSound();
+            this.scorePopups.push({ x: GAME_WIDTH / 2, y: GAME_HEIGHT / 2, text: '⚠ BOSS INCOMING ⚠', life: 3, color: COLORS.danger });
+        }
+        if (this.boss && this.boss.active && !this.boss.dead) this.boss.update(dt);
+        if (this.boss && this.boss.dead && !this.victory) this.victory = true;
+        const spawnRate = { 1: 2, 2: 1.5, 3: 1, 4: 0.5 }[this.wave];
+        if (Math.random() < dt / spawnRate) this.spawnEnemy();
+        this.screenShake *= 0.9;
+        if (this.screenShake < 0.1) this.screenShake = 0;
+    }
+    spawnEnemy() {
+        const types = ['grunt'];
+        if (this.wave >= 2) types.push('shooter');
+        if (this.wave >= 3) types.push('dasher');
+        if (this.wave >= 4) types.push('shielded');
+        const type = types[Math.floor(Math.random() * types.length)];
+        let x, y;
+        const side = Math.floor(Math.random() * 4);
+        switch (side) {
+            case 0: x = Math.random() * GAME_WIDTH; y = -30; break;
+            case 1: x = GAME_WIDTH + 30; y = Math.random() * GAME_HEIGHT; break;
+            case 2: x = Math.random() * GAME_WIDTH; y = GAME_HEIGHT + 30; break;
+            case 3: x = -30; y = Math.random() * GAME_HEIGHT; break;
+        }
+        this.enemies.push(new Enemy(this, type, x, y));
+    }
+    throwBoomerang() {
+        const angle = this.player.angle;
+        this.boomerang.throw(this.player.x, this.player.y, angle);
+        this.boomerangThrown = true;
+    }
+    spawnExtraBoomerang(x, y, angle, enhancement) {
+        const extra = new Boomerang(this);
+        extra.enhancement = enhancement;
+        extra.throw(x, y, angle);
+        this.extraBoomerang = true;
+        setTimeout(() => { extra.active = false; this.extraBoomerang = false; }, 2000);
+    }
+    gameOver() { this.gameOverFlag = true; Storage.save('highScore', Math.max(Storage.load('highScore', 0), this.score)); }
+    draw() {
+        const shake = this.screenShake;
+        this.ctx.save();
+        if (shake > 0) this.ctx.translate((Math.random() - 0.5) * shake * 2, (Math.random() - 0.5) * shake * 2);
+        this.ctx.fillStyle = COLORS.bg;
+        this.ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        this.ctx.strokeStyle = COLORS.grid;
+        this.ctx.lineWidth = 1;
+        for (let x = 0; x < GAME_WIDTH; x += 40) { this.ctx.beginPath(); this.ctx.moveTo(x, 0); this.ctx.lineTo(x, GAME_HEIGHT); this.ctx.stroke(); }
+        for (let y = 0; y < GAME_HEIGHT; y += 40) { this.ctx.beginPath(); this.ctx.moveTo(0, y); this.ctx.lineTo(GAME_WIDTH, y); this.ctx.stroke(); }
+        this.particles.draw(this.ctx);
+        this.pickups.forEach(p => p.draw(this.ctx));
+        this.enemies.forEach(e => e.draw(this.ctx));
+        if (this.boss && this.boss.active) this.boss.draw(this.ctx);
+        this.projectiles.forEach(p => p.draw(this.ctx));
+        this.boomerang.draw(this.ctx);
+        this.player.draw(this.ctx);
+        this.ctx.fillStyle = COLORS.ui;
+        this.ctx.font = '12px Orbitron';
+        this.ctx.textAlign = 'center';
+        this.damageNumbers.forEach(d => {
+            this.ctx.fillStyle = COLORS.danger;
+            this.ctx.globalAlpha = d.life;
+            this.ctx.fillText('-' + d.value, d.x, d.y);
+        });
+        this.ctx.globalAlpha = 1;
+        this.scorePopups.forEach(s => {
+            this.ctx.fillStyle = s.color || COLORS.player;
+            this.ctx.globalAlpha = Math.min(1, s.life);
+            this.ctx.font = s.text.length > 10 ? 'bold 16px Orbitron' : '14px Orbitron';
+            this.ctx.fillText(s.text, s.x, s.y);
+        });
+        this.ctx.globalAlpha = 1;
+        this.ui.draw(this.ctx);
+        if (this.gameOverFlag) {
+            this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            this.ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            this.ctx.fillStyle = COLORS.danger;
+            this.ctx.font = 'bold 48px Orbitron';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('GAME OVER', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40);
+            this.ctx.fillStyle = COLORS.white;
+            this.ctx.font = '24px Orbitron';
+            this.ctx.fillText('Score: ' + this.score, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 10);
+            this.ctx.fillText('High Score: ' + Storage.load('highScore', 0), GAME_WIDTH / 2, GAME_HEIGHT / 2 + 50);
+            this.ctx.fillStyle = COLORS.ui;
+            this.ctx.font = '18px Orbitron';
+            this.ctx.fillText('Press ENTER to restart', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 100);
+        }
+        if (this.victory) {
+            this.ctx.fillStyle = 'rgba(0,0,0,0.8)';
+            this.ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+            this.ctx.fillStyle = COLORS.player;
+            this.ctx.font = 'bold 48px Orbitron';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText('VICTORY!', GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40);
+            this.ctx.fillStyle = COLORS.white;
+            this.ctx.font = '24px Orbitron';
+            this.ctx.fillText('Final Score: ' + this.score, GAME_WIDTH / 2, GAME_HEIGHT / 2 + 10);
+            this.ctx.fillStyle = COLORS.ui;
+            this.ctx.font = '18px Orbitron';
+            this.ctx.fillText('Press ENTER to play again', GAME_WIDTH / 2, GAME_HEIGHT / 2 + 100);
+        }
+        this.ctx.restore();
+    }
+}
+
+const game = new Game();}
