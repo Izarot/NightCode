@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Rhythm Gate</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎧</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a20; overflow: hidden; font-family: 'Segoe UI', sans-serif; touch-action: none; }
+    #gameCanvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); image-rendering: pixelated; }
+    #uiOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+    .hud { position: absolute; color: #fff; font-size: 14px; text-shadow: 0 0 4px #000; }
+    #timer { top: 12px; right: 12px; font-family: monospace; font-size: 18px; color: #00ffff; }
+    #gateCharge { top: 12px; left: 12px; width: 220px; }
+    #gateBar { height: 10px; background: rgba(0,0,0,0.6); border-radius: 5px; overflow: hidden; margin-top: 4px; border: 1px solid #444; }
+    #gateFill { height: 100%; width: 0%; background: linear-gradient(90deg, #00ff88, #ffcc00, #ff3366); transition: width 0.1s; }
+    #crowdEnergy { top: 50px; left: 12px; width: 80px; height: 80px; border-radius: 50%; border: 3px solid #ff6b6b; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #ff6b6b; background: radial-gradient(circle at 30% 30%, rgba(255,107,107,0.2), transparent); }
+    #bpmDisplay { bottom: 12px; left: 12px; color: #4ecdc4; font-size: 16px; }
+    #comboDisplay { bottom: 12px; right: 12px; color: #ffcc00; font-size: 20px; font-weight: bold; }
+    .lane { position: absolute; bottom: 0; width: 4px; height: 100%; background: rgba(255,255,255,0.1); pointer-events: none; }
+    .note { position: absolute; width: 40px; height: 40px; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 10px currentColor; }
+    .note.single { animation: pulse 0.5s infinite alternate; }
+    .note.hold::after { content: ''; position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid currentColor; border-radius: 50%; transform: translate(-50%, -50%); }
+    @keyframes pulse { from { box-shadow: 0 0 5px currentColor; } to { box-shadow: 0 0 20px currentColor; } }
+    #startScreen, #gameOverScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(10,10,32,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; color: #fff; text-align: center; gap: 20px; }
+    button { padding: 12px 32px; font-size: 18px; background: linear-gradient(135deg, #00ffff, #ff00ff); border: none; border-radius: 30px; color: #000; font-weight: bold; cursor: pointer; transition: transform 0.1s; }
+    button:active { transform: scale(0.95); }
+    .hidden { display: none !important; }
+    .hitFeedback { position: absolute; font-size: 20px; font-weight: bold; pointer-events: none; animation: floatUp 0.8s ease-out forwards; }
+    .perfect { color: #00ff88; text-shadow: 0 0 10px #00ff88; }
+    .good { color: #ffcc00; text-shadow: 0 0 10px #ffcc00; }
+    .miss { color: #ff3366; text-shadow: 0 0 10px #ff3366; }
+    @keyframes floatUp { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -150%) scale(1.5); } }
+    #highScoreDisplay { color: #ffcc00; font-size: 16px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="uiOverlay">
+    <div id="timer" class="hud">00:00.000</div>
+    <div id="gateCharge" class="hud">GATE CHARGE<br><div id="gateBar"><div id="gateFill"></div></div></div>
+    <div id="crowdEnergy" class="hud">100%</div>
+    <div id="bpmDisplay" class="hud">120 BPM</div>
+    <div id="comboDisplay" class="hud">COMBO x1</div>
+    <div id="lanesContainer"></div>
+  </div>
+  <div id="startScreen">
+    <h1 style="font-size: 48px; background: linear-gradient(90deg, #00ffff, #ff00ff, #ffff00); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">RHYTHM GATE</h1>
+    <p style="color: #888; max-width: 400px;">Press keys <span style="color:#00ffff">1 2 3</span> or tap lanes in sync with the beat to charge the gate.</p>
+    <button id="startBtn">START RUN</button>
+    <div id="highScoreDisplay">Best Time: --:--.---</div>
+  </div>
+  <div id="gameOverScreen" class="hidden">
+    <h1 style="color: #ff3366;">RUN ENDED</h1>
+    <div id="finalStats"></div>
+    <button id="retryBtn">RETRY</button>
+    <button id="menuBtn" style="background: linear-gradient(135deg, #444, #666); color: #fff;">MAIN MENU</button>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
