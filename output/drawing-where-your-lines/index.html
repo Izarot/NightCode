@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>⚡ LINE PHYSICS ⚡</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #0a0f1a;
+    font-family: 'Courier New', monospace;
+    color: #e0e6ed;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  #wrapper {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    max-width: 100vw;
+    max-height: 100vh;
+    box-shadow: 0 0 60px rgba(0, 255, 136, 0.1);
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #0a0f1a;
+    cursor: crosshair;
+    image-rendering: optimizeSpeed;
+  }
+  .btn {
+    position: absolute;
+    background: transparent;
+    border: 1px solid #00ff88;
+    color: #00ff88;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 2px;
+  }
+  .btn:hover, .btn:active {
+    background: #00ff88;
+    color: #0a0f1a;
+    box-shadow: 0 0 16px rgba(0, 255, 136, 0.5);
+  }
+  #clearBtn { top: 16px; left: 16px; }
+  #spawnBtn { bottom: 16px; left: 16px; }
+  #resetBtn { top: 16px; right: 16px; }
+  .hud {
+    position: absolute;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    pointer-events: none;
+    text-shadow: 0 0 8px rgba(0, 255, 136, 0.3);
+  }
+  #lineCount {
+    top: 22px;
+    right: 16px;
+    color: #00ff88;
+  }
+  #lineCount.warn { animation: pulse 0.5s ease infinite; color: #ffcc00; }
+  #clearedCount {
+    bottom: 22px;
+    right: 16px;
+    color: #ff3366;
+    text-shadow: 0 0 8px rgba(255, 51, 102, 0.3);
+  }
+  #timer {
+    top: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #ffcc00;
+    text-shadow: 0 0 8px rgba(255, 204, 0, 0.4);
+    font-weight: bold;
+  }
+  #highScore {
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #00ff88;
+    text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  @media (max-width: 600px) {
+    .btn { font-size: 10px; padding: 4px 10px; }
+    .hud { font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+<div id="wrapper">
+  <canvas id="game"></canvas>
+  <button id="clearBtn" class="btn">CLEAR</button>
+  <button id="spawnBtn" class="btn">SPAWN: ON</button>
+  <button id="resetBtn" class="btn">RESET</button>
+  <div id="lineCount" class="hud">LINES: 0</div>
+  <div id="clearedCount" class="hud">CLEARED: 0</div>
+  <div id="timer" class="hud">00:00.00</div>
+  <div id="highScore" class="hud">BEST: 0</div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  // ============= CONSTANTS =============
+  const W = 800, H = 600;
+  const GRAVITY = { x: 0, y: 400 };
+  const DT = 1 / 60;
+  const COLLISION_ITER = 4;
+  const SAMPLE_DIST = 8;
+  const MIN_SEGMENT = 10;
+  const MIN_STROKE = 5;
+  const MAX_LINES = 500;
+  const LINE_THICK = 2;
+  const COLLISION_HULL = 4;
+  const SPAWN_RATE = 2.0;
+  const MAX_OBJECTS = 50;
+  const KILL_MARGIN = 100;
+  const CIRCLE_REST = 0.8, CIRCLE_FRIC = 0.2, CIRCLE_MASS = 1.0;
+  const BOX_REST = 0.6, BOX_FRIC = 0.4, BOX_MASS = 2.0;
+  const LINE_REST = 0.7, LINE_FRIC = 0.3;
+
+  // Colors - vibrant palette
+  const COL_BG = '#0a0f1a';
+  const COL_LINE = '#00ff88';
+  const COL_OBJ = '#ff3366';
+  const COL_TEXT = '#e0e6ed';
+  const COL_PREVIEW = '#ffcc00';
+  const COL_GRID = 'rgba(0, 255, 136, 0.05)';
+  const COL_BOX = '#00d4ff';
+
+  // ============= CANVAS SETUP =============
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  let scale = 1;
+
+  function resize() {
+    const wrap = document.getElementById('wrapper');
+    const rect = wrap.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    scale = rect.width / W;
+    ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+
+  // Offscreen line cache
+  const offCanvas = document.createElement('canvas');
+  const offCtx = offCanvas.getContext('2d');
+  let offDirty = true;
+
+  function rebuildOffscreen() {
+    offCanvas.width = W;
+    offCanvas.height = H;
+    offCtx.clearRect(0, 0, W, H);
+    offCtx.lineWidth = LINE_THICK;
+    offCtx.lineCap = 'round';
+    offCtx.strokeStyle = COL_LINE;
+    offCtx.shadowColor = COL_LINE;
+    offCtx.shadowBlur = 8;
+    offCtx.beginPath();
+    for (const seg of world.segments) {
+      offCtx.moveTo(seg.x1, seg.y1);
+      offCtx.lineTo(seg.x2, seg.y2);
+    }
+    offCtx.stroke();
+    offCtx.shadowBlur = 0;
+    offDirty = false;
+  }
+
+  // ============= AUDIO =============
+  let audioCtx = null;
+  function ensureAudio() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch(e) {}
+    }
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+  function playTone(freq, dur, type = 'sine', vol = 0.15) {
+    if (!audioCtx) return;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur);
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + dur);
+  }
+  function playPop() { playTone(800, 0.05, 'sine', 0.12); }
+  function playThud() { playTone(200, 0.08, 'sine', 0.18); }
+  function playCollision(force) {
+    if (!audioCtx) return;
+    const v = Math.min(force / 500, 0.3);
+    const bufferSize = audioCtx.sampleRate * 0.03;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize) * v;
+    }
+    const source = audioCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioCtx.destination);
+    source.start();
+  }
+  function playClear() {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    for (let i = 0; i < 5; i++) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.frequency.value = 200 + i * 100;
+      g.gain.setValueAtTime(0.12, t + i * 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.04 + 0.1);
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.start(t + i * 0.04);
+      o.stop(t + i * 0.04 + 0.1);
+    }
+  }
+
+  // ============= MATH =============
+  const Vec = {
+    add: (a, b) => ({ x: a.x + b.x, y: a.y + b.y }),
+    sub: (a, b) => ({ x: a.x - b.x, y: a.y - b.y }),
+    mul: (a, s) => ({ x: a.x * s, y: a.y * s }),
+    dot: (a, b) => a.x * b.x + a.y * b.y,
+    len: (a) => Math.hypot(a.x, a.y),
+    norm: (a) => { const l = Math.hypot(a.x, a.y) || 1; return { x: a.x / l, y: a.y / l }; },
+    perp: (a) => ({ x: -a.y, y: a.x })
+  };
+
+  // ============= WORLD =============
+  const world = {
+    segments: [],
+    objects: [],
+    cleared: 0,
+    paused: false
+  };
+
+  // ============= SPATIAL HASH =============
+  const CELL = 40;
+  const grid = new Map();
+  function gridKey(x, y) { return Math.floor(x / CELL) + ',' + Math.floor(y / CELL); }
+  function buildGrid() {
+    grid.clear();
+    for (let i = 0; i < world.objects.length; i++) {
+      const o = world.objects[i];
+      const minX = Math.floor((o.pos.x - o.r) / CELL);
+      const maxX = Math.floor((o.pos.x + o.r) / CELL);
+      const minY = Math.floor((o.pos.y - o.r) / CELL);
+      const maxY = Math.floor((o.pos.y + o.r) / CELL);
+      for (let x = minX; x <= maxX; x++) {
+        for (let y = minY; y <= maxY; y++) {
+          const k = x + ',' + y;
+          if (!grid.has(k)) grid.set(k, []);
+          grid.get(k).push(i);
+        }
+      }
+    }
+  }
+  function getNearby(o) {
+    const seen = new Set();
+    const out = [];
+    const minX = Math.floor((o.pos.x - o.r) / CELL);
+    const maxX = Math.floor((o.pos.x + o.r) / CELL);
+    const minY = Math.floor((o.pos.y - o.r) / CELL);
+    const maxY = Math.floor((o.pos.y + o.r) / CELL);
+    for (let x = minX; x <= maxX; x++) {
+      for (let y = minY; y <= maxY; y++) {
+        const arr = grid.get(x + ',' + y);
+        if (arr) {
+          for (const i of arr) {
+            if (!seen.has(i)) { seen.add(i); out.push(world.objects[i]); }
+          }
+        }
+      }
+    }
+    return out;
+  }
+
+  // ============= OBJECTS =============
+  let nextId = 1;
+  function makeCircle() {
+    return {
+      id: nextId++,
+      type: 'circle',
+      pos: { x: 30 + Math.random() * (W - 60), y: -20 },
+      vel: { x: (Math.random() - 0.5) * 50, y: 0 },
+      r: 15 + Math.random() * 20,
+      ang: 0,
+      angVel: (Math.random() - 0.5) * 4,
+      rest: CIRCLE_REST,
+      fric: CIRCLE_FRIC,
+      mass: CIRCLE_MASS,
+      color: COL_OBJ
+    };
+  }
+  function makeBox() {
+    const w = 20 + Math.random() * 20;
+    const h = 20 + Math.random() * 20;
+    return {
+      id: nextId++,
+      type: 'box',
+      pos: { x: 30 + Math.random() * (W - 60), y: -20 },
+      vel: { x: (Math.random() - 0.5) * 50, y: 0 },
+      r: Math.max(w, h) * 0.5,
+      hw: w * 0.5,
+      hh: h * 0.5,
+      ang: Math.random() * Math.PI * 2,
+      angVel: (Math.random() - 0.5) * 2,
+      rest: BOX_REST,
+      fric: BOX_FRIC,
+      mass: BOX_MASS,
+      color: COL_BOX
+    };
+  }
+  function spawnObject() {
+    if (world.objects.length >= MAX_OBJECTS) return;
+    const obj = Math.random() < 0.7 ? makeCircle() : makeBox();
+    world.objects.push(obj);
+    playThud();
+  }
+
+  // ============= COLLISION =============
+  function closestPointOnSegment(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len2 = dx * dx + dy * dy;
+    if (len2 < 0.0001) return { x: x1, y: y1, t: 0 };
+    let t = ((px - x1) * dx + (py - y1) * dy) / len2;
+    t = Math.max(0, Math.min(1, t));
+    return { x: x1 + t * dx, y: y1 + t * dy, t };
+  }
+
+  function resolveCircleSegment(obj, seg) {
+    const cp = closestPointOnSegment(obj.pos.x, obj.pos.y, seg.x1, seg.y1, seg.x2, seg.y2);
+    const dx = obj.pos.x - cp.x;
+    const dy = obj.pos.y - cp.y;
+    const dist = Math.hypot(dx, dy);
+    const minDist = obj.r + COLLISION_HULL * 0.5;
+    if (dist >= minDist) return null;
+    if (dist < 0.0001) {
+      const nx = seg.y2 - seg.y1, ny = -(seg.x2 - seg.x1);
+      const nl = Math.hypot(nx, ny) || 1;
+      return { nx: nx / nl, ny: ny / nl, depth: minDist, cx: cp.x, cy: cp.y };
+    }
+    return { nx: dx / dist, ny: dy / dist, depth: minDist - dist, cx: cp.x, cy: cp.y };
+  }
+
+  function resolveCircleCircle(a, b) {
+    const dx = b.pos.x - a.pos.x;
+    const dy = b.pos.y - a.pos.y;
+    const dist = Math.hypot(dx, dy);
+    const minDist = a.r + b.r;
+    if (dist >= minDist || dist < 0.0001) return false;
+    const nx = dx / dist, ny = dy / dist;
+    const overlap = (minDist - dist) * 0.5;
+    a.pos.x -= nx * overlap;
+    a.pos.y -= ny * overlap;
+    b.pos.x += nx * overlap;
+    b.pos.y += ny * overlap;
+    const rvx = b.vel.x - a.vel.x;
+    const rvy = b.vel.y - a.vel.y;
+    const velAlong = rvx * nx + rvy * ny;
+    if (velAlong > 0) return true;
+    const e = Math.min(a.rest, b.rest);
+    const j = -(1 + e) * velAlong / (1 / a.mass + 1 / b.mass);
+    const jx = j * nx, jy = j * ny;
+    a.vel.x -= jx / a.mass;
+    a.vel.y -= jy / a.mass;
+    b.vel.x += jx / b.mass;
+    b.vel.y += jy / b.mass;
+    const imp = Math.hypot(jx, jy);
+    if (imp > 30) playCollision(imp);
+    return true;
+  }
+
+  // ============= PHYSICS STEP =============
+  function step() {
+    if (world.paused) return;
+    for (const o of world.objects) {
+      o.vel.y += GRAVITY.y * DT;
+      o.pos.x += o.vel.x * DT;
+      o.pos.y += o.vel.y * DT;
+      o.ang += o.angVel * DT;
+      // Side walls
+      if (o.pos.x - o.r < 0) { o.pos.x = o.r; o.vel.x = -o.vel.x * o.rest; }
+      if (o.pos.x + o.r > W) { o.pos.x = W - o.r; o.vel.x = -o.vel.x * o.rest; }
+    }
+
+    buildGrid();
+
+    for (let iter = 0; iter < COLLISION_ITER; iter++) {
+      for (const o of world.objects) {
+        // vs lines
+        for (const seg of world.segments) {
+          const res = resolveCircleSegment(o, seg);
+          if (res) {
+            o.pos.x += res.nx * res.depth;
+            o.pos.y += res.ny * res.depth;
+            const vDotN = o.vel.x * res.nx + o.vel.y * res.ny;
+            if (vDotN < 0) {
+              const j = -(1 + LINE_REST) * vDotN;
+              o.vel.x += j * res.nx;
+              o.vel.y += j * res.ny;
+              // friction on tangent
+              const tx = -res.ny, ty = res.nx;
+              const vDotT = o.vel.x * tx + o.vel.y * ty;
+              o.vel.x -= vDotT * LINE_FRIC * tx;
+              o.vel.y -= vDotT * LINE_FRIC * ty;
+              o.angVel += (vDotT * 0.02) / (o.r);
+              const imp = Math.abs(j);
+              if (imp > 50) playCollision(imp);
+            }
+          }
+        }
+        // vs objects
+        const nearby = getNearby(o);
+        for (const other of nearby) {
+          if (other.id <= o.id) continue;
+          if (o.type === 'circle' && other.type === 'circle') {
+            resolveCircleCircle(o, other);
+          } else {
+            // box-vs-circle or box-vs-box: approximate as circles
+            resolveCircleCircle(o, other);
+          }
+        }
+      }
+    }
+
+    // Remove off-screen
+    for (let i = world.objects.length - 1; i >= 0; i--) {
+      const o = world.objects[i];
+      if (o.pos.y - o.r > H + KILL_MARGIN) {
+        world.objects.splice(i, 1);
+        world.cleared++;
+        if (world.cleared > parseInt(localStorage.getItem('lp_high') || '0')) {
+          localStorage.setItem('lp_high', world.cleared);
+          updateHighScore();
+        }
+      }
+    }
+  }
+
+  // ============= DRAWING =============
+  let drawing = false;
+  let curStroke = null;
+  let lastSample = null;
+
+  function startDraw(x, y) {
+    ensureAudio();
+    drawing = true;
+    curStroke = [];
+    lastSample = { x, y };
+    curStroke.push({ x, y });
+  }
+
+  function continueDraw(x, y) {
+    if (!drawing) return;
+    const dx = x - lastSample.x, dy = y - lastSample.y;
+    if (Math.hypot(dx, dy) >= SAMPLE_DIST) {
+      // Interpolate between points
+      const steps = Math.ceil(Math.hypot(dx, dy) / SAMPLE_DIST);
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        curStroke.push({ x: lastSample.x + dx * t, y: lastSample.y + dy * t });
+      }
+      lastSample = { x, y };
+    }
+  }
+
+  function endDraw() {
+    if (!drawing) return;
+    drawing = false;
+    if (!curStroke || curStroke.length < 2) { curStroke = null; return; }
+    // Measure stroke length
+    let totalLen = 0;
+    for (let i = 1; i < curStroke.length; i++) {
+      totalLen += Math.hypot(curStroke[i].x - curStroke[i-1].x, curStroke[i].y - curStroke[i-1].y);
+    }
+    if (totalLen < MIN_STROKE) { curStroke = null; return; }
+
+    // Catmull-Rom smoothing to get denser points, then convert to segments
+    const smoothed = catmullRom(curStroke);
+    // Add segments
+    const remaining = MAX_LINES - world.segments.length;
+    if (remaining <= 0) { curStroke = null; return; }
+    let added = 0;
+    for (let i = 0; i < smoothed.length - 1 && added < remaining; i++) {
+      const a = smoothed[i], b = smoothed[i + 1];
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      if (len < MIN_SEGMENT) continue;
+      world.segments.push({ x1: a.x, y1: a.y, x2: b.x, y2: b.y });
+      added++;
+    }
+    if (added > 0) {
+      playPop();
+      offDirty = true;
+    }
+    curStroke = null;
+    updateLineCount();
+  }
+
+  function catmullRom(pts) {
+    if (pts.length < 2) return pts.slice();
+    const out = [];
+    const tension = 0.5;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[Math.min(pts.length - 1, i + 2)];
+      const steps = 4;
+      for (let s = 0; s < steps; s++) {
+        const t = s / steps;
+        const t2 = t * t, t3 = t2 * t;
+        const x = 0.5 * ((2 * p1.x) + (-p0.x + p2.x) * t + (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 + (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3);
+        const y = 0.5 * ((2 * p1.y) + (-p0.y + p2.y) * t + (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 + (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3);
+        out.push({ x, y });
+      }
+    }
+    out.push(pts[pts.length - 1]);
+    return out;
+  }
+
+  // ============= INPUT =============
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    return { x: cx / rect.width * W, y: cy / rect.height * H };
+  }
+
+  canvas.addEventListener('mousedown', e => { e.preventDefault(); startDraw(getPos(e).x, getPos(e).y); });
+  window.addEventListener('mousemove', e => { if (drawing) { const p = getPos(e); continueDraw(p.x, p.y); } });
+  window.addEventListener('mouseup', e => { if (drawing) endDraw(); });
+
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); ensureAudio(); const p = getPos(e); startDraw(p.x, p.y); }, { passive: false });
+  canvas.addEventListener('touchmove', e => { e.preventDefault(); if (drawing) { const p = getPos(e); continueDraw(p.x, p.y); } }, { passive: false });
+  canvas.addEventListener('touchend', e => { e.preventDefault(); if (drawing) endDraw(); }, { passive: false });
+  canvas.addEventListener('touchcancel', e => { if (drawing) endDraw(); });
+
+  // Prevent right-click menu
+  canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+  // ============= UI =============
+  let spawnEnabled = true;
+  const clearBtn = document.getElementById('clearBtn');
+  const spawnBtn = document.getElementById('spawnBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const lineCountEl = document.getElementById('lineCount');
+  const clearedCountEl = document.getElementById('clearedCount');
+  const timerEl = document.getElementById('timer');
+  const highScoreEl = document.getElementById('highScore');
+
+  function updateLineCount() {
+    lineCountEl.textContent = 'LINES: ' + world.segments.length;
+    if (world.segments.length >= 450) lineCountEl.classList.add('warn');
+    else lineCountEl.classList.remove('warn');
+  }
+  function updateCleared() {
+    clearedCountEl.textContent = 'CLEARED: ' + world.cleared;
+  }
+  function updateHighScore() {
+    const hs = parseInt(localStorage.getItem('lp_high') || '0');
+    highScoreEl.textContent = 'BEST: ' + hs;
+  }
+
+  clearBtn.addEventListener('click', () => {
+    world.segments = [];
+    world.cleared = 0;
+    offDirty = true;
+    updateLineCount();
+    updateCleared();
+    playClear();
+  });
+
+  spawnBtn.addEventListener('click', () => {
+    spawnEnabled = !spawnEnabled;
+    spawnBtn.textContent = 'SPAWN: ' + (spawnEnabled ? 'ON' : 'OFF');
+  });
+
+  resetBtn.addEventListener('click', () => {
+    world.segments = [];
+    world.objects = [];
+    world.cleared = 0;
+    timerStart = performance.now();
+    timerRunning = true;
+    offDirty = true;
+    updateLineCount();
+    updateCleared();
+    playClear();
+  });
+
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); spawnBtn.click(); }
+    else if (e.key === 'c' || e.key === 'C') { clearBtn.click(); }
+    else if (e.key === 'r' || e.key === 'R') { resetBtn.click(); }
+  });
+
+  // ============= TIMER =============
+  let timerStart = performance.now();
+  let timerRunning = true;
+  function updateTimer() {
+    if (!timerRunning) return;
+    const elapsed = performance.now() - timerStart;
+    const ms = Math.floor(elapsed % 1000 / 10);
+    const sec = Math.floor(elapsed / 1000) % 60;
+    const min = Math.floor(elapsed / 60000);
+    timerEl.textContent = (min < 10 ? '0' : '') + min + ':' + (sec < 10 ? '0' : '') + sec + '.' + (ms < 10 ? '0' : '') + ms;
+  }
+
+  // ============= PAUSE ON BLUR =============
+  window.addEventListener('blur', () => { world.paused = true; timerRunning = false; });
+  window.addEventListener('focus', () => { world.paused = false; timerRunning = true; timerStart = performance.now() - (parseInt(localStorage.getItem('lp_lastTime') || '0')); });
+
+  // ============= SPAWN LOOP =============
+  let spawnAccum = 0;
+
+  // ============= RENDER =============
+  function drawGrid() {
+    ctx.strokeStyle = COL_GRID;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 40) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+    }
+    for (let y = 0; y <= H; y += 40) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+    }
+    ctx.stroke();
+  }
+
+  function drawPreview() {
+    if (!drawing || !curStroke || curStroke.length < 2) return;
+    ctx.strokeStyle = COL_PREVIEW;
+    ctx.lineWidth = LINE_THICK;
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(curStroke[0].x, curStroke[0].y);
+    for (let i = 1; i < curStroke.length; i++) {
+      ctx.lineTo(curStroke[i].x, curStroke[i].y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawObjects() {
+    for (const o of world.objects) {
+      ctx.save();
+      ctx.translate(o.pos.x, o.pos.y);
+      ctx.rotate(o.ang);
+      if (o.type === 'circle') {
+        ctx.fillStyle = o.color;
+        ctx.shadowColor = o.color;
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(0, 0, o.r, 0, Math.PI * 2);
+        ctx.fill();
+        // inner highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+        ctx.beginPath();
+        ctx.arc(-o.r * 0.3, -o.r * 0.3, o.r * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = o.color;
+        ctx.shadowColor = o.color;
+        ctx.shadowBlur = 6;
+        ctx.fillRect(-o.hw, -o.hh, o.hw * 2, o.hh * 2);
+      }
+      ctx.restore();
+    }
+  }
+
+  function drawHUD() {
+    // Bottom of canvas area - just a hint line
+  }
+
+  function render() {
+    ctx.fillStyle = COL_BG;
+    ctx.fillRect(0, 0, W, H);
+
+    drawGrid();
+
+    if (offDirty) rebuildOffscreen();
+    ctx.drawImage(offCanvas, 0, 0, W, H);
+
+    drawPreview();
+    drawObjects();
+  }
+
+  // ============= MAIN LOOP =============
+  let lastTime = performance.now();
+  let accum = 0;
+
+  function loop(now) {
+    const dt = Math.min((now - lastTime) / 1000, 0.1);
+    lastTime = now;
+    accum += dt;
+    while (accum >= DT) {
+      // Spawn
+      if (spawnEnabled) {
+        spawnAccum += dt;
+        if (spawnAccum >= SPAWN_RATE) {
+          spawnAccum = 0;
+          spawnObject();
+        }
+      } else {
+        spawnAccum = 0;
+      }
+      step();
+      accum -= DT;
+    }
+    updateTimer();
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  // ============= INIT =============
+  resize();
+  updateLineCount();
+  updateCleared();
+  updateHighScore();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
