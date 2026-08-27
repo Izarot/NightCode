@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Pixel Catch: Reef Runner</title>
-<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><text y=\"0.5em\" font-size=\"48\">\uD83C\u00EE\u008E\u0099</text></svg>" />
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><text y=\"0.5em\" font-size=\"48\">🐮</text></svg>" />
 <style>
   body{margin:0;background:#001;color:#fff;font-family:'Press Start 2P',monospace;}
   canvas{display:block;width:100%;height:auto;image-rendering:pixelated;background:#001;}
@@ -14,10 +14,10 @@
 </style>
 </head>
 <body>
-<canvas id=\"game\"></canvas>
-<div id=\"hud\"></div>
-<div id=\"timer\"></div>
-<div id=\"hud-bottom\"></div>
+<canvas id="game"></canvas>
+<div id="hud"></div>
+<div id="timer"></div>
+<div id="hud-bottom"></div>
 <script>
 // Config
 const CFG = {
@@ -26,7 +26,7 @@ const CFG = {
   castPowerMax:100, castCooldown:1500,
   biteWindow:{min:3000, max:8000},
   bobAmplitude:2,
-  palette:["/000"/00F"/00A"/00G"/00R"/00Y"/00W"/00F"/0F0"/0FU"/0FF"/0FG"/0FR"/0FY"/F00"/F0F"/F0A"/F0G"/F0R"/F0Y"/F0W"/F0B"/F0C"/F0U"/F0D"/F0V"/F0S"/F0T"/F0R"/F0Q"/F0P"/F0O"/F0N"/F0M"/F0L"/F0K"/F0J"/F0I"/F0H"/F0G"/F0F"/F0E"/F0D"/F0C"/F0B"/F0A"/F09"/F08"/F07"/F06"/F05"/F04"/F03"/F02"/F01"/F00"]
+  palette:["#000","#00F","#00A","#0A0","#0A0","#FF0","#FFF","#0FF","#0F0","#0F0","#0FF","#0F0","#F00","#F0F","#F0A","#F0G","#F0R","#F0Y","#F0W","#F0B"]
 };
 let canvas, ctx;
 let lastTime=0, elapsed=0, highScore=0, score=0, castCooldown=0, gameState="BOAT", tension=0, reelProgress=0, biteTimerRemaining=0, isCasting=false;
@@ -168,14 +168,14 @@ function render(){
 }
 function drawHUD(){
   const hud = document.getElementById('hud');
-  hud.innerHTML = `<div class=\"pixel\">SCORE: ${score}</div>
-                   <div class=\"pixel\">HS: ${highScore}</div>
-                   <div class=\"pixel\">CAST POWER: ${Math.min(boat.power,CFG.castPowerMax)}%</div>`;
+  hud.innerHTML = '<div class="pixel">SCORE: ' + score + '</div>' +
+                   '<div class="pixel">HS: ' + highScore + '</div>' +
+                   '<div class="pixel">CAST POWER: ' + Math.min(boat.power,CFG.castPowerMax) + '%</div>';
   const bottom = document.getElementById('hud-bottom');
-  bottom.innerHTML = `<div class=\"pixel\">INV: 4</div>
-                      <div class=\"pixel\">ROD Lv: 1</div>
-                      <div class=\"pixel\">BAIT: 5</div>
-                      <div class=\"pixel\">XP: ${score}</div>`;
+  bottom.innerHTML = '<div class="pixel">INV: 4</div>' +
+                      '<div class="pixel">ROD Lv: 1</div>' +
+                      '<div class="pixel">BAIT: 5</div>' +
+                      '<div class="pixel">XP: ' + score + '</div>';
 }
 function handleKey(e){
   const speed = boat.vx*CFG.maxSpeed;
@@ -198,7 +198,7 @@ function handleKey(e){
   }
 }
 window.addEventListener('keydown',handleKey);
-window.addEventListener('keyup',e=>{
+window.addEventListener('keyup',function(e){
   if(e.key===' '){
     if(isCasting){
       const rad = boat.angle * Math.PI/180;
