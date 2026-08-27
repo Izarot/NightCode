@@ -1,68 +1,228 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cosmic Catch</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎣%3C/text%3E%3C/svg%3E">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: #0a1a2f; color: #00ffff; font-family: 'Courier New', monospace; overflow: hidden; }
-        #gameContainer { width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
-        canvas { background: #0a1a2f; display: block; }
-        .hidden { display: none; }
-        .button { background: rgba(0, 255, 255, 0.2); border: 1px solid #00ffff; color: #00ffff; padding: 8px 16px; margin: 10px; cursor: pointer; border-radius: 4px; font-family: inherit; }
-        .button:hover { background: rgba(0, 255, 255, 0.4); }
-        #menu, #gameOver { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; background: rgba(0,0,0,0.7); padding: 20px; border-radius: 8px; }
-        #hud { position: absolute; top: 10px; left: 10px; color: #00ffff; font-size: 16px; }
-        #timer { position: absolute; top: 10px; right: 10px; }
-        #tugGauge { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); width: 200px; height: 20px; background: rgba(0,0,0,0.5); border: 1px solid #00ffff; border-radius: 10px; overflow: hidden; }
-        #tugFill { height: 100%; background: linear-gradient(to right, #ff00ff, #00ffff); width: 0%; }
-        #lineLengthBar { position: absolute; bottom: 20px; right: 20px; width: 200px; height: 20px; background: rgba(0,0,0,0.5); border: 1px solid #00ffff; border-radius: 10px; overflow: hidden; }
-        #lineFill { height: 100%; background: #00ffff; width: 0%; }
-        #upgradePanel { position: absolute; bottom: 20px; left: 20px; background: rgba(0,0,0,0.7); border: 1px solid #00ffff; border-radius: 8px; padding: 10px; min-width: 200px; }
-        .upgradeItem { margin: 10px 0; display: flex; justify-content: space-between; align-items: center; }
-        .upgradeItem button { background: rgba(255,0,255,0.3); border: 1px solid #ff00ff; color: #ff00ff; padding: 4px 8px; border-radius: 4px; }
-        #inventory { position: absolute; top: 10px; right: 10px; }
-        .inventoryItem { display: inline-block; margin: 5px; width: 30px; height: 30px; background: rgba(0,255,255,0.2); border: 1px solid #00ffff; border-radius: 4px; text-align: center; line-height: 30px; font-size: 14px; }
-    </style>
+<meta charset="UTF-8">
+<title>Pixel Catch: Reef Runner</title>
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\"><text y=\"0.5em\" font-size=\"48\">\uD83C\u00EE\u008E\u0099</text></svg>" />
+<style>
+  body{margin:0;background:#001;color:#fff;font-family:'Press Start 2P',monospace;}
+  canvas{display:block;width:100%;height:auto;image-rendering:pixelated;background:#001;}
+  #hud{position:absolute;top:0;left:0;right:0;height:40px;pointer-events:none;font-size:12px;background:#000;}
+  #timer{position:absolute;top:10px;right:10px;font-size:14px;}
+  #hud-bottom{position:absolute;bottom:0;left:0;right:0;height:80px;display:flex;justify-content:space-between;padding:0 10px;box-sizing:border-box;font-size:12px;background:#000;}
+  .pixel{font-size:8px;}
+</style>
 </head>
 <body>
-    <div id="gameContainer">
-        <canvas id="gameCanvas"></canvas>
-    </div>
-    <div id="menu" class="hidden">
-        <h1>Cosmic Catch</h1>
-        <p>Neon-lit cosmic fishing adventure</p>
-        <button id="startButton" class="button">Start Game</button>
-        <button id="instructionsButton" class="button">How to Play</button>
-    </div>
-    <div id="instructions" class="hidden">
-        <h2>How to Play</h2>
-        <p><strong>Cast:</strong> Drag to set angle & power</p>
-        <p><strong>Reel:</strong> Hold to pull line back</p>
-        <p><strong>Catch:</strong> Release before tug meter fills</p>
-        <p><strong>Move:</strong> WASD/Arrows to drift vessel</p>
-        <p><strong>Quick Cast:</strong> Spacebar</p>
-        <button id="backButton" class="button">Back</button>
-    </div>
-    <div id="gameOver" class="hidden">
-        <h1>Game Over</h1>
-        <p>Score: <span id="finalScore"></span></p>
-        <p>High Score: <span id="highScore"></span></p>
-        <button id="restartButton" class="button">Play Again</button>
-    </div>
-    <div id="hud">
-        Score: <span id="score">0</span><br>
-        <div id="tugGauge"><div id="tugFill"></div></div><br>
-        Line: <div id="lineLengthBar"><div id="lineFill"></div></div>
-    </div>
-    <div id="timer">Time: <span id="timeValue">0s</span></div>
-    <div id="upgradePanel">
-        <h3>Upgrades</h3>
-        <div id="upgradeList"></div>
-    </div>
-    <div id="inventory"></div>
-    <script type="module" src="/src/main.js"></script>
+<canvas id=\"game\"></canvas>
+<div id=\"hud\"></div>
+<div id=\"timer\"></div>
+<div id=\"hud-bottom\"></div>
+<script>
+// Config
+const CFG = {
+  w:960, h:540, fps:60,
+  maxSpeed:4, accel:0.15, friction:0.92,
+  castPowerMax:100, castCooldown:1500,
+  biteWindow:{min:3000, max:8000},
+  bobAmplitude:2,
+  palette:["/000"/00F"/00A"/00G"/00R"/00Y"/00W"/00F"/0F0"/0FU"/0FF"/0FG"/0FR"/0FY"/F00"/F0F"/F0A"/F0G"/F0R"/F0Y"/F0W"/F0B"/F0C"/F0U"/F0D"/F0V"/F0S"/F0T"/F0R"/F0Q"/F0P"/F0O"/F0N"/F0M"/F0L"/F0K"/F0J"/F0I"/F0H"/F0G"/F0F"/F0E"/F0D"/F0C"/F0B"/F0A"/F09"/F08"/F07"/F06"/F05"/F04"/F03"/F02"/F01"/F00"]
+};
+let canvas, ctx;
+let lastTime=0, elapsed=0, highScore=0, score=0, castCooldown=0, gameState="BOAT", tension=0, reelProgress=0, biteTimerRemaining=0, isCasting=false;
+let boat = {x:CFG.w/2, y:CFG.h*0.7, vx:0, vy:0, angle:0, rotating:false, rotatingDir:1, power:0, casting:false};
+let bobber = {x:0, y:0, vx:0, vy:0, landed:false};
+let fish = [];
+let audioCtx;
+function createSound(t){
+  const ctx = audioCtx;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type='sine';
+  if(t==='cast'){
+    osc.frequency.setValueAtTime(200,ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(50,ctx.currentTime+0.5);
+  }
+  if(t==='splash'){
+    osc.frequency.setValueAtTime(300,ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100,ctx.currentTime+0.3);
+  }
+  if(t==='bite'){
+    osc.frequency.setValueAtTime(600,ctx.currentTime);
+  }
+  if(t==='reel'){
+    osc.frequency.setValueAtTime(800,ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200,ctx.currentTime+0.1);
+  }
+  if(t==='catch'){
+    osc.frequency.setValueAtTime(400,ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200,ctx.currentTime+0.2);
+  }
+  if(t==='levelup'){
+    osc.frequency.setValueAtTime(500,ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100,ctx.currentTime+0.4);
+  }
+  gain.gain.setValueAtTime(0.2,ctx.currentTime);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime+0.5);
+}
+window.playSound = t=>createSound(t);
+function init(){
+  canvas = document.getElementById('game');
+  ctx = canvas.getContext('2d');
+  canvas.width = CFG.w; canvas.height = CFG.h;
+  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  for(let i=0;i<5;i++){
+    const col = CFG.palette[Math.floor(Math.random()*CFG.palette.length)];
+    fish.push({
+      x: Math.random()*CFG.w*0.8 + CFG.w*0.1,
+      y: CFG.h*0.7 + Math.random()*CFG.h*0.2,
+      vx: (Math.random()-0.5)*0.2,
+      vy: (Math.random()-0.5)*0.2,
+      col: col,
+      value: Math.floor(Math.random()*100)+1,
+      biteTimer:0,
+      hooked:false
+    });
+  }
+  const hs = localStorage.getItem('pixelCatchHS');
+  highScore = hs ? parseInt(hs) : 0;
+  requestAnimationFrame(loop);
+}
+function loop(timestamp){
+  if(!lastTime) lastTime = timestamp;
+  const dt = timestamp - lastTime;
+  lastTime = timestamp;
+  elapsed += dt;
+  const secs = Math.floor(elapsed/1000);
+  document.getElementById('timer').textContent = `TIME: ${Math.floor(secs/60)}:${secs%60}`;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+function update(dt){
+  if(castCooldown>0) castCooldown -= dt;
+  if(isCasting){
+    boat.power = Math.min(CFG.castPowerMax, boat.power + 10 * dt/1000);
+  }
+  // bobber bobbing
+  bobber.y = CFG.h*0.7 + Math.sin(elapsed*0.02)*CFG.bobAmplitude;
+  // fish update
+  for(let f of fish){
+    f.x += f.vx;
+    f.y += f.vy;
+    if(f.x<0||f.x>CFG.w) f.vx*=-1;
+    if(f.y<CFG.h*0.7||f.y<CFG.h) f.vy*=-1;
+  }
+  // bite detection
+  if(gameState==="WAITING" && bobber.landed){
+    for(let f of fish){
+      const dx = bobber.x - f.x;
+      const dy = bobber.y - f.y;
+      if(Math.hypot(dx,dy) < 80){
+        f.biteTimer = Math.random()*(CFG.biteWindow.max-CFG.biteWindow.min) + CFG.biteWindow.min;
+        biteTimerRemaining = 0.8;
+        gameState = "BITE";
+        break;
+      }
+    }
+  }
+  // bite timer countdown
+  if(gameState==="BITE"){
+    biteTimerRemaining -= dt/1000;
+    if(biteTimerRemaining <= 0){
+      gameState = "BOAT";
+    }
+  }
+  // bobber position
+  if(!bobber.landed){
+    bobber.x += bobber.vx;
+    bobber.y += bobber.vy;
+    if(bobber.y >= CFG.h*0.7){
+      bobber.y = CFG.h*0.7;
+      bobber.landed = true;
+    }
+  }
+}
+function render(){
+  ctx.clearRect(0,0,CFG.w,CFG.h);
+  // sky
+  ctx.fillStyle = CFG.palette[1];
+  ctx.fillRect(0,0,CFG.w,CFG.h*0.7);
+  // water
+  ctx.fillStyle = CFG.palette[2];
+  ctx.fillRect(0,CFG.h*0.7,CFG.w,CFG.h*0.3);
+  // bobber
+  ctx.fillStyle = '#FFF';
+  ctx.beginPath(); ctx.arc(bobber.x,bobber.y,6,0,Math.PI*2); ctx.fill();
+  // boat
+  ctx.fillStyle = '#555';
+  ctx.fillRect(boat.x-20,boat.y-10,40,20);
+  // fish
+  for(let f of fish){
+    ctx.fillStyle = f.col;
+    ctx.fillRect(f.x-8,f.y-8,16,16);
+  }
+  drawHUD();
+}
+function drawHUD(){
+  const hud = document.getElementById('hud');
+  hud.innerHTML = `<div class=\"pixel\">SCORE: ${score}</div>
+                   <div class=\"pixel\">HS: ${highScore}</div>
+                   <div class=\"pixel\">CAST POWER: ${Math.min(boat.power,CFG.castPowerMax)}%</div>`;
+  const bottom = document.getElementById('hud-bottom');
+  bottom.innerHTML = `<div class=\"pixel\">INV: 4</div>
+                      <div class=\"pixel\">ROD Lv: 1</div>
+                      <div class=\"pixel\">BAIT: 5</div>
+                      <div class=\"pixel\">XP: ${score}</div>`;
+}
+function handleKey(e){
+  const speed = boat.vx*CFG.maxSpeed;
+  if(e.key==='ArrowLeft'||e.key==='a'){
+    boat.vx = Math.max(boat.vx-CFG.accel, -speed);
+    boat.rotatingDir = -1;
+  }
+  if(e.key==='ArrowRight'||e.key==='d'){
+    boat.vx = Math.min(boat.vx+CFG.accel, speed);
+    boat.rotatingDir = 1;
+  }
+  if(e.key==='w'||e.key==='W'){
+    boat.vy = Math.max(boat.vy-CFG.accel, -speed);
+  }
+  if(e.key==='s'||e.key==='S'){
+    boat.vy = Math.min(boat.vy+CFG.accel, speed);
+  }
+  if(e.key==='q'||e.key==='Q'){
+    boat.angle += 8*boat.rotatingDir;
+  }
+}
+window.addEventListener('keydown',handleKey);
+window.addEventListener('keyup',e=>{
+  if(e.key===' '){
+    if(isCasting){
+      const rad = boat.angle * Math.PI/180;
+      const dirX = Math.cos(rad);
+      const dirY = Math.sin(rad);
+      bobber.x = boat.x + dirX*20;
+      bobber.y = boat.y + dirY*20;
+      bobber.vx = dirX * boat.power * 0.2;
+      bobber.vy = dirY * boat.power * 0.2;
+      bobber.landed = false;
+      boat.casting = false;
+      boat.power = 0;
+      isCasting = false;
+      castCooldown = CFG.castCooldown;
+      playSound('splash');
+    } else if(gameState==="BITE" && biteTimerRemaining>0){
+      gameState = "REELING";
+      tension = 0;
+      reelProgress = 0;
+      playSound('reel');
+    }
+  }
+});
+init();
+</script>
 </body>
 </html>
