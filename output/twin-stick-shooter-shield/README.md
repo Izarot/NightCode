@@ -39,7 +39,7 @@ Watch your **circular energy ring**:
 
 ## ✨ Features
 
-- 💫 Neon cyberpunk visuals with bloom effects
+- 🞫 Neon cyberpunk visuals with bloom effects
 - 📳 Satisfying screen shake on impacts
 - 🎯 Homing projectiles with physics-based reflection
 - 🏆 Shield Mastery achievement for 10 consecutive reflections
