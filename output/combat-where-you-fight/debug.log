@@ -1,0 +1,345 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 22827 (char 22826)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\" />\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\" />\n<title>Wind Blade ⚡</title>\n<link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌪️</text></svg>\" />\n<link href=\"https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap\" rel=\"stylesheet\" />\n<style>\n  * { margin: 0; padding: 0; box-sizing: border-box; }\n  html, body {\n    width: 100%;\n    height: 100%;\n    background: #050a14;\n    overflow: hidden;\n    font-family: 'Orbitron', sans-serif;\n    user-select: none;\n    -webkit-tap-highlight-color: transparent;\n  }\n  #game-wrap {\n    position: fixed;\n    inset: 0;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n  }\n  canvas {\n    display: block;\n    background: #0a1628;\n    image-rendering: pixelated;\n    box-shadow: 0 0 40px rgba(0, 255, 255, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.5);\n    border: 2px solid #1e3a5f;\n    border-radius: 4px;\n    max-width: 100vw;\n    max-height: 100vh;\n    touch-action: none;\n  }\n  #loading {\n    position: fixed;\n    inset: 0;\n    display: flex;\n    align-items: center;\n    justify-content: center;\n    color: #7fdbff;\n    font-size: 24px;\n    z-index: 100;\n    background: #0a1628;\n  }\n</style>\n</head>\n<body>\n<div id=\"loading\">⚡ SUMMONING WINDS... ⚡</div>\n<div id=\"game-wrap\"><canvas id=\"game\" width=\"1280\" height=\"800\"></canvas></div>\n<script src=\"js/config.js\"></script>\n<script src=\"js/utils.js\"></script>\n<script src=\"js/input.js\"></script>\n<script src=\"js/audio.js\"></script>\n<script src=\"js/particles.js\"></script>\n<script src=\"js/physics.js\"></script>\n<script src=\"js/abilities.js\"></script>\n<script src=\"js/enemies/base.js\"></script>\n<script src=\"js/enemies/ember-sprite.js\"></script>\n<script src=\"js/enemies/stone-golem.js\"></script>\n<script src=\"js/enemies/flame-wisp.js\"></script>\n<script src=\"js/enemies/storm-drake.js\"></script>\n<script src=\"js/wave-manager.js\"></script>\n<script src=\"js/player.js\"></script>\n<script src=\"js/ui/hud.js\"></script>\n<script src=\"js/ui/title-screen.js\"></script>\n<script src=\"js/ui/pause-menu.js\"></script>\n<script src=\"js/ui/game-over.js\"></script>\n<script src=\"js/renderer.js\"></script>\n<script src=\"js/game.js\"></script>\n<script src=\"js/main.js\"></script>\n</body>\n</html>\n", "js/config.js": "// Game constants and configuration\nconst CONFIG = {\n  // Canvas\n  CANVAS_W: 1280,\n  CANVAS_H: 800,\n  TARGET_FPS: 60,\n  FIXED_DT: 1 / 60,\n\n  // Arena\n  ARENA_W: 1200,\n  ARENA_H: 800,\n  ARENA_OFFSET_X: 40,\n  ARENA_OFFSET_Y: 0,\n\n  // Player\n  PLAYER: {\n    RADIUS: 18,\n    SPEED: 280,\n    DASH_SPEED: 1100,\n    DASH_DURATION: 0.2,\n    ACCEL: 0.15,\n    FRICTION: 0.85,\n    MAX_HP: 5,\n    INVINC_TIME: 0.8,\n  },\n\n  // Abilities\n  ABILITIES: {\n    PULSE: { cooldown: 0.3, radius: 180, force: 600, duration: 0.15 },\n    PULL: { cooldown: 1.2, radius: 300, force: 400, duration: 0.4 },\n    STREAM: { radius: 250, force: 400, width: 60 },\n    CYCLONE: { cooldown: 4.0, radius: 250, duration: 3.0, force: 500 },\n    SHIELD: { cooldown: 6.0, duration: 1.2, radius: 50 },\n  },\n\n  // Physics\n  PHYSICS: {\n    FRICTION: 0.92,\n    KNOCKBACK_CAP: 500,\n    STUN_DURATION: 0.5,\n  },\n\n  // Enemies\n  ENEMIES: {\n    EMBER: { hp: 1, speed: 120, mass: 1, radius: 14, score: 100, color: '#ff6b35' },\n    GOLEM: { hp: 5, speed: 60, mass: 5, radius: 22, score: 250, color: '#5d4e37' },\n    WISP: { hp: 1, speed: 180, mass: 0.5, radius: 10, score: 150, color: '#ffaa00' },\n    DRAKE: { hp: 8, speed: 90, mass: 3, radius: 24, score: 400, color: '#8b5cf6' },\n  },\n\n  // Waves\n  WAVES: {\n    REST_DURATION: 5,\n    HEAL_AMOUNT: 1,\n  },\n\n  // Scoring\n  SCORE: {\n    COMBO_WINDOW: 2.0,\n    COMBO_MAX: 8,\n    NO_DAMAGE_BONUS: 500,\n  },\n\n  // Particles\n  PARTICLES: {\n    POOL_SIZE: 500,\n  },\n\n  // Colors (vibrant palette)\n  COLORS: {\n    BG: '#0a1628',\n    ARENA: '#1a2744',\n    ARENA_BORDER: '#3da9fc',\n    PLAYER: '#e0f7ff',\n    PLAYER_CORE: '#00ffff',\n    WIND: '#7fdbff',\n    WIND_CORE: '#00ffff',\n    EMBER: '#ff6b35',\n    GOLEM: '#5d4e37',\n    WISP: '#ffaa00',\n    DRAKE: '#8b5cf6',\n    GOLD: '#ffd700',\n    HEALTH_GREEN: '#22c55e',\n    HEALTH_YELLOW: '#eab308',\n    HEALTH_RED: '#ef4444',\n    DANGER: '#dc2626',\n    SHIELD: '#7fdbff',\n    CYCLONE: '#5eead4',\n  },\n\n  // Font\n  FONT: 'Orbitron, monospace',\n};\n", "js/utils.js": "// Utility functions: vector math, easing, collision\nconst Utils = {\n  rand(min, max) { return Math.random() * (max - min) + min; },\n  randInt(min, max) { return Math.floor(this.rand(min, max + 1)); },\n  clamp(v, mn, mx) { return Math.max(mn, Math.min(mx, v)); },\n  lerp(a, b, t) { return a + (b - a) * t; },\n  dist(ax, ay, bx, by) { const dx = ax - bx, dy = ay - by; return Math.sqrt(dx * dx + dy * dy); },\n  distSq(ax, ay, bx, by) { const dx = ax - bx, dy = ay - by; return dx * dx + dy * dy; },\n  normalize(x, y) {\n    const m = Math.sqrt(x * x + y * y);\n    if (m < 0.0001) return { x: 0, y: 0 };\n    return { x: x / m, y: y / m };\n  },\n  angleTo(ax, ay, bx, by) { return Math.atan2(by - ay, bx - ax); },\n  easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); },\n  easeInOutQuad(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; },\n  easeOutBack(t) { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); },\n  circleCollide(ax, ay, ar, bx, by, br) { return this.distSq(ax, ay, bx, by) < (ar + br) * (ar + br); },\n  pointInRect(px, py, rx, ry, rw, rh) { return px >= rx && px <= rx + rw && py >= ry && py <= ry + rh; },\n  formatScore(n) { return n.toString().padStart(6, '0'); },\n  formatTime(s) {\n    const m = Math.floor(s / 60);\n    const sec = Math.floor(s % 60);\n    const ms = Math.floor((s % 1) * 100);\n    return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}.${ms.toString().padStart(2,'0')}`;\n  },\n  wrap(v, max) { return v < 0 ? v + max : v >= max ? v - max : v; },\n};\n", "js/input.js": "// Input handler: keyboard and mouse\nclass Input {\n  constructor(canvas) {\n    this.canvas = canvas;\n    this.keys = new Set();\n    this.keysJustPressed = new Set();\n    this.mouse = { x: 0, y: 0, worldX: 0, worldY: 0, down: false, justClicked: false, justReleased: false };\n    this.shift = false;\n\n    window.addEventListener('keydown', (e) => {\n      const k = e.key.toLowerCase();\n      if (!this.keys.has(k)) this.keysJustPressed.add(k);\n      this.keys.add(k);\n      if (k === 'shift') this.shift = true;\n      if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();\n    });\n    window.addEventListener('keyup', (e) => {\n      const k = e.key.toLowerCase();\n      this.keys.delete(k);\n      if (k === 'shift') this.shift = false;\n    });\n\n    const updateMouse = (e) => {\n      const rect = canvas.getBoundingClientRect();\n      const scaleX = canvas.width / rect.width;\n      const scaleY = canvas.height / rect.height;\n      const x = (e.clientX - rect.left) * scaleX;\n      const y = (e.clientY - rect.top) * scaleY;\n      this.mouse.x = x;\n      this.mouse.y = y;\n      // convert to world coords (arena)\n      this.mouse.worldX = x - CONFIG.ARENA_OFFSET_X;\n      this.mouse.worldY = y - CONFIG.ARENA_OFFSET_Y;\n    };\n\n    canvas.addEventListener('mousemove', updateMouse);\n    canvas.addEventListener('mousedown', (e) => {\n      if (e.button === 0) {\n        this.mouse.down = true;\n        this.mouse.justClicked = true;\n      }\n      updateMouse(e);\n    });\n    window.addEventListener('mouseup', (e) => {\n      if (e.button === 0) {\n        this.mouse.down = false;\n        this.mouse.justReleased = true;\n      }\n    });\n    // Touch support\n    canvas.addEventListener('touchstart', (e) => {\n      e.preventDefault();\n      const t = e.touches[0];\n      const rect = canvas.getBoundingClientRect();\n      const scaleX = canvas.width / rect.width;\n      const scaleY = canvas.height / rect.height;\n      this.mouse.x = (t.clientX - rect.left) * scaleX;\n      this.mouse.y = (t.clientY - rect.top) * scaleY;\n      this.mouse.worldX = this.mouse.x - CONFIG.ARENA_OFFSET_X;\n      this.mouse.worldY = this.mouse.y - CONFIG.ARENA_OFFSET_Y;\n      this.mouse.down = true;\n      this.mouse.justClicked = true;\n    }, { passive: false });\n    canvas.addEventListener('touchmove', (e) => {\n      e.preventDefault();\n      const t = e.touches[0];\n      const rect = canvas.getBoundingClientRect();\n      const scaleX = canvas.width / rect.width;\n      const scaleY = canvas.height / rect.height;\n      this.mouse.x = (t.clientX - rect.left) * scaleX;\n      this.mouse.y = (t.clientY - rect.top) * scaleY;\n      this.mouse.worldX = this.mouse.x - CONFIG.ARENA_OFFSET_X;\n      this.mouse.worldY = this.mouse.y - CONFIG.ARENA_OFFSET_Y;\n    }, { passive: false });\n    canvas.addEventListener('touchend', (e) => {\n      e.preventDefault();\n      this.mouse.down = false;\n      this.mouse.justReleased = true;\n    }, { passive: false });\n\n    // Prevent context menu\n    canvas.addEventListener('contextmenu', (e) => e.preventDefault());\n  }\n\n  isDown(...keys) { return keys.some(k => this.keys.has(k)); }\n  justPressed(...keys) { return keys.some(k => this.keysJustPressed.has(k)); }\n\n  endFrame() {\n    this.keysJustPressed.clear();\n    this.mouse.justClicked = false;\n    this.mouse.justReleased = false;\n  }\n}\n", "js/audio.js": "// Web Audio API sound effects\nclass AudioFX {\n  constructor() {\n    this.ctx = null;\n    this.muted = false;\n    try {\n      this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n    } catch (e) {\n      console.warn('Web Audio not available');\n    }\n  }\n\n  resume() {\n    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();\n  }\n\n  _osc(freq, dur, type = 'sine', vol = 0.15, sweep = 0) {\n    if (!this.ctx || this.muted) return;\n    const t = this.ctx.currentTime;\n    const osc = this.ctx.createOscillator();\n    const gain = this.ctx.createGain();\n    osc.type = type;\n    osc.frequency.setValueAtTime(freq, t);\n    if (sweep) osc.frequency.exponentialRampToValueAtTime(Math.max(1, freq + sweep), t + dur);\n    gain.gain.setValueAtTime(vol, t);\n    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);\n    osc.connect(gain).connect(this.ctx.destination);\n    osc.start(t);\n    osc.stop(t + dur);\n  }\n\n  _noise(dur, vol = 0.1, filterFreq = 2000) {\n    if (!this.ctx || this.muted) return;\n    const t = this.ctx.currentTime;\n    const bufSize = this.ctx.sampleRate * dur;\n    const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);\n    const data = buf.getChannelData(0);\n    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;\n    const src = this.ctx.createBufferSource();\n    const gain = this.ctx.createGain();\n    const filter = this.ctx.createBiquadFilter();\n    filter.type = 'lowpass';\n    filter.frequency.value = filterFreq;\n    gain.gain.setValueAtTime(vol, t);\n    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);\n    src.buffer = buf;\n    src.connect(filter).connect(gain).connect(this.ctx.destination);\n    src.start(t);\n    src.stop(t + dur);\n  }\n\n  pulse() { this._noise(0.2, 0.15, 3000); this._osc(400, 0.15, 'sine', 0.1, -300); }\n  pull() { this._osc(200, 0.3, 'sawtooth', 0.12, 400); this._noise(0.3, 0.08, 1500); }\n  stream() { this._noise(0.05, 0.05, 4000); }\n  cyclone() { this._osc(150, 0.8, 'triangle', 0.15, 200); this._noise(0.8, 0.06, 800); }\n  shield() { this._osc(800, 0.2, 'sine', 0.1, 1200); }\n  dash() { this._osc(300, 0.15, 'square', 0.08, 500); }\n  hit() { this._noise(0.15, 0.2, 1500); this._osc(100, 0.15, 'sawtooth', 0.15, -50); }\n  kill() { this._osc(600, 0.1, 'triangle', 0.12, 400); }\n  waveStart() { this._osc(440, 0.15, 'sine', 0.12); setTimeout(() => this._osc(660, 0.15, 'sine', 0.12), 100); setTimeout(() => this._osc(880, 0.2, 'sine', 0.12), 200); }\n  waveComplete() { this._osc(523, 0.15, 'sine', 0.12); setTimeout(() => this._osc(659, 0.15, 'sine', 0.12), 120); setTimeout(() => this._osc(784, 0.3, 'sine', 0.15), 240); }\n  pickup() { this._osc(700, 0.1, 'sine', 0.1, 500); }\n  gameOver() { this._osc(300, 0.3, 'sawtooth', 0.18, -150); setTimeout(() => this._osc(200, 0.4, 'sawtooth', 0.18, -100), 200); }\n}\n", "js/particles.js": "// Particle system with object pooling\nclass Particle {\n  constructor() { this.reset(); }\n  reset() {\n    this.alive = false;\n    this.x = 0; this.y = 0;\n    this.vx = 0; this.vy = 0;\n    this.life = 0; this.maxLife = 1;\n    this.size = 2;\n    this.color = '#fff';\n    this.alpha = 1;\n    this.type = 'spark';\n    this.angle = 0; this.spin = 0;\n  }\n  update(dt) {\n    if (!this.alive) return;\n    this.life -= dt;\n    if (this.life <= 0) { this.alive = false; return; }\n    this.x += this.vx * dt;\n    this.y += this.vy * dt;\n    this.vx *= 0.95;\n    this.vy *= 0.95;\n    this.angle += this.spin * dt;\n  }\n  get t() { return 1 - (this.life / this.maxLife); }\n}\n\nclass ParticleSystem {\n  constructor(size = CONFIG.PARTICLES.POOL_SIZE) {\n    this.pool = [];\n    for (let i = 0; i < size; i++) this.pool.push(new Particle());\n  }\n  spawn(x, y, opts = {}) {\n    for (let i = 0; i < this.pool.length; i++) {\n      const p = this.pool[i];\n      if (!p.alive) {\n        p.reset();\n        p.alive = true;\n        p.x = x; p.y = y;\n        p.vx = opts.vx || 0;\n        p.vy = opts.vy || 0;\n        p.life = p.maxLife = opts.life || 1;\n        p.size = opts.size || 2;\n        p.color = opts.color || '#fff';\n        p.alpha = opts.alpha || 1;\n        p.type = opts.type || 'spark';\n        p.spin = opts.spin || 0;\n        p.angle = opts.angle || 0;\n        return p;\n      }\n    }\n    return null;\n  }\n  burst(x, y, count, opts = {}) {\n    for (let i = 0; i < count; i++) {\n      const a = (i / count) * Math.PI * 2 + (opts.angleOffset || 0);\n      const speed = opts.speed || Utils.rand(50, 200);\n      this.spawn(x, y, {\n        vx: Math.cos(a) * speed + (opts.vx || 0),\n        vy: Math.sin(a) * speed + (opts.vy || 0),\n        life: opts.life || Utils.rand(0.3, 0.8),\n        size: opts.size || Utils.rand(2, 5),\n        color: opts.color || '#7fdbff',\n        type: opts.type || 'spark',\n        spin: Utils.rand(-5, 5),\n      });\n    }\n  }\n  update(dt) {\n    for (let i = 0; i < this.pool.length; i++) this.pool[i].update(dt);\n  }\n  draw(ctx) {\n    for (let i = 0; i < this.pool.length; i++) {\n      const p = this.pool[i];\n      if (!p.alive) continue;\n      const alpha = p.life / p.maxLife;\n      ctx.save();\n      ctx.globalAlpha = alpha * p.alpha;\n      ctx.translate(p.x, p.y);\n      ctx.rotate(p.angle);\n      ctx.fillStyle = p.color;\n      if (p.type === 'triangle') {\n        ctx.beginPath();\n        ctx.moveTo(0, -p.size);\n        ctx.lineTo(p.size, p.size);\n        ctx.lineTo(-p.size, p.size);\n        ctx.closePath();\n        ctx.fill();\n      } else if (p.type === 'spark') {\n        ctx.beginPath();\n        ctx.arc(0, 0, p.size, 0, Math.PI * 2);\n        ctx.fill();\n      } else if (p.type === 'ember') {\n        ctx.shadowBlur = 8;\n        ctx.shadowColor = p.color;\n        ctx.beginPath();\n        ctx.arc(0, 0, p.size, 0, Math.PI * 2);\n        ctx.fill();\n        ctx.shadowBlur = 0;\n      } else if (p.type === 'line') {\n        ctx.strokeStyle = p.color;\n        ctx.lineWidth = p.size;\n        ctx.beginPath();\n        ctx.moveTo(0, 0);\n        ctx.lineTo(p.size * 2, 0);\n        ctx.stroke();\n      } else {\n        ctx.beginPath();\n        ctx.arc(0, 0, p.size, 0, Math.PI * 2);\n        ctx.fill();\n      }\n      ctx.restore();\n    }\n  }\n}\n", "js/physics.js": "// Physics helpers: wind force, collision\nconst Physics = {\n  applyRadialForce(entity, ox, oy, radius, force, push) {\n    const dx = entity.x - ox;\n    const dy = entity.y - oy;\n    const d = Math.sqrt(dx * dx + dy * dy);\n    if (d > radius || d < 0.1) return 0;\n    const falloff = 1 - d / radius;\n    const dir = push ? 1 : -1;\n    const nx = dx / d;\n    const ny = dy / d;\n    const f = force * falloff * dir * (1 / entity.mass);\n    entity.vx += nx * f;\n    entity.vy += ny * f;\n    // cap velocity\n    const sp = Math.sqrt(entity.vx * entity.vx + entity.vy * entity.vy);\n    if (sp > CONFIG.PHYSICS.KNOCKBACK_CAP) {\n      entity.vx = (entity.vx / sp) * CONFIG.PHYSICS.KNOCKBACK_CAP;\n      entity.vy = (entity.vy / sp) * CONFIG.PHYSICS.KNOCKBACK_CAP;\n    }\n    return f;\n  },\n  applyConeForce(entity, ox, oy, angle, length, width, force) {\n    const dx = entity.x - ox;\n    const dy = entity.y - oy;\n    const d = Math.sqrt(dx * dx + dy * dy);\n    if (d > length || d < 0.1) return 0;\n    const entityAngle = Math.atan2(dy, dx);\n    let diff = entityAngle - angle;\n    while (diff > Math.PI) diff -= Math.PI * 2;\n    while (diff < -Math.PI) diff += Math.PI * 2;\n    if (Math.abs(diff) > Math.atan2(width / 2, d) + 0.2) return 0;\n    const falloff = 1 - d / length;\n    const f = force * falloff * (1 / entity.mass);\n    entity.vx += Math.cos(angle) * f;\n    entity.vy += Math.sin(angle) * f;\n    return f;\n  },\n  capVelocity(entity, max) {\n    const sp = Math.sqrt(entity.vx * entity.vx + entity.vy * entity.vy);\n    if (sp > max) {\n      entity.vx = (entity.vx / sp) * max;\n      entity.vy = (entity.vy / sp) * max;\n    }\n  },\n  friction(entity, amount) {\n    entity.vx *= amount;\n    entity.vy *= amount;\n    if (Math.abs(entity.vx) < 1) entity.vx = 0;\n    if (Math.abs(entity.vy) < 1) entity.vy = 0;\n  },\n};\n", "js/abilities.js": "// All 5 wind abilities\nclass Abilities {\n  constructor(player, particles, audio) {\n    this.player = player;\n    this.particles = particles;\n    this.audio = audio;\n    this.cooldowns = {\n      pulse: 0, pull: 0, stream: 0, cyclone: 0, shield: 0,\n    };\n    this.activeShield = false;\n    this.shieldTime = 0;\n    this.cyclones = [];\n    this.activePulse = null;\n    this.activePull = null;\n    this.streamCharge = 0;\n    this.streamActive = false;\n  }\n  update(dt) {\n    // tick cooldowns\n    for (const k in this.cooldowns) {\n      if (this.cooldowns[k] > 0) this.cooldowns[k] -= dt;\n    }\n    // shield\n    if (this.activeShield) {\n      this.shieldTime -= dt;\n      if (this.shieldTime <= 0) {\n        this.activeShield = false;\n        this.cooldowns.shield = CONFIG.ABILITIES.SHIELD.cooldown;\n        // shatter particles\n        this.particles.burst(this.player.x, this.player.y, 16, {\n          speed: 200, color: CONFIG.COLORS.SHIELD, life: 0.5, size: 3, type: 'spark'\n        });\n      } else {\n        // shimmer particles\n        if (Math.random() < 0.4) {\n          const a = Math.random() * Math.PI * 2;\n          const r = CONFIG.ABILITIES.SHIELD.radius + Utils.rand(-3, 3);\n          this.particles.spawn(this.player.x + Math.cos(a) * r, this.player.y + Math.sin(a) * r, {\n            vx: Math.cos(a + Math.PI / 2) * 20,\n            vy: Math.sin(a + Math.PI / 2) * 20,\n            life: 0.4, size: 2, color: CONFIG.COLORS.SHIELD, type: 'spark'\n          });\n        }\n      }\n    }\n    // pulse effect tick\n    if (this.activePulse) {\n      this.activePulse.t += dt;\n      if (this.activePulse.t > CONFIG.ABILITIES.PULSE.duration) this.activePulse = null;\n    }\n    if (this.activePull) {\n      this.activePull.t += dt;\n      if (this.activePull.t > CONFIG.ABILITIES.PULL.duration) this.activePull = null;\n    }\n    // stream charge\n    if (this.streamActive) {\n      this.streamCharge = Math.min(1, this.streamCharge + dt * 2);\n      // stream particles\n      const angle = Math.atan2(this.player.mouseY - this.player.y, this.player.mouseX - this.player.x);\n      for (let i = 0; i < 2; i++) {\n        const d = Utils.rand(20, CONFIG.ABILITIES.STREAM.radius * 0.9);\n        const spread = Utils.rand(-0.3, 0.3);\n        this.particles.spawn(\n          this.player.x + Math.cos(angle + spread) * d,\n          this.player.y + Math.sin(angle + spread) * d,\n          {\n            vx: Math.cos(angle) * Utils.rand(100, 200) * -0.2,\n            vy: Math.sin(angle) * Utils.rand(100, 200) * -0.2,\n            life: Utils.rand(0.2, 0.5),\n            size: Utils.rand(2, 4),\n            color: CONFIG.COLORS.WIND, type: 'spark'\n          }\n        );\n      }\n    } else {\n      this.streamCharge = Math.max(0, this.streamCharge - dt * 4);\n    }\n    // cyclones\n    for (let i = this.cyclones.length - 1; i >= 0; i--) {\n      const c = this.cyclones[i];\n      c.t += dt;\n      c.life -= dt;\n      if (c.life <= 0) {\n        this.cyclones.splice(i, 1);\n        continue;\n      }\n      // suck enemies + particles\n      if (Math.random() < 0.6) {\n        const a = Math.random() * Math.PI * 2;\n        const r = CONFIG.ABILITIES.CYCLONE.radius * 0.8;\n        this.particles.spawn(c.x + Math.cos(a) * r, c.y + Math.sin(a) * r, {\n          vx: -Math.cos(a) * 80,\n          vy: -Math.sin(a) * 80,\n          life: 0.5, size: 2, color: CONFIG.COLORS.CYCLONE, type: 'spark'\n        });\n      }\n    }\n  }\n  canUse(name) { return this.cooldowns[name] <= 0; }\n  pulse() {\n    if (!this.canUse('pulse')) return false;\n    this.cooldowns.pulse = CONFIG.ABILITIES.PULSE.cooldown;\n    this.activePulse = { x: this.player.x, y: this.player.y, t: 0 };\n    this.particles.burst(this.player.x, this.player.y, 14, {\n      speed: 400, color: CONFIG.COLORS.WIND, life: 0.4, size: 3, type: 'triangle'\n    });\n    this.audio.pulse();\n    return true;\n  }\n  pull() {\n    if (!this.canUse('pull')) return false;\n    this.cooldowns.pull = CONFIG.ABILITIES.PULL.cooldown;\n    this.activePull = { x: this.player.x, y: this.player.y, t: 0 };\n    for (let i = 0; i < 8; i++) {\n      const a = (i / 8) * Math.PI * 2;\n      this.particles.spawn(\n        this.player.x + Math.cos(a) * 200,\n        this.player.y + Math.sin(a) * 200,\n        {\n          vx: -Math.cos(a) * 300,\n          vy: -Math.sin(a) * 300,\n          life: 0.4, size: 2, color: CONFIG.COLORS.WIND, type: 'spark'\n        }\n      );\n    }\n    this.audio.pull();\n    return true;\n  }\n  startStream() { this.streamActive = true; }\n  endStream() { this.streamActive = false; }\n  cyclone(targetX, targetY) {\n    if (!this.canUse('cyclone')) return false;\n    this.cooldowns.cyclone = CONFIG.ABILITIES.CYCLONE.cooldown;\n    // clamp to arena\n    const x = Utils.clamp(targetX, 0, CONFIG.ARENA_W);
+    const y = Utils.clamp(targetY, 0, CONFIG.ARENA_H);
+    this.cyclones.push({ x, y, t: 0, life: CONFIG.ABILITIES.CYCLONE.duration });
+    this.particles.burst(x, y, 20, {
+      speed: 100, color: CONFIG.COLORS.CYCLONE, life: 0.6, size: 3, type: 'spark'
+    });
+    this.audio.cyclone();
+    return true;
+  }
+  shield() {
+    if (!this.canUse('shield') || this.activeShield) return false;
+    this.activeShield = true;
+    this.shieldTime = CONFIG.ABILITIES.SHIELD.duration;
+    this.particles.burst(this.player.x, this.player.y, 12, {
+      speed: 150, color: CONFIG.COLORS.SHIELD, life: 0.4, size: 2, type: 'spark'
+    });
+    this.audio.shield();
+    return true;
+  }
+  absorbDamage() {
+    if (this.activeShield) {
+      this.activeShield = false;
+      this.shieldTime = 0;
+      this.cooldowns.shield = CONFIG.ABILITIES.SHIELD.cooldown;
+      this.particles.burst(this.player.x, this.player.y, 24, {
+        speed: 300, color: CONFIG.COLORS.SHIELD, life: 0.6, size: 3, type: 'spark'
+      });
+      this.audio.shield();
+      return true;
+    }
+    return false;
+  }
+}
+", "js/enemies/base.js": "// Base enemy class
+class Enemy {
+  constructor(x, y, type) {
+    this.x = x; this.y = y;
+    this.type = type;
+    const cfg = CONFIG.ENEMIES[type];
+    this.maxHp = cfg.hp;
+    this.hp = cfg.hp;
+    this.speed = cfg.speed;
+    this.mass = cfg.mass;
+    this.radius = cfg.radius;
+    this.score = cfg.score;
+    this.color = cfg.color;
+    this.vx = 0; this.vy = 0;
+    this.alive = true;
+    this.stunTime = 0;
+    this.flashTime = 0;
+    this.spawnAnim = 0.4;
+    this.attackCd = 0;
+    this.facing = 0;
+    this.dyingT = 0;
+    this.dying = false;
+    this.spawnedAt = performance.now() / 1000;
+    this.t = 0;
+  }
+  takeDamage(dmg) {
+    this.hp -= dmg;
+    this.flashTime = 0.12;
+    if (this.hp <= 0 && !this.dying) {
+      this.dying = true;
+      this.dyingT = 0;
+      return true;
+    }
+    return false;
+  }
+  knockback(fx, fy) {
+    this.vx += fx;
+    this.vy += fy;
+    this.stunTime = CONFIG.PHYSICS.STUN_DURATION;
+  }
+  update(dt, player, enemies, particles) {
+    this.t += dt;
+    if (this.dying) {
+      this.dyingT += dt;
+      if (this.dyingT > 0.4) this.alive = false;
+      return;
+    }
+    if (this.spawnAnim > 0) this.spawnAnim -= dt;
+    if (this.stunTime > 0) this.stunTime -= dt;
+    if (this.flashTime > 0) this.flashTime -= dt;
+    if (this.attackCd > 0) this.attackCd -= dt;
+    // basic movement toward player if not stunned
+    if (this.stunTime <= 0) {
+      const dx = player.x - this.x;
+      const dy = player.y - this.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d > 0.1) {
+        this.facing = Math.atan2(dy, dx);
+        const desiredVx = (dx / d) * this.speed;
+        const desiredVy = (dy / d) * this.speed;
+        this.vx = Utils.lerp(this.vx, desiredVx, 0.05);
+        this.vy = Utils.lerp(this.vy, desiredVy, 0.05);
+      }
+    }
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    Physics.friction(this, CONFIG.PHYSICS.FRICTION);
+    // attack player on contact
+    if (Utils.distSq(this.x, this.y, player.x, player.y) < (this.radius + CONFIG.PLAYER.RADIUS) * (this.radius + CONFIG.PLAYER.RADIUS)) {
+      if (this.attackCd <= 0 && this.spawnAnim <= 0) {
+        if (!player.abilities.absorbDamage()) {
+          player.takeDamage(1, this.facing);
+        }
+        this.attackCd = 0.7;
+      }
+    }
+    // keep in arena
+    this.x = Utils.clamp(this.x, this.radius, CONFIG.ARENA_W - this.radius);
+    this.y = Utils.clamp(this.y, this.radius, CONFIG.ARENA_H - this.radius);
+    // avoid overlap with other enemies (simple separation)
+    for (let i = 0; i < enemies.length; i++) {
+      const o = enemies[i];
+      if (o === this || !o.alive) continue;
+      const dx = this.x - o.x;
+      const dy = this.y - o.y;
+      const minD = this.radius + o.radius;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < minD * minD && d2 > 0.01) {
+        const d = Math.sqrt(d2);
+        const push = (minD - d) * 0.5;
+        this.x += (dx / d) * push;
+        this.y += (dy / d) * push;
+      }
+    }
+  }
+  drawBody(ctx) {
+    // override per type\n  }
+  draw(ctx) {
+    if (this.dying) {
+      ctx.save();
+      ctx.globalAlpha = 1 - this.dyingT / 0.4;
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.dyingT * 6);
+      ctx.scale(1 + this.dyingT * 2, 1 + this.dyingT * 2);
+      this.drawBody(ctx);
+      ctx.restore();
+      return;
+    }
+    if (this.spawnAnim > 0) {
+      ctx.save();
+      ctx.globalAlpha = 1 - this.spawnAnim / 0.4;
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.spawnAnim * 4);
+      const s = 1 - this.spawnAnim * 0.5;
+      ctx.scale(s, s);
+      this.drawBody(ctx);
+      ctx.restore();
+      return;
+    }
+    this.drawBody(ctx);
+  }
+}
+", "js/enemies/ember-sprite.js": "// Ember Sprite: basic, fast, weak
+class EmberSprite extends Enemy {
+  constructor(x, y) { super(x, y, 'EMBER'); }
+  drawBody(ctx) {
+    ctx.save();
+    // glowing ember
+    const pulse = 0.5 + Math.sin(this.t * 8) * 0.1;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = this.color;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2 + this.facing;
+      const r = this.radius * (0.9 + pulse * 0.2);
+      ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+    }
+    ctx.closePath();
+    ctx.fill();
+    // inner core
+    ctx.fillStyle = '#fff7a0';
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // eyes
+    ctx.fillStyle = '#fff';
+    const eyeOff = this.radius * 0.35;
+    const eyeAng = this.facing;
+    const ex = Math.cos(eyeAng) * eyeOff;
+    const ey = Math.sin(eyeAng) * eyeOff;
+    const perpX = -Math.sin(eyeAng);
+    const perpY = Math.cos(eyeAng);
+    ctx.beginPath();
+    ctx.arc(ex + perpX * 4, ey + perpY * 4, 1.5, 0, Math.PI * 2);
+    ctx.arc(ex - perpX * 4, ey - perpY * 4, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    // flash white when hit
+    if (this.flashTime > 0) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  update(dt, player, enemies, particles) {
+    super.update(dt, player, enemies, particles);
+    // ember trail
+    if (this.spawnAnim <= 0 && !this.dying && Math.random() < 0.6) {
+      particles.spawn(this.x + Utils.rand(-3, 3), this.y + Utils.rand(-3, 3), {
+        vx: Utils.rand(-20, 20), vy: Utils.rand(-20, 20),
+        life: 0.4, size: Utils.rand(2, 4), color: this.color, type: 'ember'
+      });
+    }
+  }
+}
+", "js/enemies/stone-golem.js": "// Stone Golem: tanky, slow
+class StoneGolem extends Enemy {
+  constructor(x, y) { super(x, y, 'GOLEM'); this.slamCd = 1.5; }
+  drawBody(ctx) {
+    ctx.save();
+    ctx.fillStyle = this.color;
+    ctx.strokeStyle = '#2a2218';
+    ctx.lineWidth = 2;
+    // body
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // cracks
+    ctx.strokeStyle = '#1a1410';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 4; i++) {
+      const a = (i / 4) * Math.PI * 2 + this.t * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const r1 = Utils.rand(this.radius * 0.3, this.radius * 0.7);
+      const r2 = this.radius * 0.95;
+      ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+      ctx.lineTo(Math.cos(a + 0.2) * r2, Math.sin(a + 0.2) * r2);
+      ctx.stroke();
+    }
+    // glowing eye
+    const eyeAng = this.facing;
+    ctx.fillStyle = '#ffaa00';
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = '#ffaa00';
+    ctx.beginPath();
+    ctx.arc(Math.cos(eyeAng) * this.radius * 0.4, Math.sin(eyeAng) * this.radius * 0.4, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // arms hint
+    ctx.fillStyle = '#3d3329';
+    ctx.fillRect(-this.radius * 0.9, -4, 5, 8);
+    ctx.fillRect(this.radius * 0.9 - 5, -4, 5, 8);
+    if (this.flashTime > 0) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  update(dt, player, enemies, particles) {
+    const wasSlamming = this.slamCd > 1.3;
+    super.update(dt, player, enemies, particles);
+    if (this.spawnAnim <= 0 && !this.dying) {
+      this.slamCd -= dt;
+      if (this.slamCd <= 0) {
+        // slam: short burst
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        const d = Math.sqrt(dx * dx + dy * dy);
+        if (d > 0.1 && d < 200) {
+          this.vx = (dx / d) * 350;
+          this.vy = (dy / d) * 350;
+          this.stunTime = 0.2;
+        }
+        this.slamCd = 2.5;
+      }
+    }
+  }
+}
+", "js/enemies/flame-wisp.js": "// Flame Wisp: very fast, fragile, erratic
+class FlameWisp extends Enemy {
+  constructor(x, y) { super(x, y, 'WISP'); this.orbitPhase = Math.random() * Math.PI * 2; }
+  drawBody(ctx) {
+    ctx.save();
+    const pulse = 0.5 + Math.sin(this.t * 12) * 0.2;
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = this.color;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius * (0.7 + pulse * 0.4), 0, Math.PI * 2);
+    ctx.fill();
+    // tail
+    const tailAng = this.facing + Math.PI;
+    for (let i = 0; i < 4; i++) {
+      const r = this.radius * (1 + i * 0.5);
+      const a = tailAng + Math.sin(this.t * 10 + i) * 0.3;
+      ctx.globalAlpha = 0.6 - i * 0.15;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * r, Math.sin(a) * r, this.radius * (0.4 - i * 0.08), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    // eye
+    ctx.fillStyle = '#fff';
+    const eyeAng = this.facing;
+    ctx.beginPath();
+    ctx.arc(Math.cos(eyeAng) * this.radius * 0.3, Math.sin(eyeAng) * this.radius * 0.3, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    if (this.flashTime > 0) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius * 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  update(dt, player, enemies, particles) {
+    super.update(dt, player, enemies, particles);
+    // wisp flame trail
+    if (this.spawnAnim <= 0 && !this.dying && Math.random() < 0.8) {
+      particles.spawn(this.x, this.y, {
+        vx: -this.vx * 0.2 + Utils.rand(-30, 30),
+        vy: -this.vy * 0.2 + Utils.rand(-30, 30),
+        life: 0.3, size: Utils.rand(2, 5), color: this.color, type: 'ember'
+      });
+    }
+  }
+}
+", "js/enemies/storm-drake.js": "// Storm Drake: ranged, shoots lightning
+class StormDrake extends Enemy {
+  constructor(x, y) { super(x, y, 'DRAKE'); this.shootCd = 1.5; }
+  drawBody(ctx) {
+    ctx.save();
+    // body
+    ctx.fillStyle = this.color;
+    ctx.strokeStyle = '#5b21b6';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;\n      const r = this.radius * (0.85 + (i % 2) * 0.15);\n      ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);\n    }\n    ctx.closePath();\n    ctx.fill();\n    ctx.stroke();\n    // wings\n    const wingAng = Math.sin(this.t * 4) * 0.4;\n    ctx.fillStyle = '#6d28d9';\n    ctx.beginPath();\n    ctx.moveTo(0, 0);\n    ctx.lineTo(Math.cos(this.facing - 1 + wingAng) * this.radius * 1.6, Math.sin(this.facing - 1 + wingAng) * this.radius * 1.6);\n    ctx.lineTo(Math.cos(this.facing - 0.5) * this.radius * 0.8, Math.sin(this.facing - 0.5) * this.radius * 0.8);\n    ctx.closePath();\n    ctx.fill();\n    ctx.beginPath();\n    ctx.moveTo(0, 0);\n    ctx.lineTo(Math.cos(this.facing + 1 - wingAng) * this.radius * 1.6, Math.sin(this.facing + 1 - wingAng) * this.radius * 1.6);\n    ctx.lineTo(Math.cos(this.facing + 0.5) * this.radius * 0.8, Math.sin(this.facing + 0.5) * this.radius * 0.8);\n    ctx.closePath();\n    ctx.fill();\n    // eyes\n    ctx.fillStyle = '#fbbf24';\n    ctx.shadowBlur = 8;\n    ctx.shadowColor = '#fbbf24';\n    const eyeOff = this.radius * 0.4;\n    const eyeAng = this.facing;\n    const ex = Math.cos(eyeAng) * eyeOff;\n    const ey = Math.sin(eyeAng) * eyeOff;\n    const perpX = -Math.sin(eyeAng);\n    const perpY = Math.cos(eyeAng);\n    ctx.beginPath();\n    ctx.arc(ex + perpX * 3, ey + perpY * 3, 1.5, 0, Math.PI * 2);\n    ctx.arc(ex - perpX * 3, ey - perpY * 3, 1.5, 0, Math.PI * 2);\n    ctx.fill();\n    ctx.shadowBlur = 0;\n    if (this.flashTime > 0) {\n      ctx.globalCompositeOperation = 'lighter';\n      ctx.fillStyle = '#fff';\n      ctx.beginPath();\n      ctx.arc(0, 0, this.radius * 1.2, 0, Math.PI * 2);\n      ctx.fill();\n    }\n    ctx.restore();\n  }\n  update(dt, player, enemies, particles) {\n    super.update(dt, player, enemies, particles);\n    if (this.spawnAnim <= 0 && !this.dying) {\n      this.shootCd -= dt;\n      if (this.shootCd <= 0) {\n        this.shootCd = 2.0;\n        // shoot projectile toward player\n        const dx = player.x - this.x;\n        const dy = player.y - this.y;\n        const d = Math.sqrt(dx * dx + dy * dy);\n        if (d > 0.1 && d < 500) {\n          const spd = 300;\n          projectiles.push({\n            x: this.x, y: this.y,\n            vx: (dx / d) * spd, vy: (dy / d) * spd,\n            life: 2, color: '#fbbf24', radius: 5,\n            owner: 'enemy', damage: 1\n          });\n          particles.burst(this.x, this.y, 5, {\n            vx: dx / d * 100, vy: dy / d * 100,\n            speed: 80, color: '#fbbf24', life: 0.3, size: 2, type: 'spark'\n          });\n        }\n      }\n    }\n  }\n}\n", "js/wave-manager.js": "// Wave manager: spawns enemies over time\nclass WaveManager {\n  constructor(game) {\n    this.game = game;\n    this.waveNumber = 0;\n    this.state = 'rest'; // 'rest', 'spawning', 'active', 'complete'\n    this.timer = 0;\n    this.spawnQueue = [];\n    this.spawnIndex = 0;\n    this.spawnInterval = 0.4;\n    this.toSpawn = 0;\n    this.restDuration = CONFIG.WAVES.REST_DURATION;\n  }\n  buildWave(n) {\n    const wave = { totalEnemies: 0, types: [] };\n    // scaling formula\n    const base = 4 + n * 2;\n    wave.totalEnemies = Math.min(40, base);\n    // composition\n    if (n === 1) {\n      for (let i = 0; i < wave.totalEnemies; i++) wave.types.push('EMBER');\n    } else {\n      const emberCount = Math.floor(wave.totalEnemies * 0.5);\n      const wispCount = Math.floor(wave.totalEnemies * 0.25);\n      const golemCount = Math.floor(wave.totalEnemies * 0.15);\n      const drakeCount = wave.totalEnemies - emberCount - wispCount - golemCount;\n      for (let i = 0; i < emberCount; i++) wave.types.push('EMBER');\n      for (let i = 0; i < wispCount; i++) wave.types.push('WISP');\n      for (let i = 0; i < golemCount; i++) wave.types.push('GOLEM');\n      for (let i = 0; i < drakeCount; i++) wave.types.push('DRAKE');\n      // shuffle\n      for (let i = wave.types.length - 1; i > 0; i--) {\n        const j = Math.floor(Math.random() * (i + 1));\n        [wave.types[i], wave.types[j]] = [wave.types[j], wave.types[i]];\n      }\n    }\n    return wave;\n  }\n  startWave(n) {\n    this.waveNumber = n;\n    const wave = this.buildWave(n);\n    this.spawnQueue = wave.types;\n    this.toSpawn = wave.totalEnemies;\n    this.spawnIndex = 0;\n    this.spawnInterval = Math.max(0.15, 0.5 - n * 0.02);\n    this.state = 'spawning';\n    this.timer = 0;\n    this.game.audio.waveStart();\n    this.game.ui.showWaveBanner(n, this.toSpawn);\n  }\n  update(dt) {\n    if (this.state === 'rest') {\n      this.timer -= dt;\n      if (this.timer <= 0) {\n        this.startWave(this.waveNumber + 1);\n      }\n    } else if (this.state === 'spawning') {\n      this.timer += dt;\n      if (this.timer >= this.spawnInterval && this.spawnIndex < this.spawnQueue.length) {\n        this.timer = 0;\n        this.spawnEnemy(this.spawnQueue[this.spawnIndex]);\n        this.spawnIndex++;\n        if (this.spawnIndex >= this.spawnQueue.length) {\n          this.state = 'active';\n        }\n      }\n    } else if (this.state === 'active') {\n      // check if any enemies alive\n      const alive = this.game.enemies.some(e => e.alive && !e.dying);\n      if (!alive && this.toSpawn === this.spawnIndex) {\n        this.completeWave();\n      }\n    }\n  }\n  spawnEnemy(type) {\n    // spawn at random arena edge\n    const side = Math.floor(Math.random() * 4);\n    let x, y;\n    if (side === 0) { x = Math.random() * CONFIG.ARENA_W; y = -30; }\n    else if (side === 1) { x = CONFIG.ARENA_W + 30; y = Math.random() * CONFIG.ARENA_H; }\n    else if (side === 2) { x = Math.random() * CONFIG.ARENA_W; y = CONFIG.ARENA_H + 30; }\n    else { x = -30; y = Math.random() * CONFIG.ARENA_H; }\n    let enemy;\n    if (type === 'EMBER') enemy = new EmberSprite(x, y);\n    else if (type === 'GOLEM') enemy = new StoneGolem(x, y);\n    else if (type === 'WISP') enemy = new FlameWisp(x, y);\n    else if (type === 'DRAKE') enemy = new StormDrake(x, y);\n    if (enemy) {\n      this.game.enemies.push(enemy);\n      this.game.particles.burst(x, y, 6, {\n        speed: 80, color: '#7fdbff', life: 0.4, size: 2, type: 'spark'\n      });\n    }\n  }\n  completeWave() {\n    this.state = 'rest';\n    this.timer = this.restDuration;\n    this.game.audio.waveComplete();\n    // heal player\n    if (this.game.player.hp < CONFIG.PLAYER.MAX_HP) {\n      this.game.player.hp = Math.min(CONFIG.PLAYER.MAX_HP, this.game.player.hp + CONFIG.WAVES.HEAL_AMOUNT);\n    }\n    // clear projectiles\n    projectiles.length = 0;\n    this.game.ui.showRestBanner(this.restDuration);\n  }\n  get progress() {\n    if (this.state === 'rest') return 1 - (this.timer / this.restDuration);\n    if (this.state === 'spawning') return this.spawnIndex / this.toSpawn;\n    return 1;\n  }\n}\n", "js/player.js": "// Player class\nclass Player {\n  constructor(x, y) {\n    this.x = x; this.y = y;\n    this.vx = 0; this.vy = 0;\n    this.radius = CONFIG.PLAYER.RADIUS;\n    this.speed = CONFIG.PLAYER.SPEED;\n    this.hp = CONFIG.PLAYER.MAX_HP;\n    this.maxHp = CONFIG.PLAYER.MAX_HP;\n    this.facing = 0;\n    this.dashTime = 0;\n    this.dashCd = 0;\n    this.invincTime = 0;\n    this.abilities = null; // assigned by game\n    this.mouseX = 0;\n    this.mouseY = 0;\n    this.t = 0;\n  }\n  update(dt, input, particles) {\n    this.t += dt;\n    if (this.invincTime > 0) this.invincTime -= dt;\n    if (this.dashCd > 0) this.dashCd -= dt;\n    // store mouse\n    this.mouseX = input.mouse.worldX;\n    this.mouseY = input.mouse.worldY;\n    // facing\n    this.facing = Math.atan2(this.mouseY - this.y, this.mouseX - this.x);\n    // dash\n    if (input.justPressed('shift') && this.dashCd <= 0) {\n      this.dashTime = CONFIG.PLAYER.DASH_DURATION;\n      this.dashCd = 0.6;\n      const dx = this.mouseX - this.x;\n      const dy = this.mouseY - this.y;\n      const d = Math.sqrt(dx * dx + dy * dy);\n      if (d > 0.1) {\n        this.vx = (dx / d) * CONFIG.PLAYER.DASH_SPEED;\n        this.vy = (dy / d) * CONFIG.PLAYER.DASH_SPEED;\n      } else {\n        this.vx = Math.cos(this.facing) * CONFIG.PLAYER.DASH_SPEED;\n        this.vy = Math.sin(this.facing) * CONFIG.PLAYER.DASH_SPEED;\n      }\n      particles.burst(this.x, this.y, 8, {\n        speed: 150, color: CONFIG.COLORS.WIND, life: 0.3, size: 2, type: 'spark'\n      });\n    }\n    // movement input\n    let mx = 0, my = 0;\n    if (input.isDown('w', 'arrowup')) my -= 1;\n    if (input.isDown('s', 'arrowdown')) my += 1;\n    if (input.isDown('a', 'arrowleft')) mx -= 1;\n    if (input.isDown('d', 'arrowright')) mx += 1;\n    if (this.dashTime > 0) {\n      this.dashTime -= dt;\n    } else {\n      if (mx !== 0 || my !== 0) {\n        const m = Math.sqrt(mx * mx + my * my);\n        mx /= m; my /= m;\n        this.vx += mx * CONFIG.PLAYER.SPEED * CONFIG.PLAYER.ACCEL * 5 * dt * 5;\n        this.vy += my * CONFIG.PLAYER.SPEED * CONFIG.PLAYER.ACCEL * 5 * dt * 5;\n      } else {\n        this.vx *= CONFIG.PLAYER.FRICTION;\n        this.vy *= CONFIG.PLAYER.FRICTION;\n      }\n    }\n    // cap speed\n    const maxSpd = this.dashTime > 0 ? CONFIG.PLAYER.DASH_SPEED : this.speed;\n    Physics.capVelocity(this, maxSpd);\n    this.x += this.vx * dt;\n    this.y += this.vy * dt;\n    // clamp to arena\n    this.x = Utils.clamp(this.x, this.radius, CONFIG.ARENA_W - this.radius);\n    this.y = Utils.clamp(this.y, this.radius, CONFIG.ARENA_H - this.radius);\n    // collision with enemies (we already use attackCd in enemy update; here we just check for push)\n    // trail particles\n    if (this.dashTime > 0) {\n      particles.spawn(this.x + Utils.rand(-5, 5), this.y + Utils.rand(-5, 5), {\n        vx: Utils.rand(-50, 50), vy: Utils.rand(-50, 50),\n        life: 0.3, size: Utils.rand(2, 4), color: CONFIG.COLORS.WIND, type: 'spark'\n      });\n    } else if ((mx !== 0 || my !== 0) && Math.random() < 0.3) {\n      particles.spawn(this.x + Utils.rand(-8, 8), this.y + Utils.rand(-8, 8), {\n        vx: -this.vx * 0.1 + Utils.rand(-20, 20),\n        vy: -this.vy * 0.1 + Utils.rand(-20, 20),\n        life: 0.4, size: Utils.rand(1, 3), color: CONFIG.COLORS.WIND, type: 'spark'\n      });\n    }\n  }\n  takeDamage(dmg, fromAngle) {\n    if (this.invincTime > 0) return;\n    this.hp -= dmg;\n    this.invincTime = CONFIG.PLAYER.INVINC_TIME;\n    // knockback\n    this.vx += Math.cos(fromAngle) * 300;\n    this.vy += Math.sin(fromAngle) * 300;\n    // particles\n    const p = this.abilities ? this.abilities.particles : null;\n    if (p) p.burst(this.x, this.y, 10, { speed: 150, color: '#ef4444', life: 0.3, size: 2, type: 'spark' });\n  }\n  draw(ctx) {\n    ctx.save();\n    ctx.translate(this.x, this.y);\n    // invincibility flash\n    if (this.invincTime > 0 && Math.floor(this.invincTime * 20) % 2 === 0) {\n      ctx.globalAlpha = 0.4;\n    }\n    // shadow\n    ctx.fillStyle = 'rgba(0,0,0,0.3)';\n    ctx.beginPath();\n    ctx.ellipse(0, 4, this.radius * 0.9, this.radius * 0.4, 0, 0, Math.PI * 2);\n    ctx.fill();\n    // body\n    const pulse = 0.95 + Math.sin(this.t * 6) * 0.05;\n    ctx.fillStyle = CONFIG.COLORS.PLAYER;\n    ctx.shadowBlur = 20;\n    ctx.shadowColor = CONFIG.COLORS.PLAYER_CORE;\n    ctx.beginPath();\n    ctx.arc(0, 0, this.radius * pulse, 0, Math.PI * 2);\n    ctx.fill();\n    // core\n    ctx.fillStyle = CONFIG.COLORS.PLAYER_CORE;\n    ctx.shadowBlur = 25;\n    ctx.shadowColor = CONFIG.COLORS.PLAYER_CORE;\n    ctx.beginPath();\n    ctx.arc(0, 0, this.radius * 0.4, 0, Math.PI * 2);\n    ctx.fill();\n    // facing indicator\n    ctx.shadowBlur = 0;\n    ctx.strokeStyle = CONFIG.COLORS.PLAYER_CORE;\n    ctx.lineWidth = 2;\n    ctx.beginPath();\n    ctx.moveTo(0, 0);\n    ctx.lineTo(Math.cos(this.facing) * this.radius * 1.5, Math.sin(this.facing) * this.radius * 1.5);\n    ctx.stroke();\n    // dash trail\n    if (this.dashTime > 0) {\n      ctx.globalAlpha = this.dashTime / CONFIG.PLAYER.DASH_DURATION * 0.5;\n      ctx.fillStyle = CONFIG.COLORS.WIND;\n      for (let i = 0; i < 3; i++) {\n        ctx.beginPath();\n        ctx.arc(-Math.cos(this.facing) * i * 8, -Math.sin(this.facing) * i * 8, this.radius * (1 - i * 0.2), 0, Math.PI * 2);\n        ctx.fill();\n      }\n    }\n    ctx.restore();\n  }\n}\n", "js/ui/hud.js": "// HUD: health, wave, score, ability cooldowns\nclass HUD {\n  constructor(game) {\n    this.game = game;\n    this.waveBannerTime = 0;\n    this.waveBannerText = '';\n    this.restBannerTime = 0;\n    this.restBannerDuration = 0;\n    this.damageFlash = 0;\n  }\n  showWaveBanner(n, total) {\n    this.waveBannerText = `WAVE ${n}
