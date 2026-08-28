@@ -1,0 +1,410 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 27352 (char 27351)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n    <title>Split Pong</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏓</text></svg>\">\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        body {\n            background: #0d0d0d;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            min-height: 100vh;\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            overflow: hidden;\n        }\n        #gameContainer {\n            position: relative;\n            touch-action: none;\n        }\n        #gameCanvas {\n            display: block;\n            border: 3px solid #00ffff;\n            border-radius: 8px;\n            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3), inset 0 0 60px rgba(0, 0, 0, 0.5);\n        }\n        #ui {\n            position: absolute;\n            top: 10px;\n            left: 0;\n            right: 0;\n            display: flex;\n            justify-content: space-between;\n            align-items: flex-start;\n            padding: 0 20px;\n            pointer-events: none;\n        }\n        .score-display {\n            color: #fff;\n            font-size: 24px;\n            font-weight: bold;\n            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);\n        }\n        .timer {\n            position: absolute;\n            top: 10px;\n            left: 50%;\n            transform: translateX(-50%);\n            color: #ffff00;\n            font-size: 18px;\n            font-family: 'Courier New', monospace;\n            text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);\n        }\n        .ball-counter {\n            color: #ff00ff;\n            font-size: 16px;\n            text-shadow: 0 0 10px rgba(255, 0, 255, 0.5);\n        }\n        .high-score {\n            position: absolute;\n            top: 35px;\n            left: 50%;\n            transform: translateX(-50%);\n            color: #ff6b6b;\n            font-size: 14px;\n            font-family: 'Courier New', monospace;\n        }\n        #menu {\n            position: absolute;\n            top: 0;\n            left: 0;\n            right: 0;\n            bottom: 0;\n            background: rgba(0, 0, 0, 0.9);\n            display: flex;\n            flex-direction: column;\n            justify-content: center;\n            align-items: center;\n            border-radius: 8px;\n        }\n        #menu.hidden { display: none; }\n        #menu h1 {\n            font-size: 48px;\n            color: #00ffff;\n            text-shadow: 0 0 20px #00ffff;\n            margin-bottom: 30px;\n        }\n        .menu-btn {\n            padding: 15px 40px;\n            margin: 10px;\n            font-size: 20px;\n            background: linear-gradient(135deg, #00ffff, #ff00ff);\n            border: none;\n            border-radius: 30px;\n            color: #000;\n            font-weight: bold;\n            cursor: pointer;\n            transition: all 0.3s;\n            text-transform: uppercase;\n        }\n        .menu-btn:hover {\n            transform: scale(1.1);\n            box-shadow: 0 0 30px rgba(0, 255, 255, 0.7);\n        }\n        .mode-btn {\n            padding: 12px 30px;\n            margin: 8px;\n            font-size: 16px;\n            background: linear-gradient(135deg, #ff6b6b, #ffd93d);\n            border: none;\n            border-radius: 25px;\n            color: #000;\n            font-weight: bold;\n            cursor: pointer;\n            transition: all 0.3s;\n        }\n        .mode-btn:hover {\n            transform: scale(1.05);\n            box-shadow: 0 0 20px rgba(255, 107, 107, 0.7);\n        }\n        .mode-btn.selected {\n            background: linear-gradient(135deg, #00ff88, #00ffff);\n            box-shadow: 0 0 25px rgba(0, 255, 136, 0.7);\n        }\n        #pauseMenu, #gameOverScreen {\n            position: absolute;\n            top: 0;\n            left: 0;\n            right: 0;\n            bottom: 0;\n            background: rgba(0, 0, 0, 0.85);\n            display: flex;\n            flex-direction: column;\n            justify-content: center;\n            align-items: center;\n            border-radius: 8px;\n        }\n        #pauseMenu.hidden, #gameOverScreen.hidden { display: none; }\n        #pauseMenu h2, #gameOverScreen h2 {\n            font-size: 36px;\n            color: #ff00ff;\n            text-shadow: 0 0 20px #ff00ff;\n            margin-bottom: 20px;\n        }\n        #gameOverScreen h2 {\n            color: #00ff88;\n            text-shadow: 0 0 20px #00ff88;\n        }\n        #settings {\n            position: absolute;\n            top: 0;\n            left: 0;\n            right: 0;\n            bottom: 0;\n            background: rgba(0, 0, 0, 0.95);\n            display: flex;\n            flex-direction: column;\n            justify-content: center;\n            align-items: center;\n            border-radius: 8px;\n        }\n        #settings.hidden { display: none; }\n        #settings h2 {\n            font-size: 32px;\n            color: #ffd93d;\n            margin-bottom: 30px;\n        }\n        .setting-row {\n            display: flex;\n            justify-content: space-between;\n            align-items: center;\n            margin: 15px 0;\n            color: #fff;\n            font-size: 18px;\n            width: 300px;\n        }\n        .toggle {\n            width: 60px;\n            height: 30px;\n            background: #333;\n            border-radius: 15px;\n            position: relative;\n            cursor: pointer;\n            transition: all 0.3s;\n        }\n        .toggle.active { background: #00ff88; }\n        .toggle::after {\n            content: '';\n            position: absolute;\n            width: 26px;\n            height: 26px;\n            background: #fff;\n            border-radius: 50%;\n            top: 2px;\n            left: 2px;\n            transition: all 0.3s;\n        }\n        .toggle.active::after { left: 32px; }\n        .difficulty-btns {\n            display: flex;\n            gap: 10px;\n        }\n        .diff-btn {\n            padding: 8px 16px;\n            border: 2px solid #00ffff;\n            background: transparent;\n            color: #00ffff;\n            border-radius: 20px;\n            cursor: pointer;\n            transition: all 0.3s;\n        }\n        .diff-btn.selected {\n            background: #00ffff;\n            color: #000;\n        }\n        #mobileControls {\n            position: absolute;\n            bottom: 20px;\n            left: 0;\n            right: 0;\n            display: none;\n            justify-content: space-between;\n            padding: 0 20px;\n            pointer-events: none;\n        }\n        .mobile-btn {\n            width: 70px;\n            height: 70px;\n            background: rgba(0, 255, 255, 0.3);\n            border: 3px solid #00ffff;\n            border-radius: 50%;\n            color: #00ffff;\n            font-size: 30px;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            pointer-events: auto;\n            user-select: none;\n            -webkit-user-select: none;\n        }\n        @media (max-width: 850px) {\n            #gameCanvas {\n                width: 100vw !important;\n                height: auto !important;\n            }\n            #mobileControls { display: flex; }\n            .score-display { font-size: 16px; }\n            .timer { font-size: 14px; }\n            #menu h1 { font-size: 32px; }\n            .menu-btn { padding: 12px 30px; font-size: 16px; }\n        }\n    </style>\n</head>\n<body>\n    <div id=\"gameContainer\">\n        <canvas id=\"gameCanvas\" width=\"800\" height=\"600\"></canvas>\n        <div id=\"ui\">\n            <div class=\"score-display\" id=\"score1\">Player 1: 0</div>\n            <div class=\"ball-counter\" id=\"ballCounter\">Balls: 1</div>\n        </div>\n        <div class=\"timer\" id=\"timer\">00:00.00</div>\n        <div class=\"high-score\" id=\"highScore\">Best: --</div>\n        <div id=\"mobileControls\">\n            <div class=\"mobile-btn\" id=\"p1Up\">▲</div>\n            <div class=\"mobile-btn\" id=\"p1Down\">▼</div>\n            <div class=\"mobile-btn\" id=\"p2Up\">▲</div>\n            <div class=\"mobile-btn\" id=\"p2Down\">▼</div>\n        </div>\n        <div id=\"menu\">\n            <h1>🏓 SPLIT PONG</h1>\n            <button class=\"mode-btn selected\" data-mode=\"single\">Single Player</button>\n            <button class=\"mode-btn\" data-mode=\"two-player\">Two Player</button>\n            <button class=\"mode-btn\" data-mode=\"challenge\">Challenge Mode</button>\n            <button class=\"menu-btn\" id=\"startBtn\">START GAME</button>\n            <button class=\"menu-btn\" id=\"settingsBtn\" style=\"background: linear-gradient(135deg, #ffd93d, #ff6b6b);\">⚙ SETTINGS</button>\n        </div>\n        <div id=\"pauseMenu\" class=\"hidden\">\n            <h2>⏸ PAUSED</h2>\n            <button class=\"menu-btn\" id=\"resumeBtn\">RESUME</button>\n            <button class=\"menu-btn\" id=\"restartBtn\">RESTART</button>\n            <button class=\"menu-btn\" id=\"pauseSettingsBtn\">SETTINGS</button>\n            <button class=\"menu-btn\" id=\"quitBtn\" style=\"background: linear-gradient(135deg, #ff6b6b, #ff0000);\">QUIT</button>\n        </div>\n        <div id=\"gameOverScreen\" class=\"hidden\">\n            <h2 id=\"winnerText\">PLAYER 1 WINS!</h2>\n            <p style=\"color: #fff; margin: 10px;\">Final Score: <span id=\"finalScore\">10 - 5</span></p>\n            <p style=\"color: #ffff00; margin: 10px;\">Time: <span id=\"finalTime\">01:23.45</span></p>\n            <button class=\"menu-btn\" id=\"playAgainBtn\">PLAY AGAIN</button>\n            <button class=\"menu-btn\" id=\"menuBtn\" style=\"background: linear-gradient(135deg, #ff6b6b, #ffd93d);\">MAIN MENU</button>\n        </div>\n        <div id=\"settings\" class=\"hidden\">\n            <h2>⚙ SETTINGS</h2>\n            <div class=\"setting-row\">\n                <span>Sound Effects</span>\n                <div class=\"toggle active\" id=\"soundToggle\"></div>\n            </div>\n            <div class=\"setting-row\">\n                <span>Music</span>\n                <div class=\"toggle\" id=\"musicToggle\"></div>\n            </div>\n            <div class=\"setting-row\">\n                <span>Difficulty</span>\n                <div class=\"difficulty-btns\">\n                    <button class=\"diff-btn\" data-diff=\"easy\">Easy</button>\n                    <button class=\"diff-btn selected\" data-diff=\"normal\">Normal</button>\n                    <button class=\"diff-btn\" data-diff=\"hard\">Hard</button>\n                </div>\n            </div>\n            <button class=\"menu-btn\" id=\"backBtn\" style=\"margin-top: 30px;\">BACK</button>\n        </div>\n    </div>\n    <script type=\"module\">\nimport { Game } from './src/game/Game.js';\nimport { InputManager } from './src/managers/InputManager.js';\nimport { AudioManager } from './src/managers/AudioManager.js';\n\nconst canvas = document.getElementById('gameCanvas');\nconst game = new Game(canvas);\nconst input = new InputManager(game);\nconst audio = new AudioManager();\n\ngame.audio = audio;\n\n// Menu elements\nconst menu = document.getElementById('menu');\nconst pauseMenu = document.getElementById('pauseMenu');\nconst gameOverScreen = document.getElementById('gameOverScreen');\nconst settings = document.getElementById('settings');\n\n// Buttons\ndocument.getElementById('startBtn').addEventListener('click', () => {\n    menu.classList.add('hidden');\n    game.start();\n});\n\ndocument.getElementById('resumeBtn').addEventListener('click', () => {\n    pauseMenu.classList.add('hidden');\n    game.resume();\n});\n\ndocument.getElementById('restartBtn').addEventListener('click', () => {\n    pauseMenu.classList.add('hidden');\n    game.restart();\n});\n\ndocument.getElementById('quitBtn').addEventListener('click', () => {\n    pauseMenu.classList.add('hidden');\n    menu.classList.remove('hidden');\n    game.quit();\n});\n\ndocument.getElementById('playAgainBtn').addEventListener('click', () => {\n    gameOverScreen.classList.add('hidden');\n    game.restart();\n});\n\ndocument.getElementById('menuBtn').addEventListener('click', () => {\n    gameOverScreen.classList.add('hidden');\n    menu.classList.remove('hidden');\n    game.quit();\n});\n\ndocument.getElementById('settingsBtn').addEventListener('click', () => {\n    menu.classList.add('hidden');\n    settings.classList.remove('hidden');\n});\n\ndocument.getElementById('pauseSettingsBtn').addEventListener('click', () => {\n    pauseMenu.classList.add('hidden');\n    settings.classList.remove('hidden');\n});\n\ndocument.getElementById('backBtn').addEventListener('click', () => {\n    settings.classList.add('hidden');\n    menu.classList.remove('hidden');\n});\n\n// Mode selection\ndocument.querySelectorAll('.mode-btn').forEach(btn => {\n    btn.addEventListener('click', () => {\n        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));\n        btn.classList.add('selected');\n        game.setMode(btn.dataset.mode);\n    });\n});\n\n// Settings toggles\nconst soundToggle = document.getElementById('soundToggle');\nsoundToggle.addEventListener('click', () => {\n    soundToggle.classList.toggle('active');\n    game.soundEnabled = soundToggle.classList.contains('active');\n});\n\nconst musicToggle = document.getElementById('musicToggle');\nmusicToggle.addEventListener('click', () => {\n    musicToggle.classList.toggle('active');\n    game.musicEnabled = musicToggle.classList.contains('active');\n    if (game.musicEnabled) audio.startMusic();\n    else audio.stopMusic();\n});\n\n// Difficulty\ndocument.querySelectorAll('.diff-btn').forEach(btn => {\n    btn.addEventListener('click', () => {\n        document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('selected'));\n        btn.classList.add('selected');\n        game.setDifficulty(btn.dataset.diff);\n    });\n});\n\n// Mobile controls\n['p1Up', 'p1Down', 'p2Up', 'p2Down'].forEach(id => {\n    const el = document.getElementById(id);\n    const player = id.startsWith('p1') ? 1 : 2;\n    const direction = id.endsWith('Up') ? -1 : 1;\n    \n    el.addEventListener('touchstart', (e) => {\n        e.preventDefault();\n        input.mobileInput[player] = direction;\n    });\n    el.addEventListener('touchend', (e) => {\n        e.preventDefault();\n        input.mobileInput[player] = 0;\n    });\n});\n\n// Keyboard pause\ndocument.addEventListener('keydown', (e) => {\n    if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {\n        if (game.state === 'playing') game.pause();\n        else if (game.state === 'paused') game.resume();\n    }\n});\n\n// Show game over\nwindow.showGameOver = (winner, score1, score2, time) => {\n    document.getElementById('winnerText').textContent = `${winner} WINS!`;\n    document.getElementById('finalScore').textContent = `${score1} - ${score2}`;\n    document.getElementById('finalTime').textContent = time;\n    gameOverScreen.classList.remove('hidden');\n};\n\n// Show pause\nwindow.showPause = () => {\n    pauseMenu.classList.remove('hidden');\n};\n\n// Update UI\nwindow.updateUI = (score1, score2, ballCount, timer, highScore) => {\n    document.getElementById('score1').textContent = `Player 1: ${score1} | Player 2: ${score2}`;\n    document.getElementById('ballCounter').textContent = `Balls: ${ballCount}`;\n    document.getElementById('timer').textContent = timer;\n    document.getElementById('highScore').textContent = `Best: ${highScore || '--'}`;\n};\n\n// Load high score\nconst savedHighScore = localStorage.getItem('splitPongHighScore');\nif (savedHighScore) {\n    document.getElementById('highScore').textContent = `Best: ${savedHighScore}`;\n}\n    </script>\n</body>\n</html>", "src/game/Game.js": "import { Ball } from '../entities/Ball.js';\nimport { Paddle } from '../entities/Paddle.js';\nimport { Particle } from '../entities/Particle.js';\nimport { CollisionManager } from '../managers/CollisionManager.js';\n\nexport class Game {\n    constructor(canvas) {\n        this.canvas = canvas;\n        this.ctx = canvas.getContext('2d');\n        this.width = canvas.width;\n        this.height = canvas.height;\n        \n        this.state = 'menu';\n        this.mode = 'single';\n        this.difficulty = 'normal';\n        this.soundEnabled = true;\n        this.musicEnabled = false;\n        \n        this.speedIncrease = 0.05;\n        this.winScore = 10;\n        \n        this.leftPaddle = new Paddle(30, this.height / 2, 1);\n        this.rightPaddle = new Paddle(this.width - 45, this.height / 2, 2);\n        \n        this.balls = [];\n        this.particles = [];\n        \n        this.score1 = 0;\n        this.score2 = 0;\n        this.baseSpeed = 5;\n        this.speedMultiplier = 1;\n        \n        this.collisionManager = new CollisionManager();\n        \n        this.lastTime = 0;\n        this.startTime = 0;\n        this.elapsedTime = 0;\n        \n        this.gridSize = 40;\n        this.colors = {\n            background: '#1a1a1a',\n            grid: '#252525',\n            paddle: '#00ffff',\n            paddleBorder: '#ffffff',\n            ball: '#ffffff',\n            ballGlow: 'rgba(255, 255, 255, 0.3)',\n            trail: 'rgba(255, 255, 255, 0.3)',\n            particle: ['#ff00ff', '#00ffff', '#ffff00', '#ff6b6b']\n        };\n        \n        this.highScore = localStorage.getItem('splitPongHighScore');\n    }\n    \n    setMode(mode) {\n        this.mode = mode;\n        if (mode === 'challenge') {\n            this.speedIncrease = 0.15;\n            this.winScore = 15;\n        } else {\n            this.speedIncrease = 0.05;\n            this.winScore = 10;\n        }\n    }\n    \n    setDifficulty(diff) {\n        this.difficulty = diff;\n        switch(diff) {\n            case 'easy':\n                this.speedIncrease = 0.03;\n                break;\n            case 'hard':\n                this.speedIncrease = 0.07;\n                break;\n            default:\n                this.speedIncrease = 0.05;\n        }\n    }\n    \n    start() {\n        this.state = 'playing';\n        this.score1 = 0;\n        this.score2 = 0;\n        this.speedMultiplier = 1;\n        this.startTime = performance.now();\n        this.elapsedTime = 0;\n        \n        this.leftPaddle.reset();\n        this.rightPaddle.reset();\n        \n        this.balls = [this.createBall()];\n        this.particles = [];\n        \n        this.lastTime = performance.now();\n        this.gameLoop();\n    }\n    \n    createBall(x = this.width / 2, y = this.height / 2, angle = null) {\n        if (angle === null) {\n            angle = Math.PI / 4 + Math.random() * Math.PI / 2;\n            if (Math.random() > 0.5) angle = Math.PI - angle;\n        }\n        const speed = this.baseSpeed * this.speedMultiplier;\n        return new Ball(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed);\n    }\n    \n    restart() {\n        this.start();\n    }\n    \n    pause() {\n        if (this.state === 'playing') {\n            this.state = 'paused';\n            this.pauseTime = performance.now();\n            window.showPause();\n        }\n    }\n    \n    resume() {\n        if (this.state === 'paused') {\n            this.state = 'playing';\n            this.startTime += performance.now() - this.pauseTime;\n            this.lastTime = performance.now();\n            this.gameLoop();\n        }\n    }\n    \n    quit() {\n        this.state = 'menu';\n    }\n    \n    gameLoop() {\n        if (this.state !== 'playing') return;\n        \n        const currentTime = performance.now();\n        const deltaTime = (currentTime - this.lastTime) / 1000;\n        this.lastTime = currentTime;\n        \n        this.elapsedTime = currentTime - this.startTime;\n        \n        this.update(deltaTime);\n        this.render();\n        this.updateUI();\n        \n        requestAnimationFrame(() => this.gameLoop());\n    }\n    \n    update(dt) {\n        // Update paddles\n        this.leftPaddle.update(dt, this.height);\n        this.rightPaddle.update(dt, this.height);\n        \n        // AI for single player\n        if (this.mode === 'single') {\n            const targetY = this.balls.length > 0 ? \n                this.balls.reduce((sum, b) => sum + b.y, 0) / this.balls.length : \n                this.height / 2;\n            const aiAccuracy = this.difficulty === 'easy' ? 0.7 : \n                              this.difficulty === 'hard' ? 0.95 : 0.85;\n            \n            if (targetY < this.rightPaddle.y - 20) {\n                this.rightPaddle.velocity = -8 * aiAccuracy;\n            } else if (targetY > this.rightPaddle.y + 20) {\n                this.rightPaddle.velocity = 8 * aiAccuracy;\n            }\n        }\n        \n        // Update balls\n        for (let i = this.balls.length - 1; i >= 0; i--) {\n            const ball = this.balls[i];\n            ball.update(dt);\n            \n            // Wall collision\n            if (ball.y - ball.radius < 0 || ball.y + ball.radius > this.height) {\n                ball.vy *= -1;\n                ball.y = Math.max(ball.radius, Math.min(this.height - ball.radius, ball.y));\n                this.audio?.playSound('wall');\n            }\n            \n            // Score\n            if (ball.x - ball.radius < 0) {\n                this.score2++;\n                this.balls.splice(i, 1);\n                this.audio?.playSound('score');\n                this.spawnScoreParticles(0, ball.y);\n                continue;\n            }\n            if (ball.x + ball.radius > this.width) {\n                this.score1++;\n                this.balls.splice(i, 1);\n                this.audio?.playSound('score');\n                this.spawnScoreParticles(this.width, ball.y);\n                continue;\n            }\n            \n            // Paddle collision\n            const collision = this.collisionManager.checkPaddleCollision(ball, this.leftPaddle, this.rightPaddle);\n            if (collision) {\n                this.handlePaddleHit(ball, collision);\n            }\n        }\n        \n        // Spawn new ball if all destroyed\n        if (this.balls.length === 0) {\n            this.balls.push(this.createBall());\n            this.speedMultiplier = 1;\n        }\n        \n        // Update particles\n        for (let i = this.particles.length - 1; i >= 0; i--) {\n            this.particles[i].update(dt);\n            if (this.particles[i].life <= 0) {\n                this.particles.splice(i, 1);\n            }\n        }\n        \n        // Check win\n        if (this.score1 >= this.winScore || this.score2 >= this.winScore) {\n            this.endGame();\n        }\n    }\n    \n    handlePaddleHit(ball, paddle) {\n        this.audio?.playSound('paddle', ball.speed / this.baseSpeed);\n        \n        // Spawn particles\n        this.spawnSplitParticles(ball.x, ball.y);\n        \n        // Reverse direction\n        ball.vx *= -1;\n        ball.x = paddle.side === 'left' ? paddle.x + paddle.width + ball.radius : paddle.x - ball.radius;\n        \n        // Increase speed\n        this.speedMultiplier *= (1 + this.speedIncrease);\n        \n        // Split ball\n        if (this.mode === 'challenge') {\n            this.splitBall(ball, 3);\n        } else {\n            this.splitBall(ball, 2);\n        }\n        \n        // Remove original ball\n        const index = this.balls.indexOf(ball);\n        if (index > -1) {\n            this.balls.splice(index, 1);\n        }\n    }\n    \n    splitBall(ball, count) {\n        const angle = Math.atan2(ball.vy, ball.vx);\n        const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);\n        const spreadAngle = Math.PI / 6; // 30 degrees\n        \n        for (let i = 0; i < count; i++) {\n            const offsetAngle = spreadAngle * ((i / (count - 1)) - 0.5) * 2;\n            const newAngle = angle + offsetAngle;\n            const newBall = new Ball(\n                ball.x + (Math.random() - 0.5) * 2,\n                ball.y + (Math.random() - 0.5) * 2,\n                Math.cos(newAngle) * speed,\n                Math.sin(newAngle) * speed\n            );\n            newBall.trail = [];\n            this.balls.push(newBall);\n        }\n        \n        this.audio?.playSound('split');\n    }\n    \n    spawnSplitParticles(x, y) {\n        const count = 5 + Math.floor(Math.random() * 6);\n        for (let i = 0; i < count; i++) {\n            const angle = Math.random() * Math.PI * 2;\n            const speed = 50 + Math.random() * 100;\n            const color = this.colors.particle[Math.floor(Math.random() * this.colors.particle.length)];\n            this.particles.push(new Particle(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, color));\n        }\n    }\n    \n    spawnScoreParticles(x, y) {\n        for (let i = 0; i < 15; i++) {\n            const angle = Math.random() * Math.PI * 2;\n            const speed = 100 + Math.random() * 150;\n            this.particles.push(new Particle(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, '#00ff88'));\n        }\n    }\n    \n    render() {\n        const ctx = this.ctx;\n        \n        // Clear and draw background\n        ctx.fillStyle = this.colors.background;\n        ctx.fillRect(0, 0, this.width, this.height);\n        \n        // Draw grid\n        ctx.strokeStyle = this.colors.grid;\n        ctx.lineWidth = 1;\n        for (let x = 0; x <= this.width; x += this.gridSize) {\n            ctx.beginPath();\n            ctx.moveTo(x, 0);\n            ctx.lineTo(x, this.height);\n            ctx.stroke();\n        }\n        for (let y = 0; y <= this.height; y += this.gridSize) {\n            ctx.beginPath();\n            ctx.moveTo(0, y);\n            ctx.lineTo(this.width, y);\n            ctx.stroke();\n        }\n        \n        // Draw center line\n        ctx.strokeStyle = '#333';\n        ctx.lineWidth = 2;\n        ctx.setLineDash([10, 10]);\n        ctx.beginPath();\n        ctx.moveTo(this.width / 2, 0);\n        ctx.lineTo(this.width / 2, this.height);\n        ctx.stroke();\n        ctx.setLineDash([]);\n        \n        // Draw paddles\n        this.drawPaddle(this.leftPaddle);\n        this.drawPaddle(this.rightPaddle);\n        \n        // Draw ball trails\n        for (const ball of this.balls) {\n            this.drawTrail(ball);\n        }\n        \n        // Draw balls\n        for (const ball of this.balls) {\n            this.drawBall(ball);\n        }\n        \n        // Draw particles\n        for (const particle of this.particles) {\n            this.drawParticle(particle);\n        }\n    }\ndrawParticle(particle) {
+        const ctx = this.ctx;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+        ctx.fillStyle = particle.color;
+        ctx.globalAlpha = particle.life;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+    
+    drawBall(ball) {
+        const ctx = this.ctx;
+        
+        // Glow effect
+        const gradient = ctx.createRadialGradient(ball.x, ball.y, 0, ball.x, ball.y, ball.radius * 3);
+        gradient.addColorStop(0, this.colors.ballGlow);
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius * 3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Ball
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.colors.ball;
+        ctx.fill();
+    }
+    
+    drawTrail(ball) {
+        const ctx = this.ctx;
+        for (let i = 0; i < ball.trail.length; i++) {
+            const t = ball.trail[i];
+            const alpha = (i / ball.trail.length) * 0.5;
+            const size = ball.radius * (i / ball.trail.length);
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, size, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+            ctx.fill();
+        }
+    }
+    
+    drawPaddle(paddle) {
+        const ctx = this.ctx;
+        
+        // Glow
+        ctx.shadowColor = paddle.color;
+        ctx.shadowBlur = 20;
+        
+        // Paddle body
+        ctx.fillStyle = paddle.color;
+        ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+        
+        // Border
+        ctx.strokeStyle = this.colors.paddleBorder;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(paddle.x, paddle.y, paddle.width, paddle.height);
+        
+        // Reset shadow
+        ctx.shadowBlur = 0;
+    }
+    
+    updateUI() {
+        const minutes = Math.floor(this.elapsedTime / 60000);
+        const seconds = Math.floor((this.elapsedTime % 60000) / 1000);
+        const ms = Math.floor((this.elapsedTime % 1000) / 10);
+        const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+        
+        window.updateUI(this.score1, this.score2, this.balls.length, timeStr, this.highScore);
+    }
+    
+    endGame() {
+        this.state = 'ended';
+        const winner = this.score1 >= this.winScore ? 'PLAYER 1' : 'PLAYER 2';
+        const minutes = Math.floor(this.elapsedTime / 60000);
+        const seconds = Math.floor((this.elapsedTime % 60000) / 1000);
+        const ms = Math.floor((this.elapsedTime % 1000) / 10);
+        const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+        
+        // Update high score
+        if (this.elapsedTime > 0) {
+            const score = Math.floor((this.score1 + this.score2) * 1000 / this.elapsedTime * 1000);
+            if (!this.highScore || score > this.highScore) {
+                this.highScore = score;
+                localStorage.setItem('splitPongHighScore', score);
+            }
+        }
+        
+        window.showGameOver(winner, this.score1, this.score2, timeStr);
+    }
+}", "src/entities/Ball.js": "export class Ball {
+    constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.radius = 8;
+        this.trail = [];
+        this.maxTrailLength = 10;
+    }
+    
+    update(dt) {
+        // Store trail
+        this.trail.push({ x: this.x, y: this.y });
+        if (this.trail.length > this.maxTrailLength) {
+            this.trail.shift();
+        }
+        
+        // Update position
+        this.x += this.vx;
+        this.y += this.vy;
+    }
+    
+    get speed() {
+        return Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    }
+}", "src/entities/Paddle.js": "export class Paddle {
+    constructor(x, y, player) {
+        this.x = x;
+        this.y = y;
+        this.width = 15;
+        this.height = 80;
+        this.velocity = 0;
+        this.maxSpeed = 8;
+        this.player = player;
+        this.side = player === 1 ? 'left' : 'right';
+        this.color = player === 1 ? '#00ffff' : '#ff00ff';
+    }
+    
+    update(dt, canvasHeight) {
+        this.y += this.velocity;
+        
+        // Clamp to canvas
+        if (this.y < 0) {
+            this.y = 0;
+            this.velocity = 0;
+        }
+        if (this.y + this.height > canvasHeight) {
+            this.y = canvasHeight - this.height;
+            this.velocity = 0;
+        }
+    }
+    
+    reset() {
+        this.y = 300 - this.height / 2;
+        this.velocity = 0;
+    }
+    
+    moveUp(speed = 1) {
+        this.velocity = -this.maxSpeed * speed;
+    }
+    
+    moveDown(speed = 1) {
+        this.velocity = this.maxSpeed * speed;
+    }
+    
+    stop() {
+        this.velocity = 0;
+    }
+}", "src/entities/Particle.js": "export class Particle {
+    constructor(x, y, vx, vy, color, size = null) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = color;
+        this.radius = size || 3 + Math.random() * 3;
+        this.life = 1;
+        this.decay = 0.02 + Math.random() * 0.02;
+        this.friction = 0.98;
+    }
+    
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        this.life -= this.decay;
+    }
+}", "src/managers/InputManager.js": "export class InputManager {
+    constructor(game) {
+        this.game = game;
+        this.keys = {};
+        this.mobileInput = { 1: 0, 2: 0 };
+        
+        this.setupKeyboard();
+        this.setupMouse();
+        this.setupTouch();
+    }
+    
+    setupKeyboard() {
+        window.addEventListener('keydown', (e) => {
+            this.keys[e.code] = true;
+            this.handleInput();
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            this.keys[e.code] = false;
+            this.handleInput();
+        });
+    }
+    
+    handleInput() {
+        const game = this.game;
+        if (game.state !== 'playing') return;
+        
+        // Player 1 controls (WASD and Arrow keys)
+        if (this.keys['KeyW'] || this.keys['ArrowUp'] || this.mobileInput[1] === -1) {
+            game.leftPaddle.moveUp();
+        } else if (this.keys['KeyS'] || this.keys['ArrowDown'] || this.mobileInput[1] === 1) {
+            game.leftPaddle.moveDown();
+        } else {
+            game.leftPaddle.stop();
+        }
+        
+        // Player 2 controls (I, K or Numpad)
+        if (game.mode === 'two-player') {
+            if (this.keys['KeyI'] || this.keys['Numpad8']) {
+                game.rightPaddle.moveUp();
+            } else if (this.keys['KeyK'] || this.keys['Numpad5'] || this.keys['Numpad2']) {
+                game.rightPaddle.moveDown();
+            } else {
+                game.rightPaddle.stop();
+            }
+        }
+    }
+    
+    setupMouse() {
+        const canvas = this.game.canvas;
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (this.game.state !== 'playing' || this.game.mode === 'single') return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const scaleY = canvas.height / rect.height;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+            
+            // Move right paddle towards mouse
+            const targetY = mouseY - this.game.rightPaddle.height / 2;
+            if (targetY < this.game.rightPaddle.y) {
+                this.game.rightPaddle.moveUp(0.5);
+            } else if (targetY > this.game.rightPaddle.y + 5) {
+                this.game.rightPaddle.moveDown(0.5);
+            } else {
+                this.game.rightPaddle.stop();
+            }
+        });
+    }
+    
+    setupTouch() {
+        const canvas = this.game.canvas;
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (this.game.state !== 'playing' || this.game.mode === 'single') return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const scaleY = canvas.height / rect.height;
+            const touch = e.touches[0];
+            const touchY = (touch.clientY - rect.top) * scaleY;
+            
+            const targetY = touchY - this.game.rightPaddle.height / 2;
+            if (targetY < this.game.rightPaddle.y) {
+                this.game.rightPaddle.moveUp(0.5);
+            } else if (targetY > this.game.rightPaddle.y + 5) {
+                this.game.rightPaddle.moveDown(0.5);
+            } else {
+                this.game.rightPaddle.stop();
+            }
+        });
+    }
+}", "src/managers/AudioManager.js": "export class AudioManager {
+    constructor() {
+        this.audioContext = null;
+        this.enabled = true;
+        this.musicEnabled = false;
+        this.musicNodes = [];
+    }
+    
+    init() {
+        if (this.audioContext) return;
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.log('Audio not supported');
+        }
+    }
+    
+    playSound(type, volume = 1) {
+        if (!this.enabled || !this.audioContext) return;
+        
+        const ctx = this.audioContext;
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        const now = ctx.currentTime;
+        
+        switch (type) {
+            case 'paddle':
+                oscillator.frequency.setValueAtTime(440 * volume, now);
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                oscillator.start(now);
+                oscillator.stop(now + 0.1);
+                break;
+            case 'wall':
+                oscillator.frequency.setValueAtTime(220, now);
+                oscillator.type = 'triangle';
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                oscillator.start(now);
+                oscillator.stop(now + 0.05);
+                break;
+            case 'score':
+                oscillator.frequency.setValueAtTime(523, now);
+                oscillator.frequency.setValueAtTime(659, now + 0.1);
+                oscillator.frequency.setValueAtTime(784, now + 0.2);
+                oscillator.type = 'square';
+                gainNode.gain.setValueAtTime(0.2, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                oscillator.start(now);
+                oscillator.stop(now + 0.3);
+                break;
+            case 'split':
+                oscillator.frequency.setValueAtTime(880, now);
+                oscillator.frequency.exponentialRampToValueAtTime(1760, now + 0.1);
+                oscillator.type = 'sawtooth';
+                gainNode.gain.setValueAtTime(0.15, now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                oscillator.start(now);
+                oscillator.stop(now + 0.15);
+                break;
+        }
+    }
+    
+    startMusic() {
+        if (!this.audioContext || this.musicEnabled) return;
+        this.musicEnabled = true;
+        
+        // Create ambient background music using oscillators
+        this.createAmbientMusic();
+    }
+    
+    createAmbientMusic() {
+        const ctx = this.audioContext;
+        if (!ctx) return;
+        
+        // Bass drone
+        const bass = ctx.createOscillator();
+        const bassGain = ctx.createGain();
+        bass.type = 'sine';
+        bass.frequency.value = 55;
+        bassGain.gain.value = 0.05;
+        bass.connect(bassGain);
+        bassGain.connect(ctx.destination);
+        bass.start();
+        this.musicNodes.push({ node: bass, gain: bassGain });
+        
+        // High shimmer
+        const shimmer = ctx.createOscillator();
+        const shimmerGain = ctx.createGain();
+        shimmer.type = 'sine';
+        shimmer.frequency.value = 880;
+        shimmerGain.gain.value = 0.02;
+        shimmer.connect(shimmerGain);
+        shimmerGain.connect(ctx.destination);
+        shimmer.start();
+        this.musicNodes.push({ node: shimmer, gain: shimmerGain });
+    }
+    
+    stopMusic() {
+        this.musicEnabled = false;
+        for (const { node, gain } of this.musicNodes) {
+            gain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.5);
+            setTimeout(() => node.stop(), 500);
+        }
+        this.musicNodes = [];
+    }
+}", "src/managers/CollisionManager.js": "export class CollisionManager {
+    checkPaddleCollision(ball, leftPaddle, rightPaddle) {
+        // Left paddle
+        if (this.isColliding(ball, leftPaddle)) {
+            return leftPaddle;
+        }
+        
+        // Right paddle
+        if (this.isColliding(ball, rightPaddle)) {
+            return rightPaddle;
+        }
+        
+        return null;
+    }
+    
+    isColliding(ball, paddle) {
+        return ball.x - ball.radius < paddle.x + paddle.width &&
+               ball.x + ball.radius > paddle.x &&
+               ball.y - ball.radius < paddle.y + paddle.height &&
+               ball.y + ball.radius > paddle.y;
+    }
+    
+    isCollidingWithWall(ball, canvasHeight) {
+        return ball.y - ball.radius < 0 || ball.y + ball.radius > canvasHeight;
+    }
+}"}

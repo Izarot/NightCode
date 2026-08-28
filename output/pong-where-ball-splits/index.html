@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split Pong</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏓</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #1a1a1a; 
+            color: white; 
+            font-family: 'Arial', sans-serif; 
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .game-container { 
+            position: relative; 
+            width: 100vw; 
+            height: 100vh;
+            max-width: 800px;
+            max-height: 600px;
+        }
+        canvas { 
+            width: 100%; 
+            height: 100%; 
+            display: block;
+            background: #1a1a1a;
+        }
+        .hud { 
+            position: absolute; 
+            top: 10px; 
+            left: 0; 
+            right: 0; 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 0 20px;
+            font-size: 18px;
+            text-shadow: 0 0 5px #00ffff;
+        }
+        .score { font-weight: bold; }
+        .menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        .menu button {
+            margin: 10px;
+            padding: 10px 20px;
+            background: #00ffff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="hud">
+            <div class="score" id="score">Player 1: 0 | Player 2: 0</div>
+            <div class="ball-count" id="ballCount">Balls: 1</div>
+        </div>
+        <div class="menu" id="pauseMenu">
+            <h2>PAUSED</h2>
+            <button onclick="resumeGame()">Resume</button>
+            <button onclick="restartGame()">Restart</button>
+            <button onclick="quitGame()">Quit</button>
+        </div>
+        <div class="menu" id="gameOverMenu">
+            <h2 id="winnerText">Player 1 Wins!</h2>
+            <button onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game Constants
+        const CANVAS_WIDTH = 800;
+        const CANVAS_HEIGHT = 600;
+        const PADDLE_WIDTH = 15;
+        const PADDLE_HEIGHT = 100;
+        const BALL_SIZE = 15;
+        const INITIAL_SPEED = 5;
+        const WINNING_SCORE = 10;
+        const SPEED_INCREASE = 0.05;
+        
+        // Game State
+        let canvas, ctx;
+        let leftPaddle, rightPaddle;
+        let balls = [];
+        let particles = [];
+        let score = { player1: 0, player2: 0 };
+        let gameRunning = false;
+        let paused = false;
+        let gameOver = false;
+        let gameMode = 'two-player'; // 'single-player', 'challenge'
+        let difficulty = 'easy'; // 'easy', 'hard'
+        let soundEnabled = true;
+        let speedMultiplier = 1;
+        
+        // Input Handling
+        const keys = {};
+        
+        // Audio Context
+        let audioCtx;
+        
+        // Initialize Game
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = CANVAS_WIDTH;
+            canvas.height = CANVAS_HEIGHT;
+            
+            // Initialize audio
+            try {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            } catch(e) {
+                console.log('Web Audio API not supported');
+            }
+            
+            // Initialize paddles
+            leftPaddle = {
+                x: 20,
+                y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
+                width: PADDLE_WIDTH,
+                height: PADDLE_HEIGHT,
+                velocity: 0,
+                color: '#00ffff'
+            };
+            
+            rightPaddle = {
+                x: CANVAS_WIDTH - 20 - PADDLE_WIDTH,
+                y: CANVAS_HEIGHT / 2 - PADDLE_HEIGHT / 2,
+                width: PADDLE_WIDTH,
+                height: PADDLE_HEIGHT,
+                velocity: 0,
+                color: '#00ffff'
+            };
+            
+            // Initialize balls
+            resetBall();
+            
+            // Event Listeners
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+            
+            // Start game loop
+            gameRunning = true;
+            gameLoop();
+        }
+        
+        // Reset Ball to Center
+        function resetBall() {
+            balls = [];
+            const angle = Math.random() * Math.PI / 2 + Math.PI / 4; // 45-135 degrees
+            const direction = Math.random() < 0.5 ? 1 : -1;
+            
+            balls.push({
+                x: CANVAS_WIDTH / 2,
+                y: CANVAS_HEIGHT / 2,
+                size: BALL_SIZE,
+                velocityX: Math.cos(angle) * INITIAL_SPEED * direction,
+                velocityY: Math.sin(angle) * INITIAL_SPEED,
+                trail: []
+            });
+            
+            updateBallCount();
+        }
+        
+        // Update Ball Count Display
+        function updateBallCount() {
+            document.getElementById('ballCount').textContent = `Balls: ${balls.length}`;
+        }
+        
+        // Game Loop
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            requestAnimationFrame(gameLoop);
+            
+            if (paused || gameOver) return;
+            
+            update();
+            render();
+        }
+        
+        // Update Game State
+        function update() {
+            // Update paddles
+            updatePaddle(leftPaddle, keys['w'] || keys['W'], keys['s'] || keys['S']);
+            
+            if (gameMode === 'two-player') {
+                updatePaddle(rightPaddle, keys['ArrowUp'], keys['ArrowDown']);
+            } else if (gameMode === 'single-player') {
+                // AI Control
+                const targetBall = balls.reduce((closest, ball) => {
+                    const dist = Math.abs(ball.y - rightPaddle.y + PADDLE_HEIGHT/2);
+                    return dist < closest.dist ? { dist, ball } : closest;
+                }, { dist: Infinity, ball: null }).ball;
+                
+                if (targetBall) {
+                    const paddleCenter = rightPaddle.y + PADDLE_HEIGHT/2;
+                    const diff = targetBall.y - paddleCenter;
+                    if (Math.abs(diff) > 2) {
+                        rightPaddle.velocity += Math.sign(diff) * 0.8;
+                    }
+                }
+                updatePaddle(rightPaddle, false, false);
+            }
+            
+            // Update balls
+            for (let i = balls.length - 1; i >= 0; i--) {
+                const ball = balls[i];
+                
+                // Update position
+                ball.x += ball.velocityX * speedMultiplier;
+                ball.y += ball.velocityY * speedMultiplier;
+                
+                // Add to trail
+                ball.trail.push({x: ball.x, y: ball.y});
+                if (ball.trail.length > 10) ball.trail.shift();
+                
+                // Wall collision
+                if (ball.y - ball.size/2 < 0 || ball.y + ball.size/2 > CANVAS_HEIGHT) {
+                    ball.velocityY *= -1;
+                    playSound('wall');
+                }
+                
+                // Score collision
+                if (ball.x < 0) {
+                    score.player2++;
+                    updateScore();
+                    checkGameOver();
+                    balls.splice(i, 1);
+                    continue;
+                } else if (ball.x > CANVAS_WIDTH) {
+                    score.player1++;
+                    updateScore();
+                    checkGameOver();
+                    balls.splice(i, 1);
+                    continue;
+                }
+                
+                // Paddle collision
+                if (checkPaddleCollision(ball, leftPaddle) || checkPaddleCollision(ball, rightPaddle)) {
+                    handlePaddleHit(ball, ball.x < CANVAS_WIDTH/2 ? leftPaddle : rightPaddle);
+                }
+            }
+            
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.velocityX;
+                p.y += p.velocityY;
+                p.life -= 0.02;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            
+            // Respawn if no balls
+            if (balls.length === 0 && !gameOver) {
+                resetBall();
+            }
+        }
+        
+        // Update Paddle Position
+        function updatePaddle(paddle, upPressed, downPressed) {
+            if (upPressed) paddle.velocity -= 0.8;
+            if (downPressed) paddle.velocity += 0.8;
+            
+            paddle.velocity *= 0.95; // Friction
+            paddle.velocity = Math.max(-8, Math.min(8, paddle.velocity)); // Max speed
+            
+            paddle.y += paddle.velocity;
+            
+            // Boundary check
+            paddle.y = Math.max(0, Math.min(CANVAS_HEIGHT - paddle.height, paddle.y));
+        }
+        
+        // Check Ball-Paddle Collision
+        function checkPaddleCollision(ball, paddle) {
+            return ball.x - ball.size/2 < paddle.x + paddle.width &&
+                   ball.x + ball.size/2 > paddle.x &&
+                   ball.y - ball.size/2 < paddle.y + paddle.height &&
+                   ball.y + ball.size/2 > paddle.y;
+        }
+        
+        // Handle Paddle Hit
+        function handlePaddleHit(ball, paddle) {
+            // Reverse horizontal velocity
+            ball.velocityX *= -1;
+            
+            // Increase speed
+            speedMultiplier *= 1 + (difficulty === 'hard' ? 0.07 : 0.03);
+            
+            // Split ball
+            splitBall(ball, paddle);
+            
+            // Create particles
+            createParticles(ball.x, ball.y);
+            
+            // Play sound
+            playSound('paddle');
+        }
+        
+        // Split Ball into Two
+        function splitBall(originalBall, paddle) {
+            const index = balls.indexOf(originalBall);
+            if (index === -1) return;
+            
+            // Remove original ball
+            balls.splice(index, 1);
+            
+            // Create two new balls with 30 degree deviation
+            const angle = Math.atan2(originalBall.velocityY, originalBall.velocityX);
+            const speed = Math.sqrt(originalBall.velocityX**2 + originalBall.velocityY**2);
+            
+            for (let i = 0; i < 2; i++) {
+                const deviation = (i === 0 ? 1 : -1) * Math.PI / 6; // ±30 degrees
+                const newAngle = angle + deviation;
+                
+                const newBall = {
+                    x: originalBall.x + Math.cos(newAngle), // Offset to prevent overlap
+                    y: originalBall.y + Math.sin(newAngle),
+                    size: BALL_SIZE,
+                    velocityX: Math.cos(newAngle) * speed,
+                    velocityY: Math.sin(newAngle) * speed,
+                    trail: []
+                };
+                balls.push(newBall);
+            }
+            
+            // Challenge mode: split into three
+            if (gameMode === 'challenge') {
+                const thirdBall = {
+                    x: originalBall.x,
+                    y: originalBall.y,
+                    size: BALL_SIZE,
+                    velocityX: -originalBall.velocityX,
+                    velocityY: -originalBall.velocityY,
+                    trail: []
+                };
+                balls.push(thirdBall);
+            }
+            
+            updateBallCount();
+        }
+        
+        // Create Particle Effect
+        function createParticles(x, y) {
+            const particleCount = 5 + Math.random() * 5;
+            for (let i = 0; i < particleCount; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    size: 2 + Math.random() * 3,
+                    velocityX: (Math.random() - 0.5) * 5,
+                    velocityY: (Math.random() - 0.5) * 5,
+                    life: 1.0,
+                    color: ['#00ffff', '#ff00ff', '#ffffff'][Math.floor(Math.random() * 3)]
+                });
+            }
+        }
+        
+        // Render Game
+        function render() {
+            // Clear canvas
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+            
+            // Draw grid
+            drawGrid();
+            
+            // Draw center line
+            ctx.strokeStyle = '#333';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(CANVAS_WIDTH/2, 0);
+            ctx.lineTo(CANVAS_WIDTH/2, CANVAS_HEIGHT);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw paddles
+            drawPaddle(leftPaddle);
+            drawPaddle(rightPaddle);
+            
+            // Draw balls with trails
+            balls.forEach(ball => {
+                drawBall(ball);
+            });
+            
+            // Draw particles
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+        }
+        
+        // Draw Grid Background
+        function drawGrid() {
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 1;
+            
+            // Vertical lines
+            for (let x = 0; x <= CANVAS_WIDTH; x += 10) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, CANVAS_HEIGHT);
+                ctx.stroke();
+            }
+            
+            // Horizontal lines
+            for (let y = 0; y <= CANVAS_HEIGHT; y += 10) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(CANVAS_WIDTH, y);
+                ctx.stroke();
+            }
+        }
+        
+        // Draw Paddle with Neon Effect
+        function drawPaddle(paddle) {
+            // Glow effect
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = paddle.color;
+            
+            // Main paddle
+            ctx.fillStyle = paddle.color;
+            ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+            
+            // White border
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(paddle.x, paddle.y, paddle.width, paddle.height);
+        }
+        
+        // Draw Ball with Glow and Trail
+        function drawBall(ball) {
+            // Draw trail
+            ctx.globalAlpha = 0.3;
+            for (let i = 0; i < ball.trail.length - 1; i++) {
+                const point1 = ball.trail[i];
+                const point2 = ball.trail[i + 1];
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = ball.size * (i / ball.trail.length);
+                ctx.beginPath();
+                ctx.moveTo(point1.x, point1.y);
+                ctx.lineTo(point2.x, point2.y);
+                ctx.stroke();
+            }
+            ctx.globalAlpha = 1;
+            
+            // Draw ball with glow
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'white';
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.size/2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+        
+        // Update Score Display
+        function updateScore() {
+            document.getElementById('score').textContent = 
+                `Player 1: ${score.player1} | Player 2: ${score.player2}`;
+        }
+        
+        // Check Game Over Condition
+        function checkGameOver() {
+            if (score.player1 >= WINNING_SCORE || score.player2 >= WINNING_SCORE) {
+                gameOver = true;
+                document.getElementById('winnerText').textContent = 
+                    score.player1 >= WINNING_SCORE ? 'Player 1 Wins!' : 'Player 2 Wins!';
+                document.getElementById('gameOverMenu').classList.remove('hidden');
+            }
+        }
+        
+        // Sound Effects using Web Audio API
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            switch(type) {
+                case 'paddle':
+                    oscillator.frequency.value = 200 + Math.random() * 100;
+                    oscillator.type = 'sine';
+                    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                    break;
+                case 'split':
+                    oscillator.frequency.value = 400 + Math.random() * 200;
+                    oscillator.type = 'square';
+                    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    break;
+                case 'score':
+                    oscillator.frequency.value = 600;
+                    oscillator.type = 'sine';
+                    gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                    break;
+                case 'wall':
+                    oscillator.frequency.value = 100;
+                    oscillator.type = 'triangle';
+                    gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    break;
+            }
+            
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        }
+        
+        // Input Handlers
+        function handleKeyDown(e) {
+            keys[e.key] = true;
+            
+            // Pause menu
+            if (e.key === 'Escape' && gameRunning && !gameOver) {
+                togglePause();
+            }
+        }
+        
+        function handleKeyUp(e) {
+            keys[e.key] = false;
+        }
+        
+        // Menu Functions
+        function togglePause() {
+            paused = !paused;
+            document.getElementById('pauseMenu').classList.toggle('hidden', !paused);
+        }
+        
+        function resumeGame() {
+            togglePause();
+        }
+        
+        function restartGame() {
+            score = { player1: 0, player2: 0 };
+            speedMultiplier = 1;
+            balls = [];
+            particles = [];
+            gameOver = false;
+            paused = false;
+            document.getElementById('pauseMenu').classList.add('hidden');
+            document.getElementById('gameOverMenu').classList.add('hidden');
+            updateScore();
+            resetBall();
+        }
+        
+        function quitGame() {
+            gameRunning = false;
+            document.getElementById('pauseMenu').classList.add('hidden');
+            alert('Thanks for playing!');
+        }
+        
+        // Initialize game on load
+        window.onload = init;
+    </script>
+</body>
+</html>
