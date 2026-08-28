@@ -2,13 +2,77 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Responsive Game</title>
-<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>🚀</text></svg>">
-<link rel="stylesheet" href="style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>DUALITY</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0D0D1A;font-family:'Courier New',monospace}
+#c{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);image-rendering:pixelated}
+#hud{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none;color:#fff;font-size:14px;text-shadow:0 0 10px rgba(0,0,0,.8)}
+.timer{font-size:18px;color:#FFD700;text-shadow:0 0 15px #FFB800}
+.deaths{color:#00E5FF}
+.highscore{color:#FF6B00}
+#overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(13,13,26,.95);color:#fff;text-align:center;z-index:100}
+#overlay h1{font-size:48px;letter-spacing:8px;margin-bottom:20px;background:linear-gradient(90deg,#FFB800,#00E5FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#overlay p{margin:10px 0;font-size:16px;opacity:.7}
+#overlay button{margin-top:30px;padding:15px 40px;font-size:18px;background:linear-gradient(135deg,#FFB800,#FF6B00);border:none;color:#0D0D1A;font-family:inherit;cursor:pointer;letter-spacing:3px;text-transform:uppercase}
+#overlay button:hover{transform:scale(1.05)}
+#tether-ui{position:absolute;top:20px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none}
+#swap-cd{color:#fff;font-size:12px;opacity:.8}
+</style>
 </head>
 <body>
-<canvas id="gameCanvas"></canvas>
-<div id="timer">0.0s</div>
-<script src="script.js"></script>
+<canvas id="c"></canvas>
+<div id="hud"><div class="deaths">DEATHS: <span id="d">0</span></div><div class="timer" id="t">00:00.000</div><div class="highscore">BEST: <span id="h">--:--</span></div></div>
+<div id="tether-ui"><div id="tether-len">DIST: 0.0 / 6.0M</div><div id="swap-cd">SWAP READY</div></div>
+<div id="overlay"><h1>DUALITY</h1><p>Two bodies, one input</p><p>WASD/Arrows: Move | Space/W: Jump | Shift/E: Swap</p><button id="start">BEGIN</button></div>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d'),O=document.getElementById('overlay');
+let W,H,scale,keys={},lastTime=0,dt=1/60,accum=0,running=!1,time=0,deaths=0,best=localStorage.getItem('duality_best')||null;
+document.getElementById('h').textContent=best||'--:--';
+function resize(){const s=Math.min(window.innerWidth/1920,window.innerHeight/1080);W=Math.floor(1920*s);H=Math.floor(1080*s);C.width=W;C.height=H;scale=W/1920}
+resize();window.addEventListener('resize',resize);
+document.addEventListener('keydown',e=>{keys[e.code]=true;e.preventDefault()});
+document.addEventListener('keyup',e=>{keys[e.code]=false});
+document.getElementById('start').onclick=()=>{O.style.display='none';running=true;init()};
+
+// Audio
+const AC=new AudioContext();
+function beep(freq,dur,type='square',vol=.1){const o=AC.createOscillator(),g=AC.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(vol,AC.currentTime);g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+dur);o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+dur)}
+function jumpSnd(){beep(400,0.1);setTimeout(()=>beep(600,0.08),50)}
+function swapSnd(){beep(800,0.15,'sine',.15);beep(1200,0.2,'sine',.1)}
+function deathSnd(){beep(150,0.3,'sawtooth',.2);beep(100,0.4,'sawtooth',.15)}
+function winSnd(){beep(523,0.15,'sine',.2);setTimeout(()=>beep(659,0.15,'sine',.2),100);setTimeout(()=>beep(784,0.3,'sine',.25),200)}
+
+// Physics
+const GRAV=20,PRIME_COL='#FFB800',ECHO_COL='#00E5FF',WID=.6,HEI=1.8,MAX_TETHER=6,SWAP_CD=1.5;
+
+// Level
+const platforms=[{x:0,y:0,w:1920,h:40},{x:300,y:300,w:200,h:20},{x:600,y:500,w:200,h:20},{x:1000,y:350,w:200,h:20},{x:1300,y:200,w:200,h:20},{x:0,y:200,w:40,h:400},{x:1880,y:200,w:40,h:400},{x:500,y:700,w:300,h:20},{x:900,y:600,w:200,h:20},{x:1200,y:500,w:200,h:20}];
+const hazards=[{x:850,y:680,w:50,h:20},{x:1100,y:580,w:50,h:20},{x:600,y:480,w:50,h:20}];
+const goal={x:1750,y:100,w:80,h:100};
+const spawnA={x:150,y:150},spawnB={x:250,y:150};
+
+let A,B,swapCooldown=0,holdTime=0,holding=!1,timeScale=1,hitPause=0;
+
+function init(){A={x:spawnA.x,y:spawnA.y,vx:0,vy:0,w:WID,h:HEI,grounded:!1,canDash:!0,type:'prime'};B={x:spawnB.x,y:spawnB.y,vx:0,vy:0,w:WID,h:HEI,grounded:!1,canDouble:!0,type:'echo'};time=0;deaths=0;document.getElementById('d').textContent=0;swapCooldown=0;hitPause=0}
+
+function collides(e,p){return e.x<p.x+p.w&&e.x+e.w>p.x&&e.y<p.y+p.h&&e.y+e.h>p.y}
+function rectCol(e,x,y,w,h){return e.x<w+x&&e.x+e.w>x&&e.y<h+y&&e.y+e.h>y}
+
+function updateChar(c,left,right,jump){c.vx+=(left?-45:right?45:0)*dt;if(!left&&!right)c.vx*=c===A?.85:.98;c.vx=Math.max(-4.5,Math.min(4.5,c.vx));const g=c===A?GRAV:GRAV*.75;c.vy-=g*dt;c.vy=Math.max(-15,Math.min(15,c.vy));c.x+=c.vx*dt*60;c.y+=c.vy*dt*60;c.grounded=!1;for(const p of platforms){if(rectCol(c,p.x,p.y,p.w,p.h)){const overY=c.y+c.h-(p.y+p.h),overX=c.x+c.w-p.x,overX2=p.x+p.w-c.x;if(overY<.5&&c.vy<0){c.y=p.y+p.h;c.vy=0;c.grounded=!0;if(c.canDash===!1)c.canDash=!0}else if(overX<.5&&c.vx<0){c.x=p.x+p.w}else if(overX2<.5&&c.vx>0){c.x=p.x-w}else if(c.vy>0){c.y=p.y-c.h;c.vy=0}}}c.x=Math.max(0,Math.min(1920-WID,c.x))}
+
+function doSwap(){if(swapCooldown>0)return;const tx=A.x,ty=A.y,tx2=B.x,ty2=B.y,tvx=A.vx,tvy=A.vy,tvx2=B.vx,tvy2=B.vy;const ca=collides(A,tx2,ty2,B.w,B.h),cb=collides(B,tx,ty,A.w,A.h);if(!ca&&!cb){A.x=tx2;A.y=ty2;A.vx=tvx2;A.vy=tvy2;B.x=tx;B.y=ty;B.vx=tvx;B.vy=tvy;swapCooldown=SWAP_CD;timeScale=.3;setTimeout(()=>{timeScale=1},150);swapSnd()}}
+
+function update(t){if(!running)return;if(AC.state==='suspended')AC.resume();let frameTime=t-lastTime;lastTime=t;if(frameTime>.25)frameTime=.25;accum+=frameTime;while(accum>=dt){if(hitPause>0){hitPause-=dt;accum-=dt;continue}const ts=dt*timeScale;time+=ts;swapCooldown=Math.max(0,swapCooldown-ts);const left=keys['KeyA']||keys['ArrowLeft'],right=keys['KeyD']||keys['ArrowRight'];const jump=keys['Space']||keys['KeyW']||keys['ArrowUp'];if(jump&&!holding){holdTime=.12;holding=!0}if(!jump)holding=!1;holdTime=Math.max(0,holdTime-dt);const hjA=holdTime>0&&A.grounded&&c===A;if(jump){if(A.grounded||!A.lastGrounded){A.vy=10.5;A.grounded=!1;jumpSnd()}else if(!A.grounded&&A.canDash&&(keys['KeyW']||keys['Space'])){A.vx*=2.5;A.canDash=!1;beep(300,.1,'sine',.15)}A.lastGrounded=A.grounded}if(jump&&(B.grounded||!B.lastGrounded)){B.vy=10.5;B.grounded=!1;jumpSnd()}else if(jump&&!B.grounded&&B.canDouble&&!B.lastGrounded){B.vy=10.5;B.canDouble=!1;jumpSnd()}B.lastGrounded=B.grounded;updateChar(A,left,right,jump);updateChar(B,left,right,jump);if(keys['ShiftLeft']||keys['ShiftRight']||keys['KeyE']){if(holdTime>0||keys['KeyE']){if(!holding){doSwap();holding=!0}}}else holding=!1;if(keys['KeyR']){init();deathSnd()}let dx=B.x-A.x,dy=B.y-A.y;let dist=Math.sqrt(dx*dx+dy*dy);if(dist>MAX_TETHER){const c=(dist-MAX_TETHER)*.5;const nx=dx/dist,ny=dy/dist;A.x+=nx*c;A.y+=ny*c;B.x-=nx*c;B.y-=ny*c}for(const h of hazards){if(collides(A,h)||collides(B,h)){deaths++;document.getElementById('d').textContent=deaths;deathSnd();init();break}}if(A.y<-100||B.y<-100){deaths++;document.getElementById('d').textContent=deaths;deathSnd();init()}if(collides(A,goal)&&collides(B,goal)){winSnd();if(!best||time<best){best=time;localStorage.setItem('duality_best',best)}document.getElementById('h').textContent=best;running=!1;O.style.display='flex';O.querySelector('h1').textContent='SECTOR COMPLETE';O.querySelector('p').textContent=`Time: ${formatTime(time)} | Deaths: ${deaths}`;document.getElementById('start').textContent='RETRY'}accum-=dt}
+
+function formatTime(t){const m=Math.floor(t/60),s=Math.floor(t%60),ms=Math.floor((t%1)*1000);return`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(3,'0')}`}
+
+function draw(){X.fillStyle='#0D0D1A';X.fillRect(0,0,W,H);X.save();X.scale(scale,scale);for(const p of platforms){X.fillStyle='#1E1E3F';X.fillRect(p.x,p.y,p.w,p.h);X.strokeStyle='#2A2A5E';X.lineWidth=2;X.strokeRect(p.x,p.y,p.w,p.h)}for(const h of hazards){X.fillStyle='#FF0033';X.fillRect(h.x,h.y,h.w,h.h);X.fillStyle='rgba(255,0,51,0.3)';X.fillRect(h.x-5,h.y-5,h.w+10,h.h+10)}X.fillStyle='#FFB800';X.fillRect(goal.x,goal.y,goal.w,goal.h);X.strokeStyle='#FFD700';X.lineWidth=4;X.strokeRect(goal.x,goal.y,goal.w,goal.h);X.strokeStyle='rgba(255,184,0,0.3)';X.lineWidth=2;X.beginPath();X.moveTo(A.x+WID/2,A.y+HEI/2);X.lineTo(B.x+WID/2,B.y+HEI/2);X.stroke();X.fillStyle='#FFB800';X.beginPath();X.arc(A.x+WID/2,A.y+HEI/2,10,0,Math.PI*2);X.fill();X.fillStyle='#00E5FF';X.beginPath();X.arc(B.x+WID/2,B.y+HEI/2,10,0,Math.PI*2);X.fill();X.fillStyle=PRIME_COL;X.fillRect(A.x,A.y,A.w,A.h);X.fillStyle='rgba(255,184,0,0.5)';X.fillRect(A.x-2,A.y-2,A.w+4,A.h+4);X.fillStyle=ECHO_COL;X.fillRect(B.x,B.y,B.w,B.h);X.fillStyle='rgba(0,229,255,0.5)';X.fillRect(B.x-2,B.y-2,B.w+4,B.h+4);X.restore();document.getElementById('t').textContent=formatTime(time);const dx=B.x-A.x,dy=B.y-A.y,dist=Math.sqrt(dx*dx+dy*dy);document.getElementById('tether-len').textContent=`DIST: ${dist.toFixed(1)} / ${MAX_TETHER}.0M`;document.getElementById('swap-cd').textContent=swapCooldown>0?`SWAP ${swapCooldown.toFixed(1)}s`:'SWAP READY';document.getElementById('swap-cd').style.color=swapCooldown>0?'#666':timeScale<.5?'#FFD700':'#00FF88'}
+
+function loop(t){requestAnimationFrame(loop);update(t);draw()}
+requestAnimationFrame(loop);
+</script>
 </body>
 </html>

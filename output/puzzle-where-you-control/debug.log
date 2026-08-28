@@ -1,0 +1,447 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 25969 (char 25968)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n    <title>DUALITY - Precision Puzzle Platformer</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>\">\n    <style>\n        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap');\n        \n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        \n        body {\n            background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 50%, #0a1a2e 100%);\n            min-height: 100vh;\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            font-family: 'Orbitron', sans-serif;\n            overflow: hidden;\n            color: #fff;\n        }\n        \n        #gameContainer {\n            position: relative;\n            width: 100%;\n            max-width: 1200px;\n            aspect-ratio: 16/9;\n            background: #0d0d1a;\n            border: 3px solid #2a2a5e;\n            border-radius: 8px;\n            box-shadow: 0 0 40px rgba(255, 184, 0, 0.3), 0 0 80px rgba(0, 229, 255, 0.2);\n        }\n        \n        #gameCanvas {\n            width: 100%;\n            height: 100%;\n            display: block;\n            image-rendering: pixelated;\n        }\n        \n        #hud {\n            position: absolute;\n            top: 0;\n            left: 0;\n            right: 0;\n            padding: 15px 20px;\n            display: flex;\n            justify-content: space-between;\n            align-items: flex-start;\n            pointer-events: none;\n            font-family: 'JetBrains Mono', monospace;\n        }\n        \n        .hud-section {\n            background: rgba(13, 13, 26, 0.85);\n            padding: 10px 15px;\n            border-radius: 4px;\n            border: 1px solid #2a2a5e;\n        }\n        \n        #timer {\n            font-size: 1.4rem;\n            font-weight: 700;\n            color: #FFD700;\n            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);\n        }\n        \n        #highScore {\n            font-size: 0.9rem;\n            color: #00E5FF;\n        }\n        \n        #deathCounter {\n            font-size: 0.9rem;\n            color: #FF6B6B;\n        }\n        \n        #tetherMeter {\n            display: flex;\n            align-items: center;\n            gap: 10px;\n        }\n        \n        .char-dot {\n            width: 12px;\n            height: 12px;\n            border-radius: 50%;\n        }\n        \n        .dot-prime { background: #FFB800; box-shadow: 0 0 8px #FFB800; }\n        .dot-echo { background: #00E5FF; box-shadow: 0 0 8px #00E5FF; }\n        \n        #tetherBar {\n            width: 120px;\n            height: 6px;\n            background: #1a1a2e;\n            border-radius: 3px;\n            overflow: hidden;\n        }\n        \n        #tetherFill {\n            height: 100%;\n            background: linear-gradient(90deg, #FFB800, #00E5FF);\n            transition: width 0.1s;\n        }\n        \n        #swapIndicator {\n            font-size: 0.8rem;\n            color: #fff;\n        }\n        \n        #overlay {\n            position: absolute;\n            top: 0;\n            left: 0;\n            right: 0;\n            bottom: 0;\n            background: rgba(10, 10, 26, 0.95);\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            font-family: 'Orbitron', sans-serif;\n            z-index: 100;\n        }\n        \n        #overlay h1 {\n            font-size: 3rem;\n            background: linear-gradient(90deg, #FFB800, #00E5FF);\n            -webkit-background-clip: text;\n            -webkit-text-fill-color: transparent;\n            background-clip: text;\n            margin-bottom: 20px;\n            text-shadow: 0 0 30px rgba(255, 184, 0, 0.5);\n        }\n        \n        #overlay p {\n            font-size: 1rem;\n            color: #888;\n            margin-bottom: 30px;\n            font-family: 'JetBrains Mono', monospace;\n        }\n        \n        .controls-grid {\n            display: grid;\n            grid-template-columns: repeat(2, 1fr);\n            gap: 15px;\n            margin-bottom: 30px;\n            font-family: 'JetBrains Mono', monospace;\n            font-size: 0.85rem;\n        }\n        \n        .control-item {\n            display: flex;\n            align-items: center;\n            gap: 10px;\n        }\n        \n        .key {\n            background: linear-gradient(180deg, #3a3a5e, #2a2a4e);\n            padding: 5px 12px;\n            border-radius: 4px;\n            border: 1px solid #4a4a7e;\n            color: #fff;\n            font-weight: 700;\n        }\n        \n        .prime-color { color: #FFB800; }\n        .echo-color { color: #00E5FF; }\n        \n        #startBtn {\n            background: linear-gradient(135deg, #FFB800, #FF6B00);\n            border: none;\n            padding: 15px 50px;\n            font-size: 1.2rem;\n            font-family: 'Orbitron', sans-serif;\n            font-weight: 700;\n            color: #0a0a1a;\n            border-radius: 4px;\n            cursor: pointer;\n            transition: all 0.3s;\n            text-transform: uppercase;\n            letter-spacing: 2px;\n        }\n        \n        #startBtn:hover {\n            transform: scale(1.05);\n            box-shadow: 0 0 30px rgba(255, 184, 0, 0.5);\n        }\n        \n        #message {\n            position: absolute;\n            top: 50%;\n            left: 50%;\n            transform: translate(-50%, -50%);\n            font-size: 2rem;\n            font-weight: 700;\n            text-align: center;\n            pointer-events: none;\n            opacity: 0;\n            transition: opacity 0.3s;\n            text-shadow: 0 0 20px rgba(255, 255, 255, 0.8);\n        }\n        \n        .scanlines {\n            position: absolute;\n            top: 0;\n            left: 0;\n            right: 0;\n            bottom: 0;\n            background: repeating-linear-gradient(\n                0deg,\n                transparent,\n                transparent 2px,\n                rgba(0, 0, 0, 0.1) 2px,\n                rgba(0, 0, 0, 0.1) 4px\n            );\n            pointer-events: none;\n            z-index: 50;\n        }\n        \n        .vignette {\n            position: absolute;\n            top: 0;\n            left: 0;\n            right: 0;\n            bottom: 0;\n            background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.5) 100%);\n            pointer-events: none;\n            z-index: 51;\n        }\n        \n        @media (max-width: 768px) {\n            #gameContainer {\n                max-width: 100%;\n                border-radius: 0;\n                border-left: none;\n                border-right: none;\n            }\n            \n            #overlay h1 {\n                font-size: 2rem;\n            }\n            \n            .controls-grid {\n                grid-template-columns: 1fr;\n                font-size: 0.75rem;\n            }\n            \n            #hud {\n                padding: 8px 10px;\n            }\n            \n            #timer {\n                font-size: 1rem;\n            }\n            \n            .hud-section {\n                padding: 6px 10px;\n            }\n        }\n    </style>\n</head>\n<body>\n    <div id=\"gameContainer\">\n        <canvas id=\"gameCanvas\"></canvas>\n        <div class=\"scanlines\"></div>\n        <div class=\"vignette\"></div>\n        \n        <div id=\"hud\">\n            <div class=\"hud-section\" id=\"deathCounter\">DEATHS: 0</div>\n            <div class=\"hud-section\">\n                <div id=\"tetherMeter\">\n                    <span class=\"char-dot dot-prime\"></span>\n                    <div id=\"tetherBar\"><div id=\"tetherFill\" style=\"width: 50%\"></div></div>\n                    <span class=\"char-dot dot-echo\"></span>\n                    <span id=\"swapIndicator\">SWAP READY</span>\n                </div>\n            </div>\n            <div class=\"hud-section\">\n                <div id=\"timer\">00:00.000</div>\n                <div id=\"highScore\">BEST: --:--</div>\n            </div>\n        </div>\n        \n        <div id=\"overlay\">\n            <h1>DUALITY</h1>\n            <p>Two souls, one bond. Master the tether.</p>\n            <div class=\"controls-grid\">\n                <div class=\"control-item\"><span class=\"key\">A/D</span> Move</div>\n                <div class=\"control-item\"><span class=\"key\">←/→</span> Move</div>\n                <div class=\"control-item\"><span class=\"key\">W/SPACE</span> <span class=\"prime-color\">Jump</span></div>\n                <div class=\"control-item\"><span class=\"key\">SHIFT</span> <span class=\"echo-color\">Swap</span></div>\n                <div class=\"control-item\"><span class=\"key\">R</span> Reset</div>\n                <div class=\"control-item\"><span class=\"key\">ESC</span> Pause</div>\n            </div>\n            <button id=\"startBtn\">BEGIN</button>\n        </div>\n        \n        <div id=\"message\"></div>\n    </div>\n\n    <script>\n    const canvas = document.getElementById('gameCanvas');\n    const ctx = canvas.getContext('2d');\n    const overlay = document.getElementById('overlay');\n    const startBtn = document.getElementById('startBtn');\n    const timerEl = document.getElementById('timer');\n    const highScoreEl = document.getElementById('highScore');\n    const deathCounterEl = document.getElementById('deathCounter');\n    const tetherFillEl = document.getElementById('tetherFill');\n    const swapIndicatorEl = document.getElementById('swapIndicator');\n    const messageEl = document.getElementById('message');\n\n    // Game Constants\n    const LOGICAL_WIDTH = 1920;\n    const LOGICAL_HEIGHT = 1080;\n    const GRAVITY = 25;\n    const MAX_HORIZONTAL_SPEED = 4.5;\n    const JUMP_IMPULSE = 10.5;\n    const TETHER_MAX = 400;\n    const TETHER_SNAP_DIST = 600;\n\n    // Colors - Vibrant Cyberpunk Palette\n    const COLORS = {\n        prime: '#FFB800',\n        primeLight: '#FFD700',\n        primeDark: '#CC8800',\n        echo: '#00E5FF',\n        echoLight: '#66F0FF',\n        echoDark: '#0099BB',\n        bg: '#0d0d1a',\n        platform: '#2a2a5e',\n        platformLight: '#3a3a7e',\n        goal: '#00FF88',\n        hazard: '#FF3366',\n        tether: '#8844FF'\n    };\n\n    // Audio System\n    class AudioManager {\n        constructor() {\n            this.ctx = null;\n            this.masterGain = null;\n            this.initialized = false;\n        }\n\n        init() {\n            if (this.initialized) return;\n            this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n            this.masterGain = this.ctx.createGain();\n            this.masterGain.gain.value = 0.3;\n            this.masterGain.connect(this.ctx.destination);\n            this.initialized = true;\n        }\n\n        play(type) {\n            if (!this.initialized) return;\n            const osc = this.ctx.createOscillator();\n            const gain = this.ctx.createGain();\n            osc.connect(gain);\n            gain.connect(this.masterGain);\n\n            const now = this.ctx.currentTime;\n            \n            switch(type) {\n                case 'jump':\n                    osc.frequency.setValueAtTime(300, now);\n                    osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);\n                    gain.gain.setValueAtTime(0.2, now);\n                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);\n                    osc.start(now);\n                    osc.stop(now + 0.15);\n                    break;\n                case 'swap':\n                    osc.type = 'sawtooth';\n                    osc.frequency.setValueAtTime(200, now);\n                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);\n                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);\n                    gain.gain.setValueAtTime(0.3, now);\n                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);\n                    osc.start(now);\n                    osc.stop(now + 0.3);\n                    break;\n                case 'death':\n                    osc.type = 'square';\n                    osc.frequency.setValueAtTime(400, now);\n                    osc.frequency.exponentialRampToValueAtTime(50, now + 0.5);\n                    gain.gain.setValueAtTime(0.2, now);\n                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);\n                    osc.start(now);\n                    osc.stop(now + 0.5);\n                    break;\n                case 'goal':\n                    osc.type = 'sine';\n                    osc.frequency.setValueAtTime(523, now);\n                    osc.frequency.setValueAtTime(659, now + 0.1);\n                    osc.frequency.setValueAtTime(784, now + 0.2);\n                    osc.frequency.setValueAtTime(1047, now + 0.3);\n                    gain.gain.setValueAtTime(0.2, now);\n                    gain.gain.setValueAtTime(0.2, now + 0.35);\n                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);\n                    osc.start(now);\n                    osc.stop(now + 0.6);\n                    break;\n                case 'land':\n                    osc.type = 'triangle';\n                    osc.frequency.setValueAtTime(150, now);\n                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.05);\n                    gain.gain.setValueAtTime(0.15, now);\n                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);\n                    osc.start(now);\n                    osc.stop(now + 0.08);\n                    break;\n            }\n        }\n    }\n\n    const audio = new AudioManager();\n\n    // Game State\n    let gameState = 'menu';\n    let gameTime = 0;\n    let deaths = 0;\n    let bestTime = localStorage.getItem('duality_best_time') || null;\n    let lastTime = 0;\n    let scale = 1;\n    let offsetX = 0;\n    let offsetY = 0;\n\n    // Input State\n    const keys = {};\n    let shiftHeld = false;\n\n    // Characters\n    const prime = {\n        x: 200,\n        y: 500,\n        vx: 0,\n        vy: 0,\n        width: 40,\n        height: 70,\n        grounded: false,\n        wasGrounded: false,\n        color: COLORS.prime,\n        colorLight: COLORS.primeLight,\n        name: 'PRIME',\n        trail: [],\n        coyoteTime: 0,\n        jumpBuffer: 0,\n        dashCooldown: 0,\n        isDashing: false\n    };\n\n    const echo = {\n        x: 200,\n        y: 300,\n        vx: 0,\n        vy: 0,\n        width: 40,\n        height: 70,\n        grounded: false,\n        wasGrounded: false,\n        color: COLORS.echo,\n        colorLight: COLORS.echoLight,\n        name: 'ECHO',\n        trail: [],\n        coyoteTime: 0,\n        jumpBuffer: 0,\n        doubleJump: true,\n        friction: 0.02\n    };\n\n    let swapCooldown = 0;\n    let swapPreview = false;\n\n    // Level Data\n    const platforms = [\n        // Ground\n        { x: 0, y: 850, w: 1900, h: 230, color: COLORS.platform },\n        // Left tower\n        { x: 100, y: 550, w: 200, h: 30, color: COLORS.platformLight },\n        { x: 100, y: 350, w: 200, h: 30, color: COLORS.platformLight },\n        { x: 100, y: 650, w: 30, h: 200, color: COLORS.platform },\n        // Right tower\n        { x: 1600, y: 550, w: 200, h: 30, color: COLORS.platformLight },\n        { x: 1600, y: 350, w: 200, h: 30, color: COLORS.platformLight },\n        { x: 1700, y: 650, w: 30, h: 200, color: COLORS.platform },\n        // Middle platforms\n        { x: 500, y: 700, w: 150, h: 30, color: COLORS.platformLight },\n        { x: 750, y: 550, w: 150, h: 30, color: COLORS.platformLight },\n        { x: 1000, y: 400, w: 150, h: 30, color: COLORS.platformLight },\n        { x: 1250, y: 550, w: 150, h: 30, color: COLORS.platformLight },\n        // Floating islands\n        { x: 400, y: 300, w: 100, h: 30, color: COLORS.platformLight },\n        { x: 1400, y: 300, w: 100, h: 30, color: COLORS.platformLight },\n        // Ceiling\n        { x: 0, y: 100, w: 1900, h: 30, color: COLORS.platform },\n        // Walls\n        { x: 0, y: 100, w: 30, h: 730, color: COLORS.platform },\n        { x: 1870, y: 100, w: 30, h: 730, color: COLORS.platform }\n    ];\n\n    const hazards = [\n        { x: 450, y: 820, w: 80, h: 30, color: COLORS.hazard },\n        { x: 650, y: 820, w: 80, h: 30, color: COLORS.hazard },\n        { x: 850, y: 820, w: 80, h: 30, color: COLORS.hazard },\n        { x: 1050, y: 820, w: 80, h: 30, color: COLORS.hazard },\n        { x: 1250, y: 820, w: 80, h: 30, color: COLORS.hazard },\n        { x: 1450, y: 820, w: 80, h: 30, color: COLORS.hazard }\n    ];\n\n    const goals = [\n        { x: 100, y: 250, w: 60, h: 100, color: COLORS.prime },\n        { x: 1740, y: 250, w: 60, h: 100, color: COLORS.echo }\n    ];\n\n    let goalTimers = { left: 0, right: 0 };\n    let levelComplete = false;\n\n    // Particles\n    const particles = [];\n\n    class Particle {\n        constructor(x, y, vx, vy, color, life, size) {\n            this.x = x;\n            this.y = y;\n            this.vx = vx;\n            this.vy = vy;\n            this.color = color;\n            this.life = life;\n            this.maxLife = life;\n            this.size = size;\n        }\n\n        update(dt) {\n            this.x += this.vx * dt;\n            this.y += this.vy * dt;\n            this.vy += 10 * dt;\n            this.life -= dt;\n        }\n\n        draw(ctx) {\n            const alpha = this.life / this.maxLife;\n            ctx.globalAlpha = alpha;\n            ctx.fillStyle = this.color;\n            ctx.beginPath();\n            ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);\n            ctx.fill();\n            ctx.globalAlpha = 1;\n        }\n    }\n\n    function spawnParticles(x, y, color, count) {\n        for (let i = 0; i < count; i++) {\n            const angle = Math.random() * Math.PI * 2;\n            const speed = Math.random() * 200 + 100;\n            particles.push(new Particle(\n                x, y,\n                Math.cos(angle) * speed,\n                Math.sin(angle) * speed,\n                color,\n                0.5 + Math.random() * 0.5,\n                3 + Math.random() * 4\n            ));\n        }\n    }\n\n    // Camera\n    const camera = {\n        x: 0,\n        y: 0,\n        targetX: 0,\n        targetY: 0\n    };\n\n    // Initialize\n    function init() {\n        resize();\n        window.addEventListener('resize', resize);\n        \n        window.addEventListener('keydown', e => {\n            keys[e.code] = true;\n            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {\n                shiftHeld = true;\n                if (gameState === 'playing') {\n                    swapPreview = true;\n                }\n            }\n            if (e.code === 'Escape' && gameState === 'playing') {\n                gameState = 'paused';\n                showMessage('PAUSED');\n            } else if (e.code === 'Escape' && gameState === 'paused') {\n                gameState = 'playing';\n                hideMessage();\n            }\n        });\n        \n        window.addEventListener('keyup', e => {\n            keys[e.code] = false;\n            if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {\n                shiftHeld = false;\n                if (swapPreview && gameState === 'playing') {\n                    executeSwap();\n                }\n                swapPreview = false;\n            }\n        });\n\n        startBtn.addEventListener('click', startGame);\n        \n        if (bestTime) {\n            highScoreEl.textContent = `BEST: ${formatTime(bestTime)}`;\n        }\n\n        requestAnimationFrame(gameLoop);\n    }\n\n    function resize() {\n        const container = document.getElementById('gameContainer');\n        const rect = container.getBoundingClientRect();\n        canvas.width = rect.width;\n        canvas.height = rect.height;\n        scale = canvas.width / LOGICAL_WIDTH;\n        offsetX = 0;\n        offsetY = (canvas.height - LOGICAL_HEIGHT * scale) / 2;\n    }\n\n    function startGame() {\n        audio.init();\n        gameState = 'playing';\n        gameTime = 0;\n        deaths = 0;\n        overlay.style.display = 'none';\n        resetLevel();\n    }\n\n    function resetLevel() {\n        prime.x = 200;\n        prime.y = 500;\n        prime.vx = 0;\n        prime.vy = 0;\n        prime.grounded = false;\n        prime.trail = [];\n\n        echo.x = 200;\n        echo.y = 300;\n        echo.vx = 0;\n        echo.vy = 0;\n        echo.grounded = false;\n        echo.trail = [];\n        echo.doubleJump = true;\n\n        swapCooldown = 0;\n        goalTimers = { left: 0, right: 0 };\n        levelComplete = false;\n        particles.length = 0;\n    }\n\n    function formatTime(ms) {\n        const totalSeconds = Math.floor(ms / 1000);\n        const minutes = Math.floor(totalSeconds / 60);\n        const seconds = totalSeconds % 60;\n        const milliseconds = Math.floor(ms % 1000);\n        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(3, '0')}`;\n    }\n\n    function showMessage(text, color = '#fff') {\n        messageEl.textContent = text;\n        messageEl.style.color = color;\n        messageEl.style.opacity = 1;\n    }\n\n    function hideMessage() {\n        messageEl.style.opacity = 0;\n    }\n\n    function executeSwap() {\n        if (swapCooldown > 0) return;\n\n        // Check collision at swap positions\n        const newPrimeX = echo.x;\n        const newEchoX = prime.x;\n\n        let canSwap = true;\n        for (const p of platforms) {\n            if (rectCollision(newPrimeX, prime.y, prime.width, prime.height, p.x, p.y, p.w, p.h) ||\n                rectCollision(newEchoX, echo.y, echo.width, echo.height, p.x, p.y, p.w, p.h)) {\n                canSwap = false;\n                break;\n            }\n        }\n\n        if (canSwap) {\n            // Swap positions and velocities\n            const tempX = prime.x;\n            const tempY = prime.y;\n            const tempVX = prime.vx;\n            const tempVY = prime.vy;\n\n            prime.x = echo.x;\n            prime.y = echo.y;\n            prime.vx = echo.vx;\n            prime.vy = echo.vy;\n\n            echo.x = tempX;\n            echo.y = tempY;\n            echo.vx = tempVX;\n            echo.vy = tempVY;\n\n            swapCooldown = 1.5;\n            audio.play('swap');\n            spawnParticles(prime.x + prime.width/2, prime.y + prime.height/2, COLORS.prime, 15);\n            spawnParticles(echo.x + echo.width/2, echo.y + echo.height/2, COLORS.echo, 15);\n        }\n    }\n\n    function rectCollision(x1, y1, w1, h1, x2, y2, w2, h2) {\n        return x1 < x2 + w2 && x1 + w1 > x2 && y1 < y2 + h2 && y1 + h1 > y2;\n    }\n\n    function handleCharacter(char, isPrime) {\n        const moveLeft = keys['KeyA'] || keys['ArrowLeft'];\n        const moveRight = keys['KeyD'] || keys['ArrowRight'];\n        const jumpKey = keys['KeyW'] || keys['ArrowUp'] || keys['Space'];\n\n        // Horizontal movement\n        const accel = isPrime ? 45 : 15;\n        const airAccel = isPrime ? 28 : 35;\n        const maxSpeed = MAX_HORIZONTAL_SPEED;\n        const decel = isPrime ? 60 : 5;\n\n        if (moveLeft) {\n            char.vx += (char.grounded ? accel : airAccel) * 0.016;\n        } else if (moveRight) {\n            char.vx -= (char.grounded ? accel : airAccel) * 0.016;\n        } else {\n            // Deceleration\n            if (char.grounded) {\n                if (Math.abs(char.vx) < decel * 0.016) {\n                    char.vx = 0;\n                } else {\n                    char.vx -= Math.sign(char.vx) * decel * 0.016;\n                }\n            } else if (isPrime) {\n                // Prime momentum conservation\n                char.vx *= 0.995;\n            }\n        }\n\n        // Inertia inversion for Echo\n        if (!isPrime && (moveLeft || moveRight)) {\n            const inputDir = moveLeft ? 1 : -1;\n            if (Math.sign(inputDir) !== Math.sign(char.vx) && Math.abs(char.vx) > 1.0) {\n                char.vx = -char.vx * 0.8;\n            }\n        }\n\n        // Clamp horizontal speed\n        char.vx = Math.max(-maxSpeed, Math.min(maxSpeed, char.vx));\n\n        // Coyote time\n        if (char.grounded) {\n            char.coyoteTime = 0.08;\n        } else {\n            char.coyoteTime -= 0.016;\n        }\n\n        // Jump buffer\n        if (jumpKey) {\n            char.jumpBuffer = 0.12;\n        } else {\n            char.jumpBuffer -= 0.016;\n        }\n\n        // Jump\n        if (char.jumpBuffer > 0 && char.coyoteTime > 0) {\n            char.vy = JUMP_IMPULSE;\n            char.grounded = false;\n            char.coyoteTime = 0;\n            char.jumpBuffer = 0;\n            audio.play('jump');\n            spawnParticles(char.x + char.width/2, char.y + char.height, char.color, 8);\n        }\n\n        // Echo double jump\n        if (!isPrime && !char.grounded && char.coyoteTime <= 0 && jumpKey && char.doubleJump) {\n            char.vy= JUMP_IMPULSE;
+            char.doubleJump = false;
+            audio.play('jump');
+            spawnParticles(char.x + char.width/2, char.y + char.height/2, char.color, 12);
+        }
+
+        // Gravity
+        char.vy -= GRAVITY * 0.016;
+        char.vy = Math.max(-20, Math.min(20, char.vy));
+
+        // Store previous grounded state
+        char.wasGrounded = char.grounded;
+        char.grounded = false;
+
+        // Move X
+        char.x += char.vx * 60 * 0.016;
+        char.vx *= 0.98;
+
+        // Collision X
+        for (const p of platforms) {
+            if (rectCollision(char.x, char.y, char.width, char.height, p.x, p.y, p.w, p.h)) {
+                if (char.vx > 0) {
+                    char.x = p.x - char.width;
+                } else if (char.vx < 0) {
+                    char.x = p.x + p.w;
+                }
+                char.vx = 0;
+            }
+        }
+
+        // Move Y
+        char.y += char.vy * 60 * 0.016;
+
+        // Collision Y
+        for (const p of platforms) {
+            if (rectCollision(char.x, char.y, char.width, char.height, p.x, p.y, p.w, p.h)) {
+                if (char.vy > 0) {
+                    char.y = p.y - char.height;
+                    char.grounded = true;
+                    if (!isPrime) char.doubleJump = true;
+                    if (!char.wasGrounded && Math.abs(char.vy) > 2) {
+                        audio.play('land');
+                        spawnParticles(char.x + char.width/2, char.y + char.height, char.color, 5);
+                    }
+                } else if (char.vy < 0) {
+                    char.y = p.y + p.h;
+                }
+                char.vy = 0;
+            }
+        }
+
+        // Boundary check
+        if (char.x < 0) char.x = 0;
+        if (char.x + char.width > LOGICAL_WIDTH) char.x = LOGICAL_WIDTH - char.width;
+        if (char.y < 0) char.y = 0;
+        if (char.y > LOGICAL_HEIGHT) {
+            handleDeath();
+        }
+
+        // Trail
+        if (Math.abs(char.vx) > 0.5 || Math.abs(char.vy) > 0.5) {
+            char.trail.push({
+                x: char.x + char.width/2,
+                y: char.y + char.height/2,
+                age: 0
+            });
+        }
+
+        // Age trail
+        char.trail = char.trail.filter(t => {
+            t.age += 0.016;
+            return t.age < 0.3;
+        });
+    }
+
+    function handleDeath() {
+        deaths++;
+        deathCounterEl.textContent = `DEATHS: ${deaths}`;
+        audio.play('death');
+        spawnParticles(prime.x + prime.width/2, prime.y + prime.height/2, COLORS.hazard, 30);
+        spawnParticles(echo.x + echo.width/2, echo.y + echo.height/2, COLORS.hazard, 30);
+        resetLevel();
+    }
+
+    function checkHazards() {
+        for (const h of hazards) {
+            if (rectCollision(prime.x, prime.y, prime.width, prime.height, h.x, h.y, h.w, h.h) ||
+                rectCollision(echo.x, echo.y, echo.width, echo.height, h.x, h.y, h.w, h.h)) {
+                handleDeath();
+                return;
+            }
+        }
+    }
+
+    function checkGoals() {
+        // Left goal (Prime)
+        if (rectCollision(prime.x, prime.y, prime.width, prime.height, goals[0].x, goals[0].y, goals[0].w, goals[0].h)) {
+            goalTimers.left += 0.016;
+        } else {
+            goalTimers.left = Math.max(0, goalTimers.left - 0.05);
+        }
+
+        // Right goal (Echo)
+        if (rectCollision(echo.x, echo.y, echo.width, echo.height, goals[1].x, goals[1].y, goals[1].w, goals[1].h)) {
+            goalTimers.right += 0.016;
+        } else {
+            goalTimers.right = Math.max(0, goalTimers.right - 0.05);
+        }
+
+        // Check completion
+        if (goalTimers.left >= 2 && goalTimers.right >= 2 && !levelComplete) {
+            levelComplete = true;
+            gameState = 'complete';
+            audio.play('goal');
+            
+            if (!bestTime || gameTime < bestTime) {
+                bestTime = gameTime;
+                localStorage.setItem('duality_best_time', bestTime);
+                highScoreEl.textContent = `BEST: ${formatTime(bestTime)}`;
+                showMessage('NEW RECORD!', '#FFD700');
+            } else {
+                showMessage('LEVEL COMPLETE!', '#00FF88');
+            }
+
+            setTimeout(() => {
+                overlay.style.display = 'flex';
+                overlay.querySelector('h1').textContent = 'COMPLETE';
+                overlay.querySelector('p').textContent = `Time: ${formatTime(gameTime)}`;
+                startBtn.textContent = 'PLAY AGAIN';
+                gameState = 'menu';
+            }, 2000);
+        }
+    }
+
+    function update(dt) {
+        if (gameState !== 'playing') return;
+
+        gameTime += dt * 1000;
+        timerEl.textContent = formatTime(gameTime);
+
+        swapCooldown = Math.max(0, swapCooldown - dt);
+        tetherFillEl.style.width = `${Math.max(0, (1 - swapCooldown / 1.5) * 100)}%`;
+        swapIndicatorEl.textContent = swapCooldown > 0 ? `COOLDOWN ${swapCooldown.toFixed(1)}` : 'SWAP READY';
+        swapIndicatorEl.style.color = swapCooldown > 0 ? '#FF6B6B' : '#fff';
+
+        handleCharacter(prime, true);
+        handleCharacter(echo, false);
+
+        checkHazards();
+        checkGoals();
+
+        // Update particles
+        for (let i = particles.length - 1; i >= 0; i--) {
+            particles[i].update(dt);
+            if (particles[i].life <= 0) {
+                particles.splice(i, 1);
+            }
+        }
+
+        // Reset key
+        if (keys['KeyR']) {
+            resetLevel();
+            gameTime = 0;
+        }
+    }
+
+    function drawTrail(ctx, trail, color) {
+        for (const t of trail) {
+            const alpha = 1 - t.age / 0.3;
+            ctx.globalAlpha = alpha * 0.5;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(t.x * scale, t.y * scale, 8 * scale * alpha, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+    }
+
+    function drawCharacter(ctx, char, isPrime) {
+        const x = char.x * scale;
+        const y = char.y * scale;
+        const w = char.width * scale;
+        const h = char.height * scale;
+
+        // Glow
+        ctx.shadowColor = char.color;
+        ctx.shadowBlur = 20;
+
+        // Body
+        ctx.fillStyle = char.color;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 8 * scale);
+        ctx.fill();
+
+        // Inner
+        ctx.fillStyle = char.colorLight;
+        ctx.beginPath();
+        ctx.roundRect(x + 4*scale, y + 4*scale, w - 8*scale, h - 8*scale, 4 * scale);
+        ctx.fill();
+
+        // Eyes
+        const eyeY = y + 15 * scale;
+        const eyeSize = 6 * scale;
+        
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = '#0a0a1a';
+        ctx.beginPath();
+        ctx.arc(x + w/2 - 8*scale, eyeY, eyeSize, 0, Math.PI * 2);
+        ctx.arc(x + w/2 + 8*scale, eyeY, eyeSize, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(x + w/2 - 8*scale + 2*scale, eyeY - 1*scale, eyeSize/2, 0, Math.PI * 2);
+        ctx.arc(x + w/2 + 8*scale + 2*scale, eyeY - 1*scale, eyeSize/2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Label
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#fff';
+        ctx.font = `${10 * scale}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(char.name, x + w/2, y + h - 8*scale);
+
+        ctx.shadowBlur = 0;
+    }
+
+    function drawPlatform(ctx, p) {
+        const x = p.x * scale;
+        const y = p.y * scale;
+        const w = p.w * scale;
+        const h = p.h * scale;
+
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 4 * scale);
+        ctx.fill();
+
+        // Top highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.fillRect(x + 2*scale, y, w - 4*scale, 2*scale);
+    }
+
+    function drawHazard(ctx, h) {
+        const x = h.x * scale;
+        const y = h.y * scale;
+        const w = h.w * scale;
+        const h2 = h.h * scale;
+
+        // Glow
+        ctx.shadowColor = h.color;
+        ctx.shadowBlur = 15;
+
+        ctx.fillStyle = h.color;
+        
+        // Spikes
+        const spikeCount = Math.floor(w / (12 * scale));
+        const spikeWidth = w / spikeCount;
+        
+        ctx.beginPath();
+        for (let i = 0; i < spikeCount; i++) {
+            const sx = x + i * spikeWidth;
+            ctx.moveTo(sx, y + h2);
+            ctx.lineTo(sx + spikeWidth/2, y);
+            ctx.lineTo(sx + spikeWidth, y + h2);
+        }
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+    }
+
+    function drawGoal(ctx, goal, index) {
+        const x = goal.x * scale;
+        const y = goal.y * scale;
+        const w = goal.w * scale;
+        const h = goal.h * scale;
+
+        const timer = index === 0 ? goalTimers.left : goalTimers.right;
+        const pulse = Math.sin(Date.now() / 200) * 0.3 + 0.7;
+        const progress = timer / 2;
+
+        // Glow
+        ctx.shadowColor = goal.color;
+        ctx.shadowBlur = 20 + progress * 30;
+
+        // Outer ring
+        ctx.strokeStyle = goal.color;
+        ctx.lineWidth = 3 * scale;
+        ctx.globalAlpha = pulse;
+        ctx.beginPath();
+        ctx.arc(x + w/2, y + h/2, Math.max(w, h)/2 + 10*scale, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Fill based on progress
+        ctx.globalAlpha = 0.3 + progress * 0.5;
+        ctx.fillStyle = goal.color;
+        ctx.beginPath();
+        ctx.arc(x + w/2, y + h/2, Math.max(w, h)/2, 0, Math.PI * 2 * progress);
+        ctx.lineTo(x + w/2, y + h/2);
+        ctx.fill();
+
+        // Inner
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = goal.color;
+        ctx.font = `${14 * scale}px 'Orbitron', sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(index === 0 ? 'P' : 'E', x + w/2, y + h/2 + 5*scale);
+
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+    }
+
+    function drawTether(ctx) {
+        const px = (prime.x + prime.width/2) * scale;
+        const py = (prime.y + prime.height/2) * scale;
+        const ex = (echo.x + echo.width/2) * scale;
+        const ey = (echo.y + echo.height/2) * scale;
+
+        const dist = Math.sqrt((ex-px)**2 + (ey-py)**2);
+        const snapped = dist > TETHER_SNAP_DIST;
+
+        // Tether line
+        const gradient = ctx.createLinearGradient(px, py, ex, ey);
+        gradient.addColorStop(0, COLORS.prime);
+        gradient.addColorStop(1, COLORS.echo);
+
+        ctx.strokeStyle = snapped ? COLORS.hazard : gradient;
+        ctx.lineWidth = snapped ? 4 * scale : 3 * scale;
+        ctx.globalAlpha = 0.6;
+        ctx.setLineDash(snapped ? [10, 10] : [5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+
+        // Distance indicator
+        const midX = (px + ex) / 2;
+        const midY = (py + ey) / 2;
+        ctx.fillStyle = snapped ? COLORS.hazard : '#fff';
+        ctx.font = `${10 * scale}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = 0.8;
+        ctx.fillText(`${Math.round(dist)}px`, midX, midY - 10*scale);
+        ctx.globalAlpha = 1;
+
+        // Snap warning
+        if (snapped) {
+            ctx.fillStyle = COLORS.hazard;
+            ctx.font = `${12 * scale}px 'Orbitron', sans-serif`;
+            ctx.fillText('TETHER SNAPPING!', midX, midY + 20*scale);
+        }
+    }
+
+    function drawSwapPreview(ctx) {
+        if (!swapPreview || swapCooldown > 0) return;
+
+        const newPX = echo.x * scale;
+        const newPY = echo.y * scale;
+        const newEX = prime.x * scale;
+        const newEY = prime.y * scale;
+
+        ctx.globalAlpha = 0.4;
+        ctx.strokeStyle = COLORS.prime;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(newPX, newPY, prime.width * scale, prime.height * scale);
+        
+        ctx.strokeStyle = COLORS.echo;
+        ctx.strokeRect(newEX, newEY, echo.width * scale, echo.height * scale);
+        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
+    }
+
+    function draw() {
+        ctx.fillStyle = COLORS.bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Grid background
+        ctx.strokeStyle = 'rgba(42, 42, 94, 0.3)';
+        ctx.lineWidth = 1;
+        const gridSize = 50 * scale;
+        for (let x = 0; x < canvas.width; x += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, canvas.height);
+            ctx.stroke();
+        }
+        for (let y = 0; y < canvas.height; y += gridSize) {
+            ctx.beginPath();
+            ctx.moveTo(0, y);
+            ctx.lineTo(canvas.width, y);
+            ctx.stroke();
+        }
+
+        // Platforms
+        for (const p of platforms) {
+            drawPlatform(ctx, p);
+        }
+
+        // Hazards
+        for (const h of hazards) {
+            drawHazard(ctx, h);
+        }
+
+        // Goals
+        for (let i = 0; i < goals.length; i++) {
+            drawGoal(ctx, goals[i], i);
+        }
+
+        // Tether
+        drawTether(ctx);
+
+        // Trails
+        drawTrail(ctx, prime.trail, COLORS.prime);
+        drawTrail(ctx, echo.trail, COLORS.echo);
+
+        // Swap preview
+        drawSwapPreview(ctx);
+
+        // Characters
+        drawCharacter(ctx, prime, true);
+        drawCharacter(ctx, echo, false);
+
+        // Particles
+        for (const p of particles) {
+            p.draw(ctx);
+        }
+    }
+
+    function gameLoop(timestamp) {
+        const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+        lastTime = timestamp;
+
+        update(dt);
+        draw();
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    init();
+    </script>
+</body>
+</html>
