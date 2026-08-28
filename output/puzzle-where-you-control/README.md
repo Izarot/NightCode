@@ -17,8 +17,8 @@ Built on **HTML5 Canvas + Vanilla TypeScript**, running at a buttery 60fps with 
 ### Controls
 | Action | Key |
 |:---|:---|
-| Move | `A` / `D` or `←` / `→` |
-| Jump | `W` / `↑` / `Space` |
+| Move | `A` / `D` or ← / → |
+| Jump | `W` / ↑ / `Space` |
 | Dash *(Prime only)* | `Space` *(mid-air)* |
 | **Quantum Swap** *(hold to preview, release to execute)* | `Shift` / `E` |
 | Soft Reset | `R` |

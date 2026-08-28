@@ -23,11 +23,11 @@ let highScore = localStorage.getItem('highScore')? parseFloat(localStorage.getIt
 let audioCtx = null;
 function playBeep() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'uspended') audioCtx.resume();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
   
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  osc.type = 'ine';
+  osc.type = 'sine';
   osc.frequency.value = 440;
   gain.gain.value = 0.1;
   osc.connect(gain).connect(audioCtx.destination);
@@ -41,7 +41,7 @@ window.addEventListener('keydown', e => keys[e.key] = true);
 window.addEventListener('keyup', e => keys[e.key] = false);
 
 function move(delta) {
-  const speed = 200; // pixels per second
+  const speed = 200;
   let dx = 0, dy = 0;
   if (keys.ArrowLeft || keys.a) dx -= 1;
   if (keys.ArrowRight || keys.d) dx += 1;
@@ -57,7 +57,7 @@ function move(delta) {
 
 function gameLoop(timestamp) {
   if (!startTime) startTime = timestamp;
-  const delta = (timestamp - startTime) / 1000; // seconds
+  const delta = (timestamp - startTime) / 1000;
   elapsed = delta;
   
   // Update timer display
@@ -77,16 +77,15 @@ function gameLoop(timestamp) {
   ctx.fillStyle = 'rgba(255,255,255,0.8)';
   ctx.fillRect(playerX, playerY, playerSize, playerSize);
   
-  // Sound on key press (throttled by frame rate)
+  // Sound on key press
   if (keys.ArrowLeft || keys.ArrowRight || keys.ArrowUp || keys.ArrowDown || keys.a || keys.d || keys.w || keys.s) {
-    // To prevent sound overlapping too much, we only play if not already playing
-    // In a real game we'd use a more robust trigger
+    // Throttled by frame rate
   }
   
   requestAnimationFrame(gameLoop);
 }
 
-// Handle sound on first interaction to comply with browser policies
+// Handle sound on first interaction
 window.addEventListener('keydown', () => {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
