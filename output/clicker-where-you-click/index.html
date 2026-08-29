@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>EggstravaGANZA: The Bizarre Hatchery</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥚</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:linear-gradient(135deg,#1a0a2e 0%,#16213e 50%,#0f3460 100%);min-height:100vh;font-family:'Segoe UI',sans-serif;color:#fff;overflow:hidden;touch-action:manipulation}
+#game-container{position:relative;width:100vw;height:100vh;display:flex;flex-direction:column}
+#top-bar{position:absolute;top:0;left:0;right:0;height:60px;background:rgba(22,33,62,0.9);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:100;border-bottom:2px solid #e94560}
+#bells-display{display:flex;align-items:center;gap:10px;font-size:1.4rem;font-weight:700;color:#ffd700;text-shadow:0 0 10px #ffd700}
+#bells-display span{font-size:1.8rem}
+#timer{position:absolute;left:50%;transform:translateX(-50%);font-size:1rem;color:#00ff88;font-family:monospace;background:rgba(0,0,0,0.5);padding:5px 15px;border-radius:20px;border:1px solid #00ff88}
+#top-buttons{display:flex;gap:10px}
+.icon-btn{width:40px;height:40px;border-radius:50%;background:#16213e;border:2px solid #e94560;color:#fff;font-size:1.2rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}
+.icon-btn:hover{background:#e94560;transform:scale(1.1)}
+#canvas-container{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
+#gameCanvas{display:block;max-width:100%;max-height:100%}
+#progress-container{position:absolute;bottom:100px;left:50%;transform:translateX(-50%);width:60%;max-width:400px}
+#progress-bar{height:24px;background:#16213e;border-radius:12px;border:3px solid #0f3460;overflow:hidden;position:relative}
+#progress-fill{height:100%;background:linear-gradient(90deg,#e94560,#ffd700);width:0%;transition:width .1s;position:relative}
+#progress-fill::after{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,0.3),transparent)}
+#progress-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:700;text-shadow:1px 1px 2px #000;font-size:.9rem}
+#egg-info{text-align:center;margin-top:10px;font-size:.9rem;color:#aaa}
+#bottom-nav{position:absolute;bottom:0;left:0;right:0;height:70px;background:rgba(22,33,62,0.95);display:flex;justify-content:center;gap:20px;padding:10px;z-index:100;border-top:2px solid #e94560}
+.nav-btn{background:linear-gradient(180deg,#16213e,#0f3460);border:2px solid #e94560;border-radius:15px;padding:8px 25px;color:#fff;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:3px}
+.nav-btn:hover,.nav-btn.active{background:#e94560;transform:scale(1.05)}
+.nav-btn span{font-size:1.3rem}
+.panel{position:absolute;bottom:80px;left:0;right:0;background:linear-gradient(180deg,#1a0a2e,#16213e);border:2px solid #e94560;border-radius:20px 20px 0 0;max-height:60vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s ease;z-index:90;padding:20px}
+.panel.open{transform:translateY(0)}
+.panel h2{color:#ffd700;text-align:center;margin-bottom:15px;font-size:1.3rem;border-bottom:2px solid #e94560;padding-bottom:10px}
+.close-btn{position:absolute;top:10px;right:15px;background:none;border:none;color:#e94560;font-size:1.5rem;cursor:pointer}
+.upgrade-item,.creature-item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:rgba(15,52,96,0.5);border-radius:10px;margin-bottom:10px;border:1px solid #0f3460}
+.upgrade-item:hover,.creature-item:hover{border-color:#e94560}
+.upgrade-info,.creature-info{display:flex;align-items:center;gap:12px}
+.upgrade-icon,.creature-icon{font-size:2rem}
+.upgrade-name,.creature-name{font-weight:600}
+.upgrade-desc,.creature-tier{font-size:.8rem;color:#aaa}
+.buy-btn{background:linear-gradient(180deg,#00ff88,#00cc6a);border:none;border-radius:8px;padding:8px 20px;color:#1a0a2e;font-weight:700;cursor:pointer;transition:all .2s}
+.buy-btn:hover{transform:scale(1.05);box-shadow:0 0 15px #00ff88}
+.buy-btn:disabled{background:#555;color:#888;cursor:not-allowed;transform:none}
+.creature-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.creature-card{background:rgba(15,52,96,0.5);border-radius:10px;padding:10px;text-align:center;border:2px solid transparent}
+.creature-card:hover{border-color:#ffd700}
+.creature-card.new{border-color:#00ff88;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 5px #00ff88}50%{box-shadow:0 0 20px #00ff88}}
+.creature-card .icon{font-size:2.5rem}
+.creature-card .name{font-size:.75rem;margin:5px 0;font-weight:600}
+.creature-card .count{font-size:.7rem;color:#ffd700}
+.toast{position:fixed;top:80px;right:20px;background:linear-gradient(135deg,#ffd700,#e94560);color:#1a0a2e;padding:15px 25px;border-radius:10px;font-weight:700;z-index:200;transform:translateX(150%);transition:transform .3s ease;box-shadow:0 5px 20px rgba(0,0,0,.5)}
+.toast.show{transform:translateX(0)}
+.floating-text{position:absolute;font-weight:700;font-size:1.2rem;color:#ffd700;text-shadow:2px 2px 4px #000;pointer-events:none;animation:floatUp 1s ease-out forwards}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-50px) scale(1.5)}}
+.crit{color:#e94560;font-size:1.5rem}
+</style>
+</head>
+<body>
+<div id="game-container">
+<div id="top-bar">
+<div id="bells-display"><span>🔔</span><span id="bells-amount">0</span></div>
+<div id="timer">00:00.00</div>
+<div id="top-buttons">
+<button class="icon-btn" onclick="toggleSound()" title="Toggle Sound" id="sound-btn">🔊</button>
+<button class="icon-btn" onclick="saveGame()" title="Save">💾</button>
+</div>
+</div>
+<div id="canvas-container">
+<canvas id="gameCanvas"></canvas>
+</div>
+<div id="progress-container">
+<div id="progress-bar"><div id="progress-fill"></div><span id="progress-text">0%</span></div>
+<div id="egg-info">Plain Egg • Tap to Hatch!</div>
+</div>
+<div id="bottom-nav">
+<button class="nav-btn" onclick="togglePanel('shop')"><span>🛒</span>Shop</button>
+<button class="nav-btn" onclick="togglePanel('creatures')"><span>🐣</span>Creatures</button>
+<button class="nav-btn" onclick="togglePanel('stats')"><span>📊</span>Stats</button>
+</div>
+<div class="panel" id="shop-panel">
+<button class="close-btn" onclick="togglePanel('shop')">✕</button>
+<h2>🛒 Upgrade Shop</h2>
+<div id="upgrades-list"></div>
+</div>
+<div class="panel" id="creatures-panel">
+<button class="close-btn" onclick="togglePanel('creatures')">✕</button>
+<h2>🐣 Creature Collection</h2>
+<div id="creatures-grid" class="creature-grid"></div>
+</div>
+<div class="panel" id="stats-panel">
+<button class="close-btn" onclick="togglePanel('stats')">✕</button>
+<h2>📊 Statistics</h2>
+<div id="stats-content"></div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const EGGS=[{name:'Plain Egg',tier:1,clicks:10,value:1,emoji:'🥚'},{name:'Spotted Egg',tier:2,clicks:25,value:5,emoji:'🥚'},{name:'Glowing Egg',tier:3,clicks:50,value:25,emoji:'✨'},{name:'Tentacled Egg',tier:4,clicks:100,value:100,emoji:'🐙'},{name:'Cosmic Egg',tier:5,clicks:200,value:500,emoji:'🌌'},{name:'Quantum Egg',tier:6,clicks:350,value:2500,emoji:'⚛️'},{name:'Paradox Egg',tier:7,clicks:500,value:12500,emoji:'🌀'},{name:'Existential Crisis Egg',tier:8,clicks:750,value:75000,emoji:'💀'},{name:'The Final Egg',tier:9,clicks:1000,value:500000,emoji:'👁️'}];
+const CREATURES=[['🐤','Basic Chick'],['🥔','Grumpy Potato'],['🧦','Single Sock'],['🦆','Three-Eyed Duck'],['🌵','Confused Cactus'],['🍞','Talking Toaster'],['🦙','Laser Llama'],['🪱','Disco Worm'],['🐹','Ninja Hamster'],['🌽','Eldritch Corn'],['🍮','Sentient Pudding'],['🧮','Cursed Calculator'],['🐱','Void Cat'],['🐐','Dimension Goat'],['🐟','Reality Fish'],['🦜','Paradox Parrot'],['🐢','Time-Loop Turtle'],['☁️','Clone Cloud'],['🐋','Universe Whale'],['🐿️','Singularity Squirrel'],['🐹','Multiverse Mole'],['🐔','Chaos Chicken'],['🦌','Entropy Elk'],['🦗','Infinity Insect'],['👤','The Keeper'],['👻','The Other'],['🌟','The Original']];
+const UPGRADES=[{id:'clickPower',name:'Sharper Click',desc:'+1 Click Power',baseCost:50,effect:()=>{state.clickPower++}},{id:'critChance',name:'Double Tap',desc:'+1% Crit Chance',baseCost:500,effect:()=>{state.critChance+=0.01}},{id:'autoHatch1',name:'Auto-Hatch I',desc:'1 egg/10 sec',baseCost:1000,effect:()=>{state.autoHatchRate=0.1}},{id:'autoHatch2',name:'Auto-Hatch II',desc:'1 egg/5 sec',baseCost:10000,effect:()=>{state.autoHatchRate=0.2}},{id:'hastyHands',name:'Hasty Hands',desc:'-5% clicks required',baseCost:5000,effect:()=>{state.clickReduction*=0.95}},{id:'goldenTouch',name:'Golden Touch',desc:'+10% creature value',baseCost:50000,effect:()=>{state.valueMultiplier*=1.1}},{id:'instaHatch',name:'Insta-Hatch',desc:'10% skip chance',baseCost:500000,effect:()=>{state.instaHatchChance=0.1}}];
+const state={bells:0,totalBellsEarned:0,creaturesCollected:0,currentEggIndex:0,eggProgress:0,clickPower:1,critChance:0.05,hatchSpeed:1,clickReduction:1,valueMultiplier:1,autoHatchRate:0,instaHatchChance:0,upgrades:{},collection:{},achievements:[],highScore:0,soundOn:true,startTime:Date.now()};
+let audioCtx=null,canvas,ctx,particles=[],floatingTexts=[],hatchAnim=null,eggWobble=0;
+function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();}
+function playSound(type){if(!state.soundOn)return;initAudio();const osc=audioCtx.createOscillator(),gain=audioCtx.createGain();osc.connect(gain);gain.connect(audioCtx.destination);const sounds={click:{freq:800,dur:0.05},crack:{freq:400,dur:0.08},hatch:{freq:600,dur:0.3,type:'triangle'},crit:{freq:1200,dur:0.1},buy:{freq:1000,dur:0.15,type:'square'}};const s=sounds[type]||sounds.click;osc.frequency.value=s.freq;osc.type=s.type||'sine';gain.gain.setValueAtTime(0.1,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+s.dur);osc.start();osc.stop(audioCtx.currentTime+s.dur);}
+function formatNumber(n){if(n>=1e12)return(n/1e12).toFixed(1)+'T';if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return Math.floor(n).toString();}
+function loadGame(){const saved=localStorage.getItem('eggstravaSave');if(saved){const data=JSON.parse(atob(saved));Object.assign(state,data);if(state.highScore===undefined)state.highScore=0;state.startTime=Date.now();}}
+function saveGame(){state.highScore=Math.max(state.highScore,state.bells);localStorage.setItem('eggstravaSave',btoa(JSON.stringify(state)));showToast('Game Saved! 💾');}
+function getCurrentEgg(){const egg=EGGS[state.currentEggIndex];const mult=state.clickReduction;return{...egg,clicks:Math.floor(egg.clicks*mult),emoji:egg.emoji};}
+function getRandomCreature(tier){const start=tier===1?0:tier===2?3:tier===3?6:tier===4?9:tier===5?12:tier===6?15:tier===7?18:tier===8?21:24;const end=start+(tier===1?3:tier===2?3:tier===3?3:tier===4?3:tier===5?3:tier===6?3:tier===7?3:tier===8?3:3);const idx=start+Math.floor(Math.random()*(end-start));return CREATURES[idx];}
+function spawnParticles(x,y,count,color){for(let i=0;i<count;i++)particles.push({x,y,vx:(Math.random()-0.5)*8,vy:(Math.random()-0.5)*8-3,life:1,color,size:Math.random()*6+2});}
+function addFloatingText(x,y,text,isCrit=false){const el=document.createElement('div');el.className='floating-text'+(isCrit?' crit':'');el.textContent=text;el.style.left=x+'px';el.style.top=y+'px';document.getElementById('game-container').appendChild(el);setTimeout(()=>el.remove(),1000);}
+function clickEgg(e){initAudio();const egg=getCurrentEgg();let power=state.clickPower;const isCrit=Math.random()<state.critChance;if(isCrit){power*=5;playSound('crit');}else{playSound('click');}if(Math.random()<state.instaHatchChance)state.eggProgress=egg.clicks;else state.eggProgress=Math.min(state.eggProgress+power,egg.clicks);const rect=canvas.getBoundingClientRect();const x=(e.clientX||e.touches?.[0]?.clientX||rect.left+rect.width/2)-rect.left;const y=(e.clientY||e.touches?.[0]?.clientY||rect.top+rect.height/2)-rect.top;addFloatingText(x,y,(isCrit?'CRIT! +':'+')+power,isCrit);spawnParticles(x,y,isCrit?20:8,isCrit?'#e94560':'#ffd700');eggWobble=10;if(state.eggProgress>=egg.clicks){hatch();}updateUI();}
+function hatch(){playSound('hatch');const egg=getCurrentEgg();const value=Math.floor(egg.value*state.valueMultiplier);state.bells+=value;state.totalBellsEarned+=value;const tier=Math.min(egg.tier,9);const creature=getRandomCreature(tier);state.collection[creature[0]]=(state.collection[creature[0]]||0)+1;state.creaturesCollected++;state.eggProgress=0;state.currentEggIndex=Math.min(state.currentEggIndex+1,EGGS.length-1);while(state.currentEggIndex<EGGS.length-1&&state.creaturesCollected>=[,10,50,150,400,1000,2500,6000,15000][state.currentEggIndex+1]){state.currentEggIndex++;}hatchAnim={frame:0,total:30};spawnParticles(canvas.width/2,canvas.height/2,50,'#ffd700');showToast(`Hatched ${creature[0]} ${creature[1]}!`);renderCreatures();}
+function updateUI(){document.getElementById('bells-amount').textContent=formatNumber(state.bells);const egg=getCurrentEgg();const pct=Math.min((state.eggProgress/egg.clicks)*100,100);document.getElementById('progress-fill').style.width=pct+'%';document.getElementById('progress-text').textContent=Math.floor(pct)+'%';document.getElementById('egg-info').textContent=`${egg.emoji} ${egg.name} • ${egg.clicks-state.eggProgress} taps to hatch!`;const elapsed=Math.floor((Date.now()-state.startTime)/1000);const mins=Math.floor(elapsed/60).toString().padStart(2,'0');const secs=(elapsed%60).toString().padStart(2,'0');const ms=((Date.now()-state.startTime)%1000).toString().padStart(2,'0').slice(0,2);document.getElementById('timer').textContent=`${mins}:${secs}.${ms}`;renderUpgrades();}
+function togglePanel(name){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('open'));if(name){document.getElementById(name+'-panel')?.classList.add('open');}if(name==='stats')renderStats();}
+function toggleSound(){state.soundOn=!state.soundOn;document.getElementById('sound-btn').textContent=state.soundOn?'🔊':'🔇';}
+function renderUpgrades(){const list=document.getElementById('upgrades-list');list.innerHTML='';UPGRADES.forEach(u=>{const level=state.upgrades[u.id]||0;const cost=Math.floor(u.baseCost*Math.pow(1.5,level));const canBuy=state.bells>=cost;const btn=document.createElement('button');btn.className='buy-btn';btn.textContent=formatNumber(cost);btn.disabled=!canBuy;btn.onclick=()=>buyUpgrade(u,cost,btn);const item=document.createElement('div');item.className='upgrade-item';item.innerHTML=`<div class="upgrade-info"><span class="upgrade-icon">🛒</span><div><div class="upgrade-name">${u.name} ${level?'(Lv.'+level+')':''}</div><div class="upgrade-desc">${u.desc}</div></div></div>`;item.appendChild(btn);list.appendChild(item);});}
+function buyUpgrade(u,cost,btn){if(state.bells<cost)return;state.bells-=cost;state.upgrades[u.id]=(state.upgrades[u.id]||0)+1;u.effect();playSound('buy');updateUI();showToast(`Upgraded ${u.name}!`);}
+function renderCreatures(){const grid=document.getElementById('creatures-grid');grid.innerHTML='';Object.entries(state.collection).forEach(([emoji,count])=>{const name=CREATURES.find(c=>c[0]===emoji)?.[1]||'Unknown';const card=document.createElement('div');card.className='creature-card';card.innerHTML=`<span class="icon">${emoji}</span><div class="name">${name}</div><div class="count">x${count}</div>`;grid.appendChild(card);});}
+function renderStats(){const content=document.getElementById('stats-content');content.innerHTML=`<div class="upgrade-item"><div>Total Bells Earned</div><div style="color:#ffd700">${formatNumber(state.totalBellsEarned)}</div></div><div class="upgrade-item"><div>Creatures Hatched</div><div style="color:#00ff88">${state.creaturesCollected}</div></div><div class="upgrade-item"><div>Click Power</div><div>${state.clickPower}</div></div><div class="upgrade-item"><div>Crit Chance</div><div>${(state.critChance*100).toFixed(0)}%</div></div><div class="upgrade-item"><div>High Score</div><div style="color:#e94560">${formatNumber(state.highScore)}</div></div>`;}
+function showToast(msg){const toast=document.getElementById('toast');toast.textContent=msg;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),2500);}
+function drawEgg(x,y,size,crackPct,emoji){ctx.save();ctx.translate(x,y);ctx.rotate(Math.sin(eggWobble*0.1)*0.05);ctx.fillStyle='#f5f5dc';ctx.strokeStyle='#8b7355';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(0,0,size*0.6,size,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='rgba(255,220,180,0.5)';ctx.beginPath();ctx.ellipse(-size*0.2,-size*0.3,size*0.15,size*0.2,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(255,220,180,0.3)';ctx.beginPath();ctx.ellipse(size*0.25,size*0.2,size*0.1,size*0.15,-0.5,0,Math.PI*2);ctx.fill();if(crackPct>0){ctx.strokeStyle='#333';ctx.lineWidth=2;const cracks=Math.floor(crackPct/25);for(let i=0;i<cracks;i++){ctx.beginPath();ctx.moveTo((Math.random()-0.5)*size*0.8,(Math.random()-0.5)*size);ctx.lineTo((Math.random()-0.5)*size*0.8,(Math.random()-0.5)*size);ctx.stroke();}}ctx.font=`${size*0.8}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(emoji,0,0);ctx.restore();}
+function gameLoop(){ctx.clearRect(0,0,canvas.width,canvas.height);particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.2;p.life-=0.02;if(p.life>0){ctx.fillStyle=p.color;ctx.globalAlpha=p.life;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}return p.life>0;});if(Math.random()<0.1)particles.push({x:Math.random()*canvas.width,y:canvas.height+10,vx:(Math.random()-0.5)*0.5,vy:-Math.random()*0.5-0.2,life:1,color:'rgba(255,215,0,'+(Math.random()*0.5+0.3)+')',size:Math.random()*2+1});const egg=getCurrentEgg();const crackPct=(state.eggProgress/egg.clicks)*100;const eggSize=150+crackPct*0.5;drawEgg(canvas.width/2,canvas.height/2-20,eggSize,crackPct,egg.emoji);eggWobble*=0.9;updateUI();requestAnimationFrame(gameLoop);}
+function init(){canvas=document.getElementById('gameCanvas');ctx=canvas.getContext('2d');function resize(){canvas.width=Math.max(800,window.innerWidth);canvas.height=Math.max(600,window.innerHeight);}resize();window.addEventListener('resize',resize);canvas.addEventListener('click',clickEgg);canvas.addEventListener('touchstart',e=>{e.preventDefault();clickEgg(e.touches[0]);},{passive:false});loadGame();renderCreatures();gameLoop();setInterval(()=>{if(state.autoHatchRate>0){state.eggProgress+=state.autoHatchRate;const egg=getCurrentEgg();if(state.eggProgress>=egg.clicks)hatch();}},1000);setInterval(saveGame,30000);}
+window.onload=init;
+</script>
+</body>
+</html>
