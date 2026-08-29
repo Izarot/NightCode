@@ -1,0 +1,361 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 31546 (char 31545)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n    <title>Portal Snake</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐍</text></svg>\">\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        html, body {\n            width: 100%;\n            height: 100%;\n            overflow: hidden;\n            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n            touch-action: none;\n            user-select: none;\n            -webkit-user-select: none;\n        }\n        #gameContainer {\n            width: 100%;\n            height: 100%;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n        }\n        #gameCanvas {\n            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);\n            border-radius: 8px;\n            box-shadow: 0 0 40px rgba(123, 44, 191, 0.3);\n        }\n    </style>\n</head>\n<body>\n    <div id=\"gameContainer\">\n        <canvas id=\"gameCanvas\"></canvas>\n    </div>\n    <script>\n        // ============================================\n        // PORTAL SNAKE - Complete Game Implementation\n        // ============================================\n        \n        const canvas = document.getElementById('gameCanvas');\n        const ctx = canvas.getContext('2d');\n        \n        // Base resolution\n        const BASE_WIDTH = 800;\n        const BASE_HEIGHT = 600;\n        const GRID_SIZE = 20;\n        \n        // Colors - Vibrant Palette\n        const COLORS = {\n            snakeHead: '#e94560',\n            snakeTail: '#ff6b6b',\n            food: '#ffd93d',\n            portals: ['#7b2cbf', '#f5576c', '#4ecdc4', '#ffe66d'],\n            ui: {\n                text: '#ffffff',\n                panel: 'rgba(0, 0, 0, 0.4)',\n                button: '#ffe66d',\n                buttonText: '#212121',\n                danger: '#ff5f57',\n                success: '#4ecdc4'\n            }\n        };\n        \n        // Game state enum\n        const STATE = {\n            MENU: 'MENU',\n            PLAYING: 'PLAYING',\n            PAUSED: 'PAUSED',\n            GAME_OVER: 'GAME_OVER'\n        };\n        \n        // Audio context for sound effects\n        let audioCtx = null;\n        \n        function initAudio() {\n            if (!audioCtx) {\n                audioCtx = new (window.AudioContext || window.webkitAudioContext)();\n            }\n        }\n        \n        function playSound(type) {\n            if (!audioCtx) return;\n            const osc = audioCtx.createOscillator();\n            const gain = audioCtx.createGain();\n            osc.connect(gain);\n            gain.connect(audioCtx.destination);\n            \n            switch(type) {\n                case 'eat':\n                    osc.frequency.setValueAtTime(520, audioCtx.currentTime);\n                    osc.frequency.exponentialRampToValueAtTime(780, audioCtx.currentTime + 0.1);\n                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);\n                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);\n                    osc.start(audioCtx.currentTime);\n                    osc.stop(audioCtx.currentTime + 0.15);\n                    break;\n                case 'teleport':\n                    osc.frequency.setValueAtTime(200, audioCtx.currentTime);\n                    osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);\n                    osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.15);\n                    gain.gain.setValueAtTime(0.12, audioCtx.currentTime);\n                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);\n                    osc.start(audioCtx.currentTime);\n                    osc.stop(audioCtx.currentTime + 0.2);\n                    break;\n                case 'death':\n                    osc.frequency.setValueAtTime(300, audioCtx.currentTime);\n                    osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.4);\n                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);\n                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);\n                    osc.start(audioCtx.currentTime);\n                    osc.stop(audioCtx.currentTime + 0.5);\n                    break;\n                case 'click':\n                    osc.frequency.setValueAtTime(440, audioCtx.currentTime);\n                    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);\n                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);\n                    osc.start(audioCtx.currentTime);\n                    osc.stop(audioCtx.currentTime + 0.05);\n                    break;\n            }\n        }\n        \n        // Game state\n        let gameState = STATE.MENU;\n        let score = 0;\n        let highScore = parseInt(localStorage.getItem('portalSnakeHighScore')) || 0;\n        let speedRunTime = 0;\n        let isNewHighScore = false;\n        \n        // Speed settings\n        const BASE_SPEED = 200;\n        const MAX_SPEED = 400;\n        const SPEED_INCREMENT = 0.1;\n        \n        // Snake\n        let snake = [];\n        let direction = { x: 1, y: 0 };\n        let nextDirection = { x: 1, y: 0 };\n        let currentSpeed = BASE_SPEED;\n        let lastMoveTime = 0;\n        let moveAccumulator = 0;\n        \n        // Food\n        let food = { x: 0, y: 0 };\n        let foodPulse = 0;\n        \n        // Portals\n        let portals = [];\n        const MAX_PORTALS = 4;\n        let invincibilityTime = 0;\n        let portalCooldown = 0;\n        \n        // Particles\n        let particles = [];\n        \n        // Grid overlay toggle\n        let showGrid = false;\n        \n        // Timing\n        let lastTime = 0;\n        let deltaTime = 0;\n        \n        // Animation\n        let animationTime = 0;\n        let scorePopScale = 1;\n        \n        // Canvas scaling\n        let scale = 1;\n        let offsetX = 0;\n        let offsetY = 0;\n        \n        // Touch handling\n        let touchStart = null;\n        let touchValid = false;\n        \n        // Input debounce\n        let lastInputTime = 0;\n        const INPUT_DEBOUNCE = 0.05;\n        \n        // Button hover states\n        let buttons = {};\n        let mousePos = { x: 0, y: 0 };\n        \n        // ============================================\n        // INITIALIZATION\n        // ============================================\n        \n        function resize() {\n            const container = document.getElementById('gameContainer');\n            const containerWidth = container.clientWidth;\n            const containerHeight = container.clientHeight;\n            \n            const aspectRatio = BASE_WIDTH / BASE_HEIGHT;\n            let newWidth, newHeight;\n            \n            if (containerWidth / containerHeight > aspectRatio) {\n                newHeight = Math.min(containerHeight * 0.95, BASE_HEIGHT);\n                newWidth = newHeight * aspectRatio;\n            } else {\n                newWidth = Math.min(containerWidth * 0.95, BASE_WIDTH);\n                newHeight = newWidth / aspectRatio;\n            }\n            \n            canvas.width = newWidth * window.devicePixelRatio;\n            canvas.height = newHeight * window.devicePixelRatio;\n            canvas.style.width = newWidth + 'px';\n            canvas.style.height = newHeight + 'px';\n            \n            scale = (newWidth / BASE_WIDTH) * window.devicePixelRatio;\n            offsetX = (canvas.width - newWidth * window.devicePixelRatio) / 2;\n            offsetY = (canvas.height - newHeight * window.devicePixelRatio) / 2;\n            \n            ctx.setTransform(scale, 0, 0, scale, offsetX / window.devicePixelRatio * scale, offsetY / window.devicePixelRatio * scale);\n        }\n        \n        function initGame() {\n            // Initialize snake at center\n            const startX = Math.floor(BASE_WIDTH / GRID_SIZE / 2);\n            const startY = Math.floor(BASE_HEIGHT / GRID_SIZE / 2);\n            \n            snake = [\n                { x: startX, y: startY },\n                { x: startX - 1, y: startY },\n                { x: startX - 2, y: startY }\n            ];\n            \n            direction = { x: 1, y: 0 };\n            nextDirection = { x: 1, y: 0 };\n            currentSpeed = BASE_SPEED;\n            score = 0;\n            speedRunTime = 0;\n            isNewHighScore = false;\n            invincibilityTime = 0;\n            portalCooldown = 0;\n            particles = [];\n            portals = [];\n            \n            spawnFood();\n            updatePortals();\n        }\n        \n        // ============================================\n        // PORTAL SYSTEM\n        // ============================================\n        \n        function updatePortals() {\n            const targetPortals = Math.min(MAX_PORTALS, 2 + Math.floor(score / 50));\n            \n            while (portals.length < targetPortals) {\n                addPortal();\n            }\n        }\n        \n        function addPortal() {\n            if (portals.length >= MAX_PORTALS) return;\n            \n            const colorIndex = portals.length % COLORS.portals.length;\n            const portal1 = createPortalPosition();\n            const portal2 = createPortalPosition();\n            \n            portals.push({\n                x: portal1.x,\n                y: portal1.y,\n                pairIndex: portals.length,\n                color: COLORS.portals[colorIndex],\n                pulsePhase: Math.random() * Math.PI * 2\n            });\n            \n            portals.push({\n                x: portal2.x,\n                y: portal2.y,\n                pairIndex: portals.length - 1,\n                color: COLORS.portals[colorIndex],\n                pulsePhase: Math.random() * Math.PI * 2\n            });\n        }\n        \n        function createPortalPosition() {\n            let attempts = 0;\n            while (attempts < 100) {\n                const x = Math.floor(Math.random() * (BASE_WIDTH / GRID_SIZE - 2)) + 1;\n                const y = Math.floor(Math.random() * (BASE_HEIGHT / GRID_SIZE - 2)) + 1;\n                \n                // Check not on snake\n                let valid = true;\n                for (let seg of snake) {\n                    if (seg.x === x && seg.y === y) {\n                        valid = false;\n                        break;\n                    }\n                }\n                \n                // Check not on food\n                if (food.x === x && food.y === y) valid = false;\n                \n                // Check not on other portals\n                for (let p of portals) {\n                    if (Math.abs(p.x - x) < 3 && Math.abs(p.y - y) < 3) {\n                        valid = false;\n                        break;\n                    }\n                }\n                \n                if (valid) return { x, y };\n                attempts++;\n            }\n            return { x: 1, y: 1 };\n        }\n        \n        function checkPortalEntry() {\n            if (portalCooldown > 0 || invincibilityTime > 0) return;\n            \n            const head = snake[0];\n            \n            for (let portal of portals) {\n                if (head.x === portal.x && head.y === portal.y) {\n                    const pair = portals[portal.pairIndex];\n                    \n                    // Check if exit is valid\n                    let exitValid = true;\n                    for (let seg of snake) {\n                        if (seg.x === pair.x && seg.y === pair.y) {\n                            exitValid = false;\n                            break;\n                        }\n                    }\n                    \n                    if (exitValid && pair.x >= 0 && pair.x < BASE_WIDTH / GRID_SIZE && \n                        pair.y >= 0 && pair.y < BASE_HEIGHT / GRID_SIZE) {\n                        // Teleport!\n                        playSound('teleport');\n                        \n                        // Create teleport particles\n                        for (let i = 0; i < 12; i++) {\n                            const angle = (i / 12) * Math.PI * 2;\n                            particles.push({\n                                x: (head.x + 0.5) * GRID_SIZE,\n                                y: (head.y + 0.5) * GRID_SIZE,\n                                vx: Math.cos(angle) * 100,\n                                vy: Math.sin(angle) * 100,\n                                life: 0.8,\n                                color: portal.color,\n                                size: 4\n                            });\n                        }\n                        \n                        // Teleport snake\n                        const dx = pair.x - head.x;\n                        const dy = pair.y - head.y;\n                        \n                        for (let i = snake.length - 1; i > 0; i--) {\n                            snake[i].x += dx;\n                            snake[i].y += dy;\n                        }\n                        \n                        // Add invincibility\n                        invincibilityTime = 0.2;\n                        portalCooldown = 0.5;\n                        \n                        return;\n                    }\n                }\n            }\n        }\n        \n        // ============================================\n        // FOOD SYSTEM\n        // ============================================\n        \n        function spawnFood() {\n            let attempts = 0;\n            while (attempts < 100) {\n                const x = Math.floor(Math.random() * (BASE_WIDTH / GRID_SIZE - 2)) + 1;\n                const y = Math.floor(Math.random() * (BASE_HEIGHT / GRID_SIZE - 2)) + 1;\n                \n                let valid = true;\n                \n                // Check snake\n                for (let seg of snake) {\n                    if (seg.x === x && seg.y === y) {\n                        valid = false;\n                        break;\n                    }\n                }\n                \n                // Check portals\n                for (let p of portals) {\n                    if (p.x === x && p.y === y) {\n                        valid = false;\n                        break;\n                    }\n                }\n                \n                if (valid) {\n                    food = { x, y };\n                    return;\n                }\n                attempts++;\n            }\n        }\n        \n        // ============================================\n        // INPUT HANDLING\n        // ============================================\n        \n        function handleKeyDown(e) {\n            if (gameState === STATE.MENU) {\n                if (e.code === 'Space' || e.code === 'Enter') {\n                    initAudio();\n                    playSound('click');\n                    gameState = STATE.PLAYING;\n                    initGame();\n                }\n                return;\n            }\n            \n            if (gameState === STATE.GAME_OVER) {\n                if (e.code === 'Space' || e.code === 'Enter') {\n                    playSound('click');\n                    gameState = STATE.PLAYING;\n                    initGame();\n                } else if (e.code === 'Escape') {\n                    playSound('click');\n                    gameState = STATE.MENU;\n                }\n                return;\n            }\n            \n            if (gameState === STATE.PAUSED) {\n                if (e.code === 'Escape' || e.code === 'Space') {\n                    playSound('click');\n                    gameState = STATE.PLAYING;\n                }\n                return;\n            }\n            \n            if (gameState === STATE.PLAYING) {\n                if (e.code === 'Escape') {\n                    playSound('click');\n                    gameState = STATE.PAUSED;\n                    return;\n                }\n                \n                if (e.code === 'KeyG') {\n                    showGrid = !showGrid;\n                    return;\n                }\n                \n                const now = performance.now() / 1000;\n                if (now - lastInputTime < INPUT_DEBOUNCE) return;\n                \n                switch (e.code) {\n                    case 'ArrowUp':\n                    case 'KeyW':\n                        if (direction.y !== 1) {\n                            nextDirection = { x: 0, y: -1 };\n                            lastInputTime = now;\n                        }\n                        break;\n                    case 'ArrowDown':\n                    case 'KeyS':\n                        if (direction.y !== -1) {\n                            nextDirection = { x: 0, y: 1 };\n                            lastInputTime = now;\n                        }\n                        break;\n                    case 'ArrowLeft':\n                    case 'KeyA':\n                        if (direction.x !== 1) {\n                            nextDirection = { x: -1, y: 0 };\n                            lastInputTime = now;\n                        }\n                        break;\n                    case 'ArrowRight':\n                    case 'KeyD':\n                        if (direction.x !== -1) {\n                            nextDirection = { x: 1, y: 0 };\n                            lastInputTime = now;\n                        }\n                        break;\n                }\n            }\n        }\n        \n        function handleTouchStart(e) {\n            e.preventDefault();\n            initAudio();\n            \n            const touch = e.touches[0];\n            const rect = canvas.getBoundingClientRect();\n            touchStart = {\n                x: touch.clientX - rect.left,\n                y: touch.clientY - rect.top,\n                time: performance.now()\n            };\n            touchValid = true;\n            \n            // Check button clicks\n            if (gameState === STATE.MENU) {\n                if (isPointInButton(touchStart.x, touchStart.y, 'play')) {\n                    playSound('click');\n                    gameState = STATE.PLAYING;\n                    initGame();\n                }\n            } else if (gameState === STATE.PAUSED) {\n                if (isPointInButton(touchStart.x, touchStart.y, 'resume')) {\n                    playSound('click');\n                    gameState = STATE.PLAYING;\n                } else if (isPointInButton(touchStart.x, touchStart.y, 'menu')) {\n                    playSound('click');\n                    gameState = STATE.MENU;\n                }\n            } else if (gameState === STATE.GAME_OVER) {\n                if (isPointInButton(touchStart.x, touchStart.y, 'retry')) {\n                    playSound('click');\n                    gameState = STATE.PLAYING;\n                    initGame();\n                } else if (isPointInButton(touchStart.x, touchStart.y, 'mainMenu')) {\n                    playSound('click');\n                    gameState = STATE.MENU;\n                }\n            } else if (gameState === STATE.PLAYING) {\n                // Long press to pause\n                setTimeout(() => {\n                    if (touchValid && touchStart) {\n                        const rect = canvas.getBoundingClientRect();\n                        const cx = rect.width / 2;\n                        const cy = rect.height / 2;\n                        const dx = touchStart.x - cx;\n                        const dy = touchStart.y - cy;\n                        if (Math.sqrt(dx*dx + dy*dy) < 100) {\n                            playSound('click');\n                            gameState = STATE.PAUSED;\n                        }\n                    }\n                }, 500);\n            }\n        }\n        \n        function handleTouchEnd(e) {\n            if (!touchStart || !touchValid) return;\n            if (gameState !== STATE.PLAYING) {\n                touchStart = null;\n                return;\n            }\n            \n            const touch = e.changedTouches[0];\n            const rect = canvas.getBoundingClientRect();\n            const endX = touch.clientX - rect.left;\n            const endY = touch.clientY - rect.top;\n            \n            const dx = endX - touchStart.x;\n            const dy = endY - touchStart.y;\n            const duration = (performance.now() - touchStart.time) / 1000;\n            \n            if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {\n                const now = performance.now() / 1000;\n                if (now - lastInputTime >= INPUT_DEBOUNCE && duration < 0.5) {\n                    if (Math.abs(dx) > Math.abs(dy)) {\n                        if (dx > 0 && direction.x !== -1) {\n                            nextDirection = { x: 1, y: 0 };\n                        } else if (dx < 0 && direction.x !== 1) {\n                            nextDirection = { x: -1, y: 0 };\n                        }\n                    } else {\n                        if (dy > 0 && direction.y !== -1) {\n                            nextDirection = { x: 0, y: 1 };\n                        } else if (dy < 0 && direction.y !== 1) {\n                            nextDirection = { x: 0, y: -1 };\n                        }\n                    }\n                    lastInputTime = now;\n                }\n            }\n            \n            touchStart = null;\n            touchValid = false;\n        }\n        \n        function isPointInButton(px, py, btnName) {\n            const btn = buttons[btnName];\n            if (!btn) return false;\n            return px >= btn.x && px <= btn.x + btn.w && py >= btn.y && py <= btn.y + btn.h;\n        }\n        \n        // Event listeners\n        window.addEventListener('keydown', handleKeyDown);\n        canvas.addEventListener('touchstart', handleTouchStart, { passive: false });\n        canvas.addEventListener('touchend', handleTouchEnd, { passive: false });\n        canvas.addEventListener('touchcancel', () => { touchStart = null; touchValid = false; });\n        \n        canvas.addEventListener('mousemove', (e) => {\n            const rect = canvas.getBoundingClientRect();\n            mousePos.x = e.clientX - rect.left;\n            mousePos.y = e.clientY - rect.top;\n        });\n        \n        canvas.addEventListener('click', (e) => {\n            initAudio();\n            const rect = canvas.getBoundingClientRect();\n            const x = e.clientX - rect.left;\n            const y = e.clientY - rect.top;\n            \n            if (gameState === STATE.MENU) {\n                if (isPointInButton(x, y, 'play')) {\n                    playSound('click');\n                    gameState = STATE.PLAYING;\n                    initGame();\n                }\n            } else if (gameState === STATE.PAUSED) {\n                if (isPointInButton(x, y, 'resume')) {\n                    playSound('click');\n                    gameState = STATE.PLAYING;\n                } else if (isPointInButton(x, y, 'menu')) {\n                    playSound('click');\n                    gameState = STATE.MENU;\n                }\n            } else if (gameState === STATE.GAME_OVER) {\n                if (isPointInButton(x, y, 'retry')) {\n                    playSound('click');\n                    gameState = STATE.PLAYING;\n                    initGame();\n                } else if (isPointInButton(x, y, 'mainMenu')) {\n                    playSound('click');\n                    gameState = STATE.MENU;\n                }\n            }\n        });\n        \n        // ============================================\n        // GAME LOGIC\n        // ============================================\n        \n        function update(dt) {\n            if (gameState !== STATE.PLAYING) return;\n            \n            animationTime += dt;\n            foodPulse = (Math.sin(animationTime * 4) + 1) / 2;\n            \n            // Speed run timer\n            speedRunTime += dt;\n            \n            // Update timers\n            if (invincibilityTime > 0) invincibilityTime -= dt;\n            if (portalCooldown > 0) portalCooldown -= dt;\n            \n            // Score pop animation\n            if (scorePopScale > 1) {\n                scorePopScale = Math.max(1, scorePopScale - dt * 3);\n            }\n            \n            // Update particles\n            for (let i = particles.length - 1; i >= 0; i--) {\n                const p = particles[i];\n                p.x += p.vx * dt;\n                p.y += p.vy * dt;\n                p.life -= dt;\n                if (p.life <= 0) {\n                    particles.splice(i, 1);\n                }\n            }\n            \n            // Move accumulator\n            const moveInterval = GRID_SIZE / currentSpeed;\n            moveAccumulator += dt;\n            \n            while (moveAccumulator >= moveInterval) {\n                moveAccumulator -= moveInterval;\n                \n                // Apply direction\n                direction = { ...nextDirection };\n                \n                // Calculate new head\n                const head = snake[0];\n                const newHead = {\n                    x: head.x + direction.x,\n                    y: head.y + direction.y\n                };\n                \n                // Check wall collision\n                if (newHead.x < 0 || newHead.x >= BASE_WIDTH / GRID_SIZE ||\n                    newHead.y < 0 || newHead.y >= BASE_HEIGHT / GRID_SIZE) {\n                    if (invincibilityTime <= 0) {\n                        gameOver();\n                        return;\n                    }\n                } else {\n                    // Check self collision\n                    for (let i = 1; i < snake.length; i++) {\n                        if (snake[i].x === newHead.x && snake[i].y === newHead.y) {\n                            if (invincibilityTime <= 0) {\n                                gameOver();\n                                return;\n                            }\n                        }\n                    }\n                }\n                \n                // Check food\n                if (newHead.x === food.x && newHead.y === food.y) {\n                    playSound('eat');\n                    score += 10;\n                    scorePopScale = 1.3;\n                    \n                    // Grow snake\n                    snake.unshift(newHead);\n                    \n                    // Speed up\n                    if (snake.length % 3 === 0) {\n                        currentSpeed = Math.min(MAX_SPEED, currentSpeed * (1 + SPEED_INCREMENT));\n                    }\n                    \n                    // Update portals\n                    updatePortals();\n                    \n                    // Spawn new food\n                    spawnFood();\n                } else {\n                    // Normal move\n                    snake.unshift(newHead);\n                    snake.pop();\n                }\n                \n                // Check portal entry\n                checkPortalEntry();\n            }\n        }\n        \n        function gameOver() {\n            playSound('death');\n            gameState = STATE.GAME_OVER;\n            \n            // Check high score\n            if (score > highScore) {\n                highScore = score;\n                localStorage.setItem('portalSnakeHighScore', highScore.toString());\n                isNewHighScore = true;\n            }\n        }\n        \n        // ============================================\n        // RENDERING\n        // ============================================\n        \n        function drawBackground() {\n            // Gradient background\n            const gradient = ctx.createLinearGradient(0, 0, BASE_WIDTH, BASE_HEIGHT);\n            gradient.addColorStop(0, '#0a0a0f');\n            gradient.addColorStop(1, '#1a1a2e');\n            ctx.fillStyle = gradient;\n            ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);\n        }\n        \n        function drawGrid() {\n            if (!showGrid) return;\n            ctx.strokeStyle = '#1e1e2f';\n            ctx.lineWidth = 1;\n            ctx.setLineDash([4, 4]);\n            \n            for (let x = 0; x <= BASE_WIDTH; x += GRID_SIZE) {\n                ctx.beginPath();\n                ctx.moveTo(x, 0);\n                ctx.lineTo(x, BASE_HEIGHT);\n                ctx.stroke();\n            }\n            \n            for (let y = 0; y <= BASE_HEIGHT; y += GRID_SIZE) {\n                ctx.beginPath();\n                ctx.moveTo(0, y);\n                ctx.lineTo(BASE_WIDTH, y);\n                ctx.stroke();\n            }\n            ctx.setLineDash([]);\n        }\n        \n        function drawPortal(portal, index) {\n            const cx = (portal.x + 0.5) * GRID_SIZE;\n            const cy = (portal.y + 0.5) * GRID_SIZE;\n            const baseRadius = GRID_SIZE * 0.4;\n            const pulseScale = 1 + Math.sin(animationTime * 2 + portal.pulsePhase) * 0.05;\n            const radius = baseRadius * pulseScale;\n            \n            // Glow\n            ctx.save();\n            ctx.shadowColor = portal.color;\n            ctx.shadowBlur = 15;\n            \n            // Outer ring\n            ctx.beginPath();\n            ctx.arc(cx, cy, radius, 0, Math.PI * 2);\n            ctx.fillStyle = portal.color;\n            ctx.globalAlpha = 0.3;\n            ctx.fill();\n            ctx.globalAlpha = 1;\n            \n            // Inner swirl\n            const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);\n            gradient.addColorStop(0, 'rgba(255,255,255,0.8)');\n            gradient.addColorStop(0.3, portal.color);\n            gradient.addColorStop(1, 'rgba(0,0,0,0)');\n            \n            ctx.beginPath();\n            ctx.arc(cx, cy, radius * 0.8, 0, Math.PI * 2);\n            ctx.fillStyle = gradient;\n            ctx.fill();\n            \n            // Swirl lines\n            ctx.strokeStyle = 'rgba(255,255,255,0.5)';\n            ctx.lineWidth = 2;\n            for (let i = 0; i < 3; i++) {\n                const angle = animationTime * 3 + (i * Math.PI * 2 / 3);\n                ctx.beginPath();\n                ctx.arc(cx, cy, radius * 0.5, angle, angle + Math.PI * 0.5);\n                ctx.stroke();\n            }\n            \n            ctx.restore();\n        }\n        \n        function drawFood() {\n            const cx = (food.x + 0.5) * GRID_SIZE;\n            const cy = (food.y + 0.5) * GRID_SIZE;\n            const baseRadius =GSIZE * 0.4;
+            const pulseScale = 1 + foodPulse * 0.15;
+            const radius = baseRadius * pulseScale;
+            
+            // Glow
+            ctx.save();
+            ctx.shadowColor = COLORS.food;
+            ctx.shadowBlur = 12;
+            
+            // Main body
+            const gradient = ctx.createRadialGradient(cx - 2, cy - 2, 0, cx, cy, radius);
+            gradient.addColorStop(0, '#ffffff');
+            gradient.addColorStop(0.4, COLORS.food);
+            gradient.addColorStop(1, '#e6a800');
+            
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            
+            ctx.restore();
+        }
+        
+        function drawSnake() {
+            // Draw body segments
+            for (let i = snake.length - 1; i >= 0; i--) {
+                const seg = snake[i];
+                const cx = (seg.x + 0.5) * GRID_SIZE;
+                const cy = (seg.y + 0.5) * GRID_SIZE;
+                const size = GRID_SIZE * 0.45;
+                
+                // Gradient color from head to tail
+                const t = i / Math.max(1, snake.length - 1);
+                const r = Math.floor(233 + (255 - 233) * t);
+                const g = Math.floor(69 + (107 - 69) * t);
+                const b = Math.floor(96 + (107 - 96) * t);
+                
+                if (i === 0) {
+                    // Head
+                    ctx.save();
+                    ctx.shadowColor = COLORS.snakeHead;
+                    ctx.shadowBlur = invincibilityTime > 0 ? 20 : 10;
+                    
+                    // Direction indicator (eyes)
+                    const eyeOffset = GRID_SIZE * 0.2;
+                    const eyeRadius = 3;
+                    
+                    // Draw eyes based on direction
+                    let eye1x, eye1y, eye2x, eye2y;
+                    if (direction.x === 1) {
+                        eye1x = cx + eyeOffset; eye1y = cy - eyeOffset;
+                        eye2x = cx + eyeOffset; eye2y = cy + eyeOffset;
+                    } else if (direction.x === -1) {
+                        eye1x = cx - eyeOffset; eye1y = cy - eyeOffset;
+                        eye2x = cx - eyeOffset; eye2y = cy + eyeOffset;
+                    } else if (direction.y === -1) {
+                        eye1x = cx - eyeOffset; eye1y = cy - eyeOffset;
+                        eye2x = cx + eyeOffset; eye2y = cy - eyeOffset;
+                    } else {
+                        eye1x = cx - eyeOffset; eye1y = cy + eyeOffset;
+                        eye2x = cx + eyeOffset; eye2y = cy + eyeOffset;
+                    }
+                    
+                    // Eye glow during invincibility
+                    if (invincibilityTime > 0) {
+                        const flash = Math.sin(animationTime * 20) > 0;
+                        ctx.fillStyle = flash ? '#ffffff' : COLORS.snakeHead;
+                    } else {
+                        ctx.fillStyle = COLORS.snakeHead;
+                    }
+                    
+                    // Draw body
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Draw eyes
+                    ctx.fillStyle = '#ffffff';
+                    ctx.beginPath();
+                    ctx.arc(eye1x, eye1y, eyeRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(eye2x, eye2y, eyeRadius, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Pupils
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(eye1x + direction.x, eye1y + direction.y, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(eye2x + direction.x, eye2y + direction.y, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.restore();
+                } else {
+                    // Body segment
+                    ctx.globalAlpha = 0.9 - (t * 0.3);
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, size - (t * 2), 0, Math.PI * 2);
+                    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+            }
+        }
+        
+        function drawParticles() {
+            for (let p of particles) {
+                ctx.save();
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        
+        function drawUI() {
+            // Score
+            ctx.save();
+            ctx.font = 'bold 24px Segoe UI, sans-serif';
+            ctx.fillStyle = COLORS.ui.text;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.shadowColor = '#000000';
+            ctx.shadowBlur = 4;
+            
+            const scoreText = `Score: ${score}`;
+            ctx.fillText(scoreText, 20, 20);
+            
+            // Speed run time
+            const minutes = Math.floor(speedRunTime / 60);
+            const seconds = Math.floor(speedRunTime % 60);
+            const timeText = `Time: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+            ctx.fillText(timeText, 20, 50);
+            
+            // Speed indicator
+            const speedPercent = Math.round(((currentSpeed - BASE_SPEED) / (MAX_SPEED - BASE_SPEED)) * 100);
+            ctx.fillStyle = COLORS.food;
+            ctx.fillText(`Speed: ${speedPercent}%`, 20, 80);
+            
+            // High score
+            ctx.fillStyle = COLORS.ui.text;
+            ctx.textAlign = 'right';
+            ctx.fillText(`Best: ${highScore}`, BASE_WIDTH - 20, 20);
+            
+            // Snake length
+            ctx.textAlign = 'left';
+            ctx.fillText(`Length: ${snake.length}`, BASE_WIDTH - 20, 50);
+            
+            ctx.restore();
+        }
+        
+        function drawButton(text, x, y, w, h, key, isHovered) {
+            const radius = 8;
+            const color = isHovered ? '#ffffff' : COLORS.ui.button;
+            
+            ctx.save();
+            ctx.shadowColor = color;
+            ctx.shadowBlur = isHovered ? 20 : 10;
+            
+            // Background
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, radius);
+            ctx.fill();
+            
+            // Text
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = COLORS.ui.buttonText;
+            ctx.font = 'bold 20px Segoe UI, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, x + w/2, y + h/2);
+            
+            ctx.restore();
+            
+            buttons[key] = { x, y, w, h };
+        }
+        
+        function drawMenu() {
+            drawBackground();
+            
+            // Title
+            ctx.save();
+            ctx.shadowColor = '#7b2cbf';
+            ctx.shadowBlur = 20;
+            ctx.font = 'bold 64px Segoe UI, sans-serif';
+            ctx.fillStyle = COLORS.ui.text;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('PORTAL SNAKE', BASE_WIDTH/2, 150);
+            
+            // Subtitle
+            ctx.shadowColor = '#f5576c';
+            ctx.shadowBlur = 10;
+            ctx.font = '20px Segoe UI, sans-serif';
+            ctx.fillStyle = '#aaa';
+            ctx.fillText('Enter portals, eat food, survive!', BASE_WIDTH/2, 200);
+            
+            // High score
+            if (highScore > 0) {
+                ctx.shadowColor = '#4ecdc4';
+                ctx.fillStyle = COLORS.ui.success;
+                ctx.fillText(`High Score: ${highScore}`, BASE_WIDTH/2, 250);
+            }
+            
+            ctx.restore();
+            
+            // Play button
+            const btnW = 200;
+            const btnH = 50;
+            const btnX = BASE_WIDTH/2 - btnW/2;
+            const btnY = 320;
+            const hovered = isPointInButton(mousePos.x, mousePos.y, 'play');
+            drawButton('PLAY', btnX, btnY, btnW, btnH, 'play', hovered);
+            
+            // Controls info
+            ctx.font = '16px Segoe UI, sans-serif';
+            ctx.fillStyle = '#888';
+            ctx.textAlign = 'center';
+            ctx.fillText('Arrow Keys / WASD to move', BASE_WIDTH/2, 420);
+            ctx.fillText('G to toggle grid | ESC to pause', BASE_WIDTH/2, 445);
+            ctx.fillText('Touch: swipe to move, hold center to pause', BASE_WIDTH/2, 470);
+        }
+        
+        function drawPauseMenu() {
+            // Darken background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+            
+            // Title
+            ctx.save();
+            ctx.font = 'bold 48px Segoe UI, sans-serif';
+            ctx.fillStyle = COLORS.ui.text;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('PAUSED', BASE_WIDTH/2, 180);
+            
+            // Score
+            ctx.font = '24px Segoe UI, sans-serif';
+            ctx.fillStyle = COLORS.food;
+            ctx.fillText(`Current Score: ${score}`, BASE_WIDTH/2, 240);
+            ctx.restore();
+            
+            // Buttons
+            const btnW = 180;
+            const btnH = 45;
+            const btnX = BASE_WIDTH/2 - btnW/2;
+            
+            const resumeHovered = isPointInButton(mousePos.x, mousePos.y, 'resume');
+            drawButton('RESUME', btnX, 300, btnW, btnH, 'resume', resumeHovered);
+            
+            const menuHovered = isPointInButton(mousePos.x, mousePos.y, 'menu');
+            drawButton('MENU', btnX, 360, btnW, btnH, 'menu', menuHovered);
+        }
+        
+        function drawGameOver() {
+            // Darken background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
+            
+            // Title
+            ctx.save();
+            ctx.shadowColor = COLORS.ui.danger;
+            ctx.shadowBlur = 15;
+            ctx.font = 'bold 56px Segoe UI, sans-serif';
+            ctx.fillStyle = COLORS.ui.danger;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('GAME OVER', BASE_WIDTH/2, 150);
+            
+            // Score
+            ctx.shadowColor = COLORS.food;
+            ctx.shadowBlur = 10;
+            ctx.font = 'bold 32px Segoe UI, sans-serif';
+            ctx.fillStyle = COLORS.ui.text;
+            ctx.fillText(`Score: ${score}`, BASE_WIDTH/2, 220);
+            
+            // Time
+            const minutes = Math.floor(speedRunTime / 60);
+            const seconds = Math.floor(speedRunTime % 60);
+            ctx.font = '20px Segoe UI, sans-serif';
+            ctx.fillStyle = '#aaa';
+            ctx.fillText(`Time: ${minutes}:${seconds.toString().padStart(2, '0')}`, BASE_WIDTH/2, 260);
+            
+            // New high score
+            if (isNewHighScore) {
+                ctx.shadowColor = COLORS.ui.success;
+                ctx.fillStyle = COLORS.ui.success;
+                ctx.font = 'bold 28px Segoe UI, sans-serif';
+                ctx.fillText('NEW HIGH SCORE!', BASE_WIDTH/2, 310);
+            } else {
+                ctx.fillStyle = '#888';
+                ctx.fillText(`Best: ${highScore}`, BASE_WIDTH/2, 310);
+            }
+            ctx.restore();
+            
+            // Buttons
+            const btnW = 180;
+            const btnH = 45;
+            const btnX = BASE_WIDTH/2 - btnW/2;
+            
+            const retryHovered = isPointInButton(mousePos.x, mousePos.y, 'retry');
+            drawButton('RETRY', btnX, 370, btnW, btnH, 'retry', retryHovered);
+            
+            const menuHovered = isPointInButton(mousePos.x, mousePos.y, 'mainMenu');
+            drawButton('MAIN MENU', btnX, 430, btnW, btnH, 'mainMenu', menuHovered);
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            switch (gameState) {
+                case STATE.MENU:
+                    drawMenu();
+                    break;
+                    
+                case STATE.PLAYING:
+                case STATE.PAUSED:
+                    drawBackground();
+                    drawGrid();
+                    
+                    // Draw portals
+                    for (let i = 0; i < portals.length; i++) {
+                        drawPortal(portals[i], i);
+                    }
+                    
+                    drawFood();
+                    drawSnake();
+                    drawParticles();
+                    drawUI();
+                    
+                    if (gameState === STATE.PAUSED) {
+                        drawPauseMenu();
+                    }
+                    break;
+                    
+                case STATE.GAME_OVER:
+                    drawBackground();
+                    drawGrid();
+                    
+                    for (let i = 0; i < portals.length; i++) {
+                        drawPortal(portals[i], i);
+                    }
+                    
+                    drawFood();
+                    drawSnake();
+                    drawParticles();
+                    drawGameOver();
+                    break;
+            }
+        }
+        
+        // ============================================\n        // GAME LOOP\n        // ============================================\n        \n        function gameLoop(timestamp) {\n            if (!lastTime) lastTime = timestamp;\n            deltaTime = (timestamp - lastTime) / 1000;\n            lastTime = timestamp;\n            \n            // Cap delta time to prevent large jumps\n            deltaTime = Math.min(deltaTime, 0.1);\n            \n            update(deltaTime);\n            draw();\n            \n            requestAnimationFrame(gameLoop);\n        }\n        \n        // ============================================\n        // START\n        // ============================================\n        \n        window.addEventListener('resize', resize);\n        resize();\n        \n        // Initialize buttons array for menu\n        buttons = {};\n        \n        requestAnimationFrame(gameLoop);\n    </script>
+</body>
+</html>"}
