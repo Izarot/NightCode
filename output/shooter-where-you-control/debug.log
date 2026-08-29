@@ -1,0 +1,346 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 21319 (char 21318)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n<title>Swarm Control: Drone Escort</title>\n<link href=\"https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap\" rel=\"stylesheet\">\n<link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛸</text></svg>\">\n<style>\n*{margin:0;padding:0;box-sizing:border-box}\nhtml,body{width:100%;height:100%;overflow:hidden;background:#050810}\ncanvas{display:block;margin:0 auto}\n#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;font-family:'Orbitron',monospace;color:#fff;padding:15px}\n.timer{position:absolute;top:15px;left:50%;transform:translateX(-50%);font-size:14px;color:#00E5FF;text-shadow:0 0 10px #00E5FF}\n.score{position:absolute;top:15px;right:20px;text-align:right}\n.score span{color:#FFC857}\n.hp-bar{position:absolute;top:15px;left:20px}\n.hp-bar .label{font-size:10px;color:#aaa;margin-bottom:4px}\n.hp-bar .bar{width:200px;height:16px;background:#1a1a2e;border:1px solid #00E5FF;border-radius:2px;overflow:hidden}\n.hp-bar .fill{height:100%;background:linear-gradient(90deg,#00E5FF,#00ff88);transition:width .2s}\n.hp-bar .text{font-size:12px;margin-top:2px}\n.wave-info{position:absolute;top:50px;left:20px;font-size:11px;color:#aaa}\n.drones-left{position:absolute;bottom:20px;left:20px;font-size:11px}\n.drones-left .drone-icon{display:inline-block;width:12px;height:12px;background:#00E5FF;clip-path:polygon(50% 0%,100% 100%,50% 70%,0% 100%);margin:2px}\n.drones-left .drone-icon.dead{background:#333}\n.cooldowns{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:20px;font-size:10px}\n.cooldown{text-align:center}\n.cooldown .icon{font-size:20px}\n.cooldown .cd-bar{width:40px;height:40px;border-radius:50%;border:2px solid #00E5FF;position:relative;margin-bottom:4px}\n.cooldown .cd-fill{position:absolute;bottom:0;left:0;width:100%;background:rgba(0,229,255,.3);border-radius:0 0 20px 20px}\n.cooldowns.overdrive .cd-bar{border-color:#FF2A6D}\n.cooldowns.overdrive .cd-fill{background:rgba(255,42,109,.3)}\n.formation{position:absolute;bottom:20px;right:20px;font-size:11px;color:#00E5FF}\n.radar{position:absolute;bottom:60px;right:20px;width:80px;height:80px;border:1px solid #00E5FF33;border-radius:50%;background:rgba(0,0,0,.5)}\n.wave-banner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:28px;color:#00E5FF;text-shadow:0 0 20px #00E5FF;text-align:center;opacity:0;transition:opacity .3s}\n.wave-banner.show{opacity:1}\n.game-over{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;display:none}\n.game-over h1{font-size:48px;color:#FF2A6D;text-shadow:0 0 30px #FF2A6D;margin-bottom:20px}\n.game-over p{font-size:14px;color:#fff;margin:10px 0}\n.game-over .restart{color:#FFC857;cursor:pointer;pointer-events:all}\n.start-screen{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}\n.start-screen h1{font-size:32px;color:#00E5FF;text-shadow:0 0 20px #00E5FF;margin-bottom:30px}\n.start-screen p{font-size:12px;color:#aaa;margin:8px 0}\n.start-screen .start-btn{font-size:18px;color:#FFC857;cursor:pointer;pointer-events:all;margin-top:20px}\n.controls-hint{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);font-size:10px;color:#666;text-align:center}\n</style>\n</head>\n<body>\n<canvas id=\"game\"></canvas>\n<div id=\"ui\">\n  <div class=\"timer\" id=\"timer\">00:00.00</div>\n  <div class=\"score\">SCORE: <span id=\"score\">0</span><br>HIGH: <span id=\"high\">0</span></div>\n  <div class=\"hp-bar\">\n    <div class=\"label\">MOTHERSHIP</div>\n    <div class=\"bar\"><div class=\"fill\" id=\"hp-fill\" style=\"width:100%\"></div></div>\n    <div class=\"text\" id=\"hp-text\">100 / 100</div>\n  </div>\n  <div class=\"wave-info\" id=\"wave-info\">SECTOR 1 - WAVE 1/5</div>\n  <div class=\"drones-left\" id=\"drones-left\"></div>\n  <div class=\"cooldowns\">\n    <div class=\"cooldown\">\n      <div class=\"cd-bar\"><div class=\"cd-fill\" id=\"shield-cd\" style=\"height:0%\"></div></div>\n      <div>Q Shield</div>\n    </div>\n    <div class=\"cooldown overdrive\">\n      <div class=\"cd-bar\"><div class=\"cd-fill\" id=\"overdrive-cd\" style=\"height:0%\"></div></div>\n      <div>SPACE Overdrive</div>\n    </div>\n  </div>\n  <div class=\"formation\" id=\"formation\">△ TRIANGLE</div>\n  <div class=\"radar\" id=\"radar\"></div>\n  <div class=\"wave-banner\" id=\"wave-banner\">WAVE 1</div>\n  <div class=\"game-over\" id=\"game-over\">\n    <h1>MOTHERSHIP LOST</h1>\n    <p>Final Score: <span id=\"final-score\">0</span></p>\n    <p>Time: <span id=\"final-time\">00:00</span></p>\n    <p>Press R or click to restart</p>\n  </div>\n  <div class=\"start-screen\" id=\"start-screen\">\n    <h1>🛸 SWARM CONTROL 🛸</h1>\n    <p>Command your drone swarm to protect the Mothership</p>\n    <p>Move mouse to control swarm • Auto-fire enabled</p>\n    <p>Q - Shield • SPACE - Overdrive • 1/2/3 - Formation</p>\n    <p>R - Restart • P - Pause</p>\n    <div class=\"start-btn\">[ CLICK TO START ]</div>\n  </div>\n  <div class=\"controls-hint\">WASD/Arrows also move swarm • LMB Focus Fire • RMB Recall</div>\n</div>\n<script>\nconst canvas = document.getElementById('game');\nconst ctx = canvas.getContext('2d');\nconst W = 1280, H = 720;\n\n// Config\nconst C = {\n  colors: { friendly: '#00E5FF', enemy: '#FF2A6D', gold: '#FFC857', white: '#fff', bg: '#0A1024' },\n  maxDrones: 12, maxSpeed: 320, accel: 1800, drag: 0.92,\n  sepDist: 28, sepW: 1.4, seekW: 1.0, cohW: 0.3,\n  fireRate: 4, range: 280, arc: 140, projSpeed: 900,\n  mothSpeed: 60, mothHP: 100\n};\n\n// State\nlet gameState = 'start', paused = false;\nlet score = 0, highScore = parseInt(localStorage.getItem('swarmHigh') || '0');\nlet startTime = 0, elapsed = 0;\nlet sector = 1, wave = 1, waveTimer = 0, waveMax = 5;\nlet shieldActive = false, shieldHP = 0, shieldCD = 0, shieldDur = 4, shieldCooldown = 15;\nlet overdriveActive = false, overdriveCD = 0, overdriveDur = 5, overdriveCooldown = 20;\nlet formation = 0; // 0=triangle, 1=wedge, 2=ring\nlet mouseX = W/2, mouseY = H/2, mouseDown = 0, rightDown = false;\nlet shakeAmt = 0;\n\n// Mothership\nconst moth = { x: 150, y: H/2, hp: C.mothHP, maxHp: C.mothHP, speed: C.mothSpeed };\n\n// Drones\nlet drones = [];\nfunction spawnDrone(i) {\n  return {\n    x: moth.x + Math.cos(i/12*Math.PI*2)*60,\n    y: moth.y + Math.sin(i/12*Math.PI*2)*60,\n    vx: 0, vy: 0,\n    heat: 0, cooldown: 0,\n    slot: i, alive: true, regen: 0\n  };\n}\nfor(let i=0;i<4;i++) drones.push(spawnDrone(i));\n\n// Pools\nlet projectiles = [], enemies = [], particles = [];\nlet enemySpawnTimer = 0;\n\n// Audio\nlet audioCtx;\nfunction initAudio() {\n  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();\n}\nfunction playSound(type) {\n  if(!audioCtx) return;\n  const osc = audioCtx.createOscillator();\n  const gain = audioCtx.createGain();\n  osc.connect(gain); gain.connect(audioCtx.destination);\n  const t = audioCtx.currentTime;\n  if(type === 'laser') {\n    osc.type = 'square'; osc.frequency.setValueAtTime(880, t);\n    osc.frequency.exponentialRampToValueAtTime(220, t + 0.1);\n    gain.gain.setValueAtTime(0.1, t); gain.gain.exponentialRampToValueAtTime(0.01, t+0.1);\n    osc.start(t); osc.stop(t+0.1);\n  } else if(type === 'hit') {\n    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, t);\n    osc.frequency.exponentialRampToValueAtTime(50, t+0.15);\n    gain.gain.setValueAtTime(0.15, t); gain.gain.exponentialRampToValueAtTime(0.01, t+0.15);\n    osc.start(t); osc.stop(t+0.15);\n  } else if(type === 'explode') {\n    const noise = audioCtx.createBufferSource();\n    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate*0.3, audioCtx.sampleRate);\n    const data = buf.getChannelData(0);\n    for(let i=0;i<data.length;i++) data[i] = Math.random()*2-1;\n    noise.buffer = buf;\n    const filt = audioCtx.createBiquadFilter();\n    filt.type = 'lowpass'; filt.frequency.setValueAtTime(1000, t);\n    filt.frequency.exponentialRampToValueAtTime(100, t+0.3);\n    const g = audioCtx.createGain();\n    g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.01, t+0.3);\n    noise.connect(filt); filt.connect(g); g.connect(audioCtx.destination);\n    noise.start(t);\n  } else if(type === 'pickup') {\n    osc.type = 'sine'; osc.frequency.setValueAtTime(523, t);\n    osc.frequency.setValueAtTime(659, t+0.1); osc.frequency.setValueAtTime(784, t+0.2);\n    gain.gain.setValueAtTime(0.15, t); gain.gain.exponentialRampToValueAtTime(0.01, t+0.3);\n    osc.start(t); osc.stop(t+0.3);\n  }\n}\n\n// Input\nfunction resize() {\n  const ratio = Math.min(window.innerWidth/W, window.innerHeight/H);\n  canvas.width = W; canvas.height = H;\n  canvas.style.width = W*ratio+'px'; canvas.style.height = H*ratio+'px';\n}\nwindow.addEventListener('resize', resize);\nresize();\n\ncanvas.addEventListener('mousemove', e => {\n  const rect = canvas.getBoundingClientRect();\n  const ratio = W / rect.width;\n  mouseX = (e.clientX - rect.left) * ratio;\n  mouseY = (e.clientY - rect.top) * ratio;\n});\ncanvas.addEventListener('mousedown', e => {\n  initAudio();\n  if(e.button === 0) mouseDown = 1;\n  if(e.button === 2) rightDown = true;\n  if(gameState === 'start') { gameState = 'play'; startTime = performance.now(); }\n  if(gameState === 'over') restartGame();\n});\ncanvas.addEventListener('mouseup', e => {\n  if(e.button === 0) mouseDown = 0;\n  if(e.button === 2) rightDown = false;\n});\ncanvas.addEventListener('contextmenu', e => e.preventDefault());\n\nconst keys = {};\nwindow.addEventListener('keydown', e => {\n  initAudio();\n  keys[e.code] = true;\n  if(e.code === 'KeyR' && gameState === 'over') restartGame();\n  if(e.code === 'KeyP' && gameState === 'play') paused = !paused;\n  if(e.code === 'Digit1') formation = 0;\n  if(e.code === 'Digit2') formation = 1;\n  if(e.code === 'Digit3') formation = 2;\n  if(e.code === 'KeyQ') activateShield();\n  if(e.code === 'Space') { e.preventDefault(); activateOverdrive(); }\n});\nwindow.addEventListener('keyup', e => keys[e.code] = false);\n\nfunction activateShield() {\n  if(shieldCD <= 0 && !shieldActive) {\n    shieldActive = true; shieldHP = 50; shieldCD = shieldCooldown;\n    setTimeout(() => shieldActive = false, shieldDur * 1000);\n  }\n}\nfunction activateOverdrive() {\n  if(overdriveCD <= 0 && !overdriveActive) {\n    overdriveActive = true; overdriveCD = overdriveCooldown;\n    setTimeout(() => overdriveActive = false, overdriveDur * 1000);\n  }\n}\n\nfunction restartGame() {\n  gameState = 'play';\n  score = 0; sector = 1; wave = 1;\n  moth.hp = moth.maxHp; moth.x = 150;\n  drones = [];\n  for(let i=0;i<4;i++) drones.push(spawnDrone(i));\n  projectiles = []; enemies = []; particles = [];\n  enemySpawnTimer = 0;\n  shieldActive = false; shieldCD = 0; overdriveActive = false; overdriveCD = 0;\n  startTime = performance.now();\n  document.getElementById('game-over').style.display = 'none';\n}\n\n// Formations\nfunction getTargetPos(drone, i) {\n  let tx = mouseX, ty = mouseY;\n  const nearMoth = Math.hypot(mouseX - moth.x, mouseY - moth.y) < 80;\n  if(rightDown || nearMoth) {\n    tx = moth.x; ty = moth.y;\n  }\n  if(rightDown) {\n    const angle = (i / drones.length) * Math.PI * 2;\n    return { x: tx + Math.cos(angle) * 80, y: ty + Math.sin(angle) * 80 };\n  }\n  if(formation === 0) { // triangle\n    const rows = Math.ceil(Math.sqrt(drones.length * 2));\n    let r = 0, c = 0, idx = 0;\n    while(idx < drones.length) {\n      if(c >= r+1) { r++; c = 0; }\n      if(idx === i) return { x: tx + (c - r/2) * 25, y: ty - r * 22 };\n      c++; idx++;\n    }\n  } else if(formation === 1) { // wedge\n    for(let j=0;j<drones.length;j++) {\n      const row = Math.floor(Math.sqrt(j*2));\n      if(j === i) return { x: tx - row * 20, y: ty + (j % (row+1) - row/2) * 25 };\n    }\n  } else { // ring\n    const a = (i / drones.length) * Math.PI * 2;\n    return { x: tx + Math.cos(a) * 60, y: ty + Math.sin(a) * 60 };\n  }\n  return { x: tx, y: ty };\n}\n\n// Spawn enemies\nfunction spawnEnemy(type) {\n  const types = {\n    scout: { hp: 1, speed: 200, size: 15, color: '#FF2A6D', score: 10 },\n    cruiser: { hp: 4, speed: 80, size: 25, color: '#FF6B35', score: 30 },\n    bomber: { hp: 10, speed: 60, size: 30, color: '#9D4EDD', score: 50 },\n    interceptor: { hp: 2, speed: 280, size: 18, color: '#F72585', score: 25 }\n  };\n  const t = types[type];\n  enemies.push({\n    x: W + 50, y: Math.random() * (H - 100) + 50,\n    vx: -t.speed, vy: 0,\n    hp: t.hp, maxHp: t.hp, size: t.size, color: t.color, type, score: t.score,\n    shootTimer: Math.random() * 2,\n    targetDrone: null\n  });\n}\n\nfunction update(dt) {\n  if(paused || gameState !== 'play') return;\n  \n  // Timer\n  elapsed = (performance.now() - startTime) / 1000;\n  \n  // Mothership movement\n  moth.x += moth.speed * dt;\n  if(moth.x > W - 100) moth.x = W - 100;\n  \n  // Wave spawning\n  waveTimer += dt;\n  enemySpawnTimer += dt;\n  const spawnRate = Math.max(0.5, 3 - sector * 0.3);\n  if(enemySpawnTimer > spawnRate && enemies.length < 15) {\n    enemySpawnTimer = 0;\n    const types = ['scout', 'scout', 'scout', 'cruiser', 'bomber', 'interceptor'];\n    spawnEnemy(types[Math.floor(Math.random() * types.length)]);\n  }\n  \n  // Wave completion\n  if(waveTimer > 20 + sector * 5) {\n    wave++;\n    waveTimer = 0;\n    if(wave > waveMax) { wave = 1; sector++; }\n    showBanner(`SECTOR ${sector} - WAVE ${wave}`);\n  }\n  \n  // Cooldowns\n  if(shieldCD > 0) shieldCD -= dt;\n  if(overdriveCD > 0) overdriveCD -= dt;\n  \n  // Keyboard movement\n  if(keys['KeyW'] || keys['ArrowUp']) mouseY = Math.max(50, mouseY - 400 * dt);\n  if(keys['KeyS'] || keys['ArrowDown']) mouseY = Math.min(H - 50, mouseY + 400 * dt);\n  if(keys['KeyA'] || keys['ArrowLeft']) mouseX = Math.max(50, mouseX - 400 * dt);\n  if(keys['KeyD'] || keys['ArrowRight']) mouseX = Math.min(W - 50, mouseX + 400 * dt);\n  \n  // Update drones (boids)\n  const aliveDrones = drones.filter(d => d.alive);\n  aliveDrones.forEach((d, i) => {\n    // Find target\n    let target = getTargetPos(d, i);\n    \n    // Steering vectors\n    let ax = 0, ay = 0;\n    \n    // Seek\n    const dx = target.x - d.x, dy = target.y - d.y;\n    const dist = Math.hypot(dx, dy);\n    if(dist > 5) {\n      ax += (dx / dist) * C.seekW;\n      ay += (dy / dist) * C.seekW;\n    }\n    \n    // Separation\n    aliveDrones.forEach(other => {\n      if(other === d) return;\n      const ex = d.x - other.x, ey = d.y - other.y;\n      const ed = Math.hypot(ex, ey);\n      if(ed < C.sepDist && ed > 0) {\n        ax += (ex / ed) * C.sepW;\n        ay += (ey / ed) * C.sepW;\n      }\n    });\n    \n    // Cohesion\n    if(aliveDrones.length > 1) {\n      const cx = aliveDrones.reduce((s, dd) => s + dd.x, 0) / aliveDrones.length;\n      const cy = aliveDrones.reduce((s, dd) => s + dd.y, 0) / aliveDrones.length;\n      const cd = Math.hypot(cx - d.x, cy - d.y);\n      if(cd > 0) {\n        ax += ((cx - d.x) / cd) * C.cohW;\n        ay += ((cy - d.y) / cd) * C.cohW;\n      }\n    }\n    \n    d.vx += ax * C.accel * dt;\n    d.vy += ay * C.accel * dt;\n    \n    // Drag\n    d.vx *= C.drag;\n    d.vy *= C.drag;\n    \n    // Speed limit\n    const spd = Math.hypot(d.vx, d.vy);\n    if(spd > C.maxSpeed) {\n      d.vx = (d.vx / spd) * C.maxSpeed;\n      d.vy = (d.vy / spd) * C.maxSpeed;\n    }\n    \n    d.x += d.vx * dt;\n    d.y += d.vy * dt;\n    \n    // Bounds\n    d.x = Math.max(20, Math.min(W - 20, d.x));\n    d.y = Math.max(20, Math.min(H - 20, d.y));\n    \n    // Cooldown & heat\n    if(d.cooldown > 0) d.cooldown -= dt;\n    if(d.heat > 0) d.heat -= dt * 0.5;\n    \n    // Auto-fire\n    const fr = overdriveActive ? C.fireRate * 2 : C.fireRate;\n    const dmg = drones.length > 8 ? (drones.length > 11 ? 2 : 1.5) : 1;\n    \n    if(d.cooldown <= 0 && d.heat < 1 && enemies.length > 0) {\n      // Find nearest in arc\n      let nearest = null, nearDist = C.range;\n      enemies.forEach(e => {\n        const ed = Math.hypot(e.x - d.x, e.y - d.y);\n        if(ed < nearDist) {\n          const angle = Math.atan2(e.y - d.y, e.x - d.x);\n          const droneAngle = Math.atan2(d.vy, d.vx);\n          let diff = Math.abs(angle - droneAngle) * 180 / Math.PI;\n          if(diff > 180) diff = 360 - diff;\n          if(diff < C.arc / 2) {\n            nearest = e; nearDist = ed;\n          }\n        }\n      });\n      \n      if(nearest) {\n        const a = Math.atan2(nearest.y - d.y, nearest.x - d.x);\n        projectiles.push({\n          x: d.x, y: d.y,\n          vx: Math.cos(a) * C.projSpeed,\n          vy: Math.sin(a) * C.projSpeed,\n          friendly: true, damage: dmg\n        });\n        d.cooldown = 1 / fr;\n        d.heat = Math.min(1, d.heat + 0.15);\n        playSound('laser');\n        \n        // Muzzle flash\n        particles.push({ x: d.x, y: d.y, life: 0.1, maxLife: 0.1, size: 8, color: '#00E5FF', type: 'flash' });\n      }\n    }\n    \n    // Overheat\n    if(d.heat >= 1) d.cooldown = 2;\n    \n    // Regenerate if dead\n    d.regen += dt;\n    if(!d.alive && d.regen > 3) {\n      d.alive = true; d.x = moth.x; d.y = moth.y; d.regen = 0;\n    }\n  });\n  \n  // Update enemies\n  enemies.forEach(e => {\n    e.x += e.vx * dt;\n    e.y += e.vy * dt;\n    \n    // Scout behavior\n    if(e.type === 'scout') {\n      e.y += Math.sin(e.x * 0.02) * 100 * dt;\n    }\n    \n    // Interceptor targeting\n    if(e.type === 'interceptor') {\n      const target = aliveDrones.length > 0 ? \n        aliveDrones.reduce((a, b) => Math.hypot(b.x - e.x, b.y - e.y) < Math.hypot(a.x - e.x, a.y - e.y) ? b : a) : moth;\n      const a = Math.atan2(target.y - e.y, target.x - e.x);\n      e.vx += Math.cos(a) * 200 * dt;\n      e.vy += Math.sin(a) * 200 * dt;\n      const spd = Math.hypot(e.vx, e.vy);\n      if(spd > 280) { e.vx = (e.vx/spd)*280; e.vy = (e.vy/spd)*280; }\n    }\n    \n    // Collision with mothership\n    if(Math.hypot(e.x - moth.x, e.y - moth.y) < e.size + 40) {\n      if(shieldActive && shieldHP > 0) {\n        shieldHP -= 10;\n      } else {\n        moth.hp -= 10;\n        shakeAmt = 10;\n      }\n      e.hp = 0;\n      playSound('explode');\n      spawnExplosion(e.x, e.y, e.color);\n    }\n    \n    // Enemy shooting\n    e.shootTimer -= dt;\n    if(e.shootTimer <= 0 && (e.type === 'cruiser' || e.type === 'bomber')) {\n      e.shootTimer = 2 + Math.random() * 2;\n      const a = Math.atan2(moth.y - e.y, moth.x - e.x);\n      projectiles.push({\n        x: e.x, y: e.y,\n        vx: Math.cos(a) * 300, vy: Math.sin(a) * 300,\n        friendly: false, damage: 5\n      });\n    }\n  });\n  \n  // Remove off-screen enemies\n  enemies = enemies.filter(e => e.x > -50 && e.hp > 0);\n  \n  // Update projectiles\n  projectiles.forEach(p => {\n    p.x += p.vx * dt;\n    p.y += p.vy * dt;\n    \n    if(p.friendly) {\n      enemies.forEach(e => {\n        if(Math.hypot(p.x - e.x, p.y - e.y) < e.size) {\n          e.hp -= p.damage;\n          p.hit = true;\n          playSound('hit');\n          spawnSparks(p.x, p.y, 5);\n          if(e.hp <= 0) {\n            score += e.score;\n            if(score > highScore) { highScore = score; localStorage.setItem('swarmHigh', highScore); }\n            playSound('explode');\n            spawnExplosion(e.x, e.y, e.color);\n            shakeAmt = 5;\n          }\n        }\n      });\n    } else {\n      // Enemy projectile hitting mothership or drones\n      if(Math.hypot(p.x - moth.x, p.y - moth.y) < 50) {\n        if(shieldActive && shieldHP > 0) shieldHP -= 5;\n        else moth.hp -= p.damage;\n        p.hit = true;\n        shakeAmt = 3;\n      }\n      aliveDrones.forEach(d => {\n        if(Math.hypot(p.x - d.x, p.y - d.y) < 12) {\n          d.alive = false;\n          d.x = -100; d.y = -100;\n          p.hit = true;\n        }\n      });\n    }\n  });\n  projectiles = projectiles.filter(p => p.x > -10 && p.x < W+10 && p.y > -10 && p.y < H+10 && !p.hit);\n  \n  // Update particles\n  particles.forEach(p => {\n    p.life -= dt;\n    p.x += (p.vx || 0) * dt;\n    p.y += (p.vy || 0) * dt;\n    if(p.type === 'spark') { p.vx *= 0.95; p.vy *= 0.95; }\n  });\n  particles = particles.filter(p => p.life > 0);\n  \n  // Shake decay\n  if(shakeAmt > 0) shakeAmt *= 0.9;\n  \n  // Game over check\n  if(moth.hp <= 0) {\n    gameState = 'over';\n    playSound('explode');\n    spawnExplosion(moth.x, moth.y, '#FF2A6D');\n    spawnExplosion(moth.x, moth.y, '#FFC857');\n    document.getElementById('game-over').style.display = 'block';\n    document.getElementById('final-score').textContent = score;\n    document.getElementById('final-time').textContent = formatTime(elapsed);\n  }\n}\n\nfunction spawnExplosion(x, y, color) {\n  for(let i=0;i<20;i++) {\n    const a = Math.random() * Math.PI * 2;\n    const spd = 50 + Math.random() * 150;\n    particles.push({\n      x, y,\n      vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,\n      life: 0.5 + Math.random() * 0.5, maxLife: 1,\n      size: 3 + Mathandom() * 5,
+      color, type: 'explosion'
+    });
+  }
+}
+
+function spawnSparks(x, y, count) {
+  for(let i=0;i<count;i++) {
+    const a = Math.random() * Math.PI * 2;
+    const spd = 30 + Math.random() * 80;
+    particles.push({
+      x, y,
+      vx: Math.cos(a) * spd, vy: Math.sin(a) * spd,
+      life: 0.3 + Math.random() * 0.3, maxLife: 0.6,
+      size: 2, color: '#FFC857', type: 'spark'
+    });
+  }
+}
+
+function showBanner(text) {
+  const b = document.getElementById('wave-banner');
+  b.textContent = text;
+  b.classList.add('show');
+  setTimeout(() => b.classList.remove('show'), 2000);
+}
+
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`;
+}
+
+function draw() {
+  ctx.save();
+  
+  // Shake
+  if(shakeAmt > 0.5) {
+    ctx.translate(
+      (Math.random() - 0.5) * shakeAmt,
+      (Math.random() - 0.5) * shakeAmt
+    );
+  }
+  
+  // Background
+  ctx.fillStyle = C.colors.bg;
+  ctx.fillRect(0, 0, W, H);
+  
+  // Grid
+  ctx.strokeStyle = '#0A1528';
+  ctx.lineWidth = 1;
+  for(let x=0;x<W;x+=40) {
+    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke();
+  }
+  for(let y=0;y<H;y+=40) {
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+  
+  // Stars
+  ctx.fillStyle = '#fff';
+  for(let i=0;i<50;i++) {
+    const sx = ((i * 137.5) % W);
+    const sy = ((i * 73.3) % H);
+    ctx.globalAlpha = 0.3 + Math.sin(elapsed * 2 + i) * 0.2;
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+  ctx.globalAlpha = 1;
+  
+  // Shield
+  if(shieldActive) {
+    ctx.beginPath();
+    ctx.arc(moth.x, moth.y, 60, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0,229,255,${0.5 + Math.sin(elapsed * 10) * 0.2})`;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.fillStyle = `rgba(0,229,255,0.1)`;
+    ctx.fill();
+    
+    // Shield HP indicator
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px Orbitron';
+    ctx.fillText(`SHIELD: ${shieldHP}`, moth.x - 25, moth.y + 75);
+  }
+  
+  // Mothership
+  ctx.save();
+  ctx.translate(moth.x, moth.y);
+  
+  // Engine glow
+  const glow = ctx.createRadialGradient(-30, 0, 0, -30, 0, 30);
+  glow.addColorStop(0, 'rgba(255,200,87,0.8)');
+  glow.addColorStop(1, 'rgba(255,200,87,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(-30, 0, 30, 0, Math.PI * 2); ctx.fill();
+  
+  // Ship body
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath();
+  ctx.moveTo(40, 0);
+  ctx.lineTo(-20, -25);
+  ctx.lineTo(-35, -20);
+  ctx.lineTo(-40, 0);
+  ctx.lineTo(-35, 20);
+  ctx.lineTo(-20, 25);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#00E5FF';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  
+  // Cockpit
+  ctx.fillStyle = '#00E5FF';
+  ctx.beginPath(); ctx.ellipse(10, 0, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
+  
+  // Engine flames
+  ctx.fillStyle = overdriveActive ? '#FF2A6D' : '#FFC857';
+  ctx.beginPath();
+  ctx.moveTo(-40, -10);
+  ctx.lineTo(-60 - Math.random() * 20, 0);
+  ctx.lineTo(-40, 10);
+  ctx.closePath();
+  ctx.fill();
+  
+  ctx.restore();
+  
+  // Drones
+  drones.forEach((d, i) => {
+    if(!d.alive) return;
+    
+    ctx.save();
+    ctx.translate(d.x, d.y);
+    
+    // Heat indicator
+    if(d.heat > 0.5) {
+      ctx.fillStyle = `rgba(255,42,109,${d.heat})`;
+      ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+    }
+    
+    // Drone body
+    ctx.fillStyle = d.cooldown > 0 ? '#333' : C.colors.friendly;
+    ctx.shadowColor = C.colors.friendly;
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(8, 0);
+    ctx.lineTo(-4, -6);
+    ctx.lineTo(-4, 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    // Slot number
+    ctx.fillStyle = '#000';
+    ctx.font = '6px Orbitron';
+    ctx.fillText(i+1, -2, 2);
+    
+    ctx.restore();
+  });
+  
+  // Enemies
+  enemies.forEach(e => {
+    ctx.save();
+    ctx.translate(e.x, e.y);
+    
+    ctx.fillStyle = e.color;
+    ctx.shadowColor = e.color;
+    ctx.shadowBlur = 15;
+    
+    if(e.type === 'scout') {
+      ctx.beginPath();
+      ctx.moveTo(-e.size, 0);
+      ctx.lineTo(e.size, -e.size/2);
+      ctx.lineTo(e.size, e.size/2);
+      ctx.closePath();
+      ctx.fill();
+    } else if(e.type === 'cruiser') {
+      ctx.fillRect(-e.size, -e.size/3, e.size*2, e.size*2/3);
+    } else if(e.type === 'bomber') {
+      ctx.beginPath();
+      ctx.arc(0, 0, e.size, 0, Math.PI * 2);
+      ctx.fill();
+    } else if(e.type === 'interceptor') {
+      ctx.beginPath();
+      ctx.moveTo(e.size, 0);
+      ctx.lineTo(-e.size/2, -e.size/2);
+      ctx.lineTo(-e.size/2, e.size/2);
+      ctx.closePath();
+      ctx.fill();
+    }
+    
+    ctx.shadowBlur = 0;
+    
+    // HP bar
+    if(e.hp < e.maxHp) {
+      ctx.fillStyle = '#333';
+      ctx.fillRect(-e.size, -e.size-8, e.size*2, 4);
+      ctx.fillStyle = e.color;
+      ctx.fillRect(-e.size, -e.size-8, e.size*2 * (e.hp/e.maxHp), 4);
+    }
+    
+    ctx.restore();
+  });
+  
+  // Projectiles
+  projectiles.forEach(p => {
+    ctx.fillStyle = p.friendly ? C.colors.friendly : e?.color || '#FF2A6D';
+    ctx.shadowColor = p.friendly ? C.colors.friendly : '#FF2A6D';
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.friendly ? 4 : 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  });
+  
+  // Particles
+  particles.forEach(p => {
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fillStyle = p.color;
+    if(p.type === 'explosion') {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * (p.life / p.maxLife), 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+    }
+  });
+  ctx.globalAlpha = 1;
+  
+  // Mouse target indicator
+  if(gameState === 'play') {
+    ctx.strokeStyle = 'rgba(255,200,87,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(mouseX, mouseY, 20, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(mouseX - 25, mouseY);
+    ctx.lineTo(mouseX - 15, mouseY);
+    ctx.moveTo(mouseX + 15, mouseY);
+    ctx.lineTo(mouseX + 25, mouseY);
+    ctx.moveTo(mouseX, mouseY - 25);
+    ctx.lineTo(mouseX, mouseY - 15);
+    ctx.moveTo(mouseX, mouseY + 15);
+    ctx.lineTo(mouseX, mouseY + 25);
+    ctx.stroke();
+  }
+  
+  // Overdrive effect
+  if(overdriveActive) {
+    ctx.fillStyle = 'rgba(255,42,109,0.05)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(255,42,109,0.1)';
+    ctx.lineWidth = 2;
+    for(let i=0;i<W;i+=60) {
+      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke();
+    }
+    for(let i=0;i<H;i+=60) {
+      ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(W, i); ctx.stroke();
+    }
+  }
+  
+  ctx.restore();
+  
+  // UI update
+  updateUI();
+}
+
+function updateUI() {
+  document.getElementById('timer').textContent = formatTime(elapsed);
+  document.getElementById('score').textContent = score;
+  document.getElementById('high').textContent = highScore;
+  
+  const hpPct = Math.max(0, moth.hp / moth.maxHp * 100);
+  document.getElementById('hp-fill').style.width = hpPct + '%';
+  document.getElementById('hp-text').textContent = `${Math.max(0, Math.floor(moth.hp))} / ${moth.maxHp}`;
+  
+  document.getElementById('wave-info').textContent = `SECTOR ${sector} - WAVE ${wave}/${waveMax}`;
+  
+  // Drones display
+  const dl = document.getElementById('drones-left');
+  dl.innerHTML = 'DRONES: ';
+  for(let i=0;i<C.maxDrones;i++) {
+    const alive = drones[i] && drones[i].alive;
+    dl.innerHTML += `<span class="drone-icon${alive?'':' dead'}"></span>`;
+  }
+  
+  // Cooldowns
+  document.getElementById('shield-cd').style.height = (shieldCD/shieldCooldown * 100) + '%';
+  document.getElementById('overdrive-cd').style.height = (overdriveCD/overdriveCooldown * 100) + '%';
+  
+  // Formation
+  const formations = ['△ TRIANGLE', '↗ WEDGE', '◎ RING'];
+  document.getElementById('formation').textContent = formations[formation];
+  
+  // Radar
+  const radar = document.getElementById('radar');
+  radar.innerHTML = '';
+  const rScale = 0.3;
+  enemies.forEach(e => {
+    const rx = 40 + (e.x - moth.x) * rScale;
+    const ry = 40 + (e.y - moth.y) * rScale;
+    if(rx > 0 && rx < 80 && ry > 0 && ry < 80) {
+      const dot = document.createElement('div');
+      dot.style.cssText = `position:absolute;left:${rx-2}px;top:${ry-2}px;width:4px;height:4px;background:${e.color};border-radius:50%;`;
+      radar.appendChild(dot);
+    }
+  });
+  // Drone dots on radar
+  drones.forEach(d => {
+    if(!d.alive) return;
+    const rx = 40 + (d.x - moth.x) * rScale;
+    const ry = 40 + (d.y - moth.y) * rScale;
+    if(rx > 0 && rx < 80 && ry > 0 && ry < 80) {
+      const dot = document.createElement('div');
+      dot.style.cssText = `position:absolute;left:${rx-1}px;top:${ry-1}px;width:2px;height:2px;background:${C.colors.friendly};border-radius:50%;`;
+      radar.appendChild(dot);
+    }
+  });
+}
+
+// Game loop
+let lastTime = performance.now();
+function gameLoop(time) {
+  const dt = Math.min((time - lastTime) / 1000, 0.05);
+  lastTime = time;
+  
+  update(dt);
+  draw();
+  
+  requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+
+// Spawn more drones as score increases
+setInterval(() => {
+  if(gameState === 'play' && drones.length < C.maxDrones) {
+    const i = drones.length;
+    drones.push(spawnDrone(i));
+    playSound('pickup');
+    showBanner(`DRONE ${drones.length} DEPLOYED`);
+  }
+}, 15000);
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Circuit Logic Puzzle</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Rajdhani', sans-serif; background: #0a1a1a; color: #fff; }
+#app { width: 100vw; height: 100vh; display: flex; flex-direction: column; background: linear-gradient(135deg, #0f2a2a 0%, #1A3A3A 100%); }
+.topbar { height: 56px; flex-shrink: 0; background: rgba(0,0,0,0.4); border-bottom: 2px solid #03A9F4; display: flex; align-items: center; padding: 0 12px; gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+.topbar .info { flex: 1; display: flex; gap: 16px; align-items: center; overflow: hidden; }
+.topbar .lvl { font-weight: 700; color: #03A9F4; font-size: 16px; white-space: nowrap; }
+.topbar .goal { color: #FFC107; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar .timer { color: #FFEB3B; font-weight: 700; font-size: 16px; padding: 4px 10px; background: rgba(0,0,0,0.4); border-radius: 6px; border: 1px solid #FFC107; white-space: nowrap; }
+.topbar .btn { background: #03A9F4; border: none; color: #fff; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: inherit; font-weight: 600; font-size: 13px; }
+.topbar .btn:hover { background: #29B6F6; }
+.main { flex: 1; display: flex; min-height: 0; }
+.panel { background: rgba(0,0,0,0.35); border: 1px solid rgba(3,169,244,0.3); padding: 8px; overflow-y: auto; }
+.panel.left { width: 180px; flex-shrink: 0; border-right: none; }
+.panel.right { width: 180px; flex-shrink: 0; border-left: none; display: flex; flex-direction: column; gap: 8px; }
+.panel h3 { color: #03A9F4; font-size: 14px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #03A9F4; padding-bottom: 4px; }
+.inv-item { background: rgba(255,255,255,0.05); border: 2px solid #424242; border-radius: 6px; padding: 8px; margin-bottom: 6px; cursor: grab; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+.inv-item:hover { border-color: #03A9F4; background: rgba(3,169,244,0.1); }
+.inv-item.dragging { opacity: 0.5; }
+.inv-item .icon { width: 32px; height: 32px; flex-shrink: 0; }
+.inv-item .lbl { font-size: 13px; flex: 1; }
+.inv-item .cnt { background: #03A9F4; color: #fff; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+.inv-item.zero { opacity: 0.3; pointer-events: none; }
+.board-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px; min-width: 0; min-height: 0; position: relative; }
+canvas { display: block; background: #152E2E; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.6); max-width: 100%; max-height: 100%; touch-action: none; }
+.tool-btn { padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; transition: all 0.2s; }
+.tool-btn.primary { background: #03A9F4; color: #fff; box-shadow: 0 4px 0 #0277BD; }
+.tool-btn.primary:hover { background: #29B6F6; }
+.tool-btn.primary:active { transform: translateY(2px); box-shadow: 0 2px 0 #0277BD; }
+.tool-btn.secondary { background: #607D8B; color: #fff; box-shadow: 0 4px 0 #455A64; }
+.tool-btn.secondary:hover { background: #78909C; }
+.tool-btn.secondary:active { transform: translateY(2px); box-shadow: 0 2px 0 #455A64; }
+.status { background: rgba(0,0,0,0.4); border-radius: 6px; padding: 10px; font-size: 13px; min-height: 60px; border-left: 4px solid #03A9F4; }
+.status.ok { border-color: #4CAF50; color: #8BC34A; }
+.status.err { border-color: #F44336; color: #FF5252; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 100; }
+.modal.show { display: flex; }
+.modal-box { background: linear-gradient(135deg, #1A3A3A, #0f2a2a); border: 3px solid #03A9F4; border-radius: 12px; padding: 30px; text-align: center; max-width: 90%; min-width: 280px; box-shadow: 0 0 40px rgba(3,169,244,0.5); }
+.modal-box h2 { color: #FFC107; font-size: 28px; margin-bottom: 12px; }
+.stars { font-size: 40px; margin: 12px 0; }
+.stars .star { display: inline-block; margin: 0 4px; color: #424242; transition: color 0.5s; }
+.stars .star.lit { color: #FFEB3B; text-shadow: 0 0 12px #FFC107; }
+.modal-box p { margin: 8px 0; color: #B2EBF2; }
+.modal-box .btn { background: #03A9F4; border: none; color: #fff; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 15px; margin: 6px; }
+.modal-box .btn:hover { background: #29B6F6; }
+.input-toggle { display: flex; gap: 6px; margin-bottom: 8px; }
+.input-toggle button { flex: 1; padding: 8px; border: 2px solid; border-radius: 6px; cursor: pointer; font-family: inherit; font-weight: 700; font-size: 12px; background: rgba(0,0,0,0.3); }
+.input-toggle .btnA { border-color: #E53935; color: #E53935; }
+.input-toggle .btnA.on { background: #E53935; color: #fff; }
+.input-toggle .btnB { border-color: #1E88E5; color: #1E88E5; }
+.input-toggle .btnB.on { background: #1E88E5; color: #fff; }
+@media (max-width: 720px) {
+  .panel.left, .panel.right { width: 130px; }
+  .topbar .goal { display: none; }
+  .inv-item .lbl { font-size: 11px; }
+}
+@media (max-width: 480px) {
+  .panel.left, .panel.right { width: 110px; padding: 4px; }
+  .topbar .info { gap: 6px; }
+  .topbar .lvl { font-size: 13px; }
+  .inv-item .icon { width: 24px; height: 24px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="info">
+      <div class="lvl" id="lvlLabel">Level 1-1</div>
+      <div class="goal" id="goalLabel">Goal: Light the bulb</div>
+    </div>
+    <div class="timer" id="timer">00:00.0</div>
+    <button class="btn" id="resetLevelBtn">Reset</button>
+    <button class="btn" id="menuBtn">Menu</button>
+  </div>
+  <div class="main">
+    <div class="panel left">
+      <h3>Inventory</h3>
+      <div id="inventory"></div>
+    </div>
+    <div class="board-wrap">
+      <canvas id="board"></canvas>
+    </div>
+    <div class="panel right">
+      <h3>Inputs</h3>
+      <div class="input-toggle">
+        <button class="btnA on" id="btnA">A: ON</button>
+        <button class="btnB" id="btnB">B: OFF</button>
+      </div>
+      <h3>Controls</h3>
+      <button class="tool-btn primary" id="testBtn">Test Circuit</button>
+      <button class="tool-btn secondary" id="clearBtn">Reset Board</button>
+      <div class="status" id="status">Place components and press Test.</div>
+    </div>
+  </div>
+</div>
+<div class="modal" id="winModal">
+  <div class="modal-box">
+    <h2 id="winTitle">Level Complete!</h2>
+    <div class="stars" id="stars">
+      <span class="star">★</span><span class="star">★</span><span class="star">★</span>
+    </div>
+    <p id="winInfo">Time: 00:00</p>
+    <button class="btn" id="nextBtn">Next Level</button>
+    <button class="btn" id="closeWin">Close</button>
+  </div>
+</div>
+<div class="modal" id="menuModal">
+  <div class="modal-box">
+    <h2>Select Level</h2>
+    <div id="levelList" style="max-height:300px;overflow-y:auto;margin:10px 0"></div>
+    <button class="btn" id="closeMenu">Close</button>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

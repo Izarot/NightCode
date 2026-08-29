@@ -1,0 +1,989 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 26137 (char 26136)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n    <title>Circuit Logic Puzzle</title>\n    <link href=\"https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap\" rel=\"stylesheet\">\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>\">\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n            -webkit-tap-highlight-color: transparent;\n        }\n        \n        :root {\n            --board-bg: #1A3A3A;\n            --grid-line: #152E2E;\n            --inactive: #9E9E9E;\n            --outline: #424242;\n            --active-signal: #FFC107;\n            --inactive-signal: #607D8B;\n            --error: #F44336;\n            --accent: #03A9F4;\n            --input-a: #E53935;\n            --input-b: #1E88E5;\n            --bulb-off: #757575;\n            --bulb-on: #FFEB3B;\n        }\n        \n        body {\n            font-family: 'Rajdhani', 'Segoe UI', sans-serif;\n            background: linear-gradient(135deg, #0D1F1F 0%, #1A3A3A 50%, #0D1F1F 100%);\n            min-height: 100vh;\n            display: flex;\n            flex-direction: column;\n            overflow: hidden;\n            color: #E0E0E0;\n        }\n        \n        #top-bar {\n            height: 60px;\n            background: linear-gradient(180deg, #0A1616 0%, #0D1F1F 100%);\n            border-bottom: 2px solid #2A4A4A;\n            display: flex;\n            align-items: center;\n            justify-content: space-between;\n            padding: 0 20px;\n            flex-shrink: 0;\n        }\n        \n        .level-info {\n            display: flex;\n            align-items: center;\n            gap: 15px;\n        }\n        \n        .level-number {\n            font-size: 1.4em;\n            font-weight: 700;\n            color: var(--accent);\n            text-shadow: 0 0 10px rgba(3, 169, 244, 0.5);\n        }\n        \n        .chapter-title {\n            font-size: 1.1em;\n            color: #8AB4B4;\n        }\n        \n        .goal-description {\n            font-size: 1.2em;\n            color: var(--active-signal);\n            text-align: center;\n            text-shadow: 0 0 8px rgba(255, 193, 7, 0.4);\n        }\n        \n        .timer {\n            font-size: 1.3em;\n            font-weight: 600;\n            color: #00E5FF;\n            font-variant-numeric: tabular-nums;\n            text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);\n        }\n        \n        .top-buttons {\n            display: flex;\n            gap: 10px;\n        }\n        \n        .btn {\n            background: linear-gradient(180deg, #2A4A4A 0%, #1A3A3A 100%);\n            border: 2px solid #3A5A5A;\n            color: #E0E0E0;\n            padding: 8px 16px;\n            border-radius: 8px;\n            font-family: inherit;\n            font-size: 0.95em;\n            font-weight: 600;\n            cursor: pointer;\n            transition: all 0.2s ease;\n        }\n        \n        .btn:hover {\n            background: linear-gradient(180deg, #3A5A5A 0%, #2A4A4A 100%);\n            border-color: var(--accent);\n            transform: translateY(-2px);\n            box-shadow: 0 4px 12px rgba(3, 169, 244, 0.3);\n        }\n        \n        .btn:active {\n            transform: translateY(0);\n        }\n        \n        #main-area {\n            flex: 1;\n            display: flex;\n            overflow: hidden;\n        }\n        \n        #inventory-panel {\n            width: 180px;\n            background: linear-gradient(90deg, #0A1616 0%, #0D1F1F 100%);\n            border-right: 2px solid #2A4A4A;\n            padding: 15px 10px;\n            display: flex;\n            flex-direction: column;\n            gap: 10px;\n            overflow-y: auto;\n        }\n        \n        .panel-title {\n            font-size: 1.1em;\n            font-weight: 700;\n            color: var(--accent);\n            text-transform: uppercase;\n            letter-spacing: 1px;\n            padding-bottom: 10px;\n            border-bottom: 1px solid #2A4A4A;\n            text-align: center;\n        }\n        \n        .inventory-item {\n            background: linear-gradient(135deg, #1A3A3A 0%, #0D1F1F 100%);\n            border: 2px solid #2A4A4A;\n            border-radius: 10px;\n            padding: 12px 10px;\n            cursor: grab;\n            transition: all 0.2s ease;\n            display: flex;\n            align-items: center;\n            gap: 10px;\n            user-select: none;\n        }\n        \n        .inventory-item:hover {\n            border-color: var(--accent);\n            transform: scale(1.02);\n            box-shadow: 0 4px 15px rgba(3, 169, 244, 0.2);\n        }\n        \n        .inventory-item.disabled {\n            opacity: 0.4;\n            cursor: not-allowed;\n            pointer-events: none;\n        }\n        \n        .item-icon {\n            width: 40px;\n            height: 40px;\n            background: #0A1616;\n            border-radius: 6px;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            font-size: 1.5em;\n        }\n        \n        .item-info {\n            flex: 1;\n        }\n        \n        .item-name {\n            font-size: 0.9em;\n            font-weight: 600;\n            color: #E0E0E0;\n        }\n        \n        .item-count {\n            font-size: 0.8em;\n            color: var(--active-signal);\n        }\n        \n        #canvas-container {\n            flex: 1;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            background: radial-gradient(ellipse at center, #1A3A3A 0%, #0A1616 100%);\n            position: relative;\n            overflow: hidden;\n        }\n        \n        #gameCanvas {\n            border: 3px solid #2A4A4A;\n            border-radius: 10px;\n            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5), inset 0 0 60px rgba(0, 0, 0, 0.3);\n            cursor: default;\n        }\n        \n        #tools-panel {\n            width: 160px;\n            background: linear-gradient(270deg, #0A1616 0%, #0D1F1F 100%);\n            border-left: 2px solid #2A4A4A;\n            padding: 15px 10px;\n            display: flex;\n            flex-direction: column;\n            gap: 15px;\n        }\n        \n        .test-btn {\n            background: linear-gradient(180deg, var(--accent) 0%, #0288D1 100%);\n            border: none;\n            color: #fff;\n            padding: 15px 10px;\n            border-radius: 10px;\n            font-family: inherit;\n            font-size: 1.1em;\n            font-weight: 700;\n            cursor: pointer;\n            text-transform: uppercase;\n            letter-spacing: 1px;\n            transition: all 0.2s ease;\n            box-shadow: 0 4px 15px rgba(3, 169, 244, 0.4);\n        }\n        \n        .test-btn:hover {\n            transform: scale(1.05);\n            box-shadow: 0 6px 20px rgba(3, 169, 244, 0.6);\n        }\n        \n        .test-btn:active {\n            transform: scale(0.98);\n        }\n        \n        .reset-btn {\n            background: linear-gradient(180deg, #5C6BC0 0%, #3949AB 100%);\n        }\n        \n        .reset-btn:hover {\n            box-shadow: 0 4px 15px rgba(92, 107, 192, 0.4);\n        }\n        \n        .status-display {\n            background: #0A1616;\n            border: 2px solid #2A4A4A;\n            border-radius: 8px;\n            padding: 12px;\n            text-align: center;\n            min-height: 60px;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n        }\n        \n        .status-text {\n            font-size: 0.95em;\n            font-weight: 600;\n            color: #8AB4B4;\n        }\n        \n        .status-text.success {\n            color: #4CAF50;\n            text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);\n        }\n        \n        .status-text.error {\n            color: var(--error);\n            text-shadow: 0 0 10px rgba(244, 67, 54, 0.5);\n        }\n        \n        .high-score {\n            background: #0A1616;\n            border: 2px solid #2A4A4A;\n            border-radius: 8px;\n            padding: 12px;\n            text-align: center;\n        }\n        \n        .high-score-label {\n            font-size: 0.8em;\n            color: #8AB4B4;\n            margin-bottom: 5px;\n        }\n        \n        .high-score-value {\n            font-size: 1.2em;\n            font-weight: 700;\n            color: var(--active-signal);\n        }\n        \n        .controls-hint {\n            font-size: 0.75em;\n            color: #607D8B;\n            text-align: center;\n            line-height: 1.6;\n        }\n        \n        #win-modal {\n            position: fixed;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            background: rgba(0, 0, 0, 0.8);\n            display: none;\n            align-items: center;\n            justify-content: center;\n            z-index: 1000;\n        }\n        \n        .modal-content {\n            background: linear-gradient(135deg, #1A3A3A 0%, #0A1616 100%);\n            border: 3px solid var(--accent);\n            border-radius: 20px;\n            padding: 40px;\n            text-align: center;\n            box-shadow: 0 0 50px rgba(3, 169, 244, 0.5);\n            animation: modalPop 0.3s ease;\n        }\n        \n        @keyframes modalPop {\n            from {\n                transform: scale(0.8);\n                opacity: 0;\n            }\n            to {\n                transform: scale(1);\n                opacity: 1;\n            }\n        }\n        \n        .modal-title {\n            font-size: 2.5em;\n            font-weight: 700;\n            color: var(--active-signal);\n            text-shadow: 0 0 20px rgba(255, 193, 7, 0.5);\n            margin-bottom: 20px;\n        }\n        \n        .stars {\n            font-size: 3em;\n            margin-bottom: 20px;\n        }\n        \n        .star {\n            display: inline-block;\n            margin: 0 5px;\n            transition: all 0.3s ease;\n        }\n        \n        .star.filled {\n            animation: starPop 0.5s ease;\n        }\n        \n        @keyframes starPop {\n            0%, 100% { transform: scale(1); }\n            50% { transform: scale(1.3); }\n        }\n        \n        .time-result {\n            font-size: 1.2em;\n            color: #00E5FF;\n            margin-bottom: 30px;\n        }\n        \n        .modal-buttons {\n            display: flex;\n            gap: 15px;\n            justify-content: center;\n        }\n        \n        .modal-btn {\n            padding: 15px 30px;\n            font-size: 1.1em;\n        }\n        \n        #level-select-modal {\n            position: fixed;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            background: rgba(0, 0, 0, 0.9);\n            display: none;\n            align-items: center;\n            justify-content: center;\n            z-index: 1000;\n        }\n        \n        .level-select-content {\n            background: linear-gradient(135deg, #1A3A3A 0%, #0A1616 100%);\n            border: 3px solid var(--accent);\n            border-radius: 20px;\n            padding: 30px;\n            max-width: 600px;\n            max-height: 80vh;\n            overflow-y: auto;\n        }\n        \n        .chapter {\n            margin-bottom: 20px;\n        }\n        \n        .chapter-title {\n            font-size: 1.3em;\n            color: var(--accent);\n            margin-bottom: 10px;\n            padding-bottom: 5px;\n            border-bottom: 1px solid #2A4A4A;\n        }\n        \n        .level-grid {\n            display: grid;\n            grid-template-columns: repeat(4, 1fr);\n            gap: 10px;\n        }\n        \n        .level-btn {\n            background: #1A3A3A;\n            border: 2px solid #2A4A4A;\n            border-radius: 10px;\n            padding: 15px 10px;\n            color: #E0E0E0;\n            font-family: inherit;\n            font-weight: 600;\n            cursor: pointer;\n            transition: all 0.2s ease;\n        }\n        \n        .level-btn:hover {\n            border-color: var(--accent);\n            transform: scale(1.05);\n        }\n        \n        .level-btn.completed {\n            border-color: #4CAF50;\n        }\n        \n        .level-btn .level-stars {\n            font-size: 0.8em;\n            color: var(--active-signal);\n        }\n        \n        @media (max-width: 900px) {\n            #inventory-panel {\n                width: 120px;\n                padding: 10px 5px;\n            }\n            \n            #tools-panel {\n                width: 130px;\n            }\n            \n            .inventory-item {\n                padding: 8px 6px;\n            }\n            \n            .item-icon {\n                width: 32px;\n                height: 32px;\n                font-size: 1.2em;\n            }\n        }\n        \n        @media (max-width: 700px) {\n            #top-bar {\n                flex-wrap: wrap;\n                height: auto;\n                padding: 10px;\n                gap: 10px;\n            }\n            \n            .goal-description {\n                order: 3;\n                width: 100%;\n                font-size: 1em;\n            }\n            \n            #inventory-panel {\n                position: fixed;\n                bottom: 0;\n                left: 0;\n                width: 100%;\n                height: 100px;\n                flex-direction: row;\n                overflow-x: auto;\n                border-right: none;\n                border-top: 2px solid #2A4A4A;\n            }\n            \n            .panel-title {\n                display: none;\n            }\n            \n            .inventory-item {\n                min-width: 100px;\n            }\n            \n            #tools-panel {\n                position: fixed;\n                right: 0;\n                bottom: 100px;\n                width: auto;\n                flex-direction: row;\n                border-left: none;\n                border-top: 2px solid #2A4A4A;\n                padding: 10px;\n            }\n            \n            .status-display, .high-score, .controls-hint {\n                display: none;\n            }\n            \n            .test-btn, .reset-btn {\n                padding: 10px 15px;\n                font-size: 0.9em;\n            }\n            \n            #canvas-container {\n                padding-bottom: 110px;\n            }\n        }\n    </style>\n</head>\n<body>\n    <div id=\"top-bar\">\n        <div class=\"level-info\">\n            <span class=\"level-number\" id=\"levelNumber\">Level 1-1</span>\n            <span class=\"chapter-title\" id=\"chapterTitle\">Basic Wires</span>\n        </div>\n        <div class=\"goal-description\" id=\"goalDescription\">Goal: Connect A to B</div>\n        <div class=\"timer\" id=\"timer\">00:00.00</div>\n        <div class=\"top-buttons\">\n            <button class=\"btn\" id=\"levelSelectBtn\">Levels</button>\n            <button class=\"btn\" id=\"pauseBtn\">Pause</button>\n        </div>\n    </div>\n    \n    <div id=\"main-area\">\n        <div id=\"inventory-panel\">\n            <div class=\"panel-title\">Components</div>\n            <div id=\"inventoryList\"></div>\n        </div>\n        \n        <div id=\"canvas-container\">\n            <canvas id=\"gameCanvas\"></canvas>\n        </div>\n        \n        <div id=\"tools-panel\">\n            <button class=\"test-btn\" id=\"testBtn\">Test Circuit</button>\n            <button class=\"test-btn reset-btn\" id=\"resetBtn\">Reset</button>\n            <div class=\"status-display\">\n                <span class=\"status-text\" id=\"statusText\">Place components</span>\n            </div>\n            <div class=\"high-score\">\n                <div class=\"high-score-label\">Best Time</div>\n                <div class=\"high-score-value\" id=\"highScore\">--:--</div>\n            </div>\n            <div class=\"controls-hint\">\n                Right-click or R to rotate<br>\n                Click inputs to toggle\n            </div>\n        </div>\n    </div>\n    \n    <div id=\"win-modal\">\n        <div class=\"modal-content\">\n            <div class=\"modal-title\">Circuit Complete!</div>\n            <div class=\"stars\" id=\"starsDisplay\"></div>\n            <div class=\"time-result\" id=\"timeResult\">Time: 00:00</div>\n            <div class=\"modal-buttons\">\n                <button class=\"btn modal-btn\" id=\"replayBtn\">Replay</button>\n                <button class=\"btn modal-btn\" id=\"nextLevelBtn\">Next Level</button>\n            </div>\n        </div>\n    </div>\n    \n    <div id=\"level-select-modal\">\n        <div class=\"level-select-content\">\n            <div id=\"levelSelectContent\"></div>\n        </div>\n    </div>\n\n    <script>\n        const LEVELS = [\n            {\n                chapter: 1,\n                chapterTitle: \"Basic Wires\",\n                title: \"Simple Connection\",\n                goal: \"Connect A to B\",\n                goalType: \"STATIC\",\n                gridWidth: 6,\n                gridHeight: 4,\n                inventory: { wire_straight: 2, wire_corner: 0, and_gate: 0, or_gate: 0, not_gate: 0, xor_gate: 0, nand_gate: 0 },\n                inputs: { A: { x: 0, y: 1, active: true } },\n                outputs: { B: { x: 5, y: 1 } },\n                blocked: []\n            },\n            {\n                chapter: 1,\n                chapterTitle: \"Basic Wires\",\n                title: \"Corner Path\",\n                goal: \"Connect A to B using corners\",\n                goalType: \"STATIC\",\n                gridWidth: 6,\n                gridHeight: 5,\n                inventory: { wire_straight: 1, wire_corner: 2, and_gate: 0, or_gate: 0, not_gate: 0, xor_gate: 0, nand_gate: 0 },\n                inputs: { A: { x: 0, y: 2, active: true } },\n                outputs: { B: { x: 5, y: 0 } },\n                blocked: []\n            },\n            {\n                chapter: 1,\n                chapterTitle: \"Basic Wires\",\n                title: \"Complex Path\",\n                goal: \"Navigate the maze\",\n                goalType: \"STATIC\",\n                gridWidth: 7,\n                gridHeight: 5,\n                inventory: { wire_straight: 4, wire_corner: 4, and_gate: 0, or_gate: 0, not_gate: 0, xor_gate: 0, nand_gate: 0 },\n                inputs: { A: { x: 0, y: 0, active: true } },\n                outputs: { B: { x: 6, y: 4 } },\n                blocked: [{x: 3, y: 1}, {x: 3, y: 2}, {x: 3, y: 3}]\n            },\n            {\n                chapter: 2,\n                chapterTitle: \"Logic Gates\",\n                title: \"AND Gate\",\n                goal: \"Light bulb when A AND B are ON\",\n                goalType: \"ALL_INPUTS\",\n                gridWidth: 6,\n                gridHeight: 5,\n                inventory: { wire_straight: 4, wire_corner: 4, and_gate: 1, or_gate: 0, not_gate: 0, xor_gate: 0, nand_gate: 0 },\n                inputs: { A: { x: 0, y: 0, active: true }, B: { x: 0, y: 4, active: true } },\n                outputs: { B: { x: 5, y: 2 } },\n                blocked: []\n            },\n            {\n                chapter: 2,\n                chapterTitle: \"Logic Gates\",\n                title: \"OR Gate\",\n                goal: \"Light bulb when A OR B is ON\",\n                goalType: \"ALL_INPUTS\",\n                gridWidth: 6,\n                gridHeight: 5,\n                inventory: { wire_straight: 4, wire_corner: 4, and_gate: 0, or_gate: 1, not_gate: 0, xor_gate: 0, nand_gate: 0 },\n                inputs: { A: { x: 0, y: 0, active: true }, B: { x: 0, y: 4, active: true } },\n                outputs: { B: { x: 5, y: 2 } },\n                blocked: []\n            },\n            {\n                chapter: 2,\n                chapterTitle: \"Logic Gates\",\n                title: \"NOT Gate\",\n                goal: \"Light bulb when A is OFF\",\n                goalType: \"STATIC_A_OFF\",\n                gridWidth: 5,\n                gridHeight: 4,\n                inventory: { wire_straight: 2, wire_corner: 2, and_gate: 0, or_gate: 0, not_gate: 1, xor_gate: 0, nand_gate: 0 },\n                inputs: { A: { x: 0, y: 1, active: true } },\n                outputs: { B: { x: 4, y: 1 } },\n                blocked: []\n            },\n            {\n                chapter: 2,\n                chapterTitle: \"Logic Gates\",\n                title: \"Combined Logic\",\n                goal: \"Light when (A AND B) OR C\",\n                goalType: \"CUSTOM\",\n                gridWidth: 7,\n                gridHeight: 6,\n                inventory: { wire_straight: 5, wire_corner: 6, and_gate: 1, or_gate: 1, not_gate: 0, xor_gate: 0, nand_gate: 0 },\n                inputs: { A: { x: 0, y: 0, active: true }, B: { x: 0, y: 2, active: true }, C: { x: 0, y: 5, active: true } },\n                outputs: { B: { x: 6, y: 2 } },\n                blocked: [{x: 3, y: 3}]\n            },\n            {\n                chapter: 3,\n                chapterTitle: \"Advanced Logic\",\n                title: \"XOR Gate\",\n                goal: \"Light when A XOR B is true\",\n                goalType: \"ALL_INPUTS_XOR\",\n                gridWidth: 7,\n                gridHeight: 5,\n                inventory: { wire_straight: 6, wire_corner: 6, and_gate: 2, or_gate: 1, not_gate: 2, xor_gate: 0, nand_gate: 0 },\n                inputs: { A: { x: 0, y: 0, active: true }, B: { x: 0, y: 4, active: true } },\n                outputs: { B: { x: 6, y: 2 } },\n                blocked: []\n            },\n            {\n                chapter: 3,\n                chapterTitle: \"Advanced Logic\",\n                title: \"NAND Gate\",\n                goal: \"Light when NOT(A AND B)\",\n                goalType: \"ALL_INPUTS_NAND\",\n                gridWidth: 6,\n                gridHeight: 5,\n                inventory: { wire_straight: 4, wire_corner: 4, and_gate: 1, or_gate: 0, not_gate: 1, xor_gate: 0, nand_gate: 0 },\n                inputs: { A: { x: 0, y: 0, active: true }, B: { x: 0, y: 4, active: true } },\n                outputs: { B: { x: 5, y: 2 } },\n                blocked: []\n            },\n            {\n                chapter: 3,\n                chapterTitle: \"Advanced Logic\",\n                title: \"Full Challenge\",\n                goal: \"Master circuit - all inputs tested\",\n                goalType: \"ALL_INPUTS\",\n                gridWidth: 8,\n                gridHeight: 6,\n                inventory: { wire_straight: 8, wire_corner: 8, and_gate: 2, or_gate: 2, not_gate: 2, xor_gate: 1, nand_gate: 1 },\n                inputs: { A: { x: 0, y: 0, active: true }, B: { x: 0, y: 3, active: true } },\n                outputs: { B: { x: 7, y: 3 } },\n                blocked: [{x: 3, y: 1}, {x: 3, y: 4}, {x: 5, y: 1}, {x: 5, y: 4}]\n            }\n        ];\n\n        const CELL_SIZE = 60;\n        const COMPONENT_COLORS = {\n            wire_straight: '#607D8B',\n            wire_corner: '#607D8B',\n            and_gate: '#4CAF50',\n            or_gate: '#2196F3',\n            not_gate: '#FF9800',\n            xor_gate: '#9C27B0',\n            nand_gate: '#E91E63'\n        };\n\n        const COMPONENT_EMOJI = {\n            wire_straight: '━',\n            wire_corner: '┗',\n            and_gate: '⊼',\n            or_gate: '⊽',\n            not_gate: '▷',\n            xor_gate: '⊕',\n            nand_gate: '⊼̅'\n        };\n\n        const PORT_CONFIGS = {\n            wire_straight: { ports: ['N', 'S'], rotation: 0 },\n            wire_corner: { ports: ['N', 'E'], rotation: 0 },\n            and_gate: { ports: ['W', 'N'], output: 'S', rotation: 0 },\n            or_gate: { ports: ['W', 'N'], output: 'S', rotation: 0 },\n            not_gate: { ports: ['W'], output: 'E', rotation: 0 },\n            xor_gate: { ports: ['W', 'N'], output: 'S', rotation: 0 },\n            nand_gate: { ports: ['W', 'N'], output: 'S', rotation: 0 }\n        };\n\n        const DIRECTION_OFFSETS = {\n            'N': { dx: 0, dy: -1 },\n            'S': { dx: 0, dy: 1 },\n            'E': { dx: 1, dy: 0 },\n            'W': { dx: -1, dy: 0 }\n        };\n\n        const OPPOSITE_DIR = { 'N': 'S', 'S': 'N', 'E': 'W', 'W': 'E' };\n\n        let canvas, ctx;\n        let gameState = {\n            currentLevel: 0,\n            board: [],\n            inventory: {},\n            inputs: {},\n            dragState: null,\n            simulationResult: null,\n            isSimulating: false,\n            paused: false,\n            startTime: null,\n            elapsedTime: 0,\n            bestTimes: {},\n            levelStars: {},\n            completedLevels: new Set()\n        };\n\n        let audioContext = null;\n        let particles = [];\n        let pulseAnimations = [];\n\n        function initAudio() {\n            if (!audioContext) {\n                audioContext = new (window.AudioContext || window.webkitAudioContext)();\n            }\n        }\n\n        function playSound(type) {\n            if (!audioContext) return;\n            \n            const oscillator = audioContext.createOscillator();\n            const gainNode = audioContext.createGain();\n            \n            oscillator.connect(gainNode);\n            gainNode.connect(audioContext.currentTime;
+            
+            if (type === 'click') {
+                oscillator.frequency.value = 600;
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.1);
+            } else if (type === 'success') {
+                oscillator.frequency.value = 523.25;
+                gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+                oscillator.start();
+                setTimeout(() => {
+                    oscillator.frequency.value = 659.25;
+                }, 100);
+                setTimeout(() => {
+                    oscillator.frequency.value = 783.99;
+                }, 200);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                oscillator.stop(audioContext.currentTime + 0.5);
+            } else if (type === 'error') {
+                oscillator.frequency.value = 200;
+                oscillator.type = 'sawtooth';
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.3);
+            } else if (type === 'rotate') {
+                oscillator.frequency.value = 800;
+                gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+                oscillator.start();
+                oscillator.stop(audioContext.currentTime + 0.05);
+            }
+        }
+
+        function createParticle(x, y, color) {
+            particles.push({
+                x, y,
+                vx: (Math.random() - 0.5) * 4,
+                vy: (Math.random() - 0.5) * 4,
+                life: 1,
+                color: color,
+                size: Math.random() * 4 + 2
+            });
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.life;
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function addPulseAnimation(x, y, color) {
+            pulseAnimations.push({
+                x, y,
+                radius: 0,
+                maxRadius: 40,
+                color: color,
+                life: 1
+            });
+        }
+
+        function updatePulseAnimations() {
+            for (let i = pulseAnimations.length - 1; i >= 0; i--) {
+                const p = pulseAnimations[i];
+                p.radius += 2;
+                p.life -= 0.03;
+                if (p.life <= 0) {
+                    pulseAnimations.splice(i, 1);
+                }
+            }
+        }
+
+        function drawPulseAnimations() {
+            pulseAnimations.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = 3 * p.life;
+                ctx.globalAlpha = p.life;
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            });
+        }
+
+        function initGame() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            loadProgress();
+            loadLevel(gameState.currentLevel);
+            
+            setupEventListeners();
+            setupUI();
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        function loadProgress() {
+            try {
+                const saved = localStorage.getItem('circuitLogicProgress');
+                if (saved) {
+                    const data = JSON.parse(saved);
+                    gameState.bestTimes = data.bestTimes || {};
+                    gameState.levelStars = data.levelStars || {};
+                    gameState.completedLevels = new Set(data.completedLevels || []);
+                }
+            } catch (e) {
+                console.log('Could not load progress');
+            }
+        }
+
+        function saveProgress() {
+            try {
+                localStorage.setItem('circuitLogicProgress', JSON.stringify({
+                    bestTimes: gameState.bestTimes,
+                    levelStars: gameState.levelStars,
+                    completedLevels: Array.from(gameState.completedLevels)
+                }));
+            } catch (e) {
+                console.log('Could not save progress');
+            }
+        }
+
+        function loadLevel(levelIndex) {
+            const level = LEVELS[levelIndex];
+            
+            canvas.width = level.gridWidth * CELL_SIZE;
+            canvas.height = level.gridHeight * CELL_SIZE;
+            
+            gameState.board = [];
+            for (let y = 0; y < level.gridHeight; y++) {
+                gameState.board[y] = [];
+                for (let x = 0; x < level.gridWidth; x++) {
+                    gameState.board[y][x] = null;
+                }
+            }
+            
+            level.blocked.forEach(b => {
+                gameState.board[b.y][b.x] = { type: 'blocked' };
+            });
+            
+            gameState.inventory = { ...level.inventory };
+            gameState.inputs = JSON.parse(JSON.stringify(level.inputs));
+            gameState.simulationResult = null;
+            gameState.isSimulating = false;
+            gameState.startTime = Date.now();
+            gameState.elapsedTime = 0;
+            
+            Object.values(gameState.inputs).forEach(input => {
+                input.active = true;
+            });
+            
+            updateUI();
+            updateInventoryUI();
+            updateHighScore();
+        }
+
+        function setupEventListeners() {
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('mouseleave', handleMouseUp);
+            canvas.addEventListener('contextmenu', e => e.preventDefault());
+            
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+            
+            document.addEventListener('keydown', handleKeyDown);
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            
+            initAudio();
+            
+            if (touch.touches.length === 2) {
+                const touch2 = e.touches[1];
+                const x2 = touch2.clientX - rect.left;
+                const y2 = touch2.clientY - rect.top;
+                const centerX = (x + x2) / 2;
+                const centerY = (y + y2) / 2;
+                handleClick(centerX, centerY, true);
+            } else {
+                handleMouseDown({ offsetX: x, offsetY: y, button: 0 });
+            }
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (gameState.dragState && gameState.dragState.type === 'inventory') {
+                const touch = e.touches[0];
+                const rect = canvas.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                handleMouseMove({ offsetX: x, offsetY: y });
+            }
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            handleMouseUp({});
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'r' || e.key === 'R') {
+                const rect = canvas.getBoundingClientRect();
+                const x = gameState.dragState?.x ?? rect.width / 2;
+                const y = gameState.dragState?.y ?? rect.height / 2;
+                rotateComponentAt(x, y);
+            }
+        }
+
+        function handleMouseDown(e) {
+            initAudio();
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.offsetX;
+            const y = e.offsetY;
+            const gridX = Math.floor(x / CELL_SIZE);
+            const gridY = Math.floor(y / CELL_SIZE);
+            
+            if (e.button === 2 || e.ctrlKey) {
+                rotateComponentAt(x, y);
+                return;
+            }
+            
+            if (checkInputClick(gridX, gridY)) {
+                return;
+            }
+            
+            const cell = gameState.board[gridY]?.[gridX];
+            if (cell && cell.type !== 'blocked') {
+                gameState.dragState = {
+                    type: 'placed',
+                    gridX: gridX,
+                    gridY: gridY,
+                    component: cell,
+                    startX: gridX,
+                    startY: gridY
+                };
+                playSound('click');
+                return;
+            }
+            
+            if (gameState.inventory[getInventoryItemAt(x, y)] > 0) {
+                gameState.dragState = {
+                    type: 'inventory',
+                    itemType: getInventoryItemAt(x, y),
+                    offsetX: x % CELL_SIZE,
+                    offsetY: y % CELL_SIZE,
+                    x: x,
+                    y: y
+                };
+                playSound('click');
+            }
+        }
+
+        function handleMouseMove(e) {
+            if (!gameState.dragState) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.offsetX;
+            const y = e.offsetY;
+            
+            if (gameState.dragState.type === 'inventory') {
+                gameState.dragState.x = x;
+                gameState.dragState.y = y;
+            } else if (gameState.dragState.type === 'placed') {
+                const gridX = Math.floor(x / CELL_SIZE);
+                const gridY = Math.floor(y / CELL_SIZE);
+                
+                if (gridX >= 0 && gridX < LEVELS[gameState.currentLevel].gridWidth &&
+                    gridY >= 0 && gridY < LEVELS[gameState.currentLevel].gridHeight) {
+                    
+                    const targetCell = gameState.board[gridY]?.[gridX];
+                    if (!targetCell || targetCell.type === 'blocked') {
+                        gameState.board[gameState.dragState.gridY][gameState.dragState.gridX] = null;
+                        gameState.board[gridY][gridX] = gameState.dragState.component;
+                        gameState.dragState.gridX = gridX;
+                        gameState.dragState.gridY = gridY;
+                    }
+                }
+            }
+        }
+
+        function handleMouseUp(e) {
+            if (!gameState.dragState) return;
+            
+            if (gameState.dragState.type === 'inventory') {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.offsetX ?? gameState.dragState.x;
+                const y = e.offsetY ?? gameState.dragState.y;
+                const gridX = Math.floor(x / CELL_SIZE);
+                const gridY = Math.floor(y / CELL_SIZE);
+                
+                if (gridX >= 0 && gridX < LEVELS[gameState.currentLevel].gridWidth &&
+                    gridY >= 0 && gridY < LEVELS[gameState.currentLevel].gridHeight) {
+                    
+                    const cell = gameState.board[gridY]?.[gridX];
+                    if (!cell || cell.type === 'blocked') {
+                        placeComponent(gridX, gridY, gameState.dragState.itemType);
+                    }
+                }
+            }
+            
+            gameState.dragState = null;
+        }
+
+        function handleClick(x, y, isLongPress = false) {
+            const gridX = Math.floor(x / CELL_SIZE);
+            const gridY = Math.floor(y / CELL_SIZE);
+            
+            if (checkInputClick(gridX, gridY)) {
+                return;
+            }
+            
+            if (isLongPress) {
+                rotateComponentAt(x, y);
+            }
+        }
+
+        function rotateComponentAt(x, y) {
+            const gridX = Math.floor(x / CELL_SIZE);
+            const gridY = Math.floor(y / CELL_SIZE);
+            const cell = gameState.board[gridY]?.[gridX];
+            
+            if (cell && cell.type !== 'blocked' && !isInputAt(gridX, gridY)) {
+                cell.rotation = ((cell.rotation || 0) + 90) % 360;
+                playSound('rotate');
+            }
+        }
+
+        function checkInputClick(gridX, gridY) {
+            for (const key in gameState.inputs) {
+                const input = gameState.inputs[key];
+                if (input.x === gridX && input.y === gridY) {
+                    input.active = !input.active;
+                    playSound('click');
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function isInputAt(x, y) {
+            for (const key in gameState.inputs) {
+                const input = gameState.inputs[key];
+                if (input.x === x && input.y === y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function isOutputAt(x, y) {
+            const level = LEVELS[gameState.currentLevel];
+            for (const key in level.outputs) {
+                const output = level.outputs[key];
+                if (output.x === x && output.y === y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function getInventoryItemAt(x, y) {
+            const inventoryItems = document.querySelectorAll('.inventory-item');
+            const panelRect = document.getElementById('inventoryList').getBoundingClientRect();
+            
+            for (const item of inventoryItems) {
+                const rect = item.getBoundingClientRect();
+                if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+                    return item.dataset.type;
+                }
+            }
+            return null;
+        }
+
+        function placeComponent(gridX, gridY, type) {
+            if (gameState.inventory[type] > 0) {
+                gameState.board[gridY][gridX] = {
+                    type: type,
+                    rotation: 0,
+                    powered: false
+                };
+                gameState.inventory[type]--;
+                playSound('click');
+                updateInventoryUI();
+                
+                const centerX = gridX * CELL_SIZE + CELL_SIZE / 2;
+                const centerY = gridY * CELL_SIZE + CELL_SIZE / 2;
+                createParticle(centerX, centerY, COMPONENT_COLORS[type]);
+                addPulseAnimation(centerX, centerY, COMPONENT_COLORS[type]);
+            }
+        }
+
+        function removeComponent(gridX, gridY) {
+            const cell = gameState.board[gridY][gridX];
+            if (cell && cell.type !== 'blocked') {
+                gameState.inventory[cell.type]++;
+                gameState.board[gridY][gridX] = null;
+                updateInventoryUI();
+            }
+        }
+
+        function updateInventoryUI() {
+            const list = document.getElementById('inventoryList');
+            list.innerHTML = '';
+            
+            for (const [type, count] of Object.entries(gameState.inventory)) {
+                if (count > 0 || isComponentUsedInLevel(type)) {
+                    const item = document.createElement('div');
+                    item.className = 'inventory-item' + (count === 0 ? ' disabled' : '');
+                    item.dataset.type = type;
+                    
+                    const displayName = type.replace(/_/g, ' ');
+                    item.innerHTML = `
+                        <div class=\"item-icon\">${COMPONENT_EMOJI[type]}</div>
+                        <div class=\"item-info\">
+                            <div class=\"item-name\">${displayName}</div>
+                            <div class=\"item-count\">${count} left</div>
+                        </div>
+                    `;
+                    
+                    if (count > 0) {
+                        item.addEventListener('mousedown', e => {
+                            e.preventDefault();
+                            const rect = item.getBoundingClientRect();
+                            gameState.dragState = {
+                                type: 'inventory',
+                                itemType: type,
+                                offsetX: e.clientX - rect.left,
+                                offsetY: e.clientY - rect.top,
+                                x: e.clientX,
+                                y: e.clientY
+                            };
+                            initAudio();
+                            playSound('click');
+                        });
+                    }
+                    
+                    list.appendChild(item);
+                }
+            }
+        }
+
+        function isComponentUsedInLevel(type) {
+            const level = LEVELS[gameState.currentLevel];
+            return level.inventory[type] > 0;
+        }
+
+        function setupUI() {
+            document.getElementById('testBtn').addEventListener('click', testCircuit);
+            document.getElementById('resetBtn').addEventListener('click', resetLevel);
+            document.getElementById('levelSelectBtn').addEventListener('click', showLevelSelect);
+            document.getElementById('pauseBtn').addEventListener('click', togglePause);
+            document.getElementById('replayBtn').addEventListener('click', replayLevel);
+            document.getElementById('nextLevelBtn').addEventListener('click', nextLevel);
+            
+            document.getElementById('level-select-modal').addEventListener('click', e => {
+                if (e.target.id === 'level-select-modal') {
+                    hideLevelSelect();
+                }
+            });
+        }
+
+        function updateUI() {
+            const level = LEVELS[gameState.currentLevel];
+            document.getElementById('levelNumber').textContent = `Level ${level.chapter}-${level.chapterTitle === LEVELS.slice(0, gameState.currentLevel + 1).filter(l => l.chapter === level.chapter).length}`;
+            document.getElementById('chapterTitle').textContent = level.chapterTitle;
+            document.getElementById('goalDescription').textContent = `Goal: ${level.goal}`;
+        }
+
+        function updateHighScore() {
+            const key = `level_${gameState.currentLevel}`;
+            const best = gameState.bestTimes[key];
+            if (best) {
+                document.getElementById('highScore').textContent = formatTime(best);
+            } else {
+                document.getElementById('highScore').textContent = '--:--';
+            }
+        }
+
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function formatTimeDetailed(ms) {
+            const totalSeconds = ms / 1000;
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = Math.floor(totalSeconds % 60);
+            const centiseconds = Math.floor((ms % 1000) / 10);
+            return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
+        }
+
+        function testCircuit() {
+            initAudio();
+            gameState.isSimulating = true;
+            
+            const level = LEVELS[gameState.currentLevel];
+            const inputStates = {};
+            
+            for (const key in gameState.inputs) {
+                inputStates[key] = gameState.inputs[key].active;
+            }
+            
+            const result = simulateCircuit(inputStates, level);
+            
+            gameState.simulationResult = result;
+            
+            const statusText = document.getElementById('statusText');
+            
+            if (result.success) {
+                statusText.textContent = 'Circuit working!';
+                statusText.className = 'status-text success';
+                playSound('success');
+                
+                for (let i = 0; i < 20; i++) {
+                    setTimeout(() => {
+                        const centerX = level.outputs.B.x * CELL_SIZE + CELL_SIZE / 2;
+                        const centerY = level.outputs.B.y * CELL_SIZE + CELL_SIZE / 2;
+                        createParticle(centerX, centerY, '#4CAF50');
+                    }, i * 50);
+                }
+                
+                showWinModal();
+            } else {
+                statusText.textContent = result.message;
+                statusText.className = 'status-text error';
+                playSound('error');
+            }
+        }
+
+        function simulateCircuit(inputStates, level) {
+            const powered = new Set();
+            const queue = [];
+            
+            for (const [key, input] of Object.entries(gameState.inputs)) {
+                const inputKey = `${input.x},${input.y}`;
+                if (inputStates[key]) {
+                    powered.add(inputKey);
+                    queue.push({ x: input.x, y: input.y, direction: null, fromInput: true });
+                }
+            }
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                const { x, y, direction } = current;
+                
+                const cell = gameState.board[y]?.[x];
+                
+                if (x < 0 || x >= level.gridWidth || y < 0 || y >= level.gridHeight) continue;
+                
+                if (cell && cell.type === 'blocked') continue;
+                
+                const cellKey = `${x},${y}`;
+                
+                if (cell && cell.type && cell.type !== 'blocked') {
+                    const ports = getComponentPorts(cell);
+                    
+                    if (direction && !ports.includes(direction)) continue;
+                    
+                    if (cell.type.startsWith('wire')) {
+                        powered.add(cellKey);
+                        
+                        for (const port of ports) {
+                            const offset = DIRECTION_OFFSETS[port];
+                            const nextX = x + offset.dx;
+                            const nextY = y + offset.dy;
+                            const nextKey = `${nextX},${nextY}`;
+                            
+                            if (!powered.has(nextKey) || cellKey !== nextKey) {
+                                queue.push({ x: nextX, y: nextY, direction: OPPOSITE_DIR[port] });
+                            }
+                        }
+                    } else if (['and_gate', 'or_gate', 'xor_gate', 'nand_gate'].includes(cell.type)) {
+                        const inputPorts = ports.filter(p => p !== 'S');
+                        const outputPort = 'S';
+                        
+                        let allInputsPowered = true;
+                        let anyInputPowered = false;
+                        
+                        for (const inputPort of inputPorts) {
+                            const inputCellX = x + DIRECTION_OFFSETS[inputPort].dx;
+                            const inputCellY = y + DIRECTION_OFFSETS[inputPort].dy;
+                            const inputKey = `${inputCellX},${inputCellY}`;
+                            
+                            if (powered.has(inputKey)) {
+                                anyInputPowered = true;
+                            } else {
+                                allInputsPowered = false;
+                            }
+                        }
+                        
+                        let shouldPowerOutput = false;
+                        
+                        if (cell.type === 'and_gate') {
+                            shouldPowerOutput = allInputsPowered && inputPorts.length > 0;
+                        } else if (cell.type === 'or_gate') {
+                            shouldPowerOutput = anyInputPowered;
+                        } else if (cell.type === 'xor_gate') {
+                            let poweredCount = 0;
+                            for (const inputPort of inputPorts) {
+                                const inputCellX = x + DIRECTION_OFFSETS[inputPort].dx;
+                                const inputCellY = y + DIRECTION_OFFSETS[inputPort].dy;
+                                if (powered.has(`${inputCellX},${inputCellY}`)) {
+                                    poweredCount++;
+                                }
+                            }
+                            shouldPowerOutput = poweredCount === 1;
+                        } else if (cell.type === 'nand_gate') {
+                            shouldPowerOutput = !(allInputsPowered && inputPorts.length > 0);
+                        }
+                        
+                        if (shouldPowerOutput) {
+                            powered.add(cellKey);
+                            
+                            const offset = DIRECTION_OFFSETS[outputPort];
+                            const nextX = x + offset.dx;
+                            const nextY = y + offset.dy;
+                            queue.push({ x: nextX, y: nextY, direction: OPPOSITE_DIR[outputPort] });
+                        }
+                    } else if (cell.type === 'not_gate') {
+                        const inputPort = 'W';
+                        const inputCellX = x + DIRECTION_OFFSETS[inputPort].dx;
+                        const inputCellY = y + DIRECTION_OFFSETS[inputPort].dy;
+                        const inputKey = `${inputCellX},${inputCellY}`;
+                        
+                        const inputPowered = powered.has(inputKey);
+                        
+                        if (!inputPowered) {
+                            powered.add(cellKey);
+                            
+                            const outputPort = 'E';
+                            const offset = DIRECTION_OFFSETS[outputPort];
+                            const nextX = x + offset.dx;
+                            const nextY = y + offset.dy;
+                            queue.push({ x: nextX, y: nextY, direction: OPPOSITE_DIR[outputPort] });
+                        }
+                    }
+                } else if (direction && !isInputAt(x, y) && !isOutputAt(x, y)) {
+                    const neighborX = x + DIRECTION_OFFSETS[direction].dx;
+                    const neighborY = y + DIRECTION_OFFSETS[direction].dy;
+                    
+                    if (neighborX >= 0 && neighborX < level.gridWidth &&
+                        neighborY >= 0 && neighborY < level.gridHeight) {
+                        queue.push({ x: neighborX, y: neighborY, direction: direction });
+                    }
+                }
+                
+                if (direction && isOutputAt(x, y)) {
+                    continue;
+                }
+            }
+            
+            const outputKey = `${level.outputs.B.x},${level.outputs.B.y}`;
+            const outputPowered = powered.has(outputKey);
+            
+            let success = false;
+            let message = '';
+            
+            if (outputPowered) {
+                success = true;
+                message = 'Circuit complete!';
+            } else {
+                const hasAnyInput = Object.values(inputStates).some(v => v);
+                
+                if (!hasAnyInput) {
+                    message = 'Turn on at least one input';
+                } else {
+                    message = 'Signal not reaching output';
+                }
+            }
+            
+            gameState.board.forEach(row => {
+                row.forEach(cell => {
+                    if (cell && cell.type !== 'blocked') {
+                        const key = `${getCellX(cell)},${getCellY(cell)}`;
+                        cell.powered = powered.has(key);
+                    }
+                });
+            });
+            
+            return { success, message, powered };
+        }
+
+        function getCellX(cell) {
+            for (let y = 0; y < gameState.board.length; y++) {
+                const idx = gameState.board[y].indexOf(cell);
+                if (idx !== -1) return idx;
+            }
+            return -1;
+        }
+
+        function getCellY(cell) {
+            for (let y = 0; y < gameState.board.length; y++) {
+                const idx = gameState.board[y].indexOf(cell);
+                if (idx !== -1) return y;
+            }
+            return -1;
+        }
+
+        function getComponentPorts(component) {
+            const basePorts = PORT_CONFIGS[component.type]?.ports || [];
+            const rotation = component.rotation || 0;
+            const rotations = Math.floor(rotation / 90) % 4;
+            
+            const dirOrder = ['N', 'E', 'S', 'W'];
+            const baseIndex = dirOrder.indexOf(basePorts[0]);
+            
+            return basePorts.map(port => {
+                const portIndex = dirOrder.indexOf(port);
+                const newIndex = (portIndex + rotations) % 4;
+                return dirOrder[newIndex];
+            });
+        }
+
+        function resetLevel() {
+            initAudio();
+            loadLevel(gameState.currentLevel);
+            playSound('click');
+        }
+
+        function showLevelSelect() {
+            initAudio();
+            const modal = document.getElementById('level-select-modal');
+            const content = document.getElementById('levelSelectContent');
+            
+            const chapters = {};
+            LEVELS.forEach((level, index) => {
+                if (!chapters[level.chapter]) {
+                    chapters[level.chapter] = {
+                        title: level.chapterTitle,
+                        levels: []
+                    };
+                }
+                chapters[level.chapter].levels.push({ ...level, index });
+            });
+            
+            let html = '';
+            for (const chapterNum in chapters) {
+                const chapter = chapters[chapterNum];
+                html += `<div class=\"chapter\">
+                    <div class=\"chapter-title\">Chapter ${chapterNum}: ${chapter.title}</div>
+                    <div class=\"level-grid\">`;
+                
+                chapter.levels.forEach(level => {
+                    const stars = gameState.levelStars[`level_${level.index}`] || 0;
+                    const completed = gameState.completedLevels.has(`level_${level.index}`);
+                    const starDisplay = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+                    
+                    html += `<button class=\"level-btn ${completed ? 'completed' : ''}\" data-level=\"${level.index}\">
+                        ${level.index + 1}
+                        <div class=\"level-stars\">${starDisplay}</div>
+                    </button>`;
+                });
+                
+                html += '</div></div>';
+            }
+            
+            content.innerHTML = html;
+            
+            content.querySelectorAll('.level-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const levelIndex = parseInt(btn.dataset.level);
+                    hideLevelSelect();
+                    loadLevel(levelIndex);
+                    gameState.currentLevel = levelIndex;
+                    playSound('click');
+                });
+            });
+            
+            modal.style.display = 'flex';
+        }
+
+        function hideLevelSelect() {
+            document.getElementById('level-select-modal').style.display = 'none';
+        }
+
+        function togglePause() {
+            initAudio();
+            gameState.paused = !gameState.paused;
+            document.getElementById('pauseBtn').textContent = gameState.paused ? 'Resume' : 'Pause';
+            playSound('click');
+        }
+
+        function showWinModal() {
+            const elapsed = gameState.elapsedTime || (Date.now() - gameState.startTime);
+            const key = `level_${gameState.currentLevel}`;
+            
+            let stars = 1;
+            if (elapsed < 30000) stars = 3;
+            else if (elapsed < 60000) stars = 2;
+            
+            if (!gameState.bestTimes[key] || elapsed < gameState.bestTimes[key]) {
+                gameState.bestTimes[key] = elapsed;
+            }
+            
+            gameState.levelStars[key] = stars;
+            gameState.completedLevels.add(key);
+            saveProgress();
+            
+            document.getElementById('timeResult').textContent = `Time: ${formatTime(elapsed)}`;
+            
+            let starsHtml = '';
+            for (let i = 0; i < 3; i++) {
+                const filled = i < stars ? 'filled' : '';
+                starsHtml += `<span class=\"star ${filled}\">${i < stars ? '★' : '☆'}</span>`;
+            }
+            document.getElementById('starsDisplay').innerHTML = starsHtml;
+            
+            const nextBtn = document.getElementById('nextLevelBtn');
+            if (gameState.currentLevel >= LEVELS.length - 1) {
+                nextBtn.textContent = 'All Complete!';
+                nextBtn.disabled = true;
+            } else {
+                nextBtn.textContent = 'Next Level';
+                nextBtn.disabled = false;
+            }
+            
+            document.getElementById('win-modal').style.display = 'flex';
+        }
+
+        function hideWinModal() {
+            document.getElementById('win-modal').style.display = 'none';
+        }
+
+        function replayLevel() {
+            hideWinModal();
+            resetLevel();
+        }
+
+        function nextLevel() {
+            hideWinModal();
+            if (gameState.currentLevel < LEVELS.length - 1) {
+                gameState.currentLevel++;
+                loadLevel(gameState.currentLevel);
+            }
+        }
+
+        function gameLoop(timestamp) {
+            if (!gameState.paused) {
+                update();
+                draw();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update() {
+            if (!gameState.paused) {
+                gameState.elapsedTime = Date.now() - gameState.startTime;
+                document.getElementById('timer').textContent = formatTimeDetailed(gameState.elapsedTime);
+            }
+            
+            updateParticles();
+            updatePulseAnimations();
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawBoard();
+            drawGrid();
+            drawComponents();
+            drawInputs();
+            drawOutputs();
+            drawDragPreview();
+            drawParticles();
+            drawPulseAnimations();
+        }
+
+        function drawBoard() {
+            ctx.fillStyle = '#1A3A3A';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = '#152E2E';
+            ctx.lineWidth = 1;
+            
+            for (let x = 0; x <= canvas.width; x += CELL_SIZE) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y <= canvas.height; y += CELL_SIZE) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        function drawComponents() {
+            for (let y = 0; y < gameState.board.length; y++) {
+                for (let x = 0; x < gameState.board[y].length; x++) {
+                    const cell = gameState.board[y][x];
+                    if (cell && cell.type === 'blocked') {
+                        drawBlockedCell(x, y);
+                    } else if (cell && cell.type) {
+                        drawComponent(cell, x, y);
+                    }
+                }
+            }
+        }
+
+        function drawBlockedCell(x, y) {
+            const cx = x * CELL_SIZE;
+            const cy = y * CELL_SIZE;
+            
+            ctx.fillStyle = '#0D1F1F';
+            ctx.fillRect(cx + 2, cy + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+            
+            ctx.strokeStyle = '#2A4A4A';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.strokeRect(cx + 4, cy + 4, CELL_SIZE - 8, CELL_SIZE - 8);
+            ctx.setLineDash([]);
+        }
+
+        function drawComponent(component, gridX, gridY) {
+            const cx = gridX * CELL_SIZE + CELL_SIZE / 2;
+            const cy = gridY * CELL_SIZE + CELL_SIZE / 2;
+            
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate((component.rotation || 0) * Math.PI / 180);
+            
+            const isPowered = component.powered && gameState.isSimulating;
+            const color = COMPONENT_COLORS[component.type];
+            const glowColor = isPowered ? '#FFEB3B' : color;
+            
+            if (isPowered) {
+                ctx.shadowColor = glowColor;
+                ctx.shadowBlur = 15;
+            }
+            
+            if (component.type === 'wire_straight') {
+                drawWireStraight(color, isPowered);
+            } else if (component.type === 'wire_corner') {
+                drawWireCorner(color, isPowered);
+            } else if (component.type === 'and_gate') {
+                drawAndGate(color, isPowered);
+            } else if (component.type === 'or_gate') {
+                drawOrGate(color, isPowered);
+            } else if (component.type === 'not_gate') {
+                drawNotGate(color, isPowered);
+            } else if (component.type === 'xor_gate') {
+                drawXorGate(color, isPowered);
+            } else if (component.type === 'nand_gate') {
+                drawNandGate(color, isPowered);
+            }
+            
+            ctx.restore();
+        }
+
+        function drawWireStraight(color, isPowered) {
+            ctx.strokeStyle =
