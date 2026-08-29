@@ -1,36 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Symphonic Leap</title>
-  <style>
-    body{margin:0;background:#0d0220;color:#fff;font-family:sans-serif;overflow:hidden}
-    #gameContainer{position:relative;width:100%;height:100%;display:flex;justify-content:center;align-items:center}
-    canvas{max-width:100%;height:auto;display:block;background:#0d0220}
-    #hud{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
-    .bar{position:absolute;left:0;right:0;display:flex;justify-content:space-between;padding:10px 20px;box-sizing:border-box;color:#fff;text-shadow:0 0 5px #fff}
-    #topBar{border-bottom:1px solid #444}
-    #bottomBar{border-top:1px solid #444;bottom:0;position:absolute;width:100%}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>LUMEN STRIDER</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕯️</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+*{margin:0;padding:0;box-sizing:border-box}body{background:#0A0814;overflow:hidden;font-family:'Inter',sans-serif;color:#fff}#game{position:fixed;top:0;left:0;width:100%;height:100%}#ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}#hud{display:none;position:absolute;top:0;left:0;width:100%;padding:15px 25px;display:flex;justify-content:space-between;align-items:flex-start}#hud.active{display:flex}.lumencore{width:25px;height:70px;background:rgba(0,0,0,.6);border:1px solid rgba(255,210,122,.4);border-radius:4px 4px 12px 12px;position:relative;overflow:hidden}.corefill{position:absolute;bottom:0;left:0;width:100%;height:100%;background:linear-gradient(to top,#FF4D4D,#FFD27A);transition:height .3s}.corefill.low{animation:cpulse .4s infinite}@keyframes cpulse{0%,100%{opacity:1}50%{opacity:.4}}.timer{font-family:'Cormorant Garamond',serif;font-size:1.4rem;color:rgba(255,255,255,.7);letter-spacing:.1em}.highscore{font-size:.8rem;color:rgba(255,210,122,.6);margin-top:5px}.fragments{display:flex;gap:8px}.frag{width:16px;height:16px;background:rgba(255,255,255,.15);transform:rotate(45deg);transition:all .3s}.frag.collected{background:#FFD27A;box-shadow:0 0 12px rgba(255,210,122,.8)}.screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;justify-content:center;align-items:center;background:rgba(10,8,20,.95);pointer-events:none;opacity:0;transition:opacity .5s}#title.active{display:flex;opacity:1;pointer-events:auto}#pause.active{display:flex;opacity:1;pointer-events:auto}#death.active{display:flex;opacity:1}.menu{text-align:center}.menu h2{font-family:'Cormorant Garamond',serif;font-size:2.2rem;letter-spacing:.3em;margin-bottom:35px}.menbtn{display:block;width:180px;margin:12px auto;padding:12px 24px;background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;font-family:'Inter',sans-serif;font-size:.85rem;letter-spacing:.15em;cursor:pointer;transition:all .3s}.menbtn:hover{background:rgba(255,210,122,.12);border-color:#FFD27A;box-shadow:0 0 20px rgba(255,210,122,.25)}.emblem{width:60px;height:90px;margin:0 auto 15px;background:radial-gradient(ellipse at 50% 40%,#FFD27A,#3B82F6 60%,transparent 80%);border-radius:50% 50% 35% 35%;animation:flicker 1.8s ease-in-out infinite,float 2.5s ease-in-out infinite}@keyframes flicker{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.04);opacity:.88}}@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}.title{font-family:'Cormorant Garamond',serif;font-size:3.5rem;font-weight:600;letter-spacing:.4em;text-shadow:0 0 25px rgba(255,210,122,.45)}.title span{color:#FFD27A;animation:blink 1s infinite}@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}.sub{font-size:.8rem;letter-spacing:.8em;opacity:.5;margin-bottom:45px}.prompt{font-size:.75rem;letter-spacing:.25em;opacity:.35;animation:pulse 2s infinite}@keyframes pulse{0%,100%{opacity:.35}50%{opacity:.7}}.deathfx{width:100%;height:100%;background:#000;animation:deathpulse 1s forwards}@keyframes deathpulse{0%{background:#000}25%{background:radial-gradient(circle,transparent 25%,rgba(130,0,0,.5) 100%)}50%{background:#000}75%{background:radial-gradient(circle,transparent 25%,rgba(130,0,0,.5) 100%)}100%{background:#000}}.mobilectrl{position:fixed;bottom:20px;left:0;width:100%;display:none;justify-content:space-between;padding:0 20px;pointer-events:none;z-index:15}@media(max-width:768px){.mobilectrl{display:flex}.prompt{font-size:.65rem}}#joystick{width:100px;height:100px;background:rgba(255,255,255,.1);border-radius:50%;position:relative;pointer-events:auto;touch-action:none}#jstick{width:40px;height:40px;background:rgba(255,210,122,.5);border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}#jbuttons{display:flex;gap:15px;align-items:flex-end;pointer-events:auto}#jA,#jB{width:60px;height:60px;background:rgba(255,255,255,.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:rgba(255,255,255,.7)}
+    </style>
 </head>
 <body>
-<div id="gameContainer">
-  <canvas id="gameCanvas"></canvas>
-  <div id="hud">
-    <div id="topBar" class="bar">
-      <div id="musicIcon">🎵</div>
-      <div id="levelInfo">Level 1</div>
-      <div id="score">0</div>
-      <div id="hearts">❤️❤️❤️</div>
-      <div id="timer">⏱ 0.00</div>
-    </div>
-    <div id="bottomBar" class="bar">
-      <div id="jumpMeter">Jump: □□□□□</div>
-      <div id="powerTimer"></div>
-    </div>
-  </div>
+<canvas id="game"></canvas>
+<div id="ui">
+  <div id="hud"><div class="lumencore"><div class="corefill" id="corefill"></div></div><div><div class="timer" id="timer">00:00.00</div><div class="highscore" id="highscore">BEST: --:--</div></div><div class="fragments" id="frags"><div class="frag"></div><div class="frag"></div><div class="frag"></div></div></div>
+  <div id="title" class="screen active"><div class="menu"><div class="emblem"></div><h1 class="title">LUM<span>█</span>N</h1><p class="sub">S T R I D E R</p><p class="prompt">SPACE / TAP TO BEGIN</p></div></div>
+  <div id="pause" class="screen"><div class="menu"><h2>PAUSED</h2><button class="menbtn" id="bres">RESUME</button><button class="menbtn" id="brest">RESTART</button></div></div>
+  <div id="death" class="screen"><div class="deathfx"></div></div>
 </div>
-<script src="game.js"></script>
+<div class="mobilectrl">
+  <div id="joystick"><div id="jstick"></div></div>
+  <div id="jbuttons"><div id="jB">⬤</div><div id="jA">▲</div></div>
+</div>
+<script type="module">
+import LumenStrider from './game.js';
+const game = new LumenStrider('game');
+</script>
 </body>
 </html>
