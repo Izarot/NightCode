@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>VIRAL.exe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦠</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0A0A0F;font-family:'Share Tech Mono',monospace;color:#0FF;overflow:hidden;user-select:none;touch-action:none}
+#gameContainer{position:relative;width:100vw;height:100vh;display:flex;justify-content:center;align-items:center}
+#gameCanvas{background:#0A0A0F;max-width:100%;max-height:100%}
+#scanlines{position:absolute;top:0;left:0;width:100%;height:100%;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.1) 2px,rgba(0,0,0,0.1) 4px);pointer-events:none;z-index:10}
+#hud{position:absolute;top:0;left:0;width:100%;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,rgba(10,10,15,0.9) 0%,transparent 100%);z-index:20}
+.hud-item{font-size:14px;text-shadow:0 0 10px #0FF}
+#progressBar{width:200px;height:20px;background:#111;border:2px solid #0FF;border-radius:10px;overflow:hidden}
+#progressFill{height:100%;width:0%;background:linear-gradient(90deg,#0FF,#F0F);transition:width .3s}
+#minimap{border:2px solid #0FF;border-radius:5px;background:rgba(0,0,0,0.8)}
+#overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:30;display:none}
+#overlay h1{font-size:48px;text-shadow:0 0 20px #F0F;margin-bottom:20px}
+#overlay p{font-size:18px;margin:10px 0}
+.btn{background:transparent;border:2px solid #0FF;color:#0FF;padding:10px 30px;font-family:inherit;font-size:18px;cursor:pointer;margin:10px;transition:all .3s}
+.btn:hover{background:#0FF;color:#0A0A0F;box-shadow:0 0 20px #0FF}
+#startScreen{display:flex;flex-direction:column;align-items:center}
+#pulseCooldown{width:40px;height:40px;border:3px solid #0FF;border-radius:50%;position:relative}
+#pulseFill{width:100%;height:100%;background:conic-gradient(#F0F var(--pct,0%),transparent 0%);border-radius:50%;position:absolute;top:0;left:0}
+#timer{font-size:24px;color:#FF0}
+#highScore{position:absolute;top:50px;right:20px;font-size:12px;color:#F0F}
+#damageFlash{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(255,0,0,0.3);pointer-events:none;opacity:0;transition:opacity .1s;z-index:15}
+#mobileControls{position:absolute;bottom:20px;left:0;width:100%;display:none;justify-content:space-around;z-index:25}
+.ctrl-btn{width:60px;height:60px;background:rgba(0,255,255,0.2);border:2px solid #0FF;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:24px;color:#0FF}
+.ctrl-group{display:flex;gap:5px}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+<canvas id="gameCanvas"></canvas>
+<div id="scanlines"></div>
+<div id="damageFlash"></div>
+<div id="hud">
+<div class="hud-item" id="sector">SECTOR 1</div>
+<div style="display:flex;align-items:center;gap:15px">
+<div>INFECTION: <span id="progress">0</span>%</div>
+<div id="progressBar"><div id="progressFill"></div></div>
+</div>
+<div class="hud-item" id="score">SCORE: 0</div>
+</div>
+<div id="highScore">BEST: <span id="bestScore">0</span></div>
+<div id="timer">0.00s</div>
+<div id="pulseCooldown"><div id="pulseFill"></div></div>
+<canvas id="minimap" width="120" height="120" style="position:absolute;bottom:20px;right:20px;z-index:20"></canvas>
+<div id="overlay">
+<div id="overlayContent"></div>
+</div>
+<div id="mobileControls">
+<div class="ctrl-group"><div class="ctrl-btn" data-key="w">W</div></div>
+<div class="ctrl-group"><div class="ctrl-btn" data-key="a">A</div><div class="ctrl-btn" data-key="s">S</div><div class="ctrl-btn" data-key="d">D</div></div>
+</div>
+</div>
+<script>
+const canvas=document.getElementById('gameCanvas'),ctx=canvas.getContext('2d');
+const mCanvas=document.getElementById('minimap'),mCtx=mCanvas.getContext('2d');
+const W=1280,H=720;
+canvas.width=W;canvas.height=H;
+
+let gameState='menu',level=1,score=0,highScore=parseInt(localStorage.getItem('viralHighScore'))||0;
+let elapsedTime=0,pulseCooldown=0,pulseActive=false,pulseRadius=0;
+let totalNodes=0,capturedNodes=0;
+let player={x:W/2,y:H/2,vx:0,vy:0,rotation:0,onConnection:false};
+let nodes=[],connections=[],firewallBeams=[],particles=[];
+let keys={w:false,a:false,s:false,d:false,space:false};
+let lastTime=0,damageAccum=0;
+
+document.getElementById('bestScore').textContent=highScore;
+
+const levels=[
+{nodes:[[200,200,0],[400,150,0],[600,200,0],[300,350,0],[500,350,0],[700,350,0],[400,500,0],[600,500,2]],conns:[[0,1],[1,2],[0,3],[1,3],[1,4],[2,5],[3,4],[4,5],[3,6],[4,7],[6,7]]},
+{nodes:[[150,150,0],[300,100,0],[500,100,0],[700,150,0],[900,150,0],[200,300,0],[400,300,1],[600,300,0],[800,300,0],[350,450,0],[550,450,3],[750,450,0],[250,550,0],[450,550,0],[650,550,0]],conns:[[0,1],[1,2],[2,3],[3,4],[0,5],[1,6],[2,7],[3,8],[5,9],[6,9],[6,10],[7,10],[8,11],[9,12],[9,13],[10,14],[12,13],[13,14]]},
+{nodes:[[100,100,0],[250,80,0],[400,100,0],[550,80,0],[700,100,0],[850,80,0],[1000,100,0],[150,250,1],[350,250,0],[550,250,1],[750,250,0],[950,250,0],[200,400,0],[400,400,3],[600,400,0],[800,400,1],[1000,400,0],[300,550,0],[500,550,0],[700,550,0]],conns:[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[0,7],[1,7],[2,8],[3,9],[4,9],[5,10],[6,10],[7,11],[8,11],[8,12],[9,13],[10,14],[11,15],[12,17],[13,17],[13,18],[14,19],[15,19],[17,18],[18,19]]},
+];
+
+function resize(){
+const c=document.getElementById('gameContainer');
+const scale=Math.min(c.clientWidth/W,c.clientHeight/H);
+canvas.style.width=W*scale+'px';canvas.style.height=H*scale+'px';
+if('ontouchstart'in window)document.getElementById('mobileControls').style.display='flex';
+}
+window.addEventListener('resize',resize);resize();
+
+class Node{
+constructor(x,y,type){
+this.x=x;this.y=y;this.type=type;
+this.radius=type===3?50:type===1?35:type===2?25:25;
+this.captured=false;this.captureProgress=0;
+this.hue=0;this.pulse=0;this.scanTimer=0;
+this.glitchTimer=0;this.revealed=false;this.revealTimer=0;
+}
+update(dt){
+this.pulse+=dt*3;this.hue=(this.hue+dt*60)%360;
+if(this.type===1){this.scanTimer+=dt;if(this.scanTimer>2){this.scanTimer=0;firewallBeams.push(new Beam(this));}}
+if(this.revealed){this.revealTimer-=dt;if(this.revealTimer<=0)this.revealed=false;}
+if(this.captureProgress>0&&!this.captured)this.glitchTimer+=dt*20;
+}
+draw(){
+ctx.save();ctx.translate(this.x,this.y);
+let col,fill;
+if(this.captured){col='#0FF';fill='rgba(0,255,255,0.3)';}
+else if(this.type===0){col='#0F8';fill='rgba(0,255,136,0.1)';}
+else if(this.type===1){col='#F36';fill=`rgba(255,51,102,${0.3+Math.sin(this.pulse)*0.1})`;}
+else if(this.type===2){col='#FA0';fill='rgba(255,170,0,0.2)';}
+else{col=`hsl(${this.hue},100%,70%)`;fill='rgba(255,255,255,0.2)';}
+ctx.strokeStyle=col;ctx.fillStyle=fill;ctx.lineWidth=2;
+ctx.beginPath();
+if(this.type===1)for(let i=0;i<8;i++){const a=i*Math.PI/4;const r=this.radius;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);if(i===0)ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);else ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);}
+else if(this.type===2){ctx.moveTo(0,-this.radius);ctx.lineTo(this.radius,0);ctx.lineTo(0,this.radius);ctx.lineTo(-this.radius,0);ctx.closePath();}
+else{ctx.arc(0,0,this.radius,0,Math.PI*2);}
+ctx.fill();ctx.stroke();
+if(this.captureProgress>0&&!this.captured){
+ctx.strokeStyle=`rgba(0,255,255,${0.5+Math.random()*0.5})`;
+ctx.lineWidth=4;
+ctx.beginPath();ctx.arc(0,0,this.radius+5,0,Math.PI*2*this.captureProgress);ctx.stroke();
+if(this.glitchTimer>0){ctx.fillStyle='#0FF';ctx.fillRect(-5,0,10,10);this.glitchTimer--;}}
+ctx.restore();
+}
+}
+
+class Beam{
+constructor(node){this.x=node.x;this.y=node.y;this.node=node;
+const angle=Math.atan2(player.y-node.y,player.x-node.x)+Math.random()*0.3-0.15;
+this.dx=Math.cos(angle)*400;this.dy=Math.sin(angle)*400;
+this.life=3;this.hitTime=0;}
+update(dt){
+this.x+=this.dx*dt;this.y+=this.dy*dt;this.life-=dt;
+const dx=player.x-this.x,dy=player.y-this.y,dist=Math.sqrt(dx*dx+dy*dy);
+if(dist<30){this.hitTime+=dt;damageAccum+=dt;if(this.hitTime>0.5){this.hitTime=0;player.vx+=dx/dist*200;player.vy+=dy/dist*200;}}
+return this.life<=0||this.x<0||this.x>W||this.y<0||this.y>H;
+}
+draw(){ctx.strokeStyle='#F36';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(this.x-this.dx*0.1,this.y-this.dy*0.1);ctx.lineTo(this.x,this.y);ctx.stroke();ctx.fillStyle='#FFF';ctx.beginPath();ctx.arc(this.x,this.y,3,0,Math.PI*2);ctx.fill();}
+}
+
+class Particle{
+constructor(x,y,col,vx,vy,life){this.x=x;this.y=y;this.col=col;this.vx=vx;this.vy=vy;this.life=life;this.maxLife=life;this.size=4;}
+update(dt){this.x+=this.vx*dt;this.y+=this.vy*dt;this.life-=dt;this.vx*=0.98;this.vy*=0.98;return this.life<=0;}
+draw(){ctx.fillStyle=this.col;ctx.globalAlpha=this.life/this.maxLife;ctx.fillRect(this.x-this.size/2,this.y-this.size/2,this.size,this.size);ctx.globalAlpha=1;}
+}
+
+function spawnParticles(x,y,col,n){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=Math.random()*200+50;particles.push(new Particle(x,y,col,Math.cos(a)*s,Math.sin(a)*s,0.8));}}
+
+function loadLevel(l){const d=levels[l-1];nodes=d.nodes.map(n=>new Node(n[0],n[1],n[2]));connections=d.conns;totalNodes=nodes.length;player={x:nodes[0].x,y:nodes[0].y,vx:0,vy:0,rotation:0,onConnection:false};firewallBeams=[];particles=[];capturedNodes=0;damageAccum=0;elapsedTime=0;pulseCooldown=0;}
+
+function drawConnections(){connections.forEach(([a,b])=>{const n1=nodes[a],n2=nodes[b];ctx.strokeStyle=(n1.captured&&n2.captured)?'rgba(0,255,255,0.5)':'rgba(68,68,68,0.5)';ctx.lineWidth=1;ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(n1.x,n1.y);ctx.lineTo(n2.x,n2.y);ctx.stroke();ctx.setLineDash([]);});}
+
+function drawMinimap(){mCtx.fillStyle='rgba(10,10,15,0.9)';mCtx.fillRect(0,0,120,120);const scale=0.08,ox=10,oy=10;
+connections.forEach(([a,b])=>{const n1=nodes[a],n2=nodes[b];mCtx.strokeStyle=(n1.captured&&n2.captured)?'#0FF':'#333';mCtx.lineWidth=1;if((n1.captured||n1.revealed)&&(n2.captured||n2.revealed)){mCtx.beginPath();mCtx.moveTo(n1.x*scale+ox,n1.y*scale+oy);mCtx.lineTo(n2.x*scale+ox,n2.y*scale+oy);mCtx.stroke();}});
+nodes.forEach(n=>{if(!n.captured&&!n.revealed)return;const px=n.x*scale+ox,py=n.y*scale+oy;const cols={0:'#0F8',1:'#F36',2:'#FA0',3:'#FFF'};mCtx.fillStyle=n.captured?'#0FF':cols[n.type];mCtx.beginPath();mCtx.arc(px,py,3,0,Math.PI*2);mCtx.fill();});
+mCtx.strokeStyle='#0FF';mCtx.lineWidth=1;mCtx.strokeRect(0,0,120,120);
+}
+
+const audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+function playSound(type){
+if(audioCtx.state==='suspended')audioCtx.resume();
+const g=audioCtx.createGain();g.connect(audioCtx.destination);
+if(type==='capture'){const o=audioCtx.createOscillator();o.type='sawtooth';o.frequency.setValueAtTime(200, audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime+0.1);g.gain.setValueAtTime(0.1, audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime+0.15);o.connect(g);o.start();o.stop(audioCtx.currentTime+0.15);}
+else if(type==='pulse'){const o=audioCtx.createOscillator();o.type='sine';o.frequency.setValueAtTime(100, audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime+0.3);g.gain.setValueAtTime(0.3, audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime+0.4);o.connect(g);o.start();o.stop(audioCtx.currentTime+0.4);}
+else if(type==='hit'){const o=audioCtx.createOscillator();o.type='square';o.frequency.setValueAtTime(800, audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime+0.1);g.gain.setValueAtTime(0.15, audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime+0.15);o.connect(g);o.start();o.stop(audioCtx.currentTime+0.15);}
+else if(type==='win'){const freqs=[523,659,784];freqs.forEach((f,i)=>{const o=audioCtx.createOscillator();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.1, audioCtx.currentTime+i*0.1);g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime+0.5);o.connect(g);o.start(audioCtx.currentTime+i*0.1);o.stop(audioCtx.currentTime+0.5);});}
+}
+
+function showOverlay(title,text,btnText,callback){
+const oc=document.getElementById('overlayContent');
+oc.innerHTML=`<h1>${title}</h1>${text.map(t=>`<p>${t}</p>`).join('')}<button class="btn" onclick="${callback}()">${btnText}</button>`;
+document.getElementById('overlay').style.display='block';
+}
+
+function startGame(){gameState='playing';document.getElementById('overlay').style.display='none';loadLevel(level);}
+function nextLevel(){level++;if(level>levels.length){level=1;score+=1000;}startGame();}
+function restartLevel(){startGame();}
+function goMenu(){gameState='menu';document.getElementById('overlay').style.display='none';showOverlay('VIRAL.exe','<p>You are the infection. Capture all nodes.</p><p>WASD to move | SPACE for Pulse Burst</p><p>Red nodes are firewalls. Avoid their beams!</p>','START VIRUS',"startGame");}
+
+document.addEventListener('keydown',e=>{
+const k=e.key.toLowerCase();
+if(k==='w'||k==='arrowup')keys.w=true;
+if(k==='a'||k==='arrowleft')keys.a=true;
+if(k==='s'||k==='arrowdown')keys.s=true;
+if(k==='d'||k==='arrowright')keys.d=true;
+if(k===' '){keys.space=true;e.preventDefault();}
+if(k==='r'&&gameState==='playing')restartLevel();
+});
+document.addEventListener('keyup',e=>{
+const k=e.key.toLowerCase();
+if(k==='w'||k==='arrowup')keys.w=false;
+if(k==='a'||k==='arrowleft')keys.a=false;
+if(k==='s'||k==='arrowdown')keys.s=false;
+if(k==='d'||k==='arrowright')keys.d=false;
+if(k===' ')keys.space=false;
+});
+
+document.querySelectorAll('.ctrl-btn').forEach(btn=>{
+const k=btn.dataset.key;
+btn.addEventListener('touchstart',e=>{e.preventDefault();keys[k]=true;});
+btn.addEventListener('touchend',e=>{e.preventDefault();keys[k]=false;});
+});
+
+function update(dt){
+elapsedTime+=dt;
+document.getElementById('timer').textContent=elapsedTime.toFixed(2)+'s';
+let ax=0,ay=0;
+if(keys.w)ay=-1;if(keys.s)ay=1;if(keys.a)ax=-1;if(keys.d)ax=1;
+if(ax&&ay){ax*=0.707;ay*=0.707;}
+const acc=1200,spd=280;
+player.vx+=ax*acc*dt;
+player.vy+=ay*acc*dt;
+if(!ax&&!ay){player.vx*=Math.pow(0.1,dt);player.vy*=Math.pow(0.1,dt);}
+const speed=Math.sqrt(player.vx*player.vx+player.vy*player.vy);
+if(speed>spd){player.vx=player.vx/speed*spd;player.vy=player.vy/speed*spd;}
+player.x+=player.vx*dt;player.y+=player.vy*dt;
+if(player.x<30){player.x=30;player.vx*=-0.7;}
+if(player.x>W-30){player.x=W-30;player.vx*=-0.7;}
+if(player.y<30){player.y=30;player.vy*=-0.7;}
+if(player.y>H-30){player.y=H-30;player.vy*=-0.7;}
+player.rotation+=0.5*dt;
+player.onConnection=false;
+connections.forEach(([a,b])=>{const n1=nodes[a],n2=nodes[b];if(n1.captured&&n2.captured){const dx=n2.x-n1.x,dy=n2.y-n1.y,len=Math.sqrt(dx*dx+dy*dy);const t=Math.max(0,Math.min(1,((player.x-n1.x)*dx+(player.y-n1.y)*dy)/(len*len)));const px=n1.x+t*dx,py=n1.y+t*dy;if(Math.sqrt((player.x-px)**2+(player.y-py)**2)<30)player.onConnection=true;}});
+if(pulseCooldown>0){pulseCooldown-=dt;if(pulseCooldown<0){pulseCooldown=0;keys.space=false;}}
+if(keys.space&&pulseCooldown===0){pulseActive=true;pulseRadius=0;pulseCooldown=4;playSound('pulse');}
+if(pulseActive){pulseRadius+=400*dt;if(pulseRadius>150){pulseActive=false;pulseRadius=0;}}
+const pulseEl=document.getElementById('pulseFill');
+pulseEl.style.setProperty('--pct',((4-pulseCooldown)/4*100)+'%');
+nodes.forEach(n=>{
+if(n.captured)return;
+const dx=n.x-player.x,dy=n.y-player.y,dist=Math.sqrt(dx*dx+dy*dy);
+if(dist<n.radius+30){
+const rate=n.type===3?0.2:n.type===2?2:n.type===1?0.33:0.67;
+n.captureProgress+=dt*rate*(pulseActive&&dist<150?3:1);
+if(n.captureProgress>=1){n.captured=true;capturedNodes++;score+=n.type===3?1000:n.type===1?250:n.type===2?50:100;playSound('capture');spawnParticles(n.x,n.y,'#0FF',20);
+if(n.type===2){nodes.forEach(m=>{if(!m.captured&&!m.revealed){m.revealed=true;m.revealTimer=5;}});}
+if(n.type===3){gameState='won';if(score>highScore){highScore=score;localStorage.setItem('viralHighScore',highScore);document.getElementById('bestScore').textContent=highScore;}
+playSound('win');showOverlay('SECTOR COMPROMISED',[`Time: ${elapsedTime.toFixed(2)}s`,`Score: ${score}`,`Nodes: ${capturedNodes}/${totalNodes}`],level<levels.length?'NEXT SECTOR':'PLAY AGAIN',level<levels.length?'nextLevel":"goMenu");}
+}
+}
+});
+nodes.forEach(n=>n.update(dt));
+firewallBeams=firewallBeams.filter(b=>!b.update(dt));
+particles=particles.filter(p=>!p.update(dt));
+if(particles.length>200)particles=particles.slice(-200);
+const prog=Math.round(capturedNodes/totalNodes*100);
+document.getElementById('progress').textContent=prog;
+document.getElementById('progressFill').style.width=prog+'%';
+document.getElementById('score').textContent='SCORE: '+score;
+document.getElementById('sector').textContent='SECTOR '+level;
+if(damageAccum>1.5){gameState='over';playSound('hit');showOverlay('VIRUS PURGED',[`Time: ${elapsedTime.toFixed(2)}s`,`Score: ${score}`,`Progress: ${prog}%`],'RETRY','restartLevel');}
+const df=document.getElementById('damageFlash');df.style.opacity=Math.min(damageAccum*0.5,0.5);
+drawMinimap();
+}
+
+function draw(){
+ctx.fillStyle='#0A0A0F';ctx.fillRect(0,0,W,H);
+ctx.strokeStyle='#111122';ctx.lineWidth=1;
+for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+drawConnections();
+nodes.forEach(n=>n.draw());
+firewallBeams.forEach(b=>b.draw());
+particles.forEach(p=>p.draw());
+ctx.save();ctx.translate(player.x,player.y);ctx.rotate(player.rotation);
+ctx.strokeStyle='#0FF';ctx.fillStyle='rgba(0,255,255,0.3)';ctx.lineWidth=2;
+ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.lineTo(Math.cos(a)*24,Math.sin(a)*24);}ctx.closePath();ctx.fill();ctx.stroke();
+ctx.strokeStyle='#F0F';ctx.lineWidth=2;
+for(let i=0;i<6;i++){const a=i*Math.PI/3+player.rotation*2;ctx.beginPath();ctx.moveTo(Math.cos(a)*15,Math.sin(a)*15);ctx.lineTo(Math.cos(a)*45,Math.sin(a)*45);ctx.stroke();}
+ctx.restore();
+if(pulseActive){ctx.strokeStyle=`rgba(255,0,255,${1-pulseRadius/150})`;ctx.lineWidth=4;ctx.beginPath();ctx.arc(player.x,player.y,pulseRadius,0,Math.PI*2);ctx.stroke();}
+}
+
+function gameLoop(time){
+const dt=Math.min((time-lastTime)/1000,0.1);lastTime=time;
+if(gameState==='playing'){update(dt);draw();}
+requestAnimationFrame(gameLoop);
+}
+
+showOverlay('VIRAL.exe','<p>You are the infection. Capture all nodes.</p><p>WASD to move | SPACE for Pulse Burst</p><p>Red nodes are firewalls. Avoid their beams!</p>','START VIRUS','startGame');
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
