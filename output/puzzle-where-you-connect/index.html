@@ -1,33 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Wire Connection Puzzle</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='70' font-size='60'>🔌</text></svg>" />
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0a1a; overflow: hidden; font-family: 'Roboto', sans-serif; }
-    #gameCanvas { display: block; width: 100vw; height: 100vh; background: #0a0a1a; }
-    .hud { position: absolute; top: 10px; left: 10px; color: #00ffea; font-size: 16px; z-index: 10; }
-    .timer { position: absolute; top: 10px; right: 10px; color: #ff00ea; font-size: 16px; z-index: 10; }
-    .controls { position: absolute; bottom: 10px; right: 10px; z-index: 10; }
-    button { background: #1a1a2e; color: #00ffea; border: 1px solid #00ffea; padding: 8px 12px; margin: 4px; font-size: 14px; cursor: pointer; border-radius: 4px; }
-    button:hover { background: #00ffea; color: #0a0a1a; }
-    .progress-container { position: absolute; bottom: 50px; left: 10px; width: 200px; height: 12px; background: #1a1a2e; border: 1px solid #00ffea; border-radius: 6px; overflow: hidden; z-index: 10; }
-    .progress-bar { height: 100%; width: 0%; background: #00ffea; transition: width 0.3s ease; }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Connect-Dots Quest 🎨</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; }
+  #app { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); }
+  #canvas-wrap { position: relative; width: 100%; max-width: 1024px; aspect-ratio: 4/3; max-height: 100vh; box-shadow: 0 20px 60px rgba(0,0,0,.6); border-radius: 12px; overflow: hidden; background: #fff; }
+  canvas { display: block; width: 100% !important; height: 100% !important; touch-action: none; cursor: crosshair; }
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; background: rgba(15,12,41,.92); color: #fff; z-index: 10; backdrop-filter: blur(6px); }
+  .screen.hidden { display: none; }
+  h1 { font-size: clamp(28px, 6vw, 48px); background: linear-gradient(90deg,#ff6ec7,#00d4ff,#ffd86b); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-align: center; }
+  h2 { font-size: clamp(22px,4.5vw,34px); color: #ffd86b; }
+  .btn { padding: 12px 28px; font-size: 18px; border: none; border-radius: 30px; background: linear-gradient(90deg,#00d4ff,#7b2ff7); color: #fff; cursor: pointer; font-weight: 600; box-shadow: 0 4px 14px rgba(0,212,255,.4); transition: transform .15s; min-width: 160px; }
+  .btn:hover, .btn:active { transform: scale(1.05); }
+  .btn.alt { background: linear-gradient(90deg,#ff6ec7,#ffd86b); box-shadow: 0 4px 14px rgba(255,110,199,.4); }
+  .level-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 12px; width: 100%; max-width: 600px; max-height: 60vh; overflow-y: auto; padding: 10px; }
+  .level-card { aspect-ratio: 1; border-radius: 12px; background: linear-gradient(135deg,#7b2ff7,#00d4ff); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #fff; cursor: pointer; position: relative; transition: transform .2s; }
+  .level-card:hover { transform: scale(1.06); }
+  .level-card.locked { background: #444; color: #888; cursor: not-allowed; filter: grayscale(1); }
+  .level-card .stars { position: absolute; bottom: 4px; font-size: 12px; }
+  #hud { position: absolute; top: 0; left: 0; right: 0; padding: 10px 14px; display: flex; justify-content: space-between; pointer-events: none; font-weight: 600; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.5); z-index: 5; font-size: clamp(13px, 2.5vw, 16px); }
+  #hud > div { background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 20px; backdrop-filter: blur(4px); }
+  #hud-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 14px; display: flex; justify-content: space-between; pointer-events: none; font-weight: 600; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.5); z-index: 5; font-size: clamp(13px, 2.5vw, 16px); }
+  #hud-bottom > div { background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 20px; backdrop-filter: blur(4px); pointer-events: auto; }
+  #hud-bottom button { background: none; border: none; color: #fff; font-size: inherit; cursor: pointer; font-weight: 600; }
+  #toast { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); padding: 10px 22px; background: rgba(0,0,0,.8); color: #fff; border-radius: 24px; font-weight: 600; opacity: 0; transition: opacity .3s; z-index: 6; pointer-events: none; }
+  #toast.show { opacity: 1; }
+  #toast.success { background: linear-gradient(90deg,#00b894,#00d4ff); }
+  #toast.error { background: linear-gradient(90deg,#e74c3c,#ff6ec7); }
+  .menu-bg { position: absolute; inset: 0; z-index: 0; opacity: .3; }
+  .settings-row { display: flex; align-items: center; gap: 12px; color: #fff; font-size: 15px; }
+  .settings-row input[type=range] { flex: 1; }
+  @media (max-width: 600px) {
+    .btn { padding: 10px 20px; font-size: 15px; min-width: 130px; }
+    h1 { font-size: 32px; }
+  }
+</style>
 </head>
 <body>
-  <canvas id="gameCanvas"></canvas>
-  <div class="hud" id="levelDisplay">Level 1/10</div>
-  <div class="timer" id="timerDisplay">Time: 0.00s</div>
-  <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
-  <div class="controls">
-    <button onclick="restartLevel()">Restart</button>
-    <button onclick="skipLevel()">Skip</button>
-    <button onclick="togglePause()">Pause</button>
+<div id="app">
+  <div id="canvas-wrap">
+    <canvas id="game"></canvas>
+    <div id="hud" style="display:none;">
+      <div id="hud-level">Level 1</div>
+      <div id="hud-timer">⏱ 0:00</div>
+    </div>
+    <div id="hud-bottom" style="display:none;">
+      <div id="hud-stars">⭐ 0</div>
+      <div id="hud-strokes">Strokes: 0</div>
+      <div><button id="btn-hint">💡 Hint</button> <button id="btn-pause">⏸</button></div>
+    </div>
+    <div id="toast"></div>
   </div>
-  <script src="main.js"></script>
+
+  <div id="screen-main" class="screen">
+    <canvas id="menu-bg" class="menu-bg"></canvas>
+    <h1>Connect-Dots Quest</h1>
+    <p style="color:#ccc;max-width:420px;text-align:center;font-size:14px;">Draw lines to connect the dots and reveal beautiful hidden pictures!</p>
+    <button class="btn" data-action="play">▶ Play</button>
+    <button class="btn alt" data-action="levels">🖼 Levels</button>
+    <button class="btn" data-action="howto">❓ How to Play</button>
+    <button class="btn alt" data-action="settings">⚙ Settings</button>
+    <div style="color:#aaa;font-size:12px;margin-top:8px;">🏆 High Score: <span id="menu-highscore">0</span> pts</div>
+  </div>
+
+  <div id="screen-levels" class="screen hidden">
+    <h2>Select Level</h2>
+    <div class="level-grid" id="level-grid"></div>
+    <button class="btn alt" data-action="back">← Back</button>
+  </div>
+
+  <div id="screen-howto" class="screen hidden">
+    <h2>How to Play</h2>
+    <div style="color:#ddd;max-width:480px;text-align:left;line-height:1.6;font-size:15px;">
+      <p>🖱 <b>Mouse/Touch</b>: Press on a dot and drag to connect it to another dot.</p>
+      <p>🎯 Connect the dots in the right order to reveal the hidden image.</p>
+      <p>⭐ Earn up to 3 stars by being fast and efficient.</p>
+      <p>⌨ <b>R</b> = Redo, <b>Z</b> = Undo, <b>Space</b> = Pause</p>
+    </div>
+    <button class="btn alt" data-action="back">← Back</button>
+  </div>
+
+  <div id="screen-settings" class="screen hidden">
+    <h2>Settings</h2>
+    <div style="display:flex;flex-direction:column;gap:14px;width:90%;max-width:400px;">
+      <div class="settings-row"><label>🔊 Master</label><input type="range" id="vol-master" min="0" max="100" value="70"></div>
+      <div class="settings-row"><label>🎵 Music</label><input type="range" id="vol-music" min="0" max="100" value="50"></div>
+      <div class="settings-row"><label>🔉 SFX</label><input type="range" id="vol-sfx" min="0" max="100" value="80"></div>
+      <div class="settings-row"><label>🏷 Node Numbers</label><input type="checkbox" id="opt-numbers" checked></div>
+      <div class="settings-row"><label>🧲 Snap</label><input type="checkbox" id="opt-snap" checked></div>
+      <div class="settings-row"><label>🖱 Line Width</label><input type="range" id="opt-width" min="2" max="10" value="4"></div>
+    </div>
+    <button class="btn alt" data-action="back">← Back</button>
+  </div>
+
+  <div id="screen-pause" class="screen hidden">
+    <h2>⏸ Paused</h2>
+    <button class="btn" data-action="resume">▶ Resume</button>
+    <button class="btn alt" data-action="restart">🔄 Restart</button>
+    <button class="btn" data-action="quit">🏠 Quit</button>
+  </div>
+
+  <div id="screen-complete" class="screen hidden">
+    <h2 id="complete-title">🎉 Complete!</h2>
+    <div id="complete-stars" style="font-size:48px;">⭐⭐⭐</div>
+    <div id="complete-stats" style="color:#ddd;"></div>
+    <button class="btn" data-action="next">Next Level ▶</button>
+    <button class="btn alt" data-action="quit">🏠 Menu</button>
+  </div>
+</div>
+
+<script src="game.js"></script>
 </body>
 </html>

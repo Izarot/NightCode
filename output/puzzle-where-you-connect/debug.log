@@ -1,0 +1,219 @@
+JSON Decode Error: Extra data: line 1 column 40 (char 39)
+
+Raw LLM Output that failed to parse:
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - User provides a detailed game specification for "Connect-Dots Quest"
+   - Then says: "Architecture Strategy: The architecture organizes the codebase into a core engine module... Previous Feedback/Error: Initial build."
+   - Then: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). Do NOT include markdown block formatting like ```json or any conversational commentary."
+
+2.  **Identify the Task:**
+   - The user wants me to output a JSON object mapping filenames to their complete code contents for this game.
+   - They explicitly say: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). Do NOT include markdown block formatting like ```json or any conversational commentary."
+   - They also mention "SNEAKY FEATURE 1-4" and various specs, but the actual request seems to be: generate the code files as a JSON object.
+
+   Wait, let me re-read carefully. The user provides a huge game spec, then says "Architecture Strategy: The architecture organizes the codebase into a core engine module... Previous Feedback/Error: Initial build." Then: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). Do NOT include markdown block formatting like ```json or any conversational commentary. SNEAKY FEATURE 1: Make the canvas responsive so it scales to fit mobile phone screens. SNEAKY FEATURE 2: Add a cool emoji favicon in the HTML head. SNEAKY FEATURE 3: Pick a unique, vibrant color palette for the game visuals. SNEAKY FEATURE 4: Save the player's High Score using the browser's LocalStorage so it persists when they refresh. Implement simple sound effects using the Web Audio API and a Speedrun Timer in the top corner."
+
+   This looks like a prompt asking me to generate code files for this game spec, with specific sneaky features. The output must be a raw JSON object mapping filenames to code contents, no markdown, no commentary.
+
+   I need to create a set of files that implement this game. Given the complexity, I should create the essential files that cover the core gameplay, with the sneaky features embedded. The user likely expects a representative set of files, not necessarily every single file for a full production game, but enough to satisfy the request.
+
+   Let me think about what files are needed:
+   - index.html (with canvas, HUD, favemoji, responsive design, LocalStorage for high score, speedrun timer)
+   - game.js (or main.js) - core engine, input handling, game loop, validation, state management
+   - styles.css (or inline styles in HTML) - but since it's JSON mapping filenames to code, I could include a styles.css or keep it minimal in HTML
+   - Maybe a level data JSON file, but the spec says load from JSON, I can include a sample level or inline data.
+   - The sneaky features: responsive canvas, emoji favicon, vibrant color palette, LocalStorage high score, Web Audio API sound effects, speedrun timer.
+
+   I'll create a minimal but functional set of files that implement the game concept with all sneaky features. I'll output a JSON object like:
+   {
+     "index.html": "...",
+     "game.js": "...",
+     "styles.css": "...",
+     "levels.js": "...",
+     "audio.js": "..."
+   }
+
+   But the user said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). Do NOT include markdown block formatting like ```json or any conversational commentary."
+
+   So I need to output just the JSON, no ```json wrapper, no text before/after.
+
+   I need to generate the actual code content for each file. Let me plan the code:
+
+   **index.html**:
+   - Docthtml, head with emoji favicon (e.g., 🟢 or 🎯), meta tags, link to styles maybe inline or separate
+   - body with canvas, HUD elements (timer, level counter, stars, stroke counter)
+   - responsive canvas via CSS/JS
+   - LocalStorage high score
+   - Speedrun timer
+
+   **game.js**:
+   - Canvas setup, resize handling
+   - Input handling (mouse/touch)
+   - Catmull-Rom spline for lines
+   - Node snapping
+   - Validation logic
+   - Reveal mask system
+   - Star rating based on time/strokes
+   - LocalStorage high score update
+   - Web Audio API sound effects (simple oscillators or base64 encoded simple sounds, but I'll use simple OscillatorNode for demo, or just use beep patterns with AudioContext)
+   - Game loop
+
+   **styles.css** (optional, but I'll include minimal critical styles, or I could put styles in HTML to keep it simpler, but the mapping expects filenames, so I'll have a css file)
+
+   **levels.js**: sample level data
+
+   **audio.js**: Web Audio API setup
+
+   Given the constraint of outputting raw JSON, I need to make sure the JSON is valid, no trailing commas, strings properly escaped.
+
+   I'll create a compact but functional implementation. Let me draft each file's content mentally, then construct the JSON.
+
+   Let's keep it to maybe 3-4 files to keep it manageable but covering all sneaky features.
+
+   Files:
+   - index.html
+   - main.js (covers game engine, input, rendering, validation, audio, LocalStorage, timer)
+   - styles.css (minimal, but needed for responsive layout, HUD, canvas scaling)
+   - levels.json (sample level data)
+
+   But the user example only shows index.html and game.js. I'll stick to maybe 3 files: index.html, main.js, styles.css. Or maybe just index.html and main.js with inline styles? The spec says "mapping filenames to their complete code contents". I'll include a few essential files.
+
+   Let me design the code carefully.
+
+   **Sneaky Features to embed:**
+   1. Responsive canvas scaling to mobile
+   2. Emoji favicon in head
+   3. Vibrant color palette (I'll define a palette object in JS, e.g., [#ff6b6b, #4ecdc4, #ffe66d, #ff8c42])
+   4. LocalStorage high score persistence
+   5. Simple sound effects using Web Audio API
+   6. Speedrun timer in top corner
+
+   Let me write each file.
+
+   **index.html**:
+   ```html
+   <!DOCTYPE html>
+   <html lang="en">
+   <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+     <title>Connect-Dots Quest</title>
+     <link rel="icon" type="image/svg+xml" data-favicon-href>
+     <style>
+       :root { --dp: <?= window.devicePixelRatio || 1 ?>; }
+       body { margin:0; overflow:hidden; background:#111; color:#fff; font-family:sans-serif; }
+       canvas { display:block; width:100%; height:100%; }
+       .hud { position:absolute; top:10px; left:10px; pointer-events:none; }
+       .timer { font-size:1.2rem; color:#ff6b6b; }
+       .level { color:#4ecdc4; }
+       .stars { display:flex; gap:4px; margin-top:4px; }
+       .star { width:16px; height:16px; background:#333; clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 68%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+     </style>
+   </head>
+   <body>
+     <div class="hud">
+       <div class="level" id="levelCounter">Level 1 of 10</div>
+       <div class="timer" id="timer">60:00</div>
+       <div class="stars" id="stars"></div>
+       <div class="strokes" id="strokesCounter">Strokes: 0</div>
+     </div>
+     <canvas id="gameCanvas"></canvas>
+     <script type="module" src="main.js"></script>
+   </body>
+   </html>
+   ```
+
+   Wait, I can't use PHP. I'll just set devicePixelRatio in JS or CSS. I'll make the canvas responsive via CSS and JS.
+
+   Actually, the user wants the complete code contents. I'll write proper HTML with inline CSS for simplicity, or a separate CSS file. Given the JSON mapping, I'll include a styles.css.
+
+   Let me reconsider the file structure to keep it simple but complete:
+
+   File 1: index.html - contains the canvas, HUD, meta, emoji favicon, and references main.js. Includes inline minimal CSS or links to styles.css. I'll put critical CSS in a `<style>` tag inside HTML to ensure it works without external deps, but since I'm mapping filenames, I'll have a styles.css that contains the CSS, and HTML links to it.
+
+   File 2: main.js - the whole game logic.
+
+   File 3: styles.css - responsive layout, HUD, canvas container.
+
+   File 4: levels.json - sample level data (maybe optional, but good).
+
+   However, the user example only shows two files. I'll do 3 files: index.html, main.js, styles.css. That covers everything.
+
+   Let me draft main.js thoroughly.
+
+   **main.js** responsibilities:
+   - Initialize canvas, resize, DPR
+   - Set up Web Audio API for SFX
+   - Load level data (I'll include a sample level object in the JS or import from a separate module; to keep it self-contained, I'll embed a sample level in the JS or have a tiny levels.js. I'll include a `levels` array in main.js or a separate `levels.json` that main.js imports. Since I'm outputting JSON mapping, I'll have a `levels.json` file too, but maybe I can embed the level data in main.js as a constant to keep files fewer. The user didn't specify exact file count, just "mapping filenames to their complete code contents". I'll do 3 files: index.html, main.js, styles.css. I'll embed level data in main.js as a constant JSON.
+
+   Let me design the game loop and core features:
+
+   **Color palette**: vibrant, e.g., `const PALETTE = ['#ff6b6b', '#4ecdc4', '#ffe66d', '#ff8c42', '#9a8cff'];`
+
+   **Nodes**: array of {id, x, y, revealed: false, type: 'standard'}
+
+   **Connections**: player draws strokes, each stroke is an array of points. On release, validate against allowed connections for the level.
+
+   **Reveal mask**: use `globalCompositeOperation: 'destination-in'` with a clipping path that grows along the connections. Actually, the spec says: "Target image is displayed as a ImageBitmap under a globalCompositeOperation: 'destination-in' mask. The mask is a series of growing circular regions that correspond to completed connections." I'll implement a simple version: an offscreen canvas or a mask path that's the union of circles at node positions for completed connections, fading in over time.
+
+   **Speedrun timer**: countdown from level time limit (e.g., 60s for hard, none for easy). Display top-right? Spec says HUD top-right timer, red when <10s. I'll put it in the HUD.
+
+   **LocalStorage high score**: save highest level reached or best time. I'll save `highScore` as the best time in seconds, or level index. I'll save the highest star count or fastest time. I'll do `localStorage.setItem('connectDotsHighScore', bestTime)`.
+
+   **Web Audio API SFX**: simple oscillators with envelope. I'll create functions: `playSfx(type)` where type is 'draw', 'snap', 'success', 'error', 'complete'. I'll use `OscillatorNode` and `GainNode` with short bursts.
+
+   **Responsive canvas**: `canvas.width = window.innerWidth * devicePixelRatio; canvas.height = window.innerHeight * devicePixelRatio; canvas.style.width = '100%'; canvas.style.height = '100%;'` and maintain aspect ratio 4:3 or 1024:768. I'll handle resize.
+
+   **Input**: mouse down/up/move, touch start/move/end. Priority: touch > mouse. I'll add event listeners for both.
+
+   **Catmull-Rom spline**: I'll implement a simple function to generate points between two nodes for smooth drawing.
+
+   **Validation**: precomputed adjacency list. For sample level, nodes 0-7, connections 0->1->2->3->4->5->6->7, maybe some branching.
+
+   **Star rating**: based on time remaining, strokes count, no incorrect strokes. I'll give 3 stars if time > 80% and strokes <= optimal, 2 if medium, 1 if low.
+
+   **Completion**: when all required connections drawn, show celebration, update stars, save high score if applicable, play fanfare.
+
+   Okay, let me start writing the actual code. I'll be careful with string escaping in JSON. I'll need to escape newlines and quotes. I'll write the files as minified or compressed as much as possible to fit in JSON strings, but readability is also okay since JSON strings can contain newlines if I escape them properly, or I can keep them as single-line strings with `\n`. I'll use template literals in JS but in JSON I'll just write the content as a string, I'll need to escape newlines as `\n` and quotes as `\"`. To make it easier, I'll write each file's content as a string with `\n` for newlines, and escape any `"` inside.
+
+   Actually, in JSON, a string can contain `\n` for newlines, and I must escape `"` as `\"`. I'll generate the code content carefully.
+
+   Let me plan each file's content succinctly.
+
+   **index.html**:
+   ```html
+   <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"><title>Connect-Dots Quest</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.5em' font-size='90'%3E🟢%3C/text%3E%3C/svg%3E"><style>body{margin:0;background:#0d0d24;color:#fff;font-family:sans-serif}#gameCanvas{display:block;width:100%;height:100%;aspect-ratio:1024/768} .hud{position:absolute;top:10px;left:10px;pointer-events:none;display:flex;flex-direction:column;gap:4px} .timer{color:#ff6b6b;font-size:1.1rem} .level{color:#4ecdc4} .stars{display:flex;gap:2px} .star{width:12px;height:12px;background:#333;clip-path:polygon(50% 0% 61% 35% 98% 35% 68% 57% 79% 91% 50% 68% 21% 91% 32% 57% 2% 35% 39% 35)}</style></head><body><div class="hud"><div class="level" id="levelCounter">Level 1 of 10</div><div class="timer" id="timer">60:00</div><div class="stars" id="stars"></div><div class="strokes" id="strokesCounter">Strokes: 0</div></div><canvas id="gameCanvas"></canvas></body><script type="module" src="main.js"></script></html>
+   ```
+   Wait, the favicon data URI: I need to make sure it's valid. `%3Csvg ... %3E` etc. I'll use a simple emoji favicon link: `<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%220.5em%22 font-size=%2290%22>🟢</text></svg>">` but in HTML attribute, need to encode. I'll just use a standard emoji as favicon? Browsers support `<link rel="icon" href="data:image/svg+xml,...">`. I'll keep it simple: `<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20100%20100%22%3E%3Ctext%20y=%220.5em%22%20font-size=%2290%22%3E🟢%3C/text%3E%3C/svg%3E">`. That's fine.
+
+   But in JSON string, I need to escape `"` and `<` `>` are fine, but `%22` etc are fine. Actually, JSON strings can contain any characters except unescaped `"` and `\`. I'll just use regular characters and escape `"` as `\"`. Newlines as `\n`. I'll try to keep the HTML as single-line string with `\n` for readability, or I can keep it as compact. I think it's easier to write the HTML content as a string with `\n` but JSON allows literal newlines if I'm not using a wrapper? Actually, JSON spec says strings are sequences of Unicode characters, but in practice, when writing JSON manually, newlines inside strings must be escaped as `\n`. I'll use `\n` to be safe.
+
+   Let me restructure: I'll write each file's content as a single-line string with `\n` for newlines, and escape any `"` inside. Or I can use template literals and then escape, but I'll just manually construct.
+
+   This is going to be quite large. Maybe I should reduce the number of files or simplify the code to make it feasible to output as raw JSON without making the response impossibly long, but the user expects it.
+
+   Let me think of a minimal yet complete set. Perhaps just two files: `index.html` and `game.js`, with all CSS and logic in JS, and HTML having inline `<style>`. The user example: `{"index.html": "...", "game.js": "..."}`. I'll do exactly that: two files. That simplifies and avoids needing a separate CSS file. I'll put all CSS in a `<style>` tag in HTML, and all JS in `game.js`. The HTML will include the canvas, HUD, emoji favicon, LocalStorage handling, etc. The JS will contain the entire game logic, including Web Audio API, responsive canvas, etc.
+
+   Yes, I'll do two files: `index.html` and `game.js`. That matches the example and keeps the JSON compact enough.
+
+   Let me draft `index.html` content (as a string):
+
+   ```
+   <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no"><title>Connect-Dots Quest</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.5em' font-size='90'%3E🟢%3C/text%3E%3C/svg%3E"><style>body{margin:0;background:#0d0d24;color:#fff;font-family:sans-serif}#g{display:block;width:100%;height:100%;aspect-ratio:1024/768} .hud{position:absolute;top:10px;left:10px;pointer-events:none;display:flex;flex-direction:column;gap:4px} .t{color:#ff6b6b;font-size:1.1rem} .l{color:#4ecdc4} .s{display:flex;gap:2px} .sa{width:12px;height:12px;background:#333;clip-path:polygon(50% 0% 61% 35% 98% 35% 68% 57% 79% 91% 50% 68% 21% 91% 32% 57% 2% 35% 39% 35)}</style></head><body><div class="hud"><div class="l" id="lvl">Level 1 of 10</div><div class="t" id="timer">60:00</div><div class="s" id="stars"></div><div class="strokes" id="strokes">Strokes: 0</div></div><canvas id="g"></canvas></body><script type="module">...</script></html>
+   ```
+
+   But the `<script type="module">` will have a `src` pointing to `game.js`. If I put all code inline in the HTML `<script>`, I can avoid the separate file. But the user example has `game.js` as a separate file with code. I'll keep `game.js` as a separate file with all the JS logic, and `index.html` references it. That's better.
+
+   So `index.html` will have the structure, favicon, HUD, and a `<script type="module" src="game.js"></script>` at the end. The `<style>` can be in HTML or I can put minimal CSS in HTML and rely on `game.js` for dynamic styles, but to keep `index.html` meaningful, I'll include the `<style>` tag with the HUD CSS, and the rest of the game logic in `game.js`.
+
+   `game.js` will contain:
+   - Canvas setup, resize, DPR
+   - Color palette
+   - Sample level data (nodes, connections)
+   - Input handling (mouse/touch)
+   - Catmull-Rom spline generation
+   - Node snapping
+   - Stroke validation
+  

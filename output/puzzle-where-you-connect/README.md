@@ -1,19 +1,17 @@
-# Wire Connection Puzzle
 
-A fun grid-based puzzle where you connect power sources to bulbs with wires.
+
+# Connect‑Dots Quest
+
+**A 2‑D HTML5 Canvas Puzzle Adventure**
 
 ## How to Play
 
-- Move your cursor/tool in a 16x16 grid using mouse or keyboard (WASD/arrows).
-- Connect red power sources to blue bulbs with straight wires.
-- Wires must be continuous and cannot intersect themselves or other wires.
-- Light up all bulbs to complete the level.
+- Tap or click on a dot to start a stroke.  
+- Drag to draw a line connecting dots in the correct order.  
+- Release to lock the line; correct connections reveal part of the hidden image.  
+- Complete all connections to finish the level and earn stars.  
 
-## Controls
-
-- **Mouse**: Click and drag to place wires.
-- **Keyboard**: WASD or Arrow keys for movement.
-- **Buttons**: Restart, Skip, Pause.
+Keyboard shortcuts: **R** – redo, **Z** – undo, **Space** – pause.
 
 ## Note
 
