@@ -1,0 +1,639 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 23354 (char 23353)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n  <title>🐟 Fish Equations</title>\n  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n  <link href=\"https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap\" rel=\"stylesheet\">\n  <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>\">\n  <style>\n    * {\n      margin: 0;\n      padding: 0;\n      box-sizing: border-box;\n    }\n    \n    body {\n      overflow: hidden;\n      background: #0a1628;\n      font-family: 'Orbitron', 'Courier New', monospace;\n      touch-action: none;\n      user-select: none;\n      -webkit-user-select: none;\n    }\n    \n    #gameCanvas {\n      display: block;\n      position: absolute;\n      top: 0;\n      left: 0;\n    }\n    \n    #hud {\n      position: absolute;\n      top: 0;\n      left: 0;\n      width: 100%;\n      height: 100%;\n      pointer-events: none;\n      z-index: 10;\n    }\n    \n    .hud-top {\n      display: flex;\n      justify-content: space-between;\n      align-items: flex-start;\n      padding: 15px 20px;\n      gap: 10px;\n      flex-wrap: wrap;\n    }\n    \n    .hud-bottom {\n      position: absolute;\n      bottom: 0;\n      left: 0;\n      right: 0;\n      display: flex;\n      justify-content: space-between;\n      align-items: flex-end;\n      padding: 15px 20px;\n      flex-wrap: wrap;\n      gap: 10px;\n    }\n    \n    .score-panel {\n      background: rgba(13, 17, 23, 0.9);\n      border: 1px solid #30363d;\n      border-radius: 8px;\n      padding: 10px 20px;\n      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);\n    }\n    \n    .score-label {\n      font-size: 10px;\n      color: #8b949e;\n      text-transform: uppercase;\n      letter-spacing: 2px;\n    }\n    \n    .score-value {\n      font-size: 24px;\n      font-weight: 700;\n      color: #58a6ff;\n      text-shadow: 0 0 10px rgba(88, 166, 255, 0.5);\n    }\n    \n    .high-score {\n      font-size: 10px;\n      color: #ffd43b;\n      margin-top: 2px;\n    }\n    \n    .equation-panel {\n      background: rgba(22, 27, 34, 0.95);\n      border: 2px solid #58a6ff;\n      border-radius: 12px;\n      padding: 12px 25px;\n      box-shadow: 0 0 30px rgba(88, 166, 255, 0.3);\n      display: flex;\n      align-items: center;\n      gap: 8px;\n    }\n    \n    .eq-slot {\n      min-width: 45px;\n      height: 55px;\n      border: 2px dashed #30363d;\n      border-radius: 8px;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      font-size: 32px;\n      font-weight: 700;\n      color: #fff;\n      transition: all 0.3s ease;\n    }\n    \n    .eq-slot.filled {\n      border: 2px solid #3fb950;\n      background: rgba(63, 185, 80, 0.2);\n      color: #3fb950;\n      text-shadow: 0 0 10px rgba(63, 185, 80, 0.5);\n    }\n    \n    .eq-slot.operator {\n      min-width: 35px;\n      border: none;\n      color: #d29922;\n    }\n    \n    .eq-slot.result {\n      border-color: #58a6ff;\n      color: #58a6ff;\n    }\n    \n    .eq-operator {\n      font-size: 28px;\n      color: #d29922;\n      font-weight: 700;\n    }\n    \n    .level-panel {\n      background: rgba(13, 17, 23, 0.9);\n      border: 1px solid #30363d;\n      border-radius: 8px;\n      padding: 10px 20px;\n    }\n    \n    .level-label {\n      font-size: 10px;\n      color: #8b949e;\n      text-transform: uppercase;\n      letter-spacing: 2px;\n    }\n    \n    .level-value {\n      font-size: 22px;\n      font-weight: 700;\n      color: #3fb950;\n    }\n    \n    .combo-panel {\n      background: rgba(13, 17, 23, 0.9);\n      border: 1px solid #30363d;\n      border-radius: 8px;\n      padding: 10px 20px;\n      min-width: 100px;\n    }\n    \n    .combo-label {\n      font-size: 10px;\n      color: #8b949e;\n      text-transform: uppercase;\n      letter-spacing: 2px;\n    }\n    \n    .combo-value {\n      font-size: 22px;\n      font-weight: 700;\n      color: #d29922;\n      transition: all 0.3s ease;\n    }\n    \n    .combo-value.active {\n      color: #ffd43b;\n      text-shadow: 0 0 15px rgba(255, 212, 59, 0.7);\n    }\n    \n    .fish-counter {\n      background: rgba(13, 17, 23, 0.9);\n      border: 1px solid #30363d;\n      border-radius: 8px;\n      padding: 10px 20px;\n      display: flex;\n      align-items: center;\n      gap: 10px;\n    }\n    \n    .fish-icon {\n      font-size: 22px;\n    }\n    \n    .fish-count {\n      font-size: 18px;\n      font-weight: 700;\n      color: #a5d8ff;\n    }\n    \n    .timer-panel {\n      background: rgba(13, 17, 23, 0.9);\n      border: 1px solid #30363d;\n      border-radius: 8px;\n      padding: 10px 20px;\n    }\n    \n    .timer-label {\n      font-size: 10px;\n      color: #8b949e;\n      text-transform: uppercase;\n      letter-spacing: 2px;\n    }\n    \n    .timer-value {\n      font-size: 22px;\n      font-weight: 700;\n      color: #f85149;\n    }\n    \n    .power-bar {\n      position: absolute;\n      bottom: 100px;\n      left: 50%;\n      transform: translateX(-50%);\n      width: 180px;\n      height: 18px;\n      background: rgba(13, 17, 23, 0.9);\n      border: 2px solid #30363d;\n      border-radius: 10px;\n      overflow: hidden;\n      opacity: 0;\n      transition: opacity 0.2s;\n    }\n    \n    .power-bar.visible {\n      opacity: 1;\n    }\n    \n    .power-fill {\n      height: 100%;\n      width: 0%;\n      background: linear-gradient(90deg, #3fb950, #58a6ff, #d29922, #f85149);\n      border-radius: 8px;\n      transition: width 0.05s linear;\n    }\n    \n    .floating-text {\n      position: absolute;\n      font-size: 24px;\n      font-weight: 700;\n      color: #ffd43b;\n      text-shadow: 0 0 10px rgba(255, 212, 59, 0.8);\n      pointer-events: none;\n      animation: floatUp 1.5s ease-out forwards;\n    }\n    \n    @keyframes floatUp {\n      0% {\n        opacity: 1;\n        transform: translateY(0) scale(1);\n      }\n      100% {\n        opacity: 0;\n        transform: translateY(-80px) scale(1.5);\n      }\n    }\n    \n    .instruction {\n      position: absolute;\n      bottom: 130px;\n      left: 50%;\n      transform: translateX(-50%);\n      font-size: 13px;\n      color: #8b949e;\n      text-align: center;\n      opacity: 0.8;\n      white-space: nowrap;\n    }\n\n    .speedrun-timer {\n      position: absolute;\n      top: 70px;\n      left: 50%;\n      transform: translateX(-50%);\n      background: rgba(13, 17, 23, 0.9);\n      border: 1px solid #f85149;\n      border-radius: 8px;\n      padding: 8px 16px;\n    }\n    \n    .speedrun-label {\n      font-size: 9px;\n      color: #8b949e;\n      text-transform: uppercase;\n      letter-spacing: 2px;\n    }\n    \n    .speedrun-value {\n      font-size: 18px;\n      font-weight: 700;\n      color: #f85149;\n    }\n\n    @media (max-width: 600px) {\n      .score-value { font-size: 18px; }\n      .eq-slot { min-width: 35px; height: 45px; font-size: 24px; }\n      .equation-panel { padding: 8px 12px; gap: 5px; }\n      .eq-operator { font-size: 20px; }\n      .hud-top { padding: 8px; }\n      .hud-bottom { padding: 8px; }\n      .combo-panel, .fish-counter, .timer-panel, .level-panel, .score-panel { padding: 8px 12px; }\n      .instruction { bottom: 110px; font-size: 11px; }\n      .power-bar { width: 150px; bottom: 85px; }\n    }\n    \n    @media (max-width: 400px) {\n      .equation-panel {\n        padding: 6px 10px;\n        gap: 3px;\n      }\n      .eq-slot {\n        min-width: 30px;\n        height: 40px;\n        font-size: 20px;\n      }\n    }\n  </style>\n</head>\n<body>\n  <canvas id=\"gameCanvas\"></canvas>\n  \n  <div id=\"hud\">\n    <div class=\"hud-top\">\n      <div class=\"score-panel\">\n        <div class=\"score-label\">Score</div>\n        <div class=\"score-value\" id=\"score\">0</div>\n        <div class=\"high-score\" id=\"highScore\">Best: 0</div>\n      </div>\n      \n      <div class=\"equation-panel\" id=\"equationPanel\">\n        <div class=\"eq-slot\" id=\"slot0\">?</div>\n        <div class=\"eq-operator\" id=\"opSlot\">+</div>\n        <div class=\"eq-slot\" id=\"slot1\">?</div>\n        <div class=\"eq-operator\">=</div>\n        <div class=\"eq-slot result\" id=\"slot2\" style=\"border-color: #58a6ff; color: #58a6ff;\">?</div>\n      </div>\n      \n      <div class=\"level-panel\">\n        <div class=\"level-label\">Level</div>\n        <div class=\"level-value\" id=\"level\">1</div>\n      </div>\n    </div>\n    \n    <div class=\"speedrun-timer\">\n      <div class=\"speedrun-label\">Speedrun</div>\n      <div class=\"speedrun-value\" id=\"speedrunTimer\">0:00.00</div>\n    </div>\n    \n    <div class=\"hud-bottom\">\n      <div class=\"combo-panel\">\n        <div class=\"combo-label\">Combo</div>\n        <div class=\"combo-value\" id=\"combo\">x1.0</div>\n      </div>\n      \n      <div class=\"fish-counter\">\n        <span class=\"fish-icon\">🐟</span>\n        <span class=\"fish-count\" id=\"fishCount\">0</span>\n      </div>\n      \n      <div class=\"timer-panel\">\n        <div class=\"timer-label\">Time</div>\n        <div class=\"timer-value\" id=\"timer\">0:00</div>\n      </div>\n    </div>\n    \n    <div class=\"power-bar\" id=\"powerBar\">\n      <div class=\"power-fill\" id=\"powerFill\"></div>\n    </div>\n    \n    <div class=\"instruction\" id=\"instruction\">Click and hold to cast your line</div>\n  </div>\n\n  <script>\n    const canvas = document.getElementById('gameCanvas');\n    const ctx = canvas.getContext('2d');\n    \n    // Audio Context for sound effects\n    let audioCtx = null;\n    function initAudio() {\n      if (!audioCtx) {\n        audioCtx = new (window.AudioContext || window.webkitAudioContext)();\n      }\n    }\n    \n    function playSound(type) {\n      if (!audioCtx) return;\n      const osc = audioCtx.createOscillator();\n      const gain = audioCtx.createGain();\n      osc.connect(gain);\n      gain.connect(audioCtx.destination);\n      \n      switch(type) {\n        case 'cast':\n          osc.frequency.setValueAtTime(300, audioCtx.currentTime);\n          osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.2);\n          gain.gain.setValueAtTime(0.1, audioCtx.currentTime);\n          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);\n          osc.start();\n          osc.stop(audioCtx.currentTime + 0.2);\n          break;\n        case 'splash':\n          osc.type = 'noise';\n          osc.frequency.setValueAtTime(800, audioCtx.currentTime);\n          osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.15);\n          gain.gain.setValueAtTime(0.08, audioCtx.currentTime);\n          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);\n          osc.start();\n          osc.stop(audioCtx.currentTime + 0.15);\n          break;\n        case 'catch':\n          osc.type = 'sine';\n          osc.frequency.setValueAtTime(523, audioCtx.currentTime);\n          osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.1);\n          osc.frequency.setValueAtTime(784, audioCtx.currentTime + 0.2);\n          gain.gain.setValueAtTime(0.15, audioCtx.currentTime);\n          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);\n          osc.start();\n          osc.stop(audioCtx.currentTime + 0.3);\n          break;\n        case 'complete':\n          osc.type = 'sine';\n          osc.frequency.setValueAtTime(523, audioCtx.currentTime);\n          osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.1);\n          osc.frequency.setValueAtTime(784, audioCtx.currentTime + 0.2);\n          osc.frequency.setValueAtTime(1047, audioCtx.currentTime + 0.3);\n          gain.gain.setValueAtTime(0.2, audioCtx.currentTime);\n          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);\n          osc.start();\n          osc.stop(audioCtx.currentTime + 0.5);\n          break;\n        case 'miss':\n          osc.type = 'triangle';\n          osc.frequency.setValueAtTime(200, audioCtx.currentTime);\n          osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.2);\n          gain.gain.setValueAtTime(0.1, audioCtx.currentTime);\n          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);\n          osc.start();\n          osc.stop(audioCtx.currentTime + 0.2);\n          break;\n      }\n    }\n    \n    // Resize handler\n    function resize() {\n      canvas.width = window.innerWidth;\n      canvas.height = window.innerHeight;\n      boat.x = canvas.width / 2;\n      boat.y = canvas.height * 0.08;\n    }\n    resize();\n    window.addEventListener('resize', resize);\n    \n    // Game configuration\n    const CONFIG = {\n      maxChargeTime: 2000,\n      maxLineSegments: 10,\n      hookSize: 20,\n      catchRadius: 45,\n      maxTension: 100,\n      waterCurrent: 0.3,\n      reelSpeed: 4,\n      reelSpeedCharged: 8,\n      solveTimeLimit: 15000,\n      comboTimeout: 5000,\n      fishSpawnRate: 1500,\n      maxFishOnScreen: 25,\n      gravity: 0.4\n    };\n    \n    // Load high score from localStorage\n    let highScore = parseInt(localStorage.getItem('fishEquationsHighScore') || '0');\n    \n    // Game state\n    const game = {\n      score: 0,\n      level: 1,\n      combo: 1,\n      consecutiveSolves: 0,\n      fishCaught: 0,\n      solveStartTime: 0,\n      lastSolveTime: 0,\n      lastComboTime: 0,\n      operators: ['+'],\n      currentEquation: null,\n      equationSlots: [null, null, null],\n      state: 'IDLE',\n      speedrunStartTime: Date.now()\n    };\n    \n    // Boat position\n    const boat = {\n      x: 0,\n      y: 0,\n      rodAngle: -45 * Math.PI / 180,\n      rodLength: 80,\n      bobOffset: 0\n    };\n    \n    // Fishing line\n    const line = {\n      segments: [],\n      hook: { x: 0, y: 0, vx: 0, vy: 0 },\n      maxSegments: CONFIG.maxLineSegments,\n      inWater: false,\n      attachedFish: null\n    };\n    \n    // Input state\n    const input = {\n      mouseDown: false,\n      mouseX: 0,\n      mouseY: 0,\n      chargeStart: 0,\n      chargePower: 0\n    };\n    \n    // Fish array\n    let fishes = [];\n    let particles = [];\n    let bubbles = [];\n    \n    // Fish types configuration\n    const fishTypes = {\n      minnow: { \n        minSize: 25, maxSize: 35, \n        speedMin: 3, speedMax: 5, \n        valueMin: 1, valueMax: 9, \n        zone: 'shallow', \n        color: '#7dd3fc',\n        weight: 40\n      },\n      bass: { \n        minSize: 40, maxSize: 60, \n        speedMin: 2, speedMax: 3.5, \n        valueMin: 10, valueMax: 99, \n        zone: 'mid', \n        color: '#a5d8ff',\n        weight: 30\n      },\n      tuna: { \n        minSize: 60, maxSize: 90, \n        speedMin: 1, speedMax: 2, \n        valueMin: 100, valueMax: 999, \n        zone: 'deep', \n        color: '#4dabf7',\n        weight: 20\n      },\n      shark: { \n        minSize: 90, maxSize: 130, \n        speedMin: 0.5, speedMax: 1.2, \n        valueMin: 1000, valueMax: 9999, \n        zone: 'abyss', \n        color: '#339af0',\n        weight: 10\n      }\n    };\n    \n    const operatorTypes = {\n      plus: { symbol: '+', size: 40, depth: 'shallow', color: '#3fb950', weight: 30 },\n      minus: { symbol: '-', size: 40, depth: 'shallow', color: '#f85149', weight: 25 },\n      multiply: { symbol: '×', size: 45, depth: 'mid', color: '#d29922', weight: 20 },\n      divide: { symbol: '÷', size: 45, depth: 'deep', color: '#a855f7', weight: 15 },\n      equals: { symbol: '=', size: 50, depth: 'shallow', color: '#58a6ff', weight: 10 }\n    };\n    \n    // Zone boundaries\n    function getZoneBounds(zone) {\n      const h = canvas.height;\n      switch(zone) {\n        case 'surface': return { min: h * 0.12, max: h * 0.18 };\n        case 'shallow': return { min: h * 0.18, max: h * 0.40 };\n        case 'mid': return { min: h * 0.40, max: h * 0.70 };\n        case 'deep': return { min: h * 0.70, max: h * 0.90 };\n        case 'abyss': return { min: h * 0.90, max: h * 0.98 };\n        default: return { min: h * 0.18, max: h * 0.70 };\n      }\n    }\n    \n    // Generate equation\n    function generateEquation() {\n      let maxVal = 20;\n      if (game.level >= 6) maxVal = 50;\n      if (game.level >= 11) maxVal = 100;\n      if (game.level >= 21) maxVal = 500;\n      \n      const availableOps = [];\n      if (game.level >= 1) availableOps.push('+');\n      if (game.level >= 6) availableOps.push('-');\n      if (game.level >= 11) availableOps.push('*');\n      if (game.level >= 21) availableOps.push('/');\n      \n      const op = availableOps[Math.floor(Math.random() * availableOps.length)];\n      \n      let a, b, result;\n      const maxA = Math.min(maxVal - 1, Math.floor(maxVal * 0.7));\n      const multOptions = [2, 3, 4, 5, 6, 7, 8, 9, 10];\n      \n      if (op === '+') {\n        a = Math.floor(Math.random() * maxA) + 1;\n        b = Math.floor(Math.random() * (maxVal - a)) + 1;\n        result = a + b;\n      } else if (op === '-') {\n        result = Math.floor(Math.random() * maxA) + 1;\n        a = result + Math.floor(Math.random() * (maxVal - result)) + 1;\n        b = a - result;\n      } else if (op === '*') {\n        a = multOptions[Math.floor(Math.random() * multOptions.length)];\n        b = Math.floor(Math.random() * 10) + 1;\n        result = a * b;\n      } else if (op === '/') {\n        b = multOptions[Math.floor(Math.random() * multOptions.length)];\n        result = Math.floor(Math.random() * 10) + 1;\n        a = b * result;\n      }\n      \n      game.currentEquation = { a, b, result, operator: op };\n      game.equationSlots = [null, null, result];\n      game.solveStartTime = Date.now();\n      \n      updateEquationDisplay();\n      updateOperatorDisplay();\n    }\n    \n    function updateEquationDisplay() {\n      document.getElementById('slot0').textContent = game.equationSlots[0] !== null ? game.equationSlots[0] : '?';\n      document.getElementById('slot0').className = game.equationSlots[0] !== null ? 'eq-slot filled' : 'eq-slot';\n      \n      document.getElementById('slot1').textContent = game.equationSlots[1] !== null ? game.equationSlots[1] : '?';\n      document.getElementById('slot1').className = game.equationSlots[1] !== null ? 'eq-slot filled' : 'eq-slot';\n      \n      const slot2 = document.getElementById('slot2');\n      slot2.textContent = game.equationSlots[2] !== null ? game.equationSlots[2] : '?';\n      slot2.className = 'eq-slot result';\n    }\n    \n    function updateOperatorDisplay() {\n      const opSlot = document.getElementById('opSlot');\n      if (game.currentEquation) {\n        const symbols = { '+': '+', '-': '-', '*': '×', '/': '÷' };\n        opSlot.textContent = symbols[game.currentEquation.operator] || '+';\n      }\n    }\n    \n    // Spawn fish\n    function spawnFish() {\n      if (fishes.length >= CONFIG.maxFishOnScreen) return;\n      \n      const isOperator = Math.random() < 0.2;\n      \n      if (isOperator) {\n        spawnOperatorFish();\n      } else {\n        spawnNumberFish();\n      }\n    }\n    \n    function spawnNumberFish() {\n      const totalWeight = Object.values(fishTypes).reduce((sum, t) => sum + t.weight, 0);\n      let rand = Math.random() * totalWeight;\n      let selectedType = 'bass';\n      \n      for (const [type, config] of Object.entries(fishTypes)) {\n        rand -= config.weight;\n        if (rand <= 0) {\n          selectedType = type;\n          break;\n        }\n      }\n      \n      const config = fishTypes[selectedType];\n      const zone = getZoneBounds(config.zone);\n      const fromLeft = Math.random() < 0.5;\n      const size = config.minSize + Math.random() * (config.maxSize - config.minSize);\n      const speedMult = 1 + (game.level - 1) * 0.05;\n      const speed = (config.speedMin + Math.random() * (config.speedMax - config.speedMin)) * speedMult;\n      \n      fishes.push({\n        type: 'number',\n        fishType: selectedType,\n        x: fromLeft ? -size : canvas.width + size,\n        y: zone.min + Math.random() * (zone.max - zone.min),\n        vx: (fromLeft ? 1 : -1) * speed,\n        vy: 0,\n        width: size,\n        height: size * 0.5,\n        value: Math.floor(config.valueMin + Math.random() * (config.valueMax - config.valueMin + 1)),\n        color: config.color,\n        wobble: Math.random() * Math.PI * 2,\n        wobbleSpeed: 2 + Math.random() * 2,\n        startled: false,\n        startledTime: 0\n      });\n    }\n    \n    function spawnOperatorFish() {\n      const totalWeight = Object.values(operatorTypes).reduce((sum, t) => sum + t.weight, 0);\n      let rand = Math.random() * totalWeight;\n      let selectedType = 'plus';\n      \n      for (const [type, config] of Object.entries(operatorTypes)) {\n        rand -= config.weight;\n        if (rand <= 0) {\n          selectedType = type;\n          break;\n        }\n      }\n      \n      const config = operatorTypes[selectedType];\n      const zone = getZoneBounds(config.depth);\n      const fromLeft = Math.random() < 0.5;\n      const speed = 1.5 + Math.random() * 1.5;\n      \n      fishes.push({\n        type: 'operator',\n        operatorType: selectedType,\n        x: fromLeft ? -config.size : canvas.width + config.size,\n        y: zone.min + Math.random() * (zone.max - zone.min),\n        vx: (fromLeft ? 1 : -1) * speed,\n        vy: 0,\n        width: config.size,\n        height: config.size * 0.5,\n        symbol: config.symbol,\n        color: config.color,\n        wobble: Math.random() * Math.PI * 2,\n        wobbleSpeed: 3 + Math.random() * 2\n      });\n    }\n    \n    // Particle system\n    function createParticles(x, y, color, count = 15, spread = 50) {\n      for (let i = 0; i < count; i++) {\n        const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;\n        const speed = 2 + Math.random() * 4;\n        particles.push({\n          x, y,\n          vx: Math.cos(angle) * speed,\n          vy: Math.sin(angle) * speed,\n          life: 1,\n          decay: 0.02 + Math.random() * 0.02,\n          size: 3 + Math.random() * 4,\n          color\n        });\n      }\n    }\n    \n    function createBubble() {\n      bubbles.push({\n        x: Math.random() * canvas.width,\n        y: canvas.height + 20,\n        size: 2 + Math.random() * 6,\n        speed: 0.5 + Math.random() * 1.5,\n        wobble: Math.random() * Math.PI * 2,\n        wobbleSpeed: 0.02 + Math.random() * 0.03\n      });\n    }\n    \n    function createSplash(x, y) {\n      for (let i = 0; i < 20; i++) {\n        const angle = -Math.PI + Math.random() * Math.PI;\n        const speed = 2 + Math.random() * 6;\n        particles.push({\n          x, y,\n          vx: Math.cos(angle) * speed,\n          vy: Math.sin(angle) * speed - 3,\n          life: 1,\n          decay: 0.03 + Math.random() * 0.02,\n          size: 2 + Math.random() * 4,\n          color: '#7dd3fc',\n          gravity:0.3
+        });
+      }
+    }
+    
+    // Input handlers
+    canvas.addEventListener('mousedown', (e) => {
+      initAudio();
+      input.mouseDown = true;
+      input.mouseX = e.clientX;
+      input.mouseY = e.clientY;
+      input.chargeStart = Date.now();
+      document.getElementById('powerBar').classList.add('visible');
+    });
+    
+    canvas.addEventListener('mousemove', (e) => {
+      input.mouseX = e.clientX;
+      input.mouseY = e.clientY;
+    });
+    
+    canvas.addEventListener('mouseup', (e) => {
+      if (input.mouseDown && game.state === 'IDLE') {
+        const chargeTime = Date.now() - input.chargeStart;
+        castLine(Math.min(chargeTime / CONFIG.maxChargeTime, 1));
+      }
+      input.mouseDown = false;
+      document.getElementById('powerBar').classList.remove('visible');
+    });
+    
+    canvas.addEventListener('mouseleave', () => {
+      if (input.mouseDown && game.state === 'IDLE') {
+        const chargeTime = Date.now() - input.chargeStart;
+        castLine(Math.min(chargeTime / CONFIG.maxChargeTime, 1));
+      }
+      input.mouseDown = false;
+      document.getElementById('powerBar').classList.remove('visible');
+    });
+    
+    // Touch support
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      initAudio();
+      const touch = e.touches[0];
+      input.mouseDown = true;
+      input.mouseX = touch.clientX;
+      input.mouseY = touch.clientY;
+      input.chargeStart = Date.now();
+      document.getElementById('powerBar').classList.add('visible');
+    });
+    
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      input.mouseX = touch.clientX;
+      input.mouseY = touch.clientY;
+    });
+    
+    canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      if (input.mouseDown && game.state === 'IDLE') {
+        const chargeTime = Date.now() - input.chargeStart;
+        castLine(Math.min(chargeTime / CONFIG.maxChargeTime, 1));
+      }
+      input.mouseDown = false;
+      document.getElementById('powerBar').classList.remove('visible');
+    });
+    
+    // Fish click handler
+    canvas.addEventListener('click', (e) => {
+      if (game.state !== 'REELING') return;
+      
+      const clickX = e.clientX;
+      const clickY = e.clientY;
+      
+      for (let i = fishes.length - 1; i >= 0; i--) {
+        const fish = fishes[i];
+        const dx = clickX - fish.x;
+        const dy = clickY - fish.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < fish.width * 0.6) {
+          catchFish(fish, i);
+          break;
+        }
+      }
+    });
+    
+    // Cast line
+    function castLine(power) {
+      if (game.state !== 'IDLE') return;
+      
+      game.state = 'CHARGING';
+      line.segments = [];
+      line.inWater = false;
+      line.attachedFish = null;
+      line.hook = {
+        x: boat.x + Math.cos(boat.rodAngle) * boat.rodLength,
+        y: boat.y + Math.sin(boat.rodAngle) * boat.rodLength,
+        vx: 0,
+        vy: 0
+      };
+      
+      playSound('cast');
+      generateEquation();
+      
+      // Launch hook
+      const angle = Math.atan2(input.mouseY - line.hook.y, input.mouseX - line.hook.x);
+      const launchSpeed = 8 + power * 15;
+      line.hook.vx = Math.cos(angle) * launchSpeed;
+      line.hook.vy = Math.sin(angle) * launchSpeed;
+      
+      setTimeout(() => {
+        if (game.state === 'CHARGING') {
+          game.state = 'REELING';
+          document.getElementById('instruction').textContent = 'Tap fish to catch them!';
+        }
+      }, 500);
+    }
+    
+    // Catch fish
+    function catchFish(fish, index) {
+      playSound('catch');
+      createParticles(fish.x, fish.y, fish.color, 20);
+      
+      if (fish.type === 'number') {
+        // Fill equation slot
+        if (game.equationSlots[0] === null) {
+          game.equationSlots[0] = fish.value;
+        } else if (game.equationSlots[1] === null) {
+          game.equationSlots[1] = fish.value;
+        }
+        updateEquationDisplay();
+        
+        // Check if equation is complete
+        if (game.equationSlots[0] !== null && game.equationSlots[1] !== null) {
+          const a = game.equationSlots[0];
+          const b = game.equationSlots[1];
+          const result = game.equationSlots[2];
+          const eq = game.currentEquation;
+          
+          let isCorrect = false;
+          if (eq.operator === '+') isCorrect = a + b === result;
+          else if (eq.operator === '-') isCorrect = a - b === result;
+          else if (eq.operator === '*') isCorrect = a * b === result;
+          else if (eq.operator === '/') isCorrect = a / b === result;
+          
+          if (isCorrect) {
+            onEquationComplete();
+          } else {
+            onEquationWrong();
+          }
+        }
+        
+        game.fishCaught++;
+        document.getElementById('fishCount').textContent = game.fishCaught;
+        
+      } else if (fish.type === 'operator') {
+        // Show floating operator
+        createFloatingText(fish.x, fish.y, fish.symbol, fish.color);
+      }
+      
+      fishes.splice(index, 1);
+      
+      // Speed up hook after catch
+      line.hook.vx *= 1.5;
+      line.hook.vy *= 1.5;
+    }
+    
+    function onEquationComplete() {
+      playSound('complete');
+      game.consecutiveSolves++;
+      game.lastSolveTime = Date.now();
+      
+      // Score calculation
+      const timeBonus = Math.max(0, 1000 - (Date.now() - game.solveStartTime));
+      const comboMult = game.combo;
+      const levelMult = 1 + (game.level - 1) * 0.1;
+      const points = Math.floor((100 + timeBonus) * comboMult * levelMult);
+      
+      game.score += points;
+      game.consecutiveSolves++;
+      
+      // Update combo
+      if (Date.now() - game.lastComboTime < CONFIG.comboTimeout) {
+        game.combo = Math.min(game.combo + 0.5, 5);
+      } else {
+        game.combo = 1;
+      }
+      game.lastComboTime = Date.now();
+      
+      // Level up
+      if (game.consecutiveSolves % 3 === 0) {
+        game.level++;
+        document.getElementById('level').textContent = game.level;
+      }
+      
+      // Create celebration particles
+      createParticles(canvas.width / 2, canvas.height * 0.3, '#ffd43b', 30);
+      
+      createFloatingText(canvas.width / 2, canvas.height * 0.25, '+' + points, '#ffd43b');
+      
+      updateHUD();
+      
+      // Reset for next equation
+      generateEquation();
+      
+      // Check high score
+      if (game.score > highScore) {
+        highScore = game.score;
+        localStorage.setItem('fishEquationsHighScore', highScore.toString());
+        document.getElementById('highScore').textContent = 'Best: ' + highScore;
+      }
+    }
+    
+    function onEquationWrong() {
+      playSound('miss');
+      game.combo = 1;
+      game.consecutiveSolves = 0;
+      
+      createFloatingText(canvas.width / 2, canvas.height * 0.35, 'WRONG!', '#f85149');
+      
+      // Reset slots
+      game.equationSlots[0] = null;
+      game.equationSlots[1] = null;
+      updateEquationDisplay();
+    }
+    
+    function createFloatingText(x, y, text, color) {
+      const el = document.createElement('div');
+      el.className = 'floating-text';
+      el.textContent = text;
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+      el.style.color = color;
+      document.getElementById('hud').appendChild(el);
+      
+      setTimeout(() => el.remove(), 1500);
+    }
+    
+    function updateHUD() {
+      document.getElementById('score').textContent = game.score;
+      
+      const comboEl = document.getElementById('combo');
+      comboEl.textContent = 'x' + game.combo.toFixed(1);
+      comboEl.className = 'combo-value' + (game.combo > 1 ? ' active' : '');
+    }
+    
+    // Main update loop
+    let lastTime = 0;
+    let fishSpawnTimer = 0;
+    let bubbleTimer = 0;
+    
+    function update(timestamp) {
+      const dt = Math.min((timestamp - lastTime) / 16.67, 3);
+      lastTime = timestamp;
+      
+      // Update power bar
+      if (input.mouseDown) {
+        const chargeTime = Date.now() - input.chargeStart;
+        input.chargePower = Math.min(chargeTime / CONFIG.maxChargeTime, 1);
+        document.getElementById('powerFill').style.width = (input.chargePower * 100) + '%';
+      }
+      
+      // Update boat bobbing
+      boat.bobOffset = Math.sin(timestamp * 0.003) * 5;
+      
+      // Update hook physics
+      if (game.state === 'CHARGING' || game.state === 'REELING') {
+        // Gravity
+        line.hook.vy += CONFIG.gravity * dt;
+        
+        // Water current
+        if (line.inWater) {
+          line.hook.vx += CONFIG.waterCurrent * dt;
+          line.hook.vy *= 0.98;
+        }
+        
+        // Update position
+        line.hook.x += line.hook.vx * dt;
+        line.hook.y += line.hook.vy * dt;
+        
+        // Water surface check
+        const waterLevel = canvas.height * 0.15;
+        if (line.hook.y > waterLevel && !line.inWater) {
+          line.inWater = true;
+          playSound('splash');
+          createSplash(line.hook.x, waterLevel);
+        }
+        
+        // Boundary checks
+        if (line.hook.x < 0) line.hook.x = 0;
+        if (line.hook.x > canvas.width) line.hook.x = canvas.width;
+        
+        // Reel in if above water or too long
+        const hookDist = Math.sqrt(
+          Math.pow(line.hook.x - boat.x, 2) + 
+          Math.pow(line.hook.y - boat.y, 2)
+        );
+        
+        const maxDist = 600;
+        if (line.hook.y < waterLevel - 20 || hookDist > maxDist) {
+          reelIn(dt);
+        }
+        
+        // Reset if hook returns to boat
+        if (hookDist < 50 && line.hook.y < waterLevel) {
+          game.state = 'IDLE';
+          line.inWater = false;
+          document.getElementById('instruction').textContent = 'Click and hold to cast your line';
+        }
+      }
+      
+      // Update fishes
+      for (let i = fishes.length - 1; i >= 0; i--) {
+        const fish = fishes[i];
+        
+        // Check if startled by hook
+        const distToHook = Math.sqrt(
+          Math.pow(fish.x - line.hook.x, 2) + 
+          Math.pow(fish.y - line.hook.y, 2)
+        );
+        
+        if (distToHook < 100 && line.inWater && !fish.startled) {
+          fish.startled = true;
+          fish.startledTime = timestamp;
+          fish.vx *= 2.5;
+        }
+        
+        // Recover from startled
+        if (fish.startled && timestamp - fish.startledTime > 500) {
+          fish.startled = false;
+        }
+        
+        // Wobble movement
+        fish.wobble += fish.wobbleSpeed * 0.05 * dt;
+        fish.vy = Math.sin(fish.wobble) * 0.5;
+        
+        // Update position
+        fish.x += fish.vx * dt;
+        fish.y += fish.vy * dt;
+        
+        // Remove if off screen
+        if (fish.x < -fish.width * 2 || fish.x > canvas.width + fish.width * 2) {
+          fishes.splice(i, 1);
+        }
+      }
+      
+      // Spawn fishes
+      fishSpawnTimer += dt * 16.67;
+      if (fishSpawnTimer > CONFIG.fishSpawnRate / (1 + game.level * 0.1)) {
+        spawnFish();
+        fishSpawnTimer = 0;
+      }
+      
+      // Spawn bubbles
+      bubbleTimer += dt * 16.67;
+      if (bubbleTimer > 200) {
+        if (Math.random() < 0.3) createBubble();
+        bubbleTimer = 0;
+      }
+      
+      // Update bubbles
+      for (let i = bubbles.length - 1; i >= 0; i--) {
+        const b = bubbles[i];
+        b.wobble += b.wobbleSpeed;
+        b.x += Math.sin(b.wobble) * 0.5;
+        b.y -= b.speed * dt;
+        
+        if (b.y < canvas.height * 0.15) {
+          bubbles.splice(i, 1);
+        }
+      }
+      
+      // Update particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += (p.gravity || 0.2) * dt;
+        p.life -= p.decay * dt;
+        
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+      
+      // Update timer display
+      const elapsed = Math.floor((Date.now() - game.speedrunStartTime) / 1000);
+      const mins = Math.floor(elapsed / 60);
+      const secs = elapsed % 60;
+      document.getElementById('speedrunTimer').textContent = mins + ':' + secs.toString().padStart(2, '0') + '.00';
+      
+      // Update game timer
+      const gameElapsed = Math.floor((Date.now() - game.speedrunStartTime) / 1000);
+      const gameMins = Math.floor(gameElapsed / 60);
+      const gameSecs = gameElapsed % 60;
+      document.getElementById('timer').textContent = gameMins + ':' + gameSecs.toString().padStart(2, '0');
+    }
+    
+    function reelIn(dt) {
+      const targetX = boat.x + Math.cos(boat.rodAngle) * boat.rodLength;
+      const targetY = boat.y + Math.sin(boat.rodAngle) * boat.rodLength;
+      
+      const dx = targetX - line.hook.x;
+      const dy = targetY - line.hook.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      
+      const reelSpeed = input.chargePower > 0.5 ? CONFIG.reelSpeedCharged : CONFIG.reelSpeed;
+      const speed = reelSpeed * dt;
+      
+      if (dist > speed) {
+        line.hook.x += (dx / dist) * speed;
+        line.hook.y += (dy / dist) * speed;
+      } else {
+        line.hook.x = targetX;
+        line.hook.y = targetY;
+      }
+    }
+    
+    // Render
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Sky gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.2);
+      skyGrad.addColorStop(0, '#1a1a2e');
+      skyGrad.addColorStop(1, '#16213e');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(0, 0, canvas.width, canvas.height * 0.2);
+      
+      // Water gradient
+      const waterGrad = ctx.createLinearGradient(0, canvas.height * 0.15, 0, canvas.height);
+      waterGrad.addColorStop(0, '#0c4a6e');
+      waterGrad.addColorStop(0.3, '#075985');
+      waterGrad.addColorStop(0.7, '#0c4a6e');
+      waterGrad.addColorStop(1, '#082f49');
+      ctx.fillStyle = waterGrad;
+      ctx.fillRect(0, canvas.height * 0.15, canvas.width, canvas.height * 0.85);
+      
+      // Water surface shine
+      ctx.fillStyle = 'rgba(125, 211, 252, 0.1)';
+      ctx.fillRect(0, canvas.height * 0.15, canvas.width, 20);
+      
+      // Bubbles
+      bubbles.forEach(b => {
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(125, 211, 252, 0.4)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(165, 216, 255, 0.6)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+      
+      // Draw fishes
+      fishes.forEach(fish => {
+        ctx.save();
+        ctx.translate(fish.x, fish.y);
+        ctx.scale(fish.vx > 0 ? 1 : -1, 1);
+        
+        // Fish body
+        ctx.beginPath();
+        ctx.ellipse(0, 0, fish.width / 2, fish.height / 2, 0, 0, Math.PI * 2);
+        
+        const fishGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, fish.width / 2);
+        fishGrad.addColorStop(0, fish.color);
+        fishGrad.addColorStop(1, shadeColor(fish.color, -30));
+        ctx.fillStyle = fishGrad;
+        ctx.fill();
+        
+        // Fish tail
+        ctx.beginPath();
+        ctx.moveTo(fish.width / 2, 0);
+        ctx.lineTo(fish.width / 2 + fish.width * 0.4, -fish.height * 0.4);
+        ctx.lineTo(fish.width / 2 + fish.width * 0.4, fish.height * 0.4);
+        ctx.closePath();
+        ctx.fillStyle = shadeColor(fish.color, -20);
+        ctx.fill();
+        
+        // Fish eye
+        ctx.beginPath();
+        ctx.arc(-fish.width / 4, -fish.height / 6, fish.width * 0.08, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(-fish.width / 4, -fish.height / 6, fish.width * 0.04, 0, Math.PI * 2);
+        ctx.fillStyle = '#000';
+        ctx.fill();
+        
+        // Draw value or symbol
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${Math.max(12, fish.width * 0.3)}px Orbitron, monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        if (fish.type === 'number') {
+          ctx.fillText(fish.value, 0, 2);
+        } else {
+          ctx.fillText(fish.symbol, 0, 2);
+        }
+        
+        ctx.restore();
+      });
+      
+      // Draw particles
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      });
+      
+      // Draw fishing line
+      if (game.state === 'CHARGING' || game.state === 'REELING') {
+        const startX = boat.x + Math.cos(boat.rodAngle) * boat.rodLength;
+        const startY = boat.y + Math.sin(boat.rodAngle) * boat.rodLength;
+        
+        // Create smooth curve through segments
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        
+        const segments = 20;
+        for (let i = 0; i <= segments; i++) {
+          const t = i / segments;
+          const x = lerp(startX, line.hook.x, t);
+          const y = lerp(startY, line.hook.y, t);
+          
+          // Add wave effect in water
+          if (t > 0.3 && line.inWater) {
+            const wave = Math.sin(t * 10 + Date.now() * 0.01) * 3 * t;
+            ctx.lineTo(x + wave, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+        
+        ctx.strokeStyle = '#8b949e';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        
+        // Draw hook
+        ctx.beginPath();
+        ctx.arc(line.hook.x, line.hook.y, CONFIG.hookSize, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffd43b';
+        ctx.fill();
+        ctx.strokeStyle = '#d29922';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        // Hook shine
+        ctx.beginPath();
+        ctx.arc(line.hook.x - 5, line.hook.y - 5, 5, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        ctx.fill();
+      }
+      
+      // Draw boat
+      const boatX = boat.x;
+      const boatY = boat.y + boat.bobOffset;
+      
+      // Boat body
+      ctx.beginPath();
+      ctx.ellipse(boatX, boatY, 40, 15, 0, 0, Math.PI);
+      ctx.fillStyle = '#8b4513';
+      ctx.fill();
+      ctx.strokeStyle = '#5d2f0d';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      
+      // Boat cabin
+      ctx.fillStyle = '#a0522d';
+      ctx.fillRect(boatX - 20, boatY - 25, 40, 15);
+      ctx.strokeStyle = '#5d2f0d';
+      ctx.strokeRect(boatX - 20, boatY - 25, 40, 15);
+      
+      // Fishing rod
+      ctx.beginPath();
+      ctx.moveTo(boatX, boatY - 15);
+      ctx.lineTo(
+        boatX + Math.cos(boat.rodAngle) * boat.rodLength,
+        boatY + Math.sin(boat.rodAngle) * boat.rodLength
+      );
+      ctx.strokeStyle = '#5d2f0d';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      
+      // Reel
+      ctx.beginPath();
+      ctx.arc(
+        boatX + Math.cos(boat.rodAngle) * boat.rodLength * 0.3,
+        boatY + Math.sin(boat.rodAngle) * boat.rodLength * 0.3,
+        8, 0, Math.PI * 2
+      );
+      ctx.fillStyle = '#30363d';
+      ctx.fill();
+    }
+    
+    function lerp(a, b, t) {
+      return a + (b - a) * t;
+    }
+    
+    function shadeColor(color, percent) {
+      const num = parseInt(color.replace('#', ''), 16);
+      const amt = Math.round(2.55 * percent);
+      const R = (num >> 16) + amt;
+      const G = (num >> 8 & 0x00FF) + amt;
+      const B = (num & 0x0000FF) + amt;
+      return '#' + (0x1000000 + 
+        (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + 
+        (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 + 
+        (B < 255 ? B < 1 ? 0 : B : 255)
+      ).toString(16).slice(1);
+    }
+    
+    // Game loop
+    function gameLoop(timestamp) {
+      update(timestamp);
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+    
+    // Initialize
+    document.getElementById('highScore').textContent = 'Best: ' + highScore;
+    generateEquation();
+    
+    // Start spawning
+    for (let i = 0; i < 5; i++) {
+      spawnFish();
+    }
+    
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>", "README.md": "# 🐟 Fish Equations\n\nA math-based fishing game where you catch fish with numbers to solve equations!\n\n## How to Play\n\n1. **Click and hold** to charge your cast power\n2. **Release** to cast your fishing line into the water\n3. **Click on fish** to catch them - numbers fill equation slots, operators float nearby\n4. **Solve equations** by catching the correct numbers\n5. **Build combos** for bonus points and level up!\n\n## Fish Types\n\n- **Minnows** (cyan): Small numbers 1-9\n- **Bass** (light blue): Medium numbers 10-99\n- **Tuna** (blue): Large numbers 100-999\n- **Sharks** (dark blue): Very large numbers 1000-9999\n\n## Operators\n\nOperators appear as special fish at different depths:\n- **+** (green): Shallow water\n- **-** (red): Shallow water\n- **×** (yellow): Mid depths\n- **÷** (purple): Deep water\n- **=** (blue): Shallow water\n\n## Controls\n\n- **Mouse/Touch**: Hold to charge, release to cast\n- **Click/Tap**: Catch fish while reeling in\n\n## Features\n\n- Procedurally generated equations\n- Progressive difficulty (new operators at levels 6, 11, 21)\n- Combo system with time bonuses\n- Speedrun timer\n- High score persistence (localStorage)\n- Responsive design (mobile-friendly)\n- Sound effects\n- Particle effects\n\n## Development\n\nOpen `index.html` in a browser to play.\n\n## License\n\nMIT", "SPEC.md": "# Fish Equations - Technical Specification\n\n## Overview\n\nFish Equations is a casual math game where players fish for numbers to solve arithmetic equations. The game combines fishing mechanics with mental math challenges.\n\n## Architecture\n\n### Single File Structure\n- `index.html`: Complete game in one file (HTML + CSS + JS)\n- No external dependencies except Google Fonts\n\n### Game States\n1. `IDLE` - Waiting for player input\n2. `CHARGING` - Player holding mouse/touch to charge cast\n3. `REELING` - Line in water, catching fish\n\n## Game Mechanics\n\n### Fishing System\n- Charge-based casting with visual power bar\n- Physics-based hook movement (gravity, water current)\n- Line curves with wave effect in water\n- Automatic reeling when hook reaches max distance or surfaces\n\n### Fish System\n- 4 fish types with different value ranges and speeds\n- 5 operator types at different depths\n- Fish flee when hook approaches (startled mechanic)\n- Weighted spawning based on fish rarity\n\n### Equation System\n- Procedurally generated based on level\n- Operators unlock progressively:\n  - Level 1: Addition only\n  - Level 6: Addition, Subtraction\n  - Level 11: Addition, Subtraction, Multiplication\n  - Level 21: All operators including Division\n- Max values scale with level\n\n### Scoring\n- Base points: 100\n- Time bonus: up to 1000 points\n- Combo multiplier: 1.0x to 5.0x\n- Level multiplier: 1.0x + 0.1x per level\n\n### Progression\n- Level up every 3 consecutive correct equations\n- Fish speed increases with level\n- Spawn rate increases with level\n\n## Rendering\n\n### Canvas Elements\n- Sky gradient (top portion)\n- Water gradient with depth zones\n- Bubbles (ambient particles)\n- Fish with body, tail, eye, and value/symbol\n- Fishing line with wave effect\n- Hook with shine\n- Boat with bobbing animation\n- Particle effects for catches and splashes\n\n### UI Elements (HTML Overlay)\n- Score panel with high score\n- Equation display with 3 slots\n- Level indicator\n- Combo multiplier\n- Fish caught counter\n- Game timer\n- Speedrun timer\n- Power bar (visible during charge)\n- Floating score text\n- Instructions\n\n## Audio\n\nUses Web Audio API for procedural sound effects:\n- Cast: Low frequency sweep\n- Splash: Noise burst\n- Catch: Rising arpeggio\n- Complete: 4-note celebration\n- Miss: Descending tone\n\n## Responsive Design\n\n- Fluid canvas sizing\n- Responsive HUD with flexbox\n- Media queries for mobile (< 600px, < 400px)\n- Touch event support\n\n## Storage\n\n- `localStorage` for high score persistence\n- Key: `fishEquationsHighScore`\n\n## Performance\n\n- RequestAnimationFrame game loop\n- Delta time normalization\n- Object pooling for particles/bubbles\n- Off-screen culling for fish\n\n## Browser Support\n\nModern browsers with:\n- Canvas 2D API\n- Web Audio API\n- localStorage\n- Touch Events (mobile)\n\n## Future Enhancements\n\nPotential features for future versions:\n- Power-ups/collectibles\n- Multiple game modes\n- Achievements\n- Leaderboards\n- Multiple fishing spots\n- Weather effects\n- Day/night cycle\n"}
+}
