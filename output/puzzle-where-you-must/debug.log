@@ -1,0 +1,808 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 24516 (char 24515)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>Gear Gate - Steampunk Puzzle</title>\n  <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙️</text></svg>\">\n  <link href=\"https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600&display=swap\" rel=\"stylesheet\">\n  <style>\n    * {\n      margin: 0;\n      padding: 0;\n      box-sizing: border-box;\n    }\n\n    body {\n      background: linear-gradient(135deg, #0a0a1e 0%, #1a1a2e 50%, #16213e 100%);\n      min-height: 100vh;\n      display: flex;\n      flex-direction: column;\n      align-items: center;\n      justify-content: center;\n      font-family: 'Rajdhani', sans-serif;\n      overflow: hidden;\n      color: #e8e8e8;\n      padding: 10px;\n    }\n\n    #gameContainer {\n      position: relative;\n      width: 100%;\n      max-width: min(1200px, 95vw);\n      aspect-ratio: 16 / 10;\n      max-height: 90vh;\n    }\n\n    #gameCanvas {\n      width: 100%;\n      height: 100%;\n      display: block;\n      border-radius: 12px;\n      box-shadow: \n        0 0 60px rgba(255, 107, 53, 0.2),\n        0 0 100px rgba(255, 215, 0, 0.1),\n        inset 0 0 80px rgba(0, 0, 0, 0.6);\n      border: 2px solid #3a3a4a;\n    }\n\n    #hud {\n      position: absolute;\n      top: 0;\n      left: 0;\n      right: 0;\n      height: 60px;\n      background: rgba(15, 15, 26, 0.92);\n      display: flex;\n      align-items: center;\n      justify-content: space-between;\n      padding: 0 25px;\n      border-bottom: 2px solid #ff6b35;\n      border-radius: 10px 10px 0 0;\n      z-index: 10;\n    }\n\n    .hud-section {\n      display: flex;\n      align-items: center;\n      gap: 10px;\n    }\n\n    #levelIndicator {\n      font-family: 'Orbitron', monospace;\n      font-size: 1.3rem;\n      font-weight: 700;\n      color: #ffd700;\n      text-shadow: 0 0 12px rgba(255, 215, 0, 0.6);\n      letter-spacing: 2px;\n    }\n\n    #timer {\n      font-family: 'Orbitron', monospace;\n      font-size: 1.1rem;\n      color: #ff6b35;\n      text-shadow: 0 0 10px rgba(255, 107, 53, 0.5);\n      padding: 6px 14px;\n      background: rgba(58, 58, 74, 0.6);\n      border-radius: 15px;\n      border: 1px solid #ff6b35;\n      min-width: 110px;\n      text-align: center;\n    }\n\n    #highScore {\n      font-family: 'Rajdhani', sans-serif;\n      font-size: 0.9rem;\n      color: #00d9ff;\n      text-shadow: 0 0 8px rgba(0, 217, 255, 0.5);\n    }\n\n    #gearStatus {\n      font-family: 'Rajdhani', sans-serif;\n      font-size: 1rem;\n      font-weight: 600;\n      color: #e8e8e8;\n      padding: 8px 18px;\n      background: rgba(58, 58, 74, 0.6);\n      border-radius: 18px;\n      border: 1px solid #4a4a5a;\n      transition: all 0.3s ease;\n    }\n\n    #gearStatus.aligned {\n      color: #00ff88;\n      border-color: #00ff88;\n      box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);\n    }\n\n    #resetBtn, #volumeBtn {\n      width: 42px;\n      height: 42px;\n      border-radius: 50%;\n      background: #3a3a4a;\n      border: 2px solid #ff6b35;\n      cursor: pointer;\n      display: flex;\n      align-items: center;\n      justify-content: center;\n      transition: all 0.2s ease;\n    }\n\n    #resetBtn:hover, #volumeBtn:hover {\n      background: #ffd700;\n      transform: scale(1.1);\n      box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);\n    }\n\n    #resetBtn:active, #volumeBtn:active {\n      transform: scale(0.95);\n    }\n\n    #resetBtn svg, #volumeBtn svg {\n      width: 22px;\n      height: 22px;\n      fill: #ffd700;\n      transition: fill 0.2s ease;\n    }\n\n    #resetBtn:hover svg, #volumeBtn:hover svg {\n      fill: #1a1a2e;\n    }\n\n    #volumeBtn.muted svg {\n      fill: #666;\n    }\n\n    #victoryOverlay {\n      position: absolute;\n      top: 0;\n      left: 0;\n      right: 0;\n      bottom: 0;\n      background: rgba(10, 10, 30, 0.95);\n      display: none;\n      flex-direction: column;\n      align-items: center;\n      justify-content: center;\n      border-radius: 10px;\n      z-index: 100;\n      animation: fadeIn 0.3s ease;\n    }\n\n    @keyframes fadeIn {\n      from { opacity: 0; }\n      to { opacity: 1; }\n    }\n\n    #victoryOverlay.show {\n      display: flex;\n    }\n\n    #victoryOverlay h1 {\n      font-family: 'Orbitron', monospace;\n      font-size: 3rem;\n      font-weight: 900;\n      color: #ffd700;\n      text-shadow: 0 0 30px rgba(255, 215, 0, 0.8);\n      margin-bottom: 15px;\n      letter-spacing: 4px;\n      animation: glow 1.5s ease-in-out infinite alternate;\n    }\n\n    @keyframes glow {\n      from { text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }\n      to { text-shadow: 0 0 40px rgba(255, 215, 0, 0.9), 0 0 60px rgba(255, 107, 53, 0.4); }\n    }\n\n    #victoryOverlay p {\n      font-size: 1.2rem;\n      color: #a8a8a8;\n      margin-bottom: 15px;\n    }\n\n    #victoryStats {\n      color: #00d9ff;\n      font-size: 1rem;\n      margin-bottom: 30px;\n      font-family: 'Orbitron', monospace;\n    }\n\n    #nextLevelBtn {\n      font-family: 'Orbitron', monospace;\n      font-size: 1.1rem;\n      font-weight: 600;\n      padding: 15px 45px;\n      background: linear-gradient(135deg, #ffd700 0%, #ff6b35 100%);\n      border: none;\n      border-radius: 30px;\n      color: #1a1a2e;\n      cursor: pointer;\n      transition: all 0.3s ease;\n      box-shadow: 0 5px 30px rgba(255, 107, 53, 0.5);\n      letter-spacing: 2px;\n    }\n\n    #nextLevelBtn:hover {\n      transform: translateY(-3px);\n      box-shadow: 0 8px 40px rgba(255, 215, 0, 0.7);\n    }\n\n    #tooltip {\n      position: absolute;\n      background: rgba(15, 15, 26, 0.95);\n      border: 1px solid #ffd700;\n      padding: 8px 14px;\n      border-radius: 15px;\n      font-size: 0.85rem;\n      color: #e8e8e8;\n      pointer-events: none;\n      opacity: 0;\n      transition: opacity 0.2s ease;\n      white-space: nowrap;\n      z-index: 50;\n    }\n\n    #tooltip.show {\n      opacity: 1;\n    }\n\n    #loadingScreen {\n      position: fixed;\n      top: 0;\n      left: 0;\n      right: 0;\n      bottom: 0;\n      background: linear-gradient(135deg, #0a0a1e 0%, #1a1a2e 100%);\n      display: flex;\n      flex-direction: column;\n      align-items: center;\n      justify-content: center;\n      z-index: 1000;\n      transition: opacity 0.5s ease;\n    }\n\n    #loadingScreen.hidden {\n      opacity: 0;\n      pointer-events: none;\n    }\n\n    .loading-gear {\n      width: 80px;\n      height: 80px;\n      animation: spin 2s linear infinite;\n      filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.6));\n    }\n\n    @keyframes spin {\n      from { transform: rotate(0deg); }\n      to { transform: rotate(360deg); }\n    }\n\n    #loadingScreen p {\n      font-family: 'Orbitron', monospace;\n      margin-top: 20px;\n      color: #ffd700;\n      letter-spacing: 3px;\n    }\n\n    @media (max-width: 768px) {\n      #hud {\n        padding: 0 10px;\n        height: 50px;\n      }\n      #levelIndicator {\n        font-size: 0.9rem;\n        letter-spacing: 1px;\n      }\n      #timer {\n        font-size: 0.85rem;\n        min-width: 85px;\n        padding: 4px 8px;\n      }\n      #highScore {\n        display: none;\n      }\n      #gearStatus {\n        font-size: 0.85rem;\n        padding: 5px 10px;\n      }\n      #victoryOverlay h1 {\n        font-size: 1.8rem;\n      }\n      #nextLevelBtn {\n        font-size: 0.9rem;\n        padding: 12px 30px;\n      }\n    }\n\n    @media (max-height: 600px) {\n      #hud {\n        height: 45px;\n      }\n      #levelIndicator {\n        font-size: 0.85rem;\n      }\n      #timer {\n        font-size: 0.8rem;\n      }\n    }\n  </style>\n</head>\n<body>\n  <div id=\"loadingScreen\">\n    <svg class=\"loading-gear\" viewBox=\"0 0 100 100\">\n      <path fill=\"#ffd700\" d=\"M50 10 L55 25 L70 20 L65 35 L80 40 L68 50 L80 60 L65 65 L70 80 L55 75 L50 90 L45 75 L30 80 L35 65 L20 60 L32 50 L20 40 L35 35 L30 20 L45 25 Z\"/>\n      <circle cx=\"50\" cy=\"50\" r=\"15\" fill=\"#1a1a2e\"/>\n      <circle cx=\"50\" cy=\"50\" r=\"8\" fill=\"#ffd700\"/>\n    </svg>\n    <p>INITIALIZING</p>\n  </div>\n\n  <div id=\"gameContainer\">\n    <canvas id=\"gameCanvas\"></canvas>\n    <div id=\"hud\">\n      <div class=\"hud-section\">\n        <span id=\"levelIndicator\">LEVEL 1</span>\n        <span id=\"highScore\">BEST: --</span>\n      </div>\n      <div class=\"hud-section\">\n        <span id=\"timer\">00:00.0</span>\n        <span id=\"gearStatus\">0/0 ALIGNED</span>\n      </div>\n      <div class=\"hud-section\">\n        <button id=\"volumeBtn\" title=\"Toggle Sound\">\n          <svg viewBox=\"0 0 24 24\">\n            <path d=\"M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z\"/>\n          </svg>\n        </button>\n        <button id=\"resetBtn\" title=\"Reset Level\">\n          <svg viewBox=\"0 0 24 24\">\n            <path d=\"M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z\"/>\n          </svg>\n        </button>\n      </div>\n    </div>\n    <div id=\"victoryOverlay\">\n      <h1>GATE UNLOCKED</h1>\n      <p>All gears aligned perfectly!</p>\n      <div id=\"victoryStats\">Time: 00:00.0</div>\n      <button id=\"nextLevelBtn\">NEXT LEVEL</button>\n    </div>\n    <div id=\"tooltip\">Click to select, drag to rotate</div>\n  </div>\n\n  <script>\n    // ==================== AUDIO ENGINE ====================\n    class AudioEngine {\n      constructor() {\n        this.ctx = null;\n        this.masterGain = null;\n        this.muted = false;\n        this.initialized = false;\n        this.activeSounds = new Map();\n      }\n\n      init() {\n        if (this.initialized) return;\n        try {\n          this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n          this.masterGain = this.ctx.createGain();\n          this.masterGain.connect(this.ctx.destination);\n          this.masterGain.gain.value = 0.35;\n          this.initialized = true;\n        } catch (e) {\n          console.warn('Web Audio API not supported');\n        }\n      }\n\n      toggleMute() {\n        this.muted = !this.muted;\n        if (this.masterGain) {\n          this.masterGain.gain.value = this.muted ? 0 : 0.35;\n        }\n        return this.muted;\n      }\n\n      playSelect() {\n        if (!this.initialized || this.muted) return;\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.connect(gain);\n        gain.connect(this.masterGain);\n        osc.frequency.value = 900;\n        osc.type = 'square';\n        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);\n        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);\n        osc.start();\n        osc.stop(this.ctx.currentTime + 0.05);\n      }\n\n      startRotate(gearId) {\n        if (!this.initialized || this.muted) return;\n        if (this.activeSounds.has(gearId)) return;\n        \n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        const filter = this.ctx.createBiquadFilter();\n        \n        osc.connect(filter);\n        filter.connect(gain);\n        gain.connect(this.masterGain);\n        \n        osc.type = 'sawtooth';\n        osc.frequency.value = 70;\n        filter.type = 'lowpass';\n        filter.frequency.value = 250;\n        gain.gain.value = 0.06;\n        \n        osc.start();\n        this.activeSounds.set(gearId, { osc, gain, filter });\n      }\n\n      updateRotate(gearId, intensity) {\n        if (!this.activeSounds.has(gearId)) return;\n        const { gain, osc } = this.activeSounds.get(gearId);\n        osc.frequency.value = 60 + intensity * 50;\n        gain.gain.value = 0.04 + intensity * 0.06;\n      }\n\n      stopRotate(gearId) {\n        if (!this.activeSounds.has(gearId)) return;\n        const { osc, gain } = this.activeSounds.get(gearId);\n        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);\n        osc.stop(this.ctx.currentTime + 0.1);\n        this.activeSounds.delete(gearId);\n      }\n\n      playMesh() {\n        if (!this.initialized || this.muted) return;\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.connect(gain);\n        gain.connect(this.masterGain);\n        osc.frequency.value = 460;\n        osc.type = 'triangle';\n        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);\n        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.08);\n        osc.start();\n        osc.stop(this.ctx.currentTime + 0.08);\n      }\n\n      playAlignment() {\n        if (!this.initialized || this.muted) return;\n        const freqs = [523.25, 659.25, 783.99];\n        freqs.forEach((freq, i) => {\n          setTimeout(() => {\n            const osc = this.ctx.createOscillator();\n            const gain = this.ctx.createGain();\n            osc.connect(gain);\n            gain.connect(this.masterGain);\n            osc.frequency.value = freq;\n            osc.type = 'sine';\n            gain.gain.setValueAtTime(0.12, this.ctx.currentTime);\n            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);\n            osc.start();\n            osc.stop(this.ctx.currentTime + 0.3);\n          }, i * 100);\n        });\n      }\n\n      playSuccess() {\n        if (!this.initialized || this.muted) return;\n        const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5];\n        notes.forEach((freq, i) => {\n          setTimeout(() => {\n            const osc = this.ctx.createOscillator();\n            const gain = this.ctx.createGain();\n            osc.connect(gain);\n            gain.connect(this.masterGain);\n            osc.frequency.value = freq;\n            osc.type = 'sine';\n            gain.gain.setValueAtTime(0.15, this.ctx.currentTime);\n            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);\n            osc.start();\n            osc.stop(this.ctx.currentTime + 0.5);\n          }, i * 120);\n        });\n      }\n\n      playGateOpen() {\n        if (!this.initialized || this.muted) return;\n        const rumble = this.ctx.createOscillator();\n        const rumbleGain = this.ctx.createGain();\n        const noise = this.ctx.createBufferSource();\n        const noiseGain = this.ctx.createGain();\n        \n        rumble.connect(rumbleGain);\n        rumbleGain.connect(this.masterGain);\n        rumble.type = 'sawtooth';\n        rumble.frequency.value = 45;\n        rumbleGain.gain.setValueAtTime(0.25, this.ctx.currentTime);\n        rumbleGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.8);\n        rumble.start();\n        rumble.stop(this.ctx.currentTime + 0.8);\n\n        // Creak sound using filtered noise\n        const bufferSize = this.ctx.sampleRate * 0.6;\n        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);\n        const data = buffer.getChannelData(0);\n        for (let i = 0; i < bufferSize; i++) {\n          data[i] = (Math.random() * 2 - 1) * 0.5;\n        }\n        noise.buffer = buffer;\n        const noiseFilter = this.ctx.createBiquadFilter();\n        noise.connect(noiseFilter);\n        noiseFilter.connect(noiseGain);\n        noiseGain.connect(this.masterGain);\n        noiseFilter.type = 'bandpass';\n        noiseFilter.frequency.value = 800;\n        noiseGain.gain.setValueAtTime(0.15, this.ctx.currentTime);\n        noiseGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.6);\n        noise.start();\n        noise.stop(this.ctx.currentTime + 0.6);\n      }\n\n      playReset() {\n        if (!this.initialized || this.muted) return;\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.connect(gain);\n        gain.connect(this.masterGain);\n        osc.frequency.setValueAtTime(350, this.ctx.currentTime);\n        osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.15);\n        osc.type = 'square';\n        gain.gain.setValueAtTime(0.12, this.ctx.currentTime);\n        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);\n        osc.start();\n        osc.stop(this.ctx.currentTime + 0.15);\n      }\n\n      playComplete() {\n        if (!this.initialized || this.muted) return;\n        const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.5];\n        notes.forEach((freq, i) => {\n          setTimeout(() => {\n            const osc = this.ctx.createOscillator();\n            const gain = this.ctx.createGain();\n            osc.connect(gain);\n            gain.connect(this.masterGain);\n            osc.frequency.value = freq;\n            osc.type = 'triangle';\n            gain.gain.setValueAtTime(0.15, this.ctx.currentTime);\n            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.6);\n            osc.start();\n            osc.stop(this.ctx.currentTime + 0.6);\n          }, i * 100);\n        });\n      }\n    }\n\n    // ==================== GEAR CLASS ====================\n    class Gear {\n      constructor(config) {\n        this.id = config.id;\n        this.x = config.x;\n        this.y = config.y;\n        this.radius = config.radius;\n        this.teeth = config.teeth;\n        this.startAngle = config.startAngle || 0;\n        this.targetAngle = config.targetAngle || 0;\n        this.type = config.type || 'slave';\n        this.rotationSpeed = config.rotationSpeed || 2;\n        this.angle = this.startAngle;\n        this.targetAngleNormalized = this.normalizeAngle(this.targetAngle);\n        this.isAligned = false;\n        this.isSelected = false;\n        this.rotationVelocity = 0;\n        this.meshPartners = [];\n        this.dustParticles = [];\n      }\n\n      normalizeAngle(angle) {\n        return ((angle % 360) + 360) % 360;\n      }\n\n      getAngleDifference() {\n        const diff = Math.abs(this.normalizeAngle(this.angle) - this.targetAngleNormalized);\n        return Math.min(diff, 360 - diff);\n      }\n\n      checkAlignment() {\n        const diff = this.getAngleDifference();\n        const wasAligned = this.isAligned;\n        this.isAligned = diff <= 3 || diff >= 357;\n        return !wasAligned && this.isAligned;\n      }\n\n      containsPoint(px, py) {\n        const dx = px - this.x;\n        const dy = py - this.y;\n        return Math.sqrt(dx * dx + dy * dy) <= this.radius + 18;\n      }\n\n      draw(ctx, time) {\n        ctx.save();\n        ctx.translate(this.x, this.y);\n\n        ctx.shadowColor = 'transparent';\n        ctx.shadowBlur = 0;\n\n        // Selection glow\n        if (this.isSelected) {\n          const pulse = Math.sin(time * 0.005) * 0.3 + 0.7;\n          ctx.shadowColor = '#ffd700';\n          ctx.shadowBlur = 25 * pulse;\n        }\n\n        // Alignment glow\n        if (this.isAligned) {\n          ctx.shadowColor = '#00ff88';\n          ctx.shadowBlur = 18;\n        }\n\n        const toothHeight = this.radius * 0.16;\n        let baseColor, accentColor, darkColor;\n        \n        switch (this.type) {\n          case 'master':\n            baseColor = '#ff6b35';\n            accentColor = '#ffd700';\n            darkColor = '#8b3a1a';\n            break;\n          case 'locked':\n            baseColor = '#8b4513';\n            accentColor = '#cd853f';\n            darkColor = '#5a2e0c';\n            break;\n          case 'lever':\n            baseColor = '#00d9ff';\n            accentColor = '#7dffff';\n            darkColor = '#006a7a';\n            break;\n          default:\n            baseColor = '#5a5a7a';\n            accentColor = '#8a8aaa';\n            darkColor = '#3a3a5a';\n        }\n\n        const gradient = ctx.createRadialGradient(-this.radius * 0.3, -this.radius * 0.3, 0, 0, 0, this.radius);\n        gradient.addColorStop(0, accentColor);\n        gradient.addColorStop(0.5, baseColor);\n        gradient.addColorStop(1, darkColor);\n\n        // Draw teeth\n        ctx.fillStyle = gradient;\n        ctx.beginPath();\n        const toothWidth = (2 * Math.PI) / (this.teeth * 2);\n        \n        for (let i = 0; i < this.teeth; i++) {\n          const a1 = (i / this.teeth) * Math.PI * 2 + this.angle;\n          const a2 = a1 + toothWidth * 0.4;\n          const a3 = a1 + toothWidth;\n          \n          ctx.lineTo(\n            Math.cos(a1 - toothWidth * 0.3) * this.radius,\n            Math.sin(a1 - toothWidth * 0.3) * this.radius\n          );\n          ctx.lineTo(\n            Math.cos(a1 - toothWidth * 0.1) * (this.radius + toothHeight),\n            Math.sin(a1 - toothWidth * 0.1) * (this.radius + toothHeight)\n          );\n          ctx.lineTo(\n            Math.cos(a1 + toothWidth * 0.5) * (this.radius + toothHeight),\n            Math.sin(a1 + toothWidth * 0.5) * (this.radius + toothHeight)\n          );\n          ctx.lineTo(\n            Math.cos(a1 + toothWidth * 0.7) * this.radius,\n            Math.sin(a1 + toothWidth * 0.7) * this.radius\n          );\n        }\n        ctx.closePath();\n        ctx.fill();\n        ctx.strokeStyle = darkColor;\n        ctx.lineWidth = 1.5;\n        ctx.stroke();\n\n        ctx.shadowColor = 'transparent';\n        ctx.shadowBlur = 0;\n\n        // Main body\n        const bodyGrad = ctx.createRadialGradient(-this.radius * 0.4, -this.radius * 0.4, 0, 0, 0, this.radius * 0.9);\n        bodyGrad.addColorStop(0, accentColor);\n        bodyGrad.addColorStop(0.7, baseColor);\n        bodyGrad.addColorStop(1, darkColor);\n        ctx.beginPath();\n        ctx.arc(0, 0, this.radius * 0.88, 0, Math.PI * 2);\n        ctx.fillStyle = bodyGrad;\n        ctx.fill();\n        ctx.strokeStyle = darkColor;\n        ctx.lineWidth = 2;\n        ctx.stroke();\n\n        // Spokes\n        const spokeCount = Math.max(4, Math.floor(this.teeth / 3));\n        ctx.strokeStyle = darkColor;\n        ctx.lineWidth = this.radius * 0.08;\n        for (let i = 0; i < spokeCount; i++) {\n          const sa = (i / spokeCount) * Math.PI * 2 + this.angle;\n          ctx.beginPath();\n          ctx.moveTo(Math.cos(sa) * this.radius * 0.2, Math.sin(sa) * this.radius * 0.2);\n          ctx.lineTo(Math.cos(sa) * this.radius * 0.78, Math.sin(sa) * this.radius * 0.78);\n          ctx.stroke();\n        }\n\n        // Center hub\n        const hubGrad = ctx.createRadialGradient(-this.radius * 0.05, -this.radius * 0.05, 0, 0, 0, this.radius * 0.25);\n        hubGrad.addColorStop(0, accentColor);\n        hubGrad.addColorStop(0.6, baseColor);\n        hubGrad.addColorStop(1, darkColor);\n        ctx.beginPath();\n        ctx.arc(0, 0, this.radius * 0.25, 0, Math.PI * 2);\n        ctx.fillStyle = hubGrad;\n        ctx.fill();\n        ctx.strokeStyle = darkColor;\n        ctx.lineWidth = 1.5;\n        ctx.stroke();\n\n        // Center hole\n        ctx.beginPath();\n        ctx.arc(0, 0, this.radius * 0.1, 0, Math.PI * 2);\n        ctx.fillStyle = '#0a0a1e';\n        ctx.fill();\n\n        // Rivets\n        const rivetCount = 6;\n        const rivetRadius = this.radius * 0.42;\n        for (let i = 0; i < rivetCount; i++) {\n          const ra = (i / rivetCount) * Math.PI * 2 + this.angle * 0.3;\n          const rx = Math.cos(ra) * rivetRadius;\n          const ry = Math.sin(ra) * rivetRadius;\n          \n          ctx.beginPath();\n          ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);\n          const rg = ctx.createRadialGradient(rx - 1, ry - 1, 0, rx, ry, 3.5);\n          rg.addColorStop(0, '#aaaabc');\n          rg.addColorStop(1, '#3a3a5a');\n          ctx.fillStyle = rg;\n          ctx.fill();\n          ctx.strokeStyle = darkColor;\n          ctx.lineWidth = 0.5;\n          ctx.stroke();\n        }\n\n        // Target indicators\n        if (!this.isAligned) {\n          const indicatorPulse = Math.sin(time * 0.004) * 0.3 + 0.7;\n          const proximity = 1 - (this.getAngleDifference() / 180);
+          ctx.strokeStyle = `rgba(255, 215, 0, ${indicatorPulse * 0.5})`;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius * 1.35, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Target angle marker
+          ctx.save();
+          ctx.rotate(this.targetAngle * Math.PI / 180);
+          ctx.beginPath();
+          ctx.moveTo(this.radius * 0.9, -5);
+          ctx.lineTo(this.radius * 1.2, -3);
+          ctx.lineTo(this.radius * 1.2, 3);
+          ctx.lineTo(this.radius * 0.9, 5);
+          ctx.closePath();
+          ctx.fillStyle = `rgba(0, 255, 136, ${indicatorPulse * 0.7})`;
+          ctx.fill();
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    // ==================== LEVER CLASS ====================
+    class Lever {
+      constructor(config) {
+        this.id = config.id;
+        this.x = config.x;
+        this.y = config.y;
+        this.length = config.length || 80;
+        this.targetAngle = config.targetAngle || 45;
+        this.angle = config.startAngle || -45;
+        this.isSelected = false;
+        this.isPulled = false;
+        this.targetReached = false;
+        this.animationProgress = 0;
+      }
+
+      containsPoint(px, py) {
+        const handleX = this.x + Math.cos(this.angle * Math.PI / 180) * this.length;
+        const handleY = this.y + Math.sin(this.angle * Math.PI / 180) * this.length;
+        const dx = px - handleX;
+        const dy = py - handleY;
+        return Math.sqrt(dx * dx + dy * dy) <= 20;
+      }
+
+      draw(ctx, time) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // Base mount
+        ctx.fillStyle = '#3a3a4a';
+        ctx.beginPath();
+        ctx.arc(0, 0, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#2a2a3a';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Arm
+        ctx.rotate(this.angle * Math.PI / 180);
+        
+        const gradient = ctx.createLinearGradient(0, -8, 0, 8);
+        gradient.addColorStop(0, '#00d9ff');
+        gradient.addColorStop(0.5, '#008899');
+        gradient.addColorStop(1, '#004455');
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.roundRect(0, -6, this.length, 12, 4);
+        ctx.fill();
+        ctx.strokeStyle = '#004455';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Handle
+        const handleX = this.length;
+        const pulse = Math.sin(time * 0.005) * 0.2 + 0.8;
+        
+        ctx.shadowColor = this.isSelected ? '#ffd700' : '#00d9ff';
+        ctx.shadowBlur = this.isSelected ? 15 : 8 * pulse;
+        
+        ctx.beginPath();
+        ctx.arc(handleX, 0, 14, 0, Math.PI * 2);
+        ctx.fillStyle = this.isSelected ? '#ffd700' : '#00d9ff';
+        ctx.fill();
+        ctx.strokeStyle = '#008899';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Handle grip lines
+        ctx.strokeStyle = '#004455';
+        ctx.lineWidth = 1.5;
+        for (let i = -6; i <= 6; i += 4) {
+          ctx.beginPath();
+          ctx.moveTo(handleX - 8, i);
+          ctx.lineTo(handleX + 8, i);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    // ==================== GATE CLASS ====================
+    class Gate {
+      constructor(config) {
+        this.x = config.x;
+        this.y = config.y;
+        this.width = config.width || 200;
+        this.height = config.height || 300;
+        this.isOpen = false;
+        this.openProgress = 0;
+        this.sections = config.sections || 4;
+        this.barColor = '#8b4513';
+        this.accentColor = '#cd853f';
+      }
+
+      draw(ctx, time) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        // Frame
+        const frameGrad = ctx.createLinearGradient(-this.width/2 - 15, 0, this.width/2 + 15, 0);
+        frameGrad.addColorStop(0, '#4a3728');
+        frameGrad.addColorStop(0.5, '#6b4c35');
+        frameGrad.addColorStop(1, '#4a3728');
+        
+        // Left frame
+        ctx.fillStyle = frameGrad;
+        ctx.fillRect(-this.width/2 - 15, -this.height/2 - 20, 15, this.height + 40);
+        ctx.strokeStyle = '#3a2718';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(-this.width/2 - 15, -this.height/2 - 20, 15, this.height + 40);
+
+        // Right frame
+        ctx.fillRect(this.width/2, -this.height/2 - 20, 15, this.height + 40);
+        ctx.strokeRect(this.width/2, -this.height/2 - 20, 15, this.height + 40);
+
+        // Top frame
+        ctx.fillRect(-this.width/2 - 15, -this.height/2 - 20, this.width + 30, 15);
+        ctx.strokeRect(-this.width/2 - 15, -this.height/2 - 20, this.width + 30, 15);
+
+        // Bottom frame
+        ctx.fillRect(-this.width/2 - 15, this.height/2, this.width + 30, 15);
+        ctx.strokeRect(-this.width/2 - 15, this.height/2, this.width + 30, 15);
+
+        // Bars
+        const barSpacing = this.width / this.sections;
+        const openOffset = this.openProgress * (this.width / 2 + 10);
+        
+        for (let i = 0; i <= this.sections; i++) {
+          const bx = -this.width/2 + i * barSpacing - openOffset * (i <= this.sections/2 ? 1 : -1) * (i - this.sections/2);
+          
+          const barGrad = ctx.createLinearGradient(bx - 4, 0, bx + 4, 0);
+          barGrad.addColorStop(0, this.accentColor);
+          barGrad.addColorStop(0.5, this.barColor);
+          barGrad.addColorStop(1, '#5a3010');
+          
+          ctx.fillStyle = barGrad;
+          ctx.fillRect(bx - 4, -this.height/2, 8, this.height);
+          ctx.strokeStyle = '#3a2008';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(bx - 4, -this.height/2, 8, this.height);
+
+          // Rivets on bars
+          ctx.fillStyle = '#888';
+          ctx.beginPath();
+          ctx.arc(bx, -this.height/2 + 10, 3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(bx, this.height/2 - 10, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Decorative elements
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.arc(-this.width/2 - 8, -this.height/2 - 12, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(this.width/2 + 8, -this.height/2 - 12, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      }
+    }
+
+    // ==================== DUST PARTICLE CLASS ====================
+    class DustParticle {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 4;
+        this.vy = (Math.random() - 0.5) * 4;
+        this.life = 1;
+        this.decay = 0.02 + Math.random() * 0.02;
+        this.size = 2 + Math.random() * 3;
+        this.color = Math.random() > 0.5 ? '#ffd700' : '#ff6b35';
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.1;
+        this.life -= this.decay;
+        this.size *= 0.98;
+      }
+
+      draw(ctx) {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      isDead() {
+        return this.life <= 0;
+      }
+    }
+
+    // ==================== LEVEL DEFINITIONS ====================
+    const LEVELS = [
+      {
+        name: "The First Mechanism",
+        gears: [
+          { id: 'master', x: 0.3, y: 0.5, radius: 60, teeth: 16, startAngle: 45, targetAngle: 90, type: 'master' }
+        ],
+        levers: [],
+        gate: { x: 0.75, y: 0.5, width: 100, height: 200 },
+        description: "Rotate the golden gear to align its teeth"
+      },
+      {
+        name: "Twin Gears",
+        gears: [
+          { id: 'master', x: 0.3, y: 0.5, radius: 55, teeth: 14, startAngle: 30, targetAngle: 120, type: 'master' },
+          { id: 'slave1', x: 0.55, y: 0.5, radius: 45, teeth: 12, startAngle: 60, targetAngle: 0, type: 'slave' }
+        ],
+        levers: [],
+        gate: { x: 0.78, y: 0.5, width: 90, height: 180 },
+        description: "Master gear drives the slave gear"
+      },
+      {
+        name: "The Locked Wheel",
+        gears: [
+          { id: 'master', x: 0.3, y: 0.5, radius: 50, teeth: 12, startAngle: 0, targetAngle: 45, type: 'master' },
+          { id: 'locked1', x: 0.52, y: 0.35, radius: 40, teeth: 10, startAngle: 90, targetAngle: 180, type: 'locked' },
+          { id: 'slave1', x: 0.52, y: 0.65, radius: 35, teeth: 9, startAngle: 45, targetAngle: 270, type: 'slave' }
+        ],
+        levers: [],
+        gate: { x: 0.78, y: 0.5, width: 85, height: 170 },
+        description: "Locked gears cannot be moved"
+      },
+      {
+        name: "The Power Lever",
+        gears: [
+          { id: 'slave1', x: 0.35, y: 0.5, radius: 55, teeth: 14, startAngle: 120, targetAngle: 60, type: 'slave' },
+          { id: 'slave2', x: 0.6, y: 0.5, radius: 45, teeth: 12, startAngle: 200, targetAngle: 280, type: 'slave' }
+        ],
+        levers: [
+          { id: 'lever1', x: 0.2, y: 0.75, length: 70, targetAngle: 45, startAngle: -45 }
+        ],
+        gate: { x: 0.78, y: 0.5, width: 80, height: 160 },
+        description: "Pull the lever to activate the mechanism"
+      },
+      {
+        name: "Gear Chain",
+        gears: [
+          { id: 'master', x: 0.2, y: 0.5, radius: 45, teeth: 12, startAngle: 75, targetAngle: 165, type: 'master' },
+          { id: 'slave1', x: 0.38, y: 0.5, radius: 40, teeth: 10, startAngle: 15, targetAngle: 105, type: 'slave' },
+          { id: 'slave2', x: 0.55, y: 0.5, radius: 35, teeth: 9, startAngle: 45, targetAngle: 135, type: 'slave' },
+          { id: 'slave3', x: 0.7, y: 0.5, radius: 30, teeth: 8, startAngle: 90, targetAngle: 180, type: 'slave' }
+        ],
+        levers: [],
+        gate: { x: 0.85, y: 0.5, width: 75, height: 150 },
+        description: "A chain of interconnected gears"
+      },
+      {
+        name: "Complex Mechanism",
+        gears: [
+          { id: 'master', x: 0.28, y: 0.45, radius: 50, teeth: 14, startAngle: 30, targetAngle: 150, type: 'master' },
+          { id: 'locked1', x: 0.45, y: 0.3, radius: 35, teeth: 10, startAngle: 60, targetAngle: 240, type: 'locked' },
+          { id: 'slave1', x: 0.45, y: 0.6, radius: 40, teeth: 11, startAngle: 120, targetAngle: 300, type: 'slave' },
+          { id: 'slave2', x: 0.62, y: 0.45, radius: 35, teeth: 9, startAngle: 200, targetAngle: 20, type: 'slave' }
+        ],
+        levers: [],
+        gate: { x: 0.8, y: 0.45, width: 85, height: 170 },
+        description: "Navigate through locked gears"
+      },
+      {
+        name: "The Master Key",
+        gears: [
+          { id: 'slave1', x: 0.25, y: 0.5, radius: 50, teeth: 14, startAngle: 0, targetAngle: 90, type: 'slave' },
+          { id: 'slave2', x: 0.45, y: 0.5, radius: 45, teeth: 12, startAngle: 180, targetAngle: 270, type: 'slave' }
+        ],
+        levers: [
+          { id: 'lever1', x: 0.15, y: 0.75, length: 60, targetAngle: 60, startAngle: -60 }
+        ],
+        gate: { x: 0.75, y: 0.5, width: 100, height: 200 },
+        description: "Multiple controls, one goal"
+      },
+      {
+        name: "Precision Required",
+        gears: [
+          { id: 'master', x: 0.25, y: 0.5, radius: 55, teeth: 16, startAngle: 45, targetAngle: 135, type: 'master' },
+          { id: 'locked1', x: 0.48, y: 0.35, radius: 40, teeth: 12, startAngle: 30, targetAngle: 210, type: 'locked' },
+          { id: 'slave1', x: 0.48, y: 0.65, radius: 38, teeth: 11, startAngle: 150, targetAngle: 330, type: 'slave' },
+          { id: 'slave2', x: 0.68, y: 0.5, radius: 32, teeth: 9, startAngle: 60, targetAngle: 240, type: 'slave' }
+        ],
+        levers: [],
+        gate: { x: 0.82, y: 0.5, width: 80, height: 160 },
+        description: "Even more gears to master"
+      },
+      {
+        name: "The Final Challenge",
+        gears: [
+          { id: 'master', x: 0.2, y: 0.4, radius: 48, teeth: 14, startAngle: 20, targetAngle: 110, type: 'master' },
+          { id: 'locked1', x: 0.38, y: 0.25, radius: 38, teeth: 11, startAngle: 80, targetAngle: 260, type: 'locked' },
+          { id: 'slave1', x: 0.38, y: 0.55, radius: 42, teeth: 12, startAngle: 160, targetAngle: 340, type: 'slave' },
+          { id: 'locked2', x: 0.55, y: 0.4, radius: 35, teeth: 10, startAngle: 40, targetAngle: 220, type: 'locked' },
+          { id: 'slave2', x: 0.55, y: 0.7, radius: 30, teeth: 9, startAngle: 100, targetAngle: 280, type: 'slave' },
+          { id: 'slave3', x: 0.72, y: 0.4, radius: 28, teeth: 8, startAngle: 180, targetAngle: 0, type: 'slave' }
+        ],
+        levers: [],
+        gate: { x: 0.85, y: 0.4, width: 75, height: 150 },
+        description: "The ultimate test of skill"
+      },
+      {
+        name: "Grand Finale",
+        gears: [
+          { id: 'slave1', x: 0.18, y: 0.45, radius: 45, teeth: 13, startAngle: 0, targetAngle: 90, type: 'slave' },
+          { id: 'slave2', x: 0.35, y: 0.45, radius: 40, teeth: 11, startAngle: 120, targetAngle: 210, type: 'slave' },
+          { id: 'locked1', x: 0.5, y: 0.3, radius: 35, teeth: 10, startAngle: 60, targetAngle: 240, type: 'locked' },
+          { id: 'slave3', x: 0.5, y: 0.6, radius: 38, teeth: 11, startAngle: 200, targetAngle: 290, type: 'slave' },
+          { id: 'slave4', x: 0.68, y: 0.45, radius: 32, teeth: 9, startAngle: 30, targetAngle: 120, type: 'slave' }
+        ],
+        levers: [
+          { id: 'lever1', x: 0.1, y: 0.75, length: 55, targetAngle: 50, startAngle: -50 }
+        ],
+        gate: { x: 0.85, y: 0.45, width: 90, height: 180 },
+        description: "Gears and levers unite!"
+      }
+    ];
+
+    // ==================== GAME ENGINE ====================
+    class Game {
+      constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.audio = new AudioEngine();
+        
+        this.currentLevel = 0;
+        this.gears = [];
+        this.levers = [];
+        this.gate = null;
+        this.particles = [];
+        
+        this.selectedGear = null;
+        this.selectedLever = null;
+        this.isDragging = false;
+        this.lastMouseX = 0;
+        this.lastMouseY = 0;
+        
+        this.timer = 0;
+        this.timerStarted = false;
+        this.levelComplete = false;
+        this.gameComplete = false;
+        
+        this.highScores = this.loadHighScores();
+        
+        this.setupCanvas();
+        this.setupEventListeners();
+        this.loadLevel(0);
+        
+        this.lastTime = 0;
+        this.gameLoop(0);
+      }
+
+      loadHighScores() {
+        try {
+          return JSON.parse(localStorage.getItem('gearGateHighScores')) || {};
+        } catch (e) {
+          return {};
+        }
+      }
+
+      saveHighScores() {
+        try {
+          localStorage.setItem('gearGateHighScores', JSON.stringify(this.highScores));
+        } catch (e) {}
+      }
+
+      setupCanvas() {
+        const resize = () => {
+          const container = document.getElementById('gameContainer');
+          const rect = container.getBoundingClientRect();
+          this.canvas.width = rect.width * window.devicePixelRatio;
+          this.canvas.height = rect.height * window.devicePixelRatio;
+          this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+          this.canvasWidth = rect.width;
+          this.canvasHeight = rect.height;
+        };
+        
+        resize();
+        window.addEventListener('resize', resize);
+      }
+
+      setupEventListeners() {
+        // Mouse events
+        this.canvas.addEventListener('mousedown', (e) => this.handlePointerDown(e));
+        this.canvas.addEventListener('mousemove', (e) => this.handlePointerMove(e));
+        this.canvas.addEventListener('mouseup', () => this.handlePointerUp());
+        this.canvas.addEventListener('mouseleave', () => this.handlePointerUp());
+
+        // Touch events
+        this.canvas.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          this.handlePointerDown(e.touches[0]);
+        });
+        this.canvas.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          this.handlePointerMove(e.touches[0]);
+        });
+        this.canvas.addEventListener('touchend', () => this.handlePointerUp());
+
+        // HUD buttons
+        document.getElementById('resetBtn').addEventListener('click', () => this.resetLevel());
+        document.getElementById('volumeBtn').addEventListener('click', () => {
+          this.audio.init();
+          const muted = this.audio.toggleMute();
+          document.getElementById('volumeBtn').classList.toggle('muted', muted);
+        });
+        document.getElementById('nextLevelBtn').addEventListener('click', () => this.nextLevel());
+
+        // Initialize audio on first interaction
+        document.body.addEventListener('click', () => this.audio.init(), { once: true });
+        document.body.addEventListener('touchstart', () => this.audio.init(), { once: true });
+      }
+
+      getCanvasCoords(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
+      }
+
+      handlePointerDown(e) {
+        if (this.levelComplete) return;
+        
+        const coords = this.getCanvasCoords(e);
+        this.lastMouseX = coords.x;
+        this.lastMouseY = coords.y;
+
+        // Check levers first
+        for (const lever of this.levers) {
+          if (lever.containsPoint(coords.x, coords.y)) {
+            this.selectedLever = lever;
+            lever.isSelected = true;
+            this.isDragging = true;
+            this.audio.playSelect();
+            return;
+          }
+        }
+
+        // Check gears
+        for (const gear of this.gears) {
+          if (gear.containsPoint(coords.x, coords.y)) {
+            if (gear.type === 'locked') {
+              this.audio.playSelect();
+              return;
+            }
+            this.selectedGear = gear;
+            gear.isSelected = true;
+            this.isDragging = true;
+            this.audio.playSelect();
+            this.audio.startRotate(gear.id);
+            
+            if (!this.timerStarted) {
+              this.timerStarted = true;
+            }
+            return;
+          }
+        }
+      }
+
+      handlePointerMove(e) {
+        if (!this.isDragging) return;
+        
+        const coords = this.getCanvasCoords(e);
+        const dx = coords.x - this.lastMouseX;
+        const dy = coords.y - this.lastMouseY;
+
+        if (this.selectedLever) {
+          const angle = Math.atan2(coords.y - this.selectedLever.y, coords.x - this.selectedLever.x);
+          const degrees = angle * 180 / Math.PI;
+          this.selectedLever.angle = Math.max(-60, Math.min(60, degrees));
+          
+          // Check if lever reached target
+          if (!this.selectedLever.targetReached) {
+            if (Math.abs(this.selectedLever.angle - this.selectedLever.targetAngle) < 5) {
+              this.selectedLever.targetReached = true;
+              this.selectedLever.angle = this.selectedLever.targetAngle;
+              this.audio.playAlignment();
+              this.activateGearsFromLever(this.selectedLever);
+            }
+          }
+        } else if (this.selectedGear) {
+          const sensitivity = 0.5;
+          this.selectedGear.angle += dx * sensitivity;
+          
+          const intensity = Math.min(1, Math.abs(dx) / 10);
+          this.audio.updateRotate(this.selectedGear.id, intensity);
+          
+          // Create dust particles when rotating
+          if (Math.random() > 0.7) {
+            const angle = Math.atan2(coords.y - this.selectedGear.y, coords.x - this.selectedGear.x);
+            const dist = this.selectedGear.radius + 10;
+            this.particles.push(new DustParticle(
+              this.selectedGear.x + Math.cos(angle) * dist,
+              this.selectedGear.y + Math.sin(angle) * dist
+            ));
+          }
+          
+          // Check alignment
+          if (this.selectedGear.checkAlignment()) {
+            this.audio.playAlignment();
+            this.spawnAlignmentParticles(this.selectedGear);
+            this.updateGearStatus();
+            this.checkVictory();
+          }
+        }
+
+        this.lastMouseX = coords.x;
+        this.lastMouseY = coords.y;
+      }
+
+      handlePointerUp() {
+        if (this.selectedGear) {
+          this.audio.stopRotate(this.selectedGear.id);
+          this.selectedGear.isSelected = false;
+          this.selectedGear = null;
+        }
+        if (this.selectedLever) {
+          this.selectedLever.isSelected = false;
+          this.selectedLever = null;
+        }
+        this.isDragging = false;
+      }
+
+      activateGearsFromLever(lever) {
+        // When lever is pulled, activate connected gears
+        for (const gear of this.gears) {
+          if (gear.type === 'slave' && !gear.isAligned) {
+            gear.angle += 180;
+            if (gear.checkAlignment()) {
+              this.audio.playAlignment();
+              this.spawnAlignmentParticles(gear);
+              this.updateGearStatus();
+              this.checkVictory();
+            }
+          }
+        }
+      }
+
+      spawnAlignmentParticles(gear) {
+        for (let i = 0; i < 15; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = gear.radius * 0.8;
+          this.particles.push(new DustParticle(
+            gear.x + Math.cos(angle) * dist,
+            gear.y + Math.sin(angle) * dist
+          ));
+        }
+      }
+
+      loadLevel(levelIndex) {
+        if (levelIndex >= LEVELS.length) {
+          this.gameComplete = true;
+          this.showGameComplete();
+          return;
+        }
+
+        const level = LEVELS[levelIndex];
+        this.currentLevel = levelIndex;
+        
+        this.gears = level.gears.map(g => {
+          const scaled = { ...g };
+          scaled.x = g.x * this.canvasWidth;
+          scaled.y = g.y * this.canvasHeight;
+          return new Gear(scaled);
+        });
+
+        this.levers = level.levers.map(l => {
+          const scaled = { ...l };
+          scaled.x = l.x * this.canvasWidth;
+          scaled.y = l.y * this.canvasHeight;
+          return new Lever(scaled);
+        });
+
+        if (level.gate) {
+          const g = level.gate;
+          this.gate = new Gate({
+            x: g.x * this.canvasWidth,
+            y: g.y * this.canvasHeight,
+            width: g.width,
+            height: g.height
+          });
+        }
+
+        this.particles = [];
+        this.selectedGear = null;
+        this.selectedLever = null;
+        this.isDragging = false;
+        this.timer = 0;
+        this.timerStarted = false;
+        this.levelComplete = false;
+
+        this.updateUI();
+        document.getElementById('victoryOverlay').classList.remove('show');
+        
+        // Update high score display
+        const highScore = this.highScores[levelIndex];
+        document.getElementById('highScore').textContent = highScore ? `BEST: ${this.formatTime(highScore)}` : 'BEST: --';
+      }
+
+      resetLevel() {
+        this.audio.playReset();
+        this.loadLevel(this.currentLevel);
+      }
+
+      nextLevel() {
+        this.audio.playSelect();
+        this.loadLevel(this.currentLevel + 1);
+      }
+
+      updateGearStatus() {
+        const total = this.gears.filter(g => g.type !== 'locked').length;
+        const aligned = this.gears.filter(g => g.type !== 'locked' && g.isAligned).length;
+        const status = document.getElementById('gearStatus');
+        status.textContent = `${aligned}/${total} ALIGNED`;
+        status.classList.toggle('aligned', aligned === total);
+      }
+
+      checkVictory() {
+        const allAligned = this.gears.filter(g => g.type !== 'locked').every(g => g.isAligned);
+        const leverComplete = this.levers.every(l => l.targetReached);
+        
+        if (allAligned && (this.levers.length === 0 || leverComplete) && !this.levelComplete) {
+          this.levelComplete = true;
+          this.audio.playSuccess();
+          
+          // Save high score
+          if (!this.highScores[this.currentLevel] || this.timer < this.highScores[this.currentLevel]) {
+            this.highScores[this.currentLevel] = this.timer;
+            this.saveHighScores();
+          }
+          
+          setTimeout(() => {
+            this.audio.playGateOpen();
+            this.animateGateOpen();
+          }, 500);
+        }
+      }
+
+      animateGateOpen() {
+        const animate = () => {
+          this.gate.openProgress += 0.02;
+          if (this.gate.openProgress >= 1) {
+            this.showVictoryOverlay();
+            return;
+          }
+          requestAnimationFrame(animate);
+        };
+        animate();
+      }
+
+      showVictoryOverlay() {
+        this.audio.playComplete();
+        document.getElementById('victoryStats').textContent = `Time: ${this.formatTime(this.timer)}`;
+        document.getElementById('victoryOverlay').classList.add('show');
+        
+        const btn = document.getElementById('nextLevelBtn');
+        if (this.currentLevel >= LEVELS.length - 1) {
+          btn.textContent = 'PLAY AGAIN';
+        } else {
+          btn.textContent = 'NEXT LEVEL';
+        }
+      }
+
+      showGameComplete() {
+        document.getElementById('victoryOverlay').innerHTML = `
+          <h1>MASTER ENGINEER</h1>
+          <p>You've conquered all mechanisms!</p>
+          <div id="victoryStats">All 10 levels completed</div>
+          <button id="nextLevelBtn" onclick="game.loadLevel(0)">PLAY AGAIN</button>
+        `;
+        document.getElementById('victoryOverlay').classList.add('show');
+      }
+
+      formatTime(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        const tenths = Math.floor((seconds % 1) * 10);
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${tenths}`;
+      }
+
+      updateUI() {
+        document.getElementById('levelIndicator').textContent = `LEVEL ${this.currentLevel + 1}`;
+        document.getElementById('timer').textContent = this.formatTime(this.timer);
+        this.updateGearStatus();
+      }
+
+      update(deltaTime) {
+        if (!this.levelComplete && this.timerStarted) {
+          this.timer += deltaTime / 1000;
+          this.updateUI();
+        }
+
+        // Update particles
+        this.particles = this.particles.filter(p => {
+          p.update();
+          return !p.isDead();
+        });
+      }
+
+      draw(time) {
+        this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+        // Background
+        const bgGrad = this.ctx.createLinearGradient(0, 0, this.canvasWidth, this.canvasHeight);
+        bgGrad.addColorStop(0, '#1a1a2e');
+        bgGrad.addColorStop(0.5, '#16213e');
+        bgGrad.addColorStop(1, '#1a1a2e');
+        this.ctx.fillStyle = bgGrad;
+        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+        // Grid pattern
+        this.ctx.strokeStyle = 'rgba(58, 58, 74, 0.3)';
+        this.ctx.lineWidth = 1;
+        const gridSize = 40;
+        for (let x = 0; x < this.canvasWidth; x += gridSize) {
+          this.ctx.beginPath();
+          this.ctx.moveTo(x, 0);
+          this.ctx.lineTo(x, this.canvasHeight);
+          this.ctx.stroke();
+        }
+        for (let y = 0; y < this.canvasHeight; y += gridSize) {
+          this.ctx.beginPath();
+          this.ctx.moveTo(0, y);
+          this.ctx.lineTo(this.canvasWidth, y);
+          this.ctx.stroke();
+        }
+
+        // Draw gate (behind gears)
+        if (this.gate) {
+          this.gate.draw(this.ctx, time);
+        }
+
+        // Draw levers
+        for (const lever of this.levers) {
+          lever.draw(this.ctx, time);
+        }
+
+        // Draw gears
+        for (const gear of this.gears) {
+          gear.draw(this.ctx, time);
+        }
+
+        // Draw particles
+        for (const particle of this.particles) {
+          particle.draw(this.ctx);
+        }
+      }
+
+      gameLoop(time) {
+        const deltaTime = time - this.lastTime;
+        this.lastTime = time;
+
+        this.update(deltaTime);
+        this.draw(time);
+
+        requestAnimationFrame((t) => this.gameLoop(t));
+      }
+    }
+
+    // ==================== INITIALIZATION ====================
+    let game;
+    
+    window.addEventListener('load', () => {
+      // Hide loading screen after fonts load
+      setTimeout(() => {
+        document.getElementById('loadingScreen').classList.add('hidden');
+        game = new Game();
+      }, 1500);
+    });
+  </script>
+</body>
+</html>
+"}
