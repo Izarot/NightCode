@@ -1,0 +1,147 @@
+JSON Decode Error after continuation: Invalid control character at: line 4 column 11409 (char 13409)
+
+Raw: {
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<title>ChronoShift</title>\n<link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22><text y=%220.9em%22 font-size=%2224%22>⏳</text></svg>\">\n<link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n<canvas id=\"gameCanvas\"></canvas>\n<div id=\"uiOverlay\">\n<div id=\"timer\">TIME: 60.0s</div>\n<div id=\"score\">SCORE: 0</div>\n<div id=\"powerUps\"></div>\n</div>\n<div id=\"menu\" class=\"screen\">\n<h1>CHRONOSHIFT</h1>\n<p>Press SPACE to Start</p>\n</div>\n<div id=\"gameOver\" class=\"screen\">\n<h1>GAME OVER</h1>\n<p>Final Score: <span id=\"finalScore\"></span></p>\n<p>High Score: <span id=\"highScoreDisplay\"></span></p>\n<p>Press R to Restart</p>\n</div>\n<div id=\"pause\" class=\"screen\">\n<h1>PAUSED</h1>\n<button id=\"resumeBtn\">RESUME</button>\n<button id=\"restartBtn\">RESTART</button>\n<button id=\"quitBtn\">QUIT</button>\n</div>\n<script src=\"script.js\"></script>\n</body>\n</html>",
+  "style.css": "html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:#0A0A1A;display:flex;justify-content:center;align-items:center;font-family:sans-serif;color:#0ff;}\n#gameCanvas{display:block;max-width:100%;max-height:100%;background:#000;}\n#uiOverlay{position:absolute;top:10px;left:10px;pointer-events:none;text-shadow:0 0 4px #0ff;font-family:monospace;}\n#timer,#score{margin-bottom:5px;font-size:1.2rem;}\n#powerUps{display:flex;gap:10px;}\n.screen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;flex-direction:column;justify-content:center;align-items:center;color:#0ff;display:none;}\n.screen h1{font-size:3rem;margin-bottom:1rem;}\n.screen p{font-size:1.5rem;margin-bottom:1rem;}\n.screen button{margin:0.5rem;padding:0.5rem 1rem;font-size:1rem;background:#0ff;color:#0A0A1A;border:none;border-radius:4px;cursor:pointer;}\n.screen button:hover{background:#0ff;opacity:0.8;}",
+  "script.js": "const canvas = document.getElementById('gameCanvas');\nconst ctx = canvas.getContext('2d');\nlet width, height;\nfunction resize() {\n  width = window.innerWidth;\n  height = window.innerHeight;\n  canvas.width = width;\n  canvas.height = height;\n}\nwindow.addEventListener('resize', resize);\nresize();\n\n// Game states\nconst STATE_MENU = 0;\nconst STATE_PLAYING = 1;\nconst STATE_PAUSED = 2;\nconst STATE_GAMEOVER = 3;\nconst STATE_VICTORY = 4;\nlet gameState = STATE_MENU;\n\n// Timer\nconst MAX_TIME = 60; // seconds\nlet timer = MAX_TIME;\nlet score = 0;\nlet highScore = parseInt(localStorage.getItem('chronoShiftHighScore')) || 0;\n\n// Player\nconst player = {\n  x: width / 2,\n  y: height / 2,\n  vx: 0,\n  vy: 0,\n  radius: 16,\n  color: '#0ff',\n  trail: [],\n  maxTrailLength: 10,\n  acceleration: 0.5,\n  friction: 0.95,\n  maxSpeed: 4,\n  dashSpeedMult: 2,\n  dashDuration: 60, // frames at 60fps = 1 sec\n  dashCooldown: 180, // 3 sec\n  dashTimer: 0,\n  dashCooldownTimer: 0\n};\n\n// Input\nconst keys = {\n  ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false,\n  KeyW: false, KeyS: false, KeyA: false, KeyD: false,\n  Space: false\n};\nwindow.addEventListener('keydown', e => { if (e.code in keys) keys[e.code] = true; });\nwindow.addEventListener('keyup', e => { if (e.code in keys) keys[e.code] = false; });\n\n// Obstacles\nconst obstacles = [];\nconst obstacleTypes = ['blade', 'barrier', 'turret'];\nfunction spawnObstacle() {\n  const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];\n  let radius, rotationSpeed, oscillation = false;\n  switch (type) {\n    case 'blade':\n      radius = 30 + Math.random() * 20;\n      rotationSpeed = (Math.random() * 2 + 1) * (Math.PI / 180); // 1-3 deg/s\n      break;\n    case 'barrier':\n      radius = 40 + Math.random() * 30;\n      rotationSpeed = (Math.random() * 1.5 + 0.5) * (Math.PI / 180);\n      break;\n    case 'turret':\n      radius = 35 + Math.random() * 25;\n      rotationSpeed = (Math.random() * 2 + 0.5) * (Math.PI / 180);\n      break;\n  }\n  // Ensure spawn inside play area with some margin\n  const x = radius + Math.random() * (width - 2 * radius);\n  const y = radius + Math.random() * (height - 2 * radius);\n  obstacles.push({ type, x, y, radius, rotation: 0, rotationSpeed, oscillation })\n}\nlet obstacleSpawnTimer = 0;\nconst OBSTACLE_SPAWN_BASE = 180; // 3 seconds at 60fps\n\n// Power-ups\nconst powerUps = [];\nconst powerUpTypes = ['dilation', 'extension'];\nfunction spawnPowerUp() {\n  const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];\n  const radius = 20;\n  // Find a position not too close to obstacles\n  let x, y, valid = false;\n  for (let i = 0; i < 100; i++) {\n    x = radius + Math.random() * (width - 2 * radius);\n    y = radius + Math.random() * (height - 2 * radius);\n    valid = true;\n    for (const ob of obstacles) {\n      const dx = x - ob.x, dy = y - ob.y;\n      if (Math.hypot(dx, dy) < ob.radius + radius + 30) { valid = false; break; }\n    }\n    if (valid) break;\n  }\n  if (!valid) { x = width / 2; y = height / 2; }\n  powerUps.push({ type, x, y, radius, pulse: 0 })\n}\nlet powerUpSpawnTimer = 0;\nconst POWERUP_SPAWN_BASE = 600; // 10 seconds at 60fps\n\n// Power-up effects\nlet timeDilationActive = false;\nlet timeDilationTimer = 0;\nconst DILATION_FACTOR = 0.5;\nconst DILATION_DURATION = 300; // 5 seconds\n\n// Flash effect\nlet flashTimer = 0;\nconst FLASH_DURATION = 0.2; // seconds\n\n// Audio\nconst audioCtx = new (window.AudioContext || window.webkitAudioContext)();\nfunction playSound(type) {\n  const oscillator = audioCtx.createOscillator();\n  const gain = audioCtx.createGain();\n  oscillator.connect(gain);\n  gain.connect(audioCtx.destination);\n  gain.gain.setValueAtTime(0, audioCtx.currentTime);\n  gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.01);\n  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);\n  switch (type) {\n    case 'collision':\n      oscillator.frequency.setValueAtTime(120, audioCtx.currentTime);\n      break;\n    case 'powerup':\n      oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);\n      break;\n    case 'dash':\n      oscillator.frequency.setValueAtTime(1500, audioCtx.currentTime);\n      break;\n  }\n  oscillator.start();\n  oscillator.stop(audioCtx.currentTime + 0.2);\n}\n\n// Game loop\nlet lastTime = 0;\nfunction gameLoop(timestamp) {\n  const deltaTime = (timestamp - lastTime) / 1000; // seconds\n  lastTime = timestamp;\n  ctx.clearRect(0, 0, width, height);\n\n  // Update based on state\n  if (gameState === STATE_PLAYING) {\n    updatePlayer(deltaTime);\n    updateObstacles(deltaTime);\n    updatePowerUps(deltaTime);\n    updateTimer(deltaTime);\n    updateScore(deltaTime);\n    checkCollisions();\n    spawnObstacles(deltaTime);\n    spawnPowerUps(deltaTime);\n    updateFlash(deltaTime);\n  }\n\n  // Render\n  renderBackground();\n  renderPlayer();\n  renderObstacles();\n  renderPowerUps();\n  renderHUD();\n  if (flashTimer > 0) renderFlash();\n\n  // State screens\n  if (gameState === STATE_MENU) renderMenu();\n  else if (gameState === STATE_GAMEOVER) renderGameOver();\n  else if (gameState === STATE_VICTORY) renderVictory();\n  else if (gameState === STATE_PAUSED) renderPause();\n\n  requestAnimationFrame(gameLoop);\n}\nrequestAnimationFrame(gameLoop);\n\nfunction updatePlayer(dt) {\n  // Determine direction\n  let ax = 0, ay = 0;\n  if (keys.ArrowUp || keys.KeyW) ay -= 1;\n  if (keys.ArrowDown || keys.KeyS) ay += 1;\n  if (keys.ArrowLeft || keys.KeyA) ax -= 1;\n  if (keys.ArrowRight || keys.KeyD) ax += 1;\n  const len = Math.hypot(ax, ay);\n  if (len > 0) { ax /= len; ay /= len; }\n\n  // Acceleration\n  player.vx += ax * player.acceleration;\n  player.vy += ay * player.acceleration;\n\n  // Dash\n  if (keys.Space && player.dashCooldownTimer === 0) {\n    player.dashTimer = player.dashDuration;\n    player.dashCooldownTimer = player.dashCooldown;\n    playSound('dash');\n  }\n  if (player.dashTimer > 0) player.dashTimer--;\n  if (player.dashCooldownTimer > 0) player.dashCooldownTimer--;\n\n  const dashMult = player.dashTimer > 0 ? player.dashSpeedMult : 1;\n  player.vx *= dashMult;\n  player.vy *= dashMult;\n\n  // Friction\n  player.vx *= player.friction;\n  player.vy *= player.friction;\n\n  // Speed limit\n  const speed = Math.hypot(player.vx, player.vy);\n  if (speed > player.maxSpeed) {\n    const scale = player.maxSpeed / speed;\n    player.vx *= scale;\n    player.vy *= scale;\n  }\n\n  // Position\n  player.x += player.vx;\n  player.y += player.vy;\n\n  // Clamp to bounds\n  if (player.x < player.radius) player.x = player.radius;\n  if (player.x > width - player.radius) player.x = width - player.radius;\n  if (player.y < player.radius) player.y = player.radius;\n  if (player.y > height - player.radius) player.y = height - player.radius;\n\n  // Trail\n  player.trail.push({ x: player.x, y: player.y });\n  if (player.trail.length > player.maxTrailLength) player.trail.shift();\n}\n\nfunction updateObstacles(dt) {\n  const dilationFactor = timeDilationActive ? DILATION_FACTOR : 1;\n  for (const ob of obstacles) {\n    ob.rotation += ob.rotationSpeed * dilationFactor;\n  }\n}\n\nfunction updatePowerUps(dt) {\n  for (const pu of powerUps) {\n    pu.pulse = (pu.pulse + 0.1) % (Math.PI * 2);\n  }\n}\n\nfunction updateTimer(dt) {\n  if (timer > 0) {\n    timer -= dt;\n    if (timer < 0) timer = 0;\n  }\n}\n\nfunction updateScore(dt) {\n  // score = survived seconds * 20\n  const elapsed = MAX_TIME - timer;\n  score = Math.floor(elapsed * 20);\n}\n\nfunction checkCollisions() {\n  // Player vs obstacles\n  for (const ob of obstacles) {\n    const dx = player.x - ob.x;\n    const dy = player.y - ob.y;\n    const dist = Math.hypot(dx, dy);\n    if (dist < player.radius + ob.radius) {\n      handleCollision();\n      return;\n    }\n  }\n  // Player vs power-ups\n  for (let i = powerUps.length - 1; i >= 0; i--) {\n    const pu = powerUps[i];\n    const dx = player.x - pu.x;\n    const dy = player.y - pu.y;\n    const dist = Math.hypot(dx, dy);\n    if (dist < player.radius + pu.radius) {\n      activatePowerUp(pu.type);\n      powerUps.splice(i, 1);\n      playSound('powerup');\n    }\n  }\n}\n\nfunction handleCollision() {\n  playSound('collision');\n  timer = Math.max(0, timer - 1);\n  flashTimer = FLASH_DURATION;\n  // brief screen shake could be added\n}\n\nfunction activatePowerUp(type) {\n  if (type === 'dilation') {\n    timeDilationActive = true;\n    timeDilationTimer = DILATION_DURATION;\n  } else if (type === 'extension') {\n    timer = Math.min(MAX_TIME, timer + 5);\n  }\n}\n\nfunction updateFlash(dt) {\n  if (flashTimer > 0) {\n    flashTimer -= dt;\n    if (flashTimer < 0) flashTimer = 0;\n  }\n}\n\nfunction updateDilation(dt) {\n  if (timeDilationActive) {\n    timeDilationTimer -= dt * 60; // frames\n    if (timeDilationTimer <= 0) {\n      timeDilationActive = false;\n      timeDilationTimer = 0;\n    }\n  }\n}\n\nfunction spawnObstacles(dt) {\n  obstacleSpawnTimer -= dt * 60;\n  if (obstacleSpawnTimer <= 0) {\n    spawnObstacle();\n    // Increase spawn rate as time passes\n    const elapsed = MAX_TIME - timer;\n    const factor = Math.max(0.2, 1 - elapsed / MAX_TIME * 0.6); // faster spawn later\n    obstacleSpawnTimer = OBSTACLE_SPAWN_BASE * factor;\n  }\n}\n\nfunction spawnPowerUps(dt) {\n  powerUpSpawnTimer -= dt * 60;\n  if (powerUpSpawnTimer <= 0) {\n    spawnPowerUp();\n    const elapsed = MAX_TIME - timer;\n    const factor = Math.max(0.3, 1 - elapsed / MAX_TIME * 0.5);\n    powerUpSpawnTimer = POWERUP_SPAWN_BASE * factor;\n  }\n}\n\nfunction renderBackground() {\n  ctx.fillStyle = '#0A0A1A';\n  ctx.fillRect(0, 0, width, height);\n}\n\nfunction renderPlayer() {\n  // Trail\n  for (let i = 0; i < player.trail.length; i++) {\n    const p = player.trail[i];\n    const alpha = (i + 1) / player.trail.length;\n    ctx.beginPath();\n    ctx.arc(p.x, p.y, player.radius * 0.5, 0, Math.PI * 2);\n    ctx.fillStyle = `rgba(0,255,255,${alpha * 0.3})`;\n    ctx.fill();\n  }\n  // Body\n  ctx.beginPath();\n  ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);\n  ctx.fillStyle = player.color;\n  ctx.fill();\n  ctx.strokeStyle = '#0ff';\n  ctx.lineWidth = 2;\n  ctx.stroke();\n}\n\nfunction renderObstacles() {\n  for (const ob of obstacles) {\n    ctx.save();\n    ctx.translate(ob.x, ob.y);\n    ctx.rotate(ob.rotation);\n    switch (ob.type) {\n      case 'blade':\n        // Draw 3-5 blades\n        const bladeCount = 3 + Math.floor(Math.random() * 3);\n        for (let i = 0; i < bladeCount; i++) {\n          const angle = (i / bladeCount) * Math.PI * 2;\n          ctx.save();\n          ctx.rotate(angle);\n          ctx.fillStyle = '#ff00ff';\n          ctx.beginPath();\n          ctx.moveTo(0, 0);\n          ctx.lineTo(ob.radius, 0);\n          ctx.lineTo(ob.radius - 5, -8);\n          ctx.lineTo(ob.radius, 0);\n          ctx.lineTo(ob.radius - 5, 8);\n          ctx.fill();\n          ctx.restore();\n        }\n        break;\n      case 'barrier':\n        // Ring with gap\n        const gapSize = Math.PI / 3; // 60 deg gap\n        const gapStart = ob.rotation;\n        ctx.beginPath();\n        ctx.arc(0, 0, ob.radius, gapStart + gapSize, gapStart + Math.PI * 2 - gapSize);\n        ctx.strokeStyle = '#ff00ff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+        break;
+      case 'turret':
+        // Turret: a circle with a line indicating rotation
+        ctx.fillStyle = '#ff00ff';
+        ctx.beginPath();
+        ctx.arc(0, 0, ob.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        // Draw a line from center to edge to show rotation
+        ctx.save();
+        ctx.rotate(ob.rotation);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(ob.radius, 0);
+        ctx.strokeStyle = '#ff0';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+        break;
+      }
+      ctx.restore();
+    }
+  }
+
+  function renderPowerUps() {
+    for (const pu of powerUps) {
+      ctx.save();
+      ctx.translate(pu.x, pu.y);
+      ctx.beginPath();
+      ctx.arc(0, 0, pu.radius, 0, Math.PI * 2);
+      const hue = pu.type === 'dilation' ? 200 : 120; // cyan for dilation, green for extension
+      ctx.fillStyle = `hsl(${hue}, 80%, 50%)`;
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // pulse effect
+      const pulseScale = 1 + Math.sin(pu.pulse) * 0.2;
+      ctx.save();
+      ctx.scale(pulseScale, pulseScale);
+      ctx.beginPath();
+      ctx.arc(0, 0, pu.radius * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,0.3)`;
+      ctx.fill();
+      ctx.restore();
+      ctx.restore();
+    }
+  }
+
+  function renderHUD() {
+    // timer and score already in UI overlay, but we could draw something else
+    // maybe draw dash cooldown
+    if (player.dashCooldownTimer > 0) {
+      const cooldownPct = player.dashCooldownTimer / player.dashCooldown;
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.fillRect(10, height - 30, 200, 20);
+      ctx.fillStyle = '#0ff';
+      ctx.fillRect(10, height - 30, 200 * (1 - cooldownPct), 20);
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px monospace';
+      ctx.fillText(`DASH: ${Math.ceil(player.dashCooldownTimer / 60)}s`, 20, height - 15);
+    }
+  }
+
+  function renderFlash() {
+    const alpha = flashTimer / FLASH_DURATION;
+    ctx.fillStyle = `rgba(255,255,255,${alpha * 0.5})`;
+    ctx.fillRect(0, 0, width, height);
+  }
+
+  function renderMenu() {
+    // menu is HTML overlay, nothing to draw on canvas
+  }
+
+  function renderGameOver() {
+    // overlay
+  }
+
+  function renderVictory() {
+    // overlay
+  }
+
+  function renderPause() {
+    // overlay
+  }
+
+  // Event listeners for menu buttons
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space' && gameState === STATE_MENU) {
+      gameState = STATE_PLAYING;
+      timer = MAX_TIME;
+      score = 0;
+      obstacles.length = 0;
+      powerUps.length = 0;
+      player.x = width / 2;
+      player.y = height / 2;
+      player.vx = 0;
+      player.vy = 0;
+      player.trail = [];
+      timeDilationActive = false;
+      timeDilationTimer = 0;
+    }
+    if (e.code === 'KeyR' && (gameState === STATE_GAMEOVER || gameState === STATE_VICTORY)) {
+      gameState = STATE_MENU;
+    }
+    if (e.code === 'Escape' && gameState === STATE_PLAYING) {
+      gameState = STATE_PAUSED;
+    }
+  });
+
+  // Button handlers
+  document.getElementById('resumeBtn').addEventListener('click', () => {
+    if (gameState === STATE_PAUSED) gameState = STATE_PLAYING;
+  });
+  document.getElementById('restartBtn').addEventListener('click', () => {
+    gameState = STATE_MENU;
+  });
+  document.getElementById('quitBtn').addEventListener('click', () => {
+    // maybe just go to menu
+    gameState = STATE_MENU;
+  });
+
+  // Victory condition: survive full time
+  function checkVictory() {
+    if (timer <= 0 && gameState === STATE_PLAYING) {
+      gameState = STATE_VICTORY;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('chronoShiftHighScore', highScore);
+      }
+    }
+  }
+
+  // Integrate victory check into loop maybe after updateTimer
+  // We'll add a call in gameLoop after updateTimer
+"} }
