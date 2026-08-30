@@ -1,0 +1,483 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 5070 (char 5069)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n<link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚓</text></svg>\">\n<title>Project Drift - Ocean Survival</title>\n<style>\n*{margin:0;padding:0;box-sizing:border-box}\nhtml,body{width:100%;height:100%;overflow:hidden;background:#0A1628;font-family:'Segoe UI',system-ui,sans-serif;touch-action:none;user-select:none}\ncanvas{display:block;width:100%;height:100%;position:fixed;top:0;left:0;z-index:1}\n.overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:10;pointer-events:none}\n.overlay>*{pointer-events:auto}\n#hud{position:fixed;top:0;left:0;width:100%;height:100%;z-index:5;pointer-events:none}\n.hud-panel{background:rgba(10,22,38,0.88);backdrop-filter:blur(8px);border:1px solid rgba(26,82,118,0.5);border-radius:12px;padding:8px 12px;color:#E0E1DD;pointer-events:auto}\n#survival-gauges{position:fixed;top:12px;left:12px;display:flex;flex-direction:column;gap:6px;z-index:6}\n.gauge-row{display:flex;align-items:center;gap:8px}\n.gauge-circle{width:42px;height:42px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center}\n.gauge-circle canvas{width:42px;height:42px}\n.gauge-label{font-size:11px;font-weight:600;min-width:48px;text-align:right}\n.gauge-pct{font-size:10px;position:absolute;bottom:2px;right:4px}\n#timer{position:fixed;top:12px;left:50%;transform:translateX(-50%);font-size:22px;font-weight:700;color:#00E5FF;text-shadow:0 0 12px rgba(0,229,255,0.6);letter-spacing:1px;z-index:6}\n#timer span{color:#FFB700}\n#compass{position:fixed;top:12px;right:12px;width:60px;height:60px;z-index:6}\n#compass canvas{width:60px;height:60px}\n#hotbar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:4px;z-index:6}\n.hotbar-slot{width:52px;height:52px;background:rgba(10,22,38,0.88);border:2px solid rgba(26,82,118,0.6);border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}\n.hotbar-slot.active{border-color:#00E5FF;box-shadow:0 0 10px rgba(0,229,255,0.4)}\n.hotbar-slot .slot-icon{font-size:22px}\n.hotbar-slot .slot-key{position:absolute;top:2px;left:4px;font-size:9px;color:rgba(224,225,221,0.6);font-weight:700}\n.hotbar-slot .slot-count{position:absolute;bottom:2px;right:4px;font-size:10px;color:#FFB700;font-weight:700}\n#notifications{position:fixed;top:60px;right:12px;display:flex;flex-direction:column;gap:6px;z-index:7;max-width:280px}\n.toast{padding:10px 14px;border-radius:8px;font-size:13px;font-weight:600;animation:slideIn 0.3s ease,fadeOut 0.5s ease 4.5s forwards;pointer-events:auto;border:1px solid}\n.toast.danger{background:rgba(255,61,61,0.2);border-color:rgba(255,61,61,0.5);color:#FF6B6B}\n.toast.success{background:rgba(6,214,160,0.2);border-color:rgba(6,214,160,0.5);color:#06D6A0}\n.toast.info{background:rgba(0,229,255,0.15);border-color:rgba(0,229,255,0.4);color:#00E5FF}\n@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}\n@keyframes fadeOut{to{opacity:0;transform:translateY(-10px)}}\n#menu-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,22,38,0.95);z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto}\n#menu-screen h1{font-size:clamp(28px,6vw,52px);font-weight:900;color:#00E5FF;text-shadow:0 0 30px rgba(0,229,255,0.5);margin-bottom:8px;letter-spacing:2px}\n#menu-screen .sub{font-size:clamp(14px,2.5vw,18px);color:#1ABC9C;margin-bottom:30px}\n.menu-btn{background:linear-gradient(135deg,#1A5276,#0D2B4E);color:#E0E1DD;border:2px solid #1ABC9C;padding:14px 40px;font-size:18px;font-weight:700;border-radius:10px;cursor:pointer;margin:6px;transition:all 0.2s;min-width:220px;text-align:center}\n.menu-btn:hover{background:linear-gradient(135deg,#1ABC9C,#00E5FF);color:#0A1628;box-shadow:0 0 20px rgba(0,229,255,0.4)}\n.menu-btn.secondary{border-color:rgba(224,225,221,0.3)}\n#gameover-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,10,20,0.92);z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto}\n#gameover-screen h2{font-size:clamp(32px,7vw,56px);font-weight:900;color:#FF3D3D;text-shadow:0 0 30px rgba(255,61,61,0.5);margin-bottom:10px}\n#gameover-screen .final-score{font-size:20px;color:#E0E1DD;margin-bottom:6px}\n#gameover-screen .high-score{font-size:18px;color:#FFB700;margin-bottom:24px}\n.crafting-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(5,10,20,0.85);z-index:15;display:none;align-items:center;justify-content:center;pointer-events:auto}\n.crafting-panel{background:rgba(13,27,42,0.95);border:1px solid rgba(226,82,118,0.5);border-radius:16px;padding:24px;max-width:500px;width:90%;color:#E0E1DD;pointer-events:auto;max-height:80vh;overflow-y:auto}
+.crafting-panel h3{font-size:20px;color:#00E5FF;margin-bottom:16px;text-align:center}
+.crafting-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.craft-item{background:rgba(26,82,118,0.2);border:1px solid rgba(26,82,118,0.4);border-radius:8px;padding:10px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all 0.2s}
+.craft-item:hover{border-color:#00E5FF;background:rgba(0,229,255,0.1)}
+.craft-item.disabled{opacity:0.4;cursor:not-allowed}
+.craft-item .ci-icon{font-size:24px}
+.craft-item .ci-info{flex:1}
+.craft-item .ci-name{font-size:13px;font-weight:600}
+.craft-item .ci-cost{font-size:11px;color:#FFB700}
+.craft-close{position:absolute;top:12px;right:12px;background:none;border:none;color:#E0E1DD;font-size:24px;cursor:pointer;pointer-events:auto}
+#pause-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(5,10,20,0.8);z-index:18;display:none;align-items:center;justify-content:center;pointer-events:auto}
+#pause-screen .pause-box{background:rgba(13,27,42,0.95);border:1px solid rgba(26,82,118,0.5);border-radius:16px;padding:30px;text-align:center}
+#pause-screen h2{font-size:36px;color:#00E5FF;margin-bottom:20px}
+#instructions-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(5,10,20,0.9);z-index:19;display:none;align-items:center;justify-content:center;pointer-events:auto}
+#instructions-screen .inst-box{background:rgba(13,27,42,0.95);border:1px solid rgba(26,82,118,0.5);border-radius:16px;padding:24px;max-width:500px;width:90%;color:#E0E1DD;max-height:80vh;overflow-y:auto}
+#instructions-screen h2{font-size:28px;color:#00E5FF;margin-bottom:16px;text-align:center}
+#instructions-screen .inst-section{margin-bottom:16px}
+#instructions-screen .inst-section h4{color:#1ABC9C;margin-bottom:6px;font-size:15px}
+#instructions-screen .inst-section p{font-size:13px;color:rgba(224,225,221,0.8);line-height:1.5}
+.key{display:inline-block;background:rgba(26,82,118,0.4);border:1px solid rgba(26,82,118,0.6);border-radius:4px;padding:2px 6px;font-size:11px;font-weight:700;color:#00E5FF;margin:0 2px}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<div id="hud">
+  <div id="survival-gauges">
+    <div class="gauge-row">
+      <div class="gauge-circle"><canvas id="hungerCanvas" width="84" height="84"></canvas><span class="gauge-pct" id="hungerPct">100%</span></div>
+      <span class="gauge-label" style="color:#FF6B6B">Hunger</span>
+    </div>
+    <div class="gauge-row">
+      <div class="gauge-circle"><canvas id="thirstCanvas" width="84" height="84"></canvas><span class="gauge-pct" id="thirstPct">100%</span></div>
+      <span class="gauge-label" style="color:#00E5FF">Thirst</span>
+    </div>
+    <div class="gauge-row">
+      <div class="gauge-circle"><canvas id="healthCanvas" width="84" height="84"></canvas><span class="gauge-pct" id="healthPct">100%</span></div>
+      <span class="gauge-label" style="color:#06D6A0">Health</span>
+    </div>
+    <div class="gauge-row">
+      <div class="gauge-circle"><canvas id="energyCanvas" width="84" height="84"></canvas><span class="gauge-pct" id="energyPct">100%</span></div>
+      <span class="gauge-label" style="color:#FFB700">Energy</span>
+    </div>
+  </div>
+  <div id="timer">Day <span id="dayNum">1</span> · <span id="timeNum">06:00</span></div>
+  <canvas id="compass" width="120" height="120"></canvas>
+</div>
+
+<div id="hotbar">
+  <div class="hotbar-slot active" data-slot="0"><span class="slot-key">1</span><span class="slot-icon"></span><span class="slot-count"></span></div>
+  <div class="hotbar-slot" data-slot="1"><span class="slot-key">2</span><span class="slot-icon"></span><span class="slot-count"></span></div>
+  <div class="hotbar-slot" data-slot="2"><span class="slot-key">3</span><span class="slot-icon"></span><span class="slot-count"></span></div>
+  <div class="hotbar-slot" data-slot="3"><span class="slot-key">4</span><span class="slot-icon"></span><span class="slot-count"></span></div>
+  <div class="hotbar-slot" data-slot="4"><span class="slot-key">5</span><span class="slot-icon"></span><span class="slot-count"></span></div>
+</div>
+
+<div id="notifications"></div>
+
+<div id="menu-screen">
+  <h1>⚓ Project Drift</h1>
+  <div class="sub">Ocean Survival</div>
+  <button class="menu-btn" onclick="startGame()">Start Survival</button>
+  <button class="menu-btn secondary" onclick="showInstructions()">How to Play</button>
+</div>
+
+<div id="gameover-screen">
+  <h2>You Drifted Away</h2>
+  <div class="final-score">Score: <span id="finalScore">0</span></div>
+  <div class="high-score">Best: <span id="highScore">0</span></div>
+  <button class="menu-btn" onclick="startGame()">Try Again</button>
+  <button class="menu-btn secondary" onclick="goToMenu()">Main Menu</button>
+</div>
+
+<div class="crafting-overlay" id="crafting-overlay">
+  <div class="crafting-panel">
+    <button class="craft-close" onclick="closeCrafting()">✕</button>
+    <h3>⚙️ Crafting</h3>
+    <div class="crafting-grid" id="craftingGrid"></div>
+  </div>
+</div>
+
+<div id="pause-screen">
+  <div class="pause-box">
+    <h2>Paused</h2>
+    <button class="menu-btn" onclick="resumeGame()">Resume</button><br>
+    <button class="menu-btn secondary" onclick="goToMenu()">Quit</button>
+  </div>
+</div>
+
+<div id="instructions-screen">
+  <div class="inst-box">
+    <h2>⚓ How to Play</h2>
+    <div class="inst-section"><h4>Movement</h4><p>Use <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> or arrow keys to move. Collect driftwood, fish, and seaweed to survive.</p></div>
+    <div class="inst-section"><h4>Survival</h4><p>Manage your <span style="color:#FF6B6B">Hunger</span>, <span style="color:#00E5FF">Thirst</span>, <span style="color:#06D6A0">Health</span>, and <span style="color:#FFB700">Energy</span>. They decay over time!</p></div>
+    <div class="inst-section"><h4>Crafting</h4><p>Press <span class="key">C</span> to open crafting. Build tools, shelter, and cook food to improve your chances.</p></div>
+    <div class="inst-section"><h4>Day/Night</h4><p>Each day lasts 120 seconds. Nights are dangerous — stay warm and safe!</p></div>
+    <div class="inst-section"><h4>Quick Keys</h4><p><span class="key">1</span>-<span class="key">5</span> select hotbar slots · <span class="key">E</span> interact · <span class="key">F</span> pick up items · <span class="key">Space</span> sprint</p></div>
+  </div>
+</div>
+
+<script>
+// ===== GAME ENGINE =====
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+// Audio
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+function playSound(freq, type, dur, vol) {
+  if (!audioCtx) return;
+  try {
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type || 'sine';
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || 0.1, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (dur || 0.2));
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + (dur || 0.2));
+  } catch(e) {}
+}
+function sfxPickup() { playSound(600, 'sine', 0.15, 0.12); setTimeout(() => playSound(900, 'sine', 0.1, 0.08), 80); }
+function sfxCraft() { playSound(400, 'triangle', 0.1, 0.1); setTimeout(() => playSound(600, 'triangle', 0.1, 0.1), 100); setTimeout(() => playSound(800, 'triangle', 0.15, 0.08), 200); }
+function sfxHurt() { playSound(200, 'sawtooth', 0.2, 0.1); }
+function sfxDrink() { playSound(500, 'sine', 0.1, 0.08); setTimeout(() => playSound(700, 'sine', 0.1, 0.06), 100); }
+function sfxDay() { playSound(300, 'sine', 0.5, 0.08); setTimeout(() => playSound(500, 'sine', 0.5, 0.06), 300); }
+function sfxNight() { playSound(200, 'sine', 0.8, 0.06); }
+
+// Game state
+let gameState = 'menu'; // menu, playing, paused, gameover, crafting, instructions
+let player, world, items, particles, dayTime, dayNum, score, highScore;
+let keys = {};
+let selectedSlot = 0;
+let lastTime = 0;
+let notificationTimer = 0;
+let craftingOpen = false;
+
+highScore = parseInt(localStorage.getItem('drift_high') || '0');
+
+// Item types
+const ITEM_TYPES = {
+  driftwood: { name: 'Driftwood', icon: '🪵', color: '#8B6914', stackable: true },
+  fish: { name: 'Raw Fish', icon: '🐟', color: '#4FC3F7', stackable: true },
+  seaweed: { name: 'Seaweed', icon: '🌿', color: '#2E7D32', stackable: true },
+  water: { name: 'Water', icon: '💧', color: '#00E5FF', stackable: true },
+  stone: { name: 'Stone', icon: '🪨', color: '#78909C', stackable: true },
+  flint: { name: 'Flint', icon: '🔶', color: '#FF8F00', stackable: true },
+  cookedFish: { name: 'Cooked Fish', icon: '🍳', color: '#FFB700', stackable: true },
+  rope: { name: 'Rope', icon: '🧶', color: '#FFF176', stackable: true },
+  shelter: { name: 'Shelter', icon: '🏠', color: '#A1887F', stackable: false },
+  spear: { name: 'Spear', icon: '🎯', color: '#78909C', stackable: false },
+    campfire: { name: 'Campfire', icon: '🔥', color: '#FF6D00', stackable: false },
+  medical: { name: 'Med Kit', icon: '💊', color: '#F48FB1', stackable: true },
+  compass: { name: 'Compass', icon: '🧭', color: '#CE93D8', stackable: false }
+};
+
+// Recipes
+const RECIPES = [
+  { name: 'Campfire', result: 'campfire', cost: { driftwood: 3, stone: 2 } },
+  { name: 'Spear', result: 'spear', cost: { driftwood: 2, flint: 1 } },
+  { name: 'Cooked Fish', result: 'cookedFish', cost: { fish: 1 }, needsFire: true },
+  { name: 'Water', result: 'water', cost: { stone: 1, seaweed: 1 } },
+  { name: 'Rope', result: 'rope', cost: { seaweed: 3 } },
+  { name: 'Shelter', result: 'shelter', cost: { driftwood: 5, rope: 2 } },
+  { name: 'Medical', result: 'medical', cost: { seaweed: 2, fish: 1 } },
+  { name: 'Compass', result: 'compass', cost: { flint: 2, stone: 2, rope: 1 } }
+];
+
+function createPlayer() {
+  return {
+    x: W / 2, y: H / 2,
+    vx: 0, vy: 0,
+    speed: 3,
+    sprintSpeed: 5,
+    radius: 14,
+    facing: 0,
+    selectedItem: null,
+    inventory: { driftwood: 3, fish: 1, seaweed: 2 },
+    hotbar: [null, null, null, null, null],
+    hunger: 100, thirst: 100, health: 100, energy: 100,
+    invulnerable: 0,
+    building: false,
+    buildProgress: 0
+  };
+}
+
+function createWorld() {
+  const islands = [];
+  for (let i = 0; i < 8; i++) {
+    islands.push({
+      x: Math.random() * W * 2 - W * 0.5 + W / 2,
+      y: Math.random() * H * 2 - H * 0.5 + H / 2,
+      radius: 40 + Math.random() * 60,
+      type: Math.random() > 0.5 ? 'small' : 'large',
+      trees: Math.floor(Math.random() * 5) + 2,
+      hasFlint: Math.random() > 0.6,
+      hasStone: Math.random() > 0.5
+    });
+  }
+  const fishSchools = [];
+  for (let i = 0; i < 12; i++) {
+    fishSchools.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: (Math.random() - 0.5) * 1.5,
+      vy: (Math.random() - 0.5) * 1.5,
+      count: 3 + Math.floor(Math.random() * 5),
+      radius: 15
+    });
+  }
+  const floatingObjects = [];
+  for (let i = 0; i < 15; i++) {
+    floatingObjects.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      type: ['driftwood', 'seaweed', 'stone', 'flint'][Math.floor(Math.random() * 4)],
+      radius: 8 + Math.random() * 8,
+      bobPhase: Math.random() * Math.PI * 2,
+      bobSpeed: 0.5 + Math.random() * 1
+    });
+  }
+  return { islands, fishSchools, floatingObjects, currents: [] };
+}
+
+function spawnItem(x, y, type, count) {
+  items.push({ x, y, type, count: count || 1, radius: 10, bobPhase: Math.random() * Math.PI * 2 });
+}
+
+function addParticle(x, y, color, count, speed) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const spd = (speed || 2) * (0.5 + Math.random());
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * spd,
+      vy: Math.sin(angle) * spd,
+      life: 1,
+      decay: 0.02 + Math.random() * 0.03,
+      radius: 2 + Math.random() * 3,
+      color
+    });
+  }
+}
+
+function addNotification(text, type) {
+  const container = document.getElementById('notifications');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + (type || 'info');
+  toast.textContent = text;
+  container.appendChild(toast);
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 5000);
+}
+
+// Gauge drawing
+function drawGauge(canvasId, pct, colors) {
+  const c = document.getElementById(canvasId);
+  const g = c.getContext('2d');
+  const size = c.width;
+  const cx = size / 2, cy = size / 2;
+  const r = size / 2 - 6;
+  g.clearRect(0, 0, size, size);
+  // Background
+  g.beginPath();
+  g.arc(cx, cy, r, 0, Math.PI * 2);
+  g.strokeStyle = 'rgba(255,255,255,0.1)';
+  g.lineWidth = 5;
+  g.stroke();
+  // Fill
+  const startAngle = -Math.PI / 2;
+  const endAngle = startAngle + (Math.PI * 2 * (pct / 100));
+  if (pct > 0) {
+    const grad = g.createLinearGradient(cx - r, cy, cx + r, cy);
+    grad.addColorStop(0, colors[0]);
+    grad.addColorStop(1, colors[1]);
+    g.beginPath();
+    g.arc(cx, cy, r, startAngle, endAngle);
+    g.strokeStyle = grad;
+    g.lineWidth = 5;
+    g.lineCap = 'round';
+    g.stroke();
+  }
+  // Text
+  g.fillStyle = '#E0E1DD';
+  g.font = 'bold 14px sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(Math.round(pct) + '%', cx, cy);
+}
+
+function updateGauges() {
+  drawGauge('hungerCanvas', player.hunger, ['#FF6B6B', '#FF3D3D']);
+  drawGauge('thirstCanvas', player.thirst, ['#00E5FF', '#0097A7']);
+  drawGauge('healthCanvas', player.health, ['#06D6A0', '#009688']);
+  drawGauge('energyCanvas', player.energy, ['#FFB700', '#FF6D00']);
+  document.getElementById('hungerPct').textContent = Math.round(player.hunger) + '%';
+  document.getElementById('thirstPct').textContent = Math.round(player.thirst) + '%';
+  document.getElementById('healthPct').textContent = Math.round(player.health) + '%';
+  document.getElementById('energyPct').textContent = Math.round(player.energy) + '%';
+  document.getElementById('dayNum').textContent = dayNum;
+  const hours = Math.floor(dayTime / 60);
+  const mins = Math.floor(dayTime % 60);
+  document.getElementById('timeNum').textContent = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
+}
+
+function updateHotbar() {
+  const slots = document.querySelectorAll('.hotbar-slot');
+  slots.forEach((slot, i) => {
+    slot.classList.toggle('active', i === selectedSlot);
+    const item = player.hotbar[i];
+    if (item) {
+      slot.querySelector('.slot-icon').textContent = ITEM_TYPES[item].icon;
+      slot.querySelector('.slot-count').textContent = player.inventory[item] > 1 ? player.inventory[item] : '';
+    } else {
+      slot.querySelector('.slot-icon').textContent = '';
+      slot.querySelector('.slot-count').textContent = '';
+    }
+  });
+}
+
+// Compass
+function drawCompass() {
+  const c = document.getElementById('compass');
+  const g = c.getContext('2d');
+  const cx = 60, cy = 60, r = 50;
+  g.clearRect(0, 0, 120, 120);
+  g.beginPath();
+  g.arc(cx, cy, r, 0, Math.PI * 2);
+  g.fillStyle = 'rgba(10,22,38,0.8)';
+  g.fill();
+  g.strokeStyle = 'rgba(26,82,118,0.5)';
+  g.lineWidth = 2;
+  g.stroke();
+  // N
+  g.fillStyle = '#FF3D3D';
+  g.font = 'bold 14px sans-serif';
+  g.textAlign = 'center';
+  g.fillText('N', cx, cy - r + 12);
+  // Direction indicator
+  const dir = player.facing;
+  g.save();
+  g.translate(cx, cy);
+  g.rotate(dir);
+  g.beginPath();
+  g.moveTo(0, -r + 5);
+  g.lineTo(-6, 5);
+  g.lineTo(0, 0);
+  g.lineTo(6, 5);
+  g.closePath();
+  g.fillStyle = '#00E5FF';
+  g.fill();
+  g.restore();
+  // S
+  g.fillStyle = 'rgba(224,225,221,0.5)';
+  g.fillText('S', cx, cy + r - 12);
+}
+
+// World rendering
+function drawWorld(time) {
+  // Sky gradient based on day time
+  const dayFraction = dayTime / 120;
+  let skyTop, skyBottom, oceanTop, oceanBottom;
+  if (dayFraction < 0.15) {
+    // Dawn
+    const t = dayFraction / 0.15;
+    skyTop = lerpColor('#0A1628', '#1A3A5C', t);
+    skyBottom = lerpColor('#0A1628', '#FFB700', t * 0.5);
+    oceanTop = lerpColor('#0A2040', '#0D4A6B', t);
+    oceanBottom = lerpColor('#061828', '#0A3050', t);
+  } else if (dayFraction < 0.35) {
+    // Day
+    const t = (dayFraction - 0.15) / 0.2;
+    skyTop = lerpColor('#1A3A5C', '#1E6091', t);
+    skyBottom = lerpColor('#FFB700', '#87CEEB', t);
+    oceanTop = lerpColor('#0D4A6B', '#1A7AB5', t);
+    oceanBottom = lerpColor('#0A3050', '#0D5A8A', t);
+  } else if (dayFraction < 0.65) {
+    // Afternoon
+    skyTop = '#1E6091';
+    skyBottom = '#87CEEB';
+    oceanTop = '#1A7AB5';
+    oceanBottom = '#0D5A8A';
+  } else if (dayFraction < 0.85) {
+    // Dusk
+    const t = (dayFraction - 0.65) / 0.2;
+    skyTop = lerpColor('#1E6091', '#2D1B4E', t);
+    skyBottom = lerpColor('#87CEEB', '#FF6D00', t);
+    oceanTop = lerpColor('#1A7AB5', '#2D1B4E', t);
+    oceanBottom = lerpColor('#0D5A8A', '#1A0A2E', t);
+  } else {
+    // Night
+    const t = (dayFraction - 0.85) / 0.15;
+    skyTop = lerpColor('#2D1B4E', '#050510', t);
+    skyBottom = lerpColor('#FF6D00', '#0A1628', t);
+    oceanTop = lerpColor('#2D1B4E', '#050510', t);
+    oceanBottom = lerpColor('#1A0A2E', '#030308', t);
+  }
+
+  // Sky
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.5);
+  skyGrad.addColorStop(0, skyTop);
+  skyGrad.addColorStop(1, skyBottom);
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars at night
+  const isNight = dayFraction > 0.7 || dayFraction < 0.15;
+  if (isNight) {
+    const starAlpha = dayFraction > 0.7 ? (dayFraction - 0.7) / 0.15 : (0.15 - dayFraction) / 0.15;
+    ctx.fillStyle = `rgba(255,255,255,${starAlpha * 0.8})`;
+    for (let i = 0; i < 100; i++) {
+      const sx = (i * 7919 + 1) % W;
+      const sy = (i * 6271 + 1) % (H * 0.4);
+      const sr = (i * 3571 % 3) + 0.5;
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Sun/Moon
+  const sunX = W * 0.5 + Math.cos(dayTime / 120 * Math.PI * 2) * W * 0.4;
+  const sunY = H * 0.3 + Math.sin(dayTime / 120 * Math.PI * 2) * H * 0.15;
+  if (isNight) {
+    // Moon
+    ctx.fillStyle = `rgba(200,210,230,${isNight ? 0.7 : 0})`;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = skyTop;
+    ctx.beginPath();
+    ctx.arc(sunX + 6, sunY - 3, 14, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (dayFraction > 0.15 && dayFraction < 0.85) {
+    // Sun
+    const sunGrad = ctx.createRadialGradient(sunX, sunY, 0, sunX, sunY, 40);
+    sunGrad.addColorStop(0, 'rgba(255,255,200,0.9)');
+    sunGrad.addColorStop(0.5, 'rgba(255,200,100,0.3)');
+    sunGrad.addColorStop(1, 'rgba(255,200,100,0)');
+    ctx.fillStyle = sunGrad;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 40, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#FFF8E1';
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Ocean
+  const oceanGrad = ctx.createLinearGradient(0, H * 0.35, 0, H);
+  oceanGrad.addColorStop(0, oceanTop);
+  oceanGrad.addColorStop(1, oceanBottom);
+  ctx.fillStyle = oceanGrad;
+  ctx.fillRect(0, H * 0.35, W, H * 0.65);
+
+  // Ocean waves
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 1.5;
+  for (let layer = 0; layer < 5; layer++) {
+    const baseY = H * 0.4 + layer * 25;
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 5) {
+      const y = baseY + Math.sin(x * 0.02 + time * 0.002 + layer) * (6 + layer * 2) + Math.sin(x * 0.01 + time * 0.001) * 4;
+      if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // Currents indicator
+  world.currents.forEach(c => {
+    ctx.strokeStyle = `rgba(100,180,255,${0.1 + Math.sin(time * 0.003) * 0.05})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(c.x - 20, c.y);
+    ctx.lineTo(c.x +

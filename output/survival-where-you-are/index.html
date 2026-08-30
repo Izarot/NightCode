@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>🌊 Project Drift: Ocean Survival</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { width:100%; height:100%; overflow:hidden; background:#0a1929; font-family:'Segoe UI',sans-serif; touch-action:none; user-select:none; }
+  #wrap { position:relative; width:100vw; height:100vh; }
+  canvas { display:block; width:100%; height:100%; background:linear-gradient(180deg,#1e3a5f 0%,#0d2540 50%,#061829 100%); }
+  #ui-layer { position:absolute; inset:0; pointer-events:none; }
+  .hud-panel { background:rgba(10,25,40,0.65); border:1px solid rgba(120,200,255,0.4); border-radius:12px; padding:10px; backdrop-filter:blur(8px); box-shadow:0 0 12px rgba(80,180,255,0.2); }
+  #stats { position:absolute; top:10px; left:10px; display:flex; flex-direction:column; gap:6px; }
+  .stat-row { display:flex; align-items:center; gap:8px; color:#fff; font-size:13px; }
+  .stat-ring { width:42px; height:42px; position:relative; }
+  .stat-ring svg { transform:rotate(-90deg); }
+  .stat-ring circle.bg { fill:none; stroke:rgba(255,255,255,0.1); stroke-width:5; }
+  .stat-ring circle.fg { fill:none; stroke-width:5; stroke-linecap:round; transition:stroke-dashoffset .3s; }
+  .stat-ring .icon { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:18px; }
+  .stat-label { font-size:10px; opacity:0.8; letter-spacing:1px; text-transform:uppercase; }
+  #compass { position:absolute; top:10px; right:10px; padding:10px 14px; color:#fff; font-size:13px; min-width:140px; }
+  #compass .arrow { font-size:22px; display:inline-block; transition:transform .2s; }
+  #timer { position:absolute; top:60px; right:10px; padding:6px 12px; color:#7eff7e; font-family:'Courier New',monospace; font-size:14px; background:rgba(10,25,40,0.65); border:1px solid rgba(120,255,150,0.3); border-radius:6px; }
+  #hotbar { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:4px; padding:6px; background:rgba(10,25,40,0.7); border:1px solid rgba(120,200,255,0.4); border-radius:10px; }
+  .slot { width:48px; height:48px; background:rgba(255,255,255,0.06); border:2px solid rgba(120,200,255,0.3); border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#fff; font-size:20px; position:relative; }
+  .slot.active { border-color:#7edcff; background:rgba(126,220,255,0.18); box-shadow:0 0 10px rgba(126,220,255,0.6); }
+  .slot .count { position:absolute; bottom:1px; right:3px; font-size:10px; color:#fff; background:rgba(0,0,0,0.6); padding:1px 4px; border-radius:4px; }
+  #highscore { position:absolute; top:95px; right:10px; padding:5px 10px; color:#ffd700; font-size:12px; background:rgba(10,25,40,0.65); border:1px solid rgba(255,215,0,0.3); border-radius:6px; }
+  #notifications { position:absolute; top:140px; right:10px; display:flex; flex-direction:column; gap:6px; max-width:240px; }
+  .toast { padding:8px 12px; border-radius:6px; color:#fff; font-size:12px; animation:slideIn .3s, fadeOut .5s 4.5s forwards; }
+  .toast.danger { background:rgba(220,50,50,0.85); border-left:3px solid #ff5555; }
+  .toast.success { background:rgba(50,180,80,0.85); border-left:3px solid #55ff55; }
+  .toast.info { background:rgba(50,120,200,0.85); border-left:3px solid #55aaff; }
+  @keyframes slideIn { from{transform:translateX(120%);opacity:0;} to{transform:translateX(0);opacity:1;} }
+  @keyframes fadeOut { to{opacity:0;transform:translateX(20%);} }
+  #controls { position:absolute; bottom:80px; left:10px; color:rgba(255,255,255,0.7); font-size:11px; padding:8px; background:rgba(10,25,40,0.5); border-radius:6px; line-height:1.6; }
+  #message-overlay { position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,0.7); pointer-events:auto; }
+  #message-overlay.show { display:flex; }
+  #message-box { padding:30px 40px; background:rgba(15,30,50,0.95); border:2px solid #7edcff; border-radius:14px; color:#fff; text-align:center; max-width:340px; box-shadow:0 0 30px rgba(126,220,255,0.4); }
+  #message-box h2 { color:#7edcff; margin-bottom:10px; font-size:24px; }
+  #message-box p { margin-bottom:8px; font-size:13px; opacity:0.9; }
+  #message-box button { margin-top:14px; padding:10px 24px; background:#7edcff; color:#0a1929; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:13px; }
+  @media (max-width:600px) {
+    .slot { width:38px; height:38px; font-size:16px; }
+    #controls { display:none; }
+    .stat-ring { width:36px; height:36px; }
+    .stat-ring .icon { font-size:14px; }
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <div id="ui-layer">
+    <div id="stats" class="hud-panel"></div>
+    <div id="compass" class="hud-panel">
+      <span class="arrow" id="compass-arrow">⬆️</span> <span id="compass-label">Drifting: N</span>
+      <div id="compass-island" style="font-size:11px;opacity:0.7;margin-top:4px;">Nearest: --</div>
+    </div>
+    <div id="timer">⏱ 00:00</div>
+    <div id="highscore">🏆 Best: <span id="hs-val">0</span>s</div>
+    <div id="notifications"></div>
+    <div id="hotbar"></div>
+    <div id="controls">
+      <b>WASD/Arrows</b> Move | <b>SPACE</b> Jump Off<br>
+      <b>SHIFT</b> Sprint | <b>1-8</b> Hotbar<br>
+      <b>E</b> Gather | <b>Q</b> Craft | <b>R</b> Row<br>
+      <b>TAB</b> Inventory
+    </div>
+    <div id="message-overlay">
+      <div id="message-box">
+        <h2 id="msg-title">Washed Ashore</h2>
+        <p id="msg-body">You wake on a tiny raft, alone in an endless ocean.</p>
+        <p style="font-size:11px;opacity:0.6;">Gather debris. Survive. Drift onward.</p>
+        <button id="msg-btn">Set Sail ⛵</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
