@@ -1,0 +1,284 @@
+JSON Decode Error after continuation: Expecting ',' delimiter: line 1 column 28583 (char 28582)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n    <title>Tetris Fall</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>\">\n    <link href=\"https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap\" rel=\"stylesheet\">\n    <style>\n        * { margin: 0; padding: 0; box-sizing: border-box; }\n        body {\n            background: #050810;\n            min-height: 100vh;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            font-family: 'Orbitron', monospace;\n            overflow: hidden;\n        }\n        #gameContainer {\n            position: relative;\n            width: 100vmin;\n            height: 100vmin;\n            max-width: 640px;\n            max-height: 640px;\n        }\n        #gameCanvas {\n            width: 100%;\n            height: 100%;\n            display: block;\n            image-rendering: pixelated;\n        }\n        #scanlines {\n            position: absolute;\n            top: 0; left: 0; right: 0; bottom: 0;\n            background: repeating-linear-gradient(\n                0deg,\n                rgba(0, 0, 0, 0.1) 0px,\n                rgba(0, 0, 0, 0.1) 1px,\n                transparent 1px,\n                transparent 3px\n            );\n            pointer-events: none;\n            z-index: 10;\n        }\n        #hud {\n            position: absolute;\n            top: 0; left: 0; right: 0;\n            padding: 10px 15px;\n            display: flex;\n            justify-content: space-between;\n            align-items: flex-start;\n            pointer-events: none;\n            z-index: 5;\n        }\n        .hud-left, .hud-right, .hud-center {\n            display: flex;\n            flex-direction: column;\n            gap: 5px;\n        }\n        .hud-center { align-items: center; }\n        .hud-right { align-items: flex-end; }\n        #score {\n            font-size: 18px;\n            color: #fff;\n            text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;\n        }\n        #time {\n            font-size: 14px;\n            color: #0ff;\n            text-shadow: 0 0 8px #0ff;\n        }\n        #stackDist {\n            font-size: 12px;\n            color: #fff;\n            transition: color 0.3s;\n        }\n        #stackDist.warning { color: #ff0; }\n        #stackDist.danger { color: #f44; }\n        #dashBar {\n            width: 80px;\n            height: 4px;\n            background: #1a1a2e;\n            border-radius: 2px;\n            overflow: hidden;\n        }\n        #dashFill {\n            height: 100%;\n            background: linear-gradient(90deg, #0ff, #0f8);\n            width: 100%;\n            transition: width 0.1s;\n        }\n        #overlay {\n            position: absolute;\n            top: 0; left: 0; right: 0; bottom: 0;\n            background: rgba(5, 8, 16, 0.92);\n            display: flex;\n            flex-direction: column;\n            justify-content: center;\n            align-items: center;\n            z-index: 20;\n            gap: 20px;\n        }\n        #overlay.hidden { display: none; }\n        #title {\n            font-size: clamp(28px, 8vmin, 48px);\n            font-weight: 900;\n            color: #fff;\n            text-shadow: 0 0 20px #f0f, 0 0 40px #f0f, 0 0 60px #0ff;\n            letter-spacing: 4px;\n            animation: titlePulse 2s ease-in-out infinite;\n        }\n        @keyframes titlePulse {\n            0%, 100% { text-shadow: 0 0 20px #f0f, 0 0 40px #f0f, 0 0 60px #0ff; }\n            50% { text-shadow: 0 0 30px #f0f, 0 0 60px #f0f, 0 0 80px #0ff; }\n        }\n        #subtitle {\n            font-size: clamp(10px, 2.5vmin, 14px);\n            color: #888;\n            opacity: 0;\n            animation: fadeIn 1s 0.5s forwards;\n        }\n        @keyframes fadeIn { to { opacity: 1; } }\n        .btn {\n            font-family: 'Orbitron', monospace;\n            font-size: clamp(12px, 3vmin, 16px);\n            padding: 12px 30px;\n            background: transparent;\n            border: 2px solid #0ff;\n            color: #0ff;\n            cursor: pointer;\n            transition: all 0.2s;\n            text-transform: uppercase;\n            letter-spacing: 2px;\n        }\n        .btn:hover {\n            background: #0ff;\n            color: #050810;\n            box-shadow: 0 0 20px #0ff;\n        }\n        #highScore {\n            font-size: clamp(10px, 2.5vmin, 14px);\n            color: #ffd700;\n            text-shadow: 0 0 10px #ffd700;\n        }\n        #gameOverContent {\n            text-align: center;\n            display: none;\n        }\n        #gameOverContent.show { display: block; }\n        #menuContent { display: block; }\n        #menuContent.hidden { display: none; }\n        #finalScore {\n            font-size: clamp(20px, 5vmin, 32px);\n            color: #ffd700;\n            text-shadow: 0 0 15px #ffd700;\n            margin: 10px 0;\n        }\n        #stats {\n            font-size: clamp(9px, 2vmin, 12px);\n            color: #0ff;\n            line-height: 1.8;\n        }\n        #deathCause {\n            font-size: clamp(10px, 2.5vmin, 14px);\n            color: #f44;\n            margin: 10px 0;\n        }\n        #timer {\n            position: absolute;\n            top: 10px;\n            left: 50%;\n            transform: translateX(-50%);\n            font-size: clamp(14px, 3.5vmin, 20px);\n            color: #fff;\n            text-shadow: 0 0 10px #0ff;\n            z-index: 5;\n        }\n        #notifications {\n            position: absolute;\n            bottom: 50px;\n            left: 50%;\n            transform: translateX(-50%);\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            gap: 5px;\n            pointer-events: none;\n            z-index: 15;\n        }\n        .notification {\n            font-size: 12px;\n            color: #ffd700;\n            text-shadow: 0 0 8px #ffd700;\n            animation: floatUp 1s forwards;\n        }\n        @keyframes floatUp {\n            0% { opacity: 1; transform: translateY(0); }\n            100% { opacity: 0; transform: translateY(-30px); }\n        }\n        @media (max-width: 480px) {\n            #hud { padding: 5px 8px; }\n            #score { font-size: 14px; }\n            #time { font-size: 11px; }\n            #stackDist { font-size: 10px; }\n        }\n    </style>\n</head>\n<body>\n    <div id=\"gameContainer\">\n        <canvas id=\"gameCanvas\"></canvas>\n        <div id=\"scanlines\"></div>\n        <div id=\"timer\">00:00</div>\n        <div id=\"hud\">\n            <div class=\"hud-left\">\n                <div id=\"score\">SCORE: 0</div>\n                <div id=\"dashBar\"><div id=\"dashFill\"></div></div>\n            </div>\n            <div class=\"hud-center\">\n                <div id=\"time\">00:00</div>\n            </div>\n            <div class=\"hud-right\">\n                <div id=\"stackDist\">STACK: 0</div>\n            </div>\n        </div>\n        <div id=\"notifications\"></div>\n        <div id=\"overlay\">\n            <div id=\"menuContent\">\n                <div id=\"title\">TETRIS FALL</div>\n                <div id=\"subtitle\">Navigate the collapsing labyrinth</div>\n                <button class=\"btn\" id=\"startBtn\">START</button>\n                <div id=\"highScore\">HIGH SCORE: 0</div>\n            </div>\n            <div id=\"gameOverContent\">\n                <div id=\"title\">RUN ENDED</div>\n                <div id=\"finalScore\">0</div>\n                <div id=\"stats\"></div>\n                <div id=\"deathCause\"></div>\n                <button class=\"btn\" id=\"restartBtn\">PLAY AGAIN</button>\n            </div>\n        </div>\n    </div>\n\n    <script>\n    const CONFIG = {\n        GRID_SIZE: 20,\n        CELL_SIZE: 32,\n        PLAYER_SPEED: 8,\n        DASH_SPEED: 20,\n        DASH_DURATION: 500,\n        DASH_COOLDOWN: 1500,\n        BASE_FALL_SPEED: 3,\n        FALL_ACCEL: 0.2,\n        ACCEL_INTERVAL: 15,\n        STACK_RISE_SPEED: 0.15,\n        SPAWN_INTERVAL: 2000,\n        MIN_SPAWN_INTERVAL: 800,\n        COLORS: {\n            bg: '#0a0e27',\n            grid: '#1a3a5c',\n            player: '#ffffff',\n            playerGlow: '#00ffff',\n            stackLine: '#ff0040',\n            pieces: ['#00ffff', '#ffff00', '#ff00ff', '#ff8800', '#0088ff', '#00ff00', '#ff0044']\n        },\n        PIECES: [\n            { shape: [[1,1,1,1]], color: 0 },\n            { shape: [[1,1],[1,1]], color: 1 },\n            { shape: [[0,1,0],[1,1,1]], color: 2 },\n            { shape: [[1,0,0],[1,1,1]], color: 3 },\n            { shape: [[0,0,1],[1,1,1]], color: 4 },\n            { shape: [[0,1,1],[1,1,0]], color: 5 },\n            { shape: [[1,1,0],[0,1,1]], color: 6 }\n        ]\n    };\n\n    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();\n    \n    function playSound(type) {\n        const osc = audioCtx.createOscillator();\n        const gain = audioCtx.createGain();\n        osc.connect(gain);\n        gain.connect(audioCtx.destination);\n        const now = audioCtx.currentTime;\n        \n        switch(type) {\n            case 'move':\n                osc.frequency.value = 800;\n                osc.type = 'square';\n                gain.gain.setValueAtTime(0.05, now);\n                gain.gain.exponentialDecayTo && gain.gain.exponentialDecayTo(0.01, now + 0.05);\n                gain.gain.setValueAtTime(0.05, now);\n                gain.gain.linearRampToValueAtTime(0.001, now + 0.05);\n                osc.start(now);\n                osc.stop(now + 0.05);\n                break;\n            case 'fall':\n                osc.frequency.value = 200;\n                osc.type = 'sawtooth';\n                gain.gain.setValueAtTime(0.08, now);\n                gain.gain.linearRampToValueAtTime(0.001, now + 0.15);\n                osc.start(now);\n                osc.stop(now + 0.15);\n                break;\n            case 'settle':\n                osc.frequency.value = 100;\n                osc.type = 'square';\n                gain.gain.setValueAtTime(0.15, now);\n                gain.gain.linearRampToValueAtTime(0.001, now + 0.2);\n                osc.start(now);\n                osc.stop(now + 0.2);\n                break;\n            case 'dash':\n                osc.frequency.value = 400;\n                osc.type = 'sine';\n                gain.gain.setValueAtTime(0.1, now);\n                gain.gain.linearRampToValueAtTime(0.001, now + 0.1);\n                osc.start(now);\n                osc.stop(now + 0.1);\n                break;\n            case 'death':\n                osc.frequency.value = 300;\n                osc.type = 'sawtooth';\n                gain.gain.setValueAtTime(0.2, now);\n                osc.frequency.linearRampToValueAtTime(50, now + 0.5);\n                gain.gain.linearRampToValueAtTime(0.001, now + 0.5);\n                osc.start(now);\n                osc.stop(now + 0.5);\n                break;\n            case 'warning':\n                osc.frequency.value = 150;\n                osc.type = 'triangle';\n                gain.gain.setValueAtTime(0.1, now);\n                gain.gain.linearRampToValueAtTime(0.001, now + 0.3);\n                osc.start(now);\n                osc.stop(now + 0.3);\n                break;\n        }\n    }\n\n    class Game {\n        constructor() {\n            this.canvas = document.getElementById('gameCanvas');\n            this.ctx = this.canvas.getContext('2d');\n            this.resize();\n            window.addEventListener('resize', () => this.resize());\n            \n            this.state = 'menu';\n            this.highScore = parseInt(localStorage.getItem('tetrisFallHighScore')) || 0;\n            this.updateHighScoreDisplay();\n            \n            this.setupInput();\n            this.setupUI();\n            \n            this.particles = [];\n            this.screenShake = { x: 0, y: 0, duration: 0 };\n            this.ambientParticles = [];\n            \n            for (let i = 0; i < 20; i++) {\n                this.ambientParticles.push({\n                    x: Math.random() * this.canvas.width,\n                    y: Math.random() * this.canvas.height,\n                    vx: (Math.random() - 0.5) * 0.3,\n                    vy: (Math.random() - 0.5) * 0.3,\n                    size: Math.random() * 2 + 1,\n                    alpha: Math.random() * 0.3 + 0.1\n                });\n            }\n            \n            this.lastTime = 0;\n            this.loop = this.loop.bind(this);\n            requestAnimationFrame(this.loop);\n        }\n        \n        resize() {\n            const container = document.getElementById('gameContainer');\n            const size = Math.min(container.clientWidth, container.clientHeight);\n            this.canvas.width = CONFIG.GRID_SIZE * CONFIG.CELL_SIZE;\n            this.canvas.height = CONFIG.GRID_SIZE * CONFIG.CELL_SIZE;\n            this.scale = size / this.canvas.width;\n        }\n        \n        setupInput() {\n            this.keys = {};\n            this.inputBuffer = null;\n            this.inputBufferTime = 0;\n            \n            window.addEventListener('keydown', (e) => {\n                if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D','Shift'].includes(e.key)) {\n                    e.preventDefault();\n                    if (!this.keys[e.key]) {\n                        this.keys[e.key] = true;\n                        this.handleInput(e.key);\n                    }\n                }\n            });\n            \n            window.addEventListener('keyup', (e) => {\n                this.keys[e.key] = false;\n                if (e.key === 'Shift') {\n                    this.player.dashEndTime = 0;\n                }\n            });\n        }\n        \n        setupUI() {\n            document.getElementById('startBtn').addEventListener('click', () => this.startGame());\n            document.getElementById('restartBtn').addEventListener('click', () => this.startGame());\n        }\n        \n        handleInput(key) {\n            const dirMap = {\n                'ArrowUp': {x: 0, y: -1}, 'w': {x: 0, y: -1}, 'W': {x: 0, y: -1},\n                'ArrowDown': {x: 0, y: 1}, 's': {x: 0, y: 1}, 'S': {x: 0, y: 1},\n                'ArrowLeft': {x: -1, y: 0}, 'a': {x: -1, y: 0}, 'A': {x: -1, y: 0},\n                'ArrowRight': {x: 1, y: 0}, 'd': {x: 1, y: 0}, 'D': {x: 1, y: 0}\n            };\n            \n            if (dirMap[key]) {\n                if (this.state === 'playing') {\n                    if (this.keys['Shift']) {\n                        this.tryDash(dirMap[key]);\n                    } else {\n                        this.inputBuffer = dirMap[key];\n                        this.inputBufferTime = performance.now();\n                    }\n                }\n            }\n        }\n        \n        tryDash(dir) {\n            const now = performance.now();\n            if (this.player.dashCooldownEnd > now) return;\n            \n            this.player.dashing = true;\n            this.player.dashDir = dir;\n            this.player.dashEndTime = now + CONFIG.DASH_DURATION;\n            this.player.dashCooldownEnd = now + CONFIG.DASH_DURATION + CONFIG.DASH_COOLDOWN;\n            playSound('dash');\n        }\n        \n        startGame() {\n            audioCtx.resume();\n            this.state = 'playing';\n            this.score = 0;\n            this.timeElapsed = 0;\n            this.blocksSettled = 0;\n            this.distanceTraveled = 0;\n            this.maxDepth = 0;\n            this.deathCause = '';\n            \n            this.maze = this.generateMaze();\n            this.player = {\n                x: 1, y: 1,\n                targetX: 1, targetY: 1,\n                moveProgress: 1,\n                dashing: false,\n                dashDir: {x: 0, y: 0},\n                dashEndTime: 0,\n                dashCooldownEnd: 0,\n                iframes: 0,\n                facing: {x: 0, y: 1}\n            };\n            \n            this.pieces = [];\n            this.stackHeight = 0;\n            this.lastSpawnTime = 0;\n            this.gameStartTime = performance.now();\n            \n            this.particles = [];\n            this.updateHUD();\n            \n            document.getElementById('overlay').classList.add('hidden');\n            document.getElementById('timer').style.display = 'block';\n        }\n        \n        generateMaze() {\n            const maze = Array(CONFIG.GRID_SIZE).fill(null).map(() => \n                Array(CONFIG.GRID_SIZE).fill(1)\n            );\n            \n            const stack = [[1, 1]];\n            maze[1][1] = 0;\n            \n            const dirs = [[0, -2], [0, 2], [-2, 0], [2, 0]];\n            \n            while (stack.length > 0) {\n                const [cx, cy] = stack[stack.length - 1];\n                const shuffled = dirs.slice().sort(() => Math.random() - 0.5);\n                let found = false;\n                \n                for (const [dx, dy] of shuffled) {\n                    const nx = cx + dx, ny = cy + dy;\n                    if (nx > 0 && nx < CONFIG.GRID_SIZE - 1 && \n                        ny > 0 && ny < CONFIG.GRID_SIZE - 1 && \n                        maze[ny][nx] === 1) {\n                        maze[cy + dy/2][cx + dx/2] = 0;\n                        maze[ny][nx] = 0;\n                        stack.push([nx, ny]);\n                        found = true;\n                        break;\n                    }\n                }\n                \n                if (!found) stack.pop();\n            }\n            \n            return maze;\n        }\n        \n        getFallSpeed() {\n            const elapsed = this.timeElapsed;\n            return CONFIG.BASE_FALL_SPEED + Math.floor(elapsed / CONFIG.ACCEL_INTERVAL) * CONFIG.FALL_ACCEL;\n        }\n        \n        getSpawnInterval() {\n            const elapsed = this.timeElapsed;\n            const reduction = Math.floor(elapsed / 30) * 100;\n            return Math.max(CONFIG.MIN_SPAWN_INTERVAL, CONFIG.SPAWN_INTERVAL - reduction);\n        }\n        \n        spawnPiece() {\n            const type = CONFIG.PIECES[Math.floor(Math.random() * CONFIG.PIECES.length)];\n            const x = Math.floor(Math.random() * (CONFIG.GRID_SIZE - 3)) + 1;\n            this.pieces.push({\n                ...type,\n                x: x,\n                y: -4,\n                rotation: 0,\n                rotated: false,\n                state: 'falling',\n                settleDelay: 0\n            });\n            playSound('fall');\n        }\n        \n        checkCollision(x, y, piece) {\n            const shape = this.getRotatedShape(piece);\n            for (let py = 0; py < shape.length; py++) {\n                for (let px = 0; px < shape[py].length; px++) {\n                    if (shape[py][px]) {\n                        const worldX = Math.floor(x) + px;\n                        const worldY = Math.floor(y) + py;\n                        if (worldX < 0 || worldX >= CONFIG.GRID_SIZE || worldY >= CONFIG.GRID_SIZE) {\n                            return true;\n                        }\n                        if (worldY >= 0 && this.maze[worldY][worldX] === 2) {\n                            return true;\n                        }\n                        if (worldY >= 0 && this.maze[worldY][worldX] === 1) {\n                            return true;\n                        }\n                    }\n                }\n            }\n            return false;\n        }\n        \n        getRotatedShape(piece) {\n            let shape = piece.shape.map(row => [...row]);\n            for (let r = 0; r < piece.rotation; r++) {\n                const rows = shape.length, cols = shape[0].length;\n                const rotated = Array(cols).fill(null).map(() => Array(rows).fill(0));\n                for (let y = 0; y < rows; y++) {\n                    for (let x = 0; x < cols; x++) {\n                        rotated[x][rows - 1 - y] = shape[y][x];\n                    }\n                }\n                shape = rotated;\n            }\n            return shape;\n        }\n        \n        settlePiece(piece) {\n            const shape = this.getRotatedShape(piece);\n            for (let py = 0; py < shape.length; py++) {\n                for (let px = 0; px < shape[py].length; px++) {\n                    if (shape[py][px]) {\n                        const worldX = Math.floor(piece.x) + px;\n                        const worldY = Math.floor(piece.y) + py;\n                        if (worldX >= 0 && worldX < CONFIG.GRID_SIZE && worldY >= 0 && worldY < CONFIG.GRID_SIZE) {\n                            this.maze[worldY][worldX] = 2;\n                        }\n                    }\n                }\n            }\n            \n            this.blocksSettled++;\n            this.score += 10;\n            this.showNotification('+10 BLOCK', '#ffd700');\n            playSound('settle');\n            \n            this.spawnParticles(piece.x * CONFIG.CELL_SIZE + 16, piece.y * CONFIG.CELL_SIZE + 16, piece.color);\n            this.screenShake.duration = 100;\n            this.screenShake.x = (Math.random() - 0.5) * 6;\n            this.screenShake.y = (Math.random() - 0.5) * 6;\n        }\n        \n        spawnParticles(x, y, colorIndex) {\n            const color = CONFIG.COLORS.pieces[colorIndex] || '#fff';\n            for (let i = 0; i < 8; i++) {\n                const angle = (Math.PI * 2 / 8) * i;\n                this.particles.push({\n                    x, y,\n                    vx: Math.cos(angle) * 2,\n                    vy: Math.sin(angle) * 2,\n                    life: 1,\n                    color,\n                    size: 4\n                });\n            }\n        }\n        \n        showNotification(text, color = '#ffd700') {\n            const el = document.createElement('div');\n            el.className = 'notification';\n            el.textContent = text;\n            el.style.color = color;\n            document.getElementById('notifications').appendChild(el);\n            setTimeout(() => el.remove(), 1000);\n        }\n        \n        updatePlayer(dt) {\n            const now = performance.now();\n            const p = this.player;\n            \n            if (p.dashing && now < p.dashEndTime) {\n                const speed = CONFIG.DASH_SPEED * dt;\n                const newX = p.x + p.dashDir.x * speed;\n                const newY = p.y + p.dashDir.y * speed;\n                const checkX = Math.floor(newX + 0.5);\n                const checkY = Math.floor(newY + 0.5);\n                \n                if (checkX >= 0 && checkX < CONFIG.GRID_SIZE && checkY >= 0 && checkY < CONFIG.GRID_SIZE) {\n                    if (this.maze[checkY][checkX] !== 1) {\n                        p.x = newX;\n                        p.y = newY;\n                        p.facing = p.dashDir;\n                        this.distanceTraveled += speed;\n                        \n                        if (Math.random() < 0.3) {\n                            this.particles.push({\n                                x: p.x * CONFIG.CELL_SIZE + 16,\n                                y: p.y * CONFIG.CELL_SIZE + 16,\n                                vx: -p.dashDir.x * 1.5,\n                                vy: -p.dashDir.y * 1.5,\n                                life: 0.5,\n                                color: '#0ff',\n                                size: 6\n                            });\n                        }\n                    } else {\n                        p.dashing = false;\n                    }\n                } else {\n                    p.dashing = false;\n                }\n            } else {\n                if (p.dashing) {\n                    p.dashing = false;\n                }\n                \n                if (this.inputBuffer && now - this.inputBufferTime < 100) {\n                    const speed = CONFIG.PLAYER_SPEED * dt;\n                    const targetX = Math.round(p.x);\n                    const targetY = Math.round(p.y);\n                    const dx = this.inputBuffer.x;\n                    const dy = this.inputBuffer.y;\n                    const newX = targetX + dx;\n                    const newY = targetY + dy;\n                    \n                    if (newX >= 0 && newX < CONFIG.GRID_SIZE && newY >= 0 && newY < CONFIG.GRID_SIZE) {\n                        if (this.maze[newY][newX] !== 1) {\n                            p.x += dx * speed;\n                            p.y += dy * speed;\n                            p.facing = {x: dx, y: dy};\n                            \n                            if (Math.abs(p.x - targetX) >= 0.9 || Math.abs(p.y - targetY) >= 0.9) {\n                                p.x = Math.round(p.x);\n                                p.y = Math.round(p.y);\n                                this.distanceTraveled++;\n                                playSound('move');\n                                this.inputBuffer = null;\n                            }\n                        } else {\n                            this.inputBuffer = null;\n                        }\n                    } else {\n                        this.inputBuffer = null;\n                    }\n                }\n            }\n            \n            if (p.iframes > 0) {\n                p.iframes -= dt;\n            }\n            \n            if (p.x < 0) p.x = 0;\n            if (p.x >= CONFIG.GRID_SIZE - 1) p.x = CONFIG.GRID_SIZE - 1;\n            if (p.y < 0) p.y = 0;\n            if (p.y >= CONFIG.GRID_SIZE - 1) p.y = CONFIG.GRID_SIZE - 1;\n            \n            this.maxDepth = Math.max(this.maxDepth, Math.floor(p.y));\n        }\n        \n        updatePieces(dt) {\n            const now = performance.now();\n            const fallSpeed = this.getFallSpeed();\n            \n            for (let i = this.pieces.length - 1; i >= 0; i--) {\n                const piece = this.pieces[i];\n                \n                if (piece.state === 'falling') {\n                    if (!piece.rotated && piece.y > CONFIG.GRID_SIZE / 2) {\n                        piece.rotation = (piece.rotation + 1) % 4;\n                        piece.rotated = true;\n                    }\n                    \n                    piece.y += fallSpeed * dt;\n                    \n                    if (this.checkCollision(piece.x, piece.y, piece)) {\n                        piece.y = Math.floor(piece.y);\n                        while (this.checkCollision(piece.x, piece.y - 0.1, piece)) {\n                            piece.y -= 0.1;\n                        }\n                        piece.state = 'settling';\n                        piece.settleDelay = 0.1;\n                    }\n                } else if (piece.state === 'settling') {\n                    piece.settleDelay -= dt;\n                    if (piece.settleDelay <= 0) {\n                        piece.y = Math.floor(piece.y);\n                        this.settlePiece(piece);\n                        this.pieces.splice(i, 1);\n                    }\n                }\n            }\n        }\n        \n        updateStack(dt) {\n            const riseSpeed = CONFIG.STACK_RISE_SPEED + Math.floor(this.timeElapsed / CONFIG.ACCEL_INTERVAL) * 0.03;\n            this.stackHeight += riseSpeed * dt;\n        }\n        \n        checkDeaths() {\n            const p = this.player;\n            const px = Math.round(p.x);\n            const py = Math.round(p.y);\n            \n            if (py >= this.stackHeight) {\n                this.endGame('Overtaken by stack');\n                return;\n            }\n            \n            if (!p.dashing && this.maze[py] && this.maze[py][px] === 2) {\n                this.endGame('Crushed into wall');\n                return;\n            }\n            \n            for (const piece of this.pieces) {\n                if (piece.state === 'settling' || piece.state === 'fall{"index.html": "...ing') {
+                    const shape = this.getRotatedShape(piece);
+                    const dist = Math.hypot(piece.x + shape[0].length/2 - p.x, piece.y + shape.length/2 - p.y);
+                    if (dist < 0.8) {
+                        this.endGame('Crushed by block');
+                        return;
+                    }
+                }
+            }
+        }
+        
+        endGame(reason) {
+            this.state = 'gameover';
+            this.deathCause = reason;
+            playSound('death');
+            
+            if (this.score > this.highScore) {
+                this.highScore = this.score;
+                localStorage.setItem('tetrisFallHighScore', this.highScore);
+                this.showNotification('NEW HIGH SCORE!', '#ffd700');
+            }
+            
+            document.getElementById('overlay').classList.remove('hidden');
+            document.getElementById('menuContent').classList.add('hidden');
+            document.getElementById('gameOverContent').classList.add('show');
+            document.getElementById('timer').style.display = 'none';
+            
+            document.getElementById('finalScore').textContent = this.score;
+            document.getElementById('stats').innerHTML = 
+                'TIME: ' + this.formatTime(this.timeElapsed) + '<br>' +
+                'DEPTH: ' + this.maxDepth + '<br>' +
+                'BLOCKS: ' + this.blocksSettled + '<br>' +
+                'DISTANCE: ' + Math.floor(this.distanceTraveled);
+            document.getElementById('deathCause').textContent = reason;
+            
+            this.updateHighScoreDisplay();
+        }
+        
+        updateHUD() {
+            document.getElementById('score').textContent = 'SCORE: ' + this.score;
+            document.getElementById('stackDist').textContent = 'STACK: ' + Math.floor(this.stackHeight);
+            
+            const stackClass = this.stackHeight > CONFIG.GRID_SIZE * 0.7 ? 'danger' : 
+                               this.stackHeight > CONFIG.GRID_SIZE * 0.5 ? 'warning' : '';
+            document.getElementById('stackDist').className = stackClass;
+            
+            const dashFill = document.getElementById('dashFill');
+            const now = performance.now();
+            if (this.player) {
+                const cooldownRemaining = Math.max(0, this.player.dashCooldownEnd - now);
+                const fillPercent = Math.max(0, 100 - (cooldownRemaining / CONFIG.DASH_COOLDOWN) * 100);
+                dashFill.style.width = fillPercent + '%';
+            }
+        }
+        
+        updateHighScoreDisplay() {
+            document.getElementById('highScore').textContent = 'HIGH SCORE: ' + this.highScore;
+        }
+        
+        formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return mins.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
+        }
+        
+        draw() {
+            const ctx = this.ctx;
+            const cs = CONFIG.CELL_SIZE;
+            
+            ctx.save();
+            if (this.screenShake.duration > 0) {
+                ctx.translate(this.screenShake.x, this.screenShake.y);
+            }
+            
+            ctx.fillStyle = CONFIG.COLORS.bg;
+            ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            
+            for (let y = 0; y < CONFIG.GRID_SIZE; y++) {
+                for (let x = 0; x < CONFIG.GRID_SIZE; x++) {
+                    if ((x + y) % 2 === 0) {
+                        ctx.fillStyle = 'rgba(26, 58, 92, 0.3)';
+                        ctx.fillRect(x * cs, y * cs, cs, cs);
+                    }
+                }
+            }
+            
+            for (let y = 0; y < CONFIG.GRID_SIZE; y++) {
+                for (let x = 0; x < CONFIG.GRID_SIZE; x++) {
+                    if (this.maze[y][x] === 1) {
+                        ctx.fillStyle = '#1a2a4a';
+                        ctx.fillRect(x * cs + 1, y * cs + 1, cs - 2, cs - 2);
+                        
+                        ctx.strokeStyle = 'rgba(100, 150, 200, 0.3)';
+                        ctx.strokeRect(x * cs + 2, y * cs + 2, cs - 4, cs - 4);
+                    }
+                }
+            }
+            
+            if (this.stackHeight > 0) {
+                const stackY = (CONFIG.GRID_SIZE - this.stackHeight) * cs;
+                const gradient = ctx.createLinearGradient(0, stackY, 0, this.canvas.height);
+                gradient.addColorStop(0, 'rgba(255, 0, 64, 0.8)');
+                gradient.addColorStop(1, 'rgba(255, 0, 64, 0.2)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, stackY, this.canvas.width, this.canvas.height - stackY);
+                
+                ctx.strokeStyle = '#ff0040';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, stackY);
+                ctx.lineTo(this.canvas.width, stackY);
+                ctx.stroke();
+                
+                ctx.fillStyle = '#ff0040';
+                ctx.font = '12px Orbitron';
+                ctx.fillText('STACK', 5, stackY - 5);
+            }
+            
+            for (let y = 0; y < CONFIG.GRID_SIZE; y++) {
+                for (let x = 0; x < CONFIG.GRID_SIZE; x++) {
+                    if (this.maze[y][x] === 2) {
+                        const color = CONFIG.COLORS.pieces[(x * 7 + y) % 7];
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x * cs + 2, y * cs + 2, cs - 4, cs - 4);
+                        
+                        ctx.shadowColor = color;
+                        ctx.shadowBlur = 8;
+                        ctx.fillRect(x * cs + 4, y * cs + 4, cs - 8, cs - 8);
+                        ctx.shadowBlur = 0;
+                    }
+                }
+            }
+            
+            for (const piece of this.pieces) {
+                const shape = this.getRotatedShape(piece);
+                const color = CONFIG.COLORS.pieces[piece.color];
+                
+                for (let py = 0; py < shape.length; py++) {
+                    for (let px = 0; px < shape[py].length; px++) {
+                        if (shape[py][px]) {
+                            const drawX = (piece.x + px) * cs;
+                            const drawY = (piece.y + py) * cs;
+                            
+                            if (drawY > -cs) {
+                                ctx.fillStyle = color;
+                                ctx.fillRect(drawX + 2, drawY + 2, cs - 4, cs - 4);
+                                
+                                ctx.shadowColor = color;
+                                ctx.shadowBlur = piece.state === 'settling' ? 15 : 10;
+                                ctx.fillRect(drawX + 4, drawY + 4, cs - 8, cs - 8);
+                                ctx.shadowBlur = 0;
+                                
+                                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                                ctx.strokeRect(drawX + 3, drawY + 3, cs - 6, cs - 6);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            for (const particle of this.particles) {
+                ctx.globalAlpha = particle.life;
+                ctx.fillStyle = particle.color;
+                ctx.beginPath();
+                ctx.arc(particle.x, particle.y, particle.size * particle.life, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            
+            for (const p of this.ambientParticles) {
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = '#0ff';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            
+            if (this.state === 'playing' || this.state === 'gameover') {
+                const p = this.player;
+                const px = p.x * cs + cs / 2;
+                const py = p.y * cs + cs / 2;
+                
+                const pulse = 0.8 + Math.sin(performance.now() / 200) * 0.2;
+                
+                if (p.iframes <= 0 || Math.floor(p.iframes * 10) % 2 === 0) {
+                    ctx.shadowColor = CONFIG.COLORS.playerGlow;
+                    ctx.shadowBlur = 15 * pulse;
+                    
+                    ctx.fillStyle = CONFIG.COLORS.player;
+                    ctx.beginPath();
+                    ctx.arc(px, py, cs / 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.strokeStyle = CONFIG.COLORS.playerGlow;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(px, py, cs / 2.5, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    ctx.fillStyle = CONFIG.COLORS.playerGlow;
+                    ctx.beginPath();
+                    ctx.arc(px + p.facing.x * cs / 3, py + p.facing.y * cs / 3, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.shadowBlur = 0;
+                }
+                
+                if (p.dashing) {
+                    ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+                    ctx.lineWidth = 3;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(px, py);
+                    ctx.lineTo(px + p.dashDir.x * cs * 2, py + p.dashDir.y * cs * 2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+            
+            ctx.restore();
+        }
+        
+        loop(timestamp) {
+            const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1);
+            this.lastTime = timestamp;
+            
+            if (this.state === 'playing') {
+                this.timeElapsed = (performance.now() - this.gameStartTime) / 1000;
+                
+                if (performance.now() - this.lastSpawnTime > this.getSpawnInterval()) {
+                    this.spawnPiece();
+                    this.lastSpawnTime = performance.now();
+                }
+                
+                this.updatePlayer(dt);
+                this.updatePieces(dt);
+                this.updateStack(dt);
+                this.checkDeaths();
+                this.updateHUD();
+                
+                document.getElementById('timer').textContent = this.formatTime(this.timeElapsed);
+            }
+            
+            for (let i = this.particles.length - 1; i >= 0; i--) {
+                const p = this.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= dt * 2;
+                if (p.life <= 0) {
+                    this.particles.splice(i, 1);
+                }
+            }
+            
+            for (const p of this.ambientParticles) {
+                p.x += p.vx;
+                p.y += p.vy;
+                if (p.x < 0) p.x = this.canvas.width;
+                if (p.x > this.canvas.width) p.x = 0;
+                if (p.y < 0) p.y = this.canvas.height;
+                if (p.y > this.canvas.height) p.y = 0;
+            }
+            
+            if (this.screenShake.duration > 0) {
+                this.screenShake.duration -= dt * 1000;
+                if (this.screenShake.duration <= 0) {
+                    this.screenShake.x = 0;
+                    this.screenShake.y = 0;
+                }
+            }
+            
+            this.draw();
+            requestAnimationFrame(this.loop);
+        }
+    }
+    
+    window.addEventListener('load', () => {
+        new Game();
+    });
+    </script>
+</body>
+</html>"}
