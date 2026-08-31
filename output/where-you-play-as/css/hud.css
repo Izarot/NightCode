@@ -1,0 +1,27 @@
+* { margin:0; padding:0; box-sizing:border-box; user-select:none; }
+html,body { width:100%; height:100%; overflow:hidden; background:#0a0a0a; font-family:'Courier New',monospace; color:#eee; }
+#game { position:absolute; top:0; left:0; width:100%; height:100%; display:block; image-rendering:pixelated; }
+#hud { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
+#compass { position:absolute; top:20px; left:20px; width:60px; height:60px; border:2px solid rgba(255,80,80,0.5); border-radius:50%; background:rgba(0,0,0,0.4); }
+#compass::after { content:''; position:absolute; top:50%; left:50%; width:2px; height:24px; background:#ff5050; transform-origin:bottom center; transform:translate(-50%,-100%) rotate(0deg); }
+#tools { position:absolute; bottom:20px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
+.slot { width:50px; height:56px; clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); background:rgba(0,0,0,0.5); border:1px solid #555; display:flex; align-items:center; justify-content:center; font-size:11px; }
+.slot.active { border-color:#fff; box-shadow:0 0 8px #fff; }
+.slot .cd { position:absolute; font-size:9px; color:#aaa; }
+#stats { position:absolute; bottom:20px; right:20px; display:flex; gap:6px; }
+#noiseBar,#staminaBar { width:12px; height:80px; background:rgba(0,0,0,0.5); border:1px solid #333; position:relative; }
+#noiseBar::after,#staminaBar::after { content:''; position:absolute; bottom:0; left:0; width:100%; background:linear-gradient(to top,#0f8,#ff0,#f00); transition:height 0.1s; }
+#staminaBar::after { background:#0cf; }
+#detect { position:absolute; top:20px; right:20px; width:14px; height:200px; background:rgba(0,0,0,0.5); border:1px solid #333; }
+#detect::after { content:''; position:absolute; bottom:0; left:0; width:100%; background:linear-gradient(to top,#06f,#ff0,#f00); transition:height 0.15s; }
+#timer { position:absolute; top:90px; right:24px; font-size:14px; color:#ff8855; text-shadow:0 0 4px #000; }
+#highscore { position:absolute; top:110px; right:24px; font-size:11px; color:#aaa; }
+#prompt { position:absolute; top:55%; left:50%; transform:translate(-50%,-50%); font-family:Georgia,serif; font-size:14px; color:#fff; text-shadow:0 0 4px #000; opacity:0; transition:opacity 0.2s; }
+#prompt.show { opacity:1; }
+#menu,#endscreen { position:absolute; top:0; left:0; width:100%; height:100%; background:radial-gradient(circle at center,#1a0a0a,#000); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:10; }
+#menu h1 { font-family:Georgia,serif; font-size:48px; color:#d44020; text-shadow:0 0 12px #f00; letter-spacing:3px; }
+#menu p { color:#c88; margin:10px; font-style:italic; }
+button { margin-top:30px; padding:12px 32px; background:transparent; border:1px solid #d44020; color:#d44020; font-family:Georgia,serif; font-size:16px; cursor:pointer; letter-spacing:2px; transition:all 0.3s; }
+button:hover { background:#d44020; color:#000; box-shadow:0 0 20px #d44020; }
+.hidden { display:none; }
+@media(max-width:600px) { #menu h1 { font-size:32px; } #compass { width:50px; height:50px; } }
