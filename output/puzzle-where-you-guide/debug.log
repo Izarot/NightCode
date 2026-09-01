@@ -1,0 +1,228 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 21796 (char 21795)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n  <title>Flock Formation</title>\n  <link href=\"https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&display=swap\" rel=\"stylesheet\">\n  <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐦</text></svg>\">\n  <style>\n    * {\n      margin: 0;\n      padding: 0;\n      box-sizing: border-box;\n    }\n    body {\n      overflow: hidden;\n      background: #0a0a12;\n      font-family: 'Rajdhani', 'Segoe UI', sans-serif;\n      touch-action: none;\n    }\n    #game {\n      display: block;\n      position: fixed;\n      top: 0;\n      left: 0;\n      width: 100vw;\n      height: 100vh;\n    }\n    .hud {\n      position: fixed;\n      top: 0;\n      left: 0;\n      right: 0;\n      padding: 15px 25px;\n      display: flex;\n      justify-content: space-between;\n      align-items: flex-start;\n      pointer-events: none;\n      z-index: 10;\n    }\n    .hud-left, .hud-right {\n      display: flex;\n      flex-direction: column;\n      gap: 8px;\n    }\n    .hud-right {\n      align-items: flex-end;\n    }\n    .level-title {\n      font-size: clamp(18px, 4vw, 28px);\n      font-weight: 700;\n      color: #fff;\n      text-shadow: 0 0 20px rgba(244,162,97,0.5);\n      text-transform: uppercase;\n      letter-spacing: 2px;\n    }\n    .timer {\n      font-size: clamp(14px, 3vw, 20px);\n      color: #00d9ff;\n      font-weight: 600;\n      font-variant-numeric: tabular-nums;\n    }\n    .high-score {\n      font-size: clamp(12px, 2.5vw, 16px);\n      color: #ffd700;\n      font-weight: 600;\n    }\n    .score {\n      font-size: clamp(20px, 4vw, 32px);\n      font-weight: 700;\n      color: #f4a261;\n      text-shadow: 0 0 15px rgba(244,162,97,0.4);\n    }\n    .stars {\n      font-size: clamp(18px, 3.5vw, 24px);\n      letter-spacing: 4px;\n    }\n    .progress {\n      font-size: clamp(12px, 2.5vw, 16px);\n      color: #00d9ff;\n      font-weight: 600;\n    }\n    .hud-bottom {\n      position: fixed;\n      bottom: 0;\n      left: 0;\n      right: 0;\n      padding: 15px 25px;\n      display: flex;\n      justify-content: space-between;\n      align-items: center;\n      pointer-events: none;\n      z-index: 10;\n    }\n    .attraction-bar {\n      display: flex;\n      align-items: center;\n      gap: 10px;\n    }\n    .attraction-label {\n      font-size: clamp(11px, 2vw, 14px);\n      color: rgba(255,255,255,0.7);\n      text-transform: uppercase;\n      letter-spacing: 1px;\n    }\n    .attraction-track {\n      width: clamp(80px, 15vw, 150px);\n      height: 8px;\n      background: rgba(255,255,255,0.15);\n      border-radius: 4px;\n      overflow: hidden;\n    }\n    .attraction-fill {\n      height: 100%;\n      background: linear-gradient(90deg, #00d9ff, #f4a261);\n      border-radius: 4px;\n      transition: width 0.15s ease;\n    }\n    .controls-hint {\n      font-size: clamp(10px, 2vw, 13px);\n      color: rgba(255,255,255,0.5);\n      text-align: right;\n    }\n    .controls-hint span {\n      color: rgba(255,255,255,0.8);\n    }\n    .level-complete {\n      position: fixed;\n      top: 50%;\n      left: 50%;\n      transform: translate(-50%, -50%) scale(0);\n      background: rgba(10,10,18,0.95);\n      border: 2px solid #ffd700;\n      border-radius: 20px;\n      padding: 40px 60px;\n      text-align: center;\n      z-index: 20;\n      opacity: 0;\n      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);\n      pointer-events: none;\n    }\n    .level-complete.show {\n      transform: translate(-50%, -50%) scale(1);\n      opacity: 1;\n    }\n    .level-complete h2 {\n      font-size: clamp(24px, 5vw, 36px);\n      color: #ffd700;\n      margin-bottom: 10px;\n      text-transform: uppercase;\n      letter-spacing: 3px;\n    }\n    .level-complete .stars {\n      font-size: clamp(28px, 6vw, 40px);\n      margin-bottom: 20px;\n    }\n    .level-complete p {\n      font-size: clamp(14px, 3vw, 18px);\n      color: rgba(255,255,255,0.8);\n      margin-bottom: 25px;\n    }\n    .next-btn {\n      background: linear-gradient(135deg, #f4a261, #e76f51);\n      border: none;\n      color: #fff;\n      font-family: inherit;\n      font-size: clamp(14px, 3vw, 18px);\n      font-weight: 700;\n      padding: 12px 40px;\n      border-radius: 30px;\n      cursor: pointer;\n      text-transform: uppercase;\n      letter-spacing: 2px;\n      transition: transform 0.2s, box-shadow 0.2s;\n      pointer-events: auto;\n    }\n    .next-btn:hover {\n      transform: scale(1.05);\n      box-shadow: 0 0 30px rgba(244,162,97,0.5);\n    }\n    .game-over {\n      position: fixed;\n      top: 50%;\n      left: 50%;\n      transform: translate(-50%, -50%) scale(0);\n      background: rgba(10,10,18,0.98);\n      border: 2px solid #00d9ff;\n      border-radius: 20px;\n      padding: 50px 70px;\n      text-align: center;\n      z-index: 20;\n      opacity: 0;\n      transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);\n      pointer-events: none;\n    }\n    .game-over.show {\n      transform: translate(-50%, -50%) scale(1);\n      opacity: 1;\n    }\n    .game-over h2 {\n      font-size: clamp(28px, 6vw, 42px);\n      color: #00d9ff;\n      margin-bottom: 15px;\n      text-transform: uppercase;\n      letter-spacing: 3px;\n    }\n    .game-over .final-score {\n      font-size: clamp(36px, 8vw, 56px);\n      color: #ffd700;\n      font-weight: 700;\n      margin-bottom: 10px;\n    }\n    .game-over .high-score-text {\n      font-size: clamp(14px, 3vw, 18px);\n      color: rgba(255,255,255,0.7);\n      margin-bottom: 30px;\n    }\n    @keyframes pulse {\n      0%, 100% { opacity: 0.6; }\n      50% { opacity: 1; }\n    }\n  </style>\n</head>\n<body>\n  <canvas id=\"game\"></canvas>\n  <div class=\"hud\">\n    <div class=\"hud-left\">\n      <div class=\"level-title\" id=\"levelTitle\">Level 1: The Line</div>\n      <div class=\"timer\" id=\"timer\">00:00.00</div>\n    </div>\n    <div class=\"hud-right\">\n      <div class=\"high-score\" id=\"highScore\">Best: 0</div>\n      <div class=\"score\" id=\"score\">0</div>\n      <div class=\"stars\" id=\"stars\">☆☆☆</div>\n      <div class=\"progress\" id=\"progress\">Match: 0%</div>\n    </div>\n  </div>\n  <div class=\"hud-bottom\">\n    <div class=\"attraction-bar\">\n      <span class=\"attraction-label\">Attraction</span>\n      <div class=\"attraction-track\">\n        <div class=\"attraction-fill\" id=\"attractionFill\" style=\"width: 40%\"></div>\n      </div>\n    </div>\n    <div class=\"controls-hint\">\n      <span>Move</span> attract • <span>Scroll</span> power • <span>RMB</span> repel • <span>Space</span> restart\n    </div>\n  </div>\n  <div class=\"level-complete\" id=\"levelComplete\">\n    <h2>Formation Complete!</h2>\n    <div class=\"stars\" id=\"completeStars\">⭐⭐⭐</div>\n    <p id=\"completeTime\">Time: 00:00.00</p>\n    <button class=\"next-btn\" id=\"nextBtn\">Next Level</button>\n  </div>\n  <div class=\"game-over\" id=\"gameOver\">\n    <h2>All Formations Complete!</h2>\n    <div class=\"final-score\" id=\"finalScore\">0</div>\n    <div class=\"high-score-text\" id=\"highScoreText\">New High Score!</div>\n    <button class=\"next-btn\" id=\"playAgainBtn\">Play Again</button>\n  </div>\n  <script>\n    const canvas = document.getElementById('game');\n    const ctx = canvas.getContext('2d');\n    let width, height;\n    function resize() {\n      width = canvas.width = window.innerWidth;\n      height = canvas.height = window.innerHeight;\n    }\n    resize();\n    window.addEventListener('resize', resize);\n\n    // Audio System\n    const AudioCtx = window.AudioContext || window.webkitAudioContext;\n    let audioCtx = null;\n    function initAudio() {\n      if (!audioCtx) audioCtx = new AudioCtx();\n    }\n    function playTone(freq, duration, type = 'sine', vol = 0.15) {\n      if (!audioCtx) return;\n      const osc = audioCtx.createOscillator();\n      const gain = audioCtx.createGain();\n      osc.type = type;\n      osc.frequency.value = freq;\n      gain.gain.setValueAtTime(vol, audioCtx.currentTime);\n      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);\n      osc.connect(gain);\n      gain.connect(audioCtx.destination);\n      osc.start();\n      osc.stop(audioCtx.currentTime + duration);\n    }\n    function playSuccess() {\n      playTone(523, 0.15, 'sine', 0.2);\n      setTimeout(() => playTone(659, 0.15, 'sine', 0.2), 100);\n      setTimeout(() => playTone(784, 0.3, 'sine', 0.25), 200);\n    }\n    function playAttract() {\n      playTone(220, 0.08, 'sine', 0.05);\n    }\n    function playRepel() {\n      playTone(150, 0.2, 'square', 0.1);\n    }\n    function playLevelUp() {\n      playTone(440, 0.1, 'triangle', 0.15);\n      setTimeout(() => playTone(554, 0.1, 'triangle', 0.15), 80);\n      setTimeout(() => playTone(659, 0.1, 'triangle', 0.15), 160);\n      setTimeout(() => playTone(880, 0.25, 'triangle', 0.2), 240);\n    }\n\n    // High Score\n    function getHighScore() {\n      return parseInt(localStorage.getItem('flockFormationHighScore') || '0');\n    }\n    function setHighScore(score) {\n      localStorage.setItem('flockFormationHighScore', score.toString());\n    }\n\n    // Levels\n    const levels = [\n      { name: 'The Line', birdCount: 5, parTime: 10, pattern: generateLine(5) },\n      { name: 'The Triangle', birdCount: 3, parTime: 15, pattern: generateTriangle() },\n      { name: 'The Circle', birdCount: 8, parTime: 20, pattern: generateCircle(8) },\n      { name: 'The Star', birdCount: 5, parTime: 25, pattern: generateStar() },\n      { name: 'The Arrow', birdCount: 7, parTime: 30, pattern: generateArrow() }\n    ];\n    function generateLine(count) {\n      const pts = [];\n      for (let i = 0; i < count; i++) pts.push({ x: (i - (count - 1) / 2) * 50, y: 0 });\n      return pts;\n    }\n    function generateTriangle() {\n      const s = 120;\n      return [\n        { x: 0, y: -s * 0.866 },\n        { x: -s / 2, y: s * 0.433 },\n        { x: s / 2, y: s * 0.433 }\n      ];\n    }\n    function generateCircle(count) {\n      const r = 100, pts = [];\n      for (let i = 0; i < count; i++) {\n        const a = (i / count) * Math.PI * 2 - Math.PI / 2;\n        pts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r });\n      }\n      return pts;\n    }\n    function generateStar() {\n      const r1 = 80, r2 = 40, pts = [];\n      for (let i = 0; i < 5; i++) {\n        const a1 = (i * 4 / 5) * Math.PI * 2 - Math.PI / 2;\n        const a2 = ((i * 4 + 1) / 5) * Math.PI * 2 - Math.PI / 2;\n        pts.push({ x: Math.cos(a1) * r1, y: Math.sin(a1) * r1 });\n        pts.push({ x: Math.cos(a2) * r2, y: Math.sin(a2) * r2 });\n      }\n      return pts;\n    }\n    function generateArrow() {\n      return [\n        { x: 0, y: -100 },\n        { x: -40, y: 0 },\n        { x: -20, y: 0 },\n        { x: -20, y: 60 },\n        { x: 20, y: 60 },\n        { x: 20, y: 0 },\n        { x: 40, y: 0 }\n      ];\n    }\n\n    // Boid class\n    class Boid {\n      constructor(x, y) {\n        this.x = x;\n        this.y = y;\n        this.vx = (Math.random() - 0.5) * 4;\n        this.vy = (Math.random() - 0.5) * 4;\n        this.ax = 0;\n        this.ay = 0;\n        this.trail = [];\n        this.maxTrail = 6;\n      }\n      applyForce(fx, fy) {\n        this.ax += fx;\n        this.ay += fy;\n      }\n      separate(boids, dist = 25) {\n        let fx = 0, fy = 0, count = 0;\n        for (const b of boids) {\n          if (b === this) continue;\n          const dx = this.x - b.x, dy = this.y - b.y;\n          const d = Math.sqrt(dx * dx + dy * dy);\n          if (d < dist && d > 0) {\n            fx += dx / d / d;\n            fy += dy / d / d;\n            count++;\n          }\n        }\n        if (count > 0) { fx /= count; fy /= count; }\n        return { fx, fy };\n      }\n      align(boids, dist = 50) {\n        let fx = 0, fy = 0, count = 0;\n        for (const b of boids) {\n          if (b === this) continue;\n          const dx = this.x - b.x, dy = this.y - b.y;\n          const d = Math.sqrt(dx * dx + dy * dy);\n          if (d < dist) {\n            fx += b.vx;\n            fy += b.vy;\n            count++;\n          }\n        }\n        if (count > 0) { fx = fx / count - this.vx; fy = fy / count - this.vy; }\n        return { fx, fy };\n      }\n      cohere(boids, dist = 75) {\n        let fx = 0, fy = 0, count = 0;\n        for (const b of boids) {\n          if (b === this) continue;\n          const dx = this.x - b.x, dy = this.y - b.y;\n          const d = Math.sqrt(dx * dx + dy * dy);\n          if (d < dist) {\n            fx += b.x;\n            fy += b.y;\n            count++;\n          }\n        }\n        if (count > 0) { fx = fx / count - this.x; fy = fy / count - this.y; }\n        return { fx, fy };\n      }\n      attractTo(mx, my, strength, dist = 200) {\n        const dx = mx - this.x, dy = my - this.y;\n        const d = Math.sqrt(dx * dx + dy * dy);\n        if (d < dist && d > 0) {\n          const f = strength * (1 - d / dist) * 0.08;\n          return { fx: dx / d * f, fy: dy / d * f };\n        }\n        return { fx: 0, fy: 0 };\n      }\n      repelFrom(mx, my, dist = 150) {\n        const dx = this.x - mx, dy = this.y - my;\n        const d = Math.sqrt(dx * dx + dy * dy);\n        if (d < dist && d > 0) {\n          const f = 3 * (1 - d / dist);\n          return { fx: dx / d * f, fy: dy / d * f };\n        }\n        return { fx: 0, fy: 0 };\n      }\n      update() {\n        this.vx += this.ax;\n        this.vy += this.ay;\n        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);\n        const maxSpeed = 4;\n        if (speed > maxSpeed) {\n          this.vx = this.vx / speed * maxSpeed;\n          this.vy = this.vy / speed * maxSpeed;\n        }\n        const maxForce = 0.15;\n        this.ax = Math.max(-maxForce, Math.min(maxForce, this.ax));\n        this.ay = Math.max(-maxForce, Math.min(maxForce, this.ay));\n        this.x += this.vx;\n        this.y += this.vy;\n        if (this.x < 20) { this.x = 20; this.vx *= -0.5; }\n        if (this.x > width - 20) { this.x = width - 20; this.vx *= -0.5; }\n        if (this.y < 20) { this.y = 20; this.vy *= -0.5; }\n        if (this.y > height - 20) { this.y = height - 20; this.vy *= -0.5; }\n        this.trail.unshift({ x: this.x, y: this.y });\n        if (this.trail.length > this.maxTrail) this.trail.pop();\n      }\n    }\n\n    // Particle System\n    class Particle {\n      constructor(x, y, vx, vy, color, life, size) {\n        this.x = x; this.y = y; this.vx = vx; this.vy = vy;\n        this.color = color; this.life = life; this.maxLife = life; this.size = size;\n      }\n      update() {\n        this.x += this.vx; this.y += this.vy;\n        this.vx *= 0.98; this.vy *= 0.98;\n        this.life--;\n      }\n      draw() {\n        const alpha = this.life / this.maxLife;\n        ctx.beginPath();\n        ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);\n        ctx.fillStyle = this.color.replace('1)', alpha + ')');\n        ctx.fill();\n      }\n    }\n    const particles = [];\n    const stars = [];\n    for (let i = 0; i < 100; i++) {\n      stars.push({\n        x: Math.random() * 2000,\n        y: Math.random() * 2000,\n        size: Math.random() * 1.5 + 0.5,\n        twinkle: Math.random() * Math.PI * 2,\n        speed: Math.random() * 0.02 + 0.01\n      });\n    }\n\n    // Game State\n    let currentLevel = 0;\n    let boids = [];\n    let score = 0;\n    let gameState = 'playing';\n    let levelTime = 0;\n    let mouseX = -1000, mouseY = -1000;\n    let attractionPower = 2.0;\n    let repelEffect = 0;\n    let attractPulse = 0;\n    let lastAttractSound = 0;\n    let successFlash = 0;\n    let patternMatched = [];\n\n    function initLevel() {\n      const lvl = levels[currentLevel];\n      boids = [];\n      for (let i = 0; i < lvl.birdCount; i++) {\n        const x = width * 0.2 + Math.random() * width * 0.6;\n        const y = height * 0.2 + Math.random() * height * 0.6;\n        boids.push(new Boid(x, y));\n      }\n      patternMatched = [];\n      levelTime = 0;\n      gameState = 'playing';\n      updateHUD();\n    }\n\n    function updateHUD() {\n      const lvl = levels[currentLevel];\n      document.getElementById('levelTitle').textContent = `Level ${currentLevel + 1}: ${lvl.name}`;\n      document.getElementById('highScore').textContent = `Best: ${getHighScore()}`;\n      document.getElementById('score').textContent = score;\n      const fillPct = ((attractionPower - 1) / 4) * 100;\n      document.getElementById('attractionFill').style.width = fillPct + '%';\n    }\n\n    function formatTime(t) {\n      const mins = Math.floor(t / 3600);\n      const secs = Math.floor((t % 3600) / 60);\n      const ms = Math.floor((t % 60) * 100 / 60);\n      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;\n    }\n\n    function calculateMatch() {\n      const lvl = levels[currentLevel];\n      const pat = lvl.pattern;\n      if (pat.length === 0) return 0;\n      let totalDist = 0;\n      const assigned = new Set();\n      for (const bird of boids) {\n        let bestDist = Infinity, bestIdx = -1;\n        for (let i = 0; i < pat.length; i++) {\n          if (assigned.has(i)) continue;\n          const dx = bird.x - width / 2 - pat[i].x;\n          const dy = bird.y - height / 2 - pat[i].y;\n          const d = Math.sqrt(dx * dx + dy * dy);\n          if (d < bestDist) { bestDist = d; bestIdx = i; }\n        }\n        if (bestIdx >= 0) { assigned.add(bestIdx); totalDist += bestDist; }\n      }\n      const maxErr = pat.length * 200;\n      return Math.max(0, 1 - totalDist / maxErr);\n    }\n\n    function getStars(time, parTime) {\n      if (time <= parTime * 0.6) return 3;\n      if (time <= parTime * 1.2) return 2;\n      return 1;\n    }\n\n    function spawnSuccessParticles() {\n      for (let i = 0; i < 60; i++) {\n        const angle = Math.random() * Math.PI * 2;\n        const speed = Math.random() * 8 + 2;\n        particles.push(new Particle(\n          width / 2, height / 2,\n          Math.cos(angle) * speed, Math.sin(angle) * speed,\n          'rgba(255, 215, 0, 1)', 60 + Math.random() * 30, 4 + Math.random() * 4\n        ));\n      }\n    }\n\n    function update() {\n      if (gameState !== 'playing') return;\n      levelTime++;\n      const lvl = levels[currentLevel];\n      for (const boid of boids) {\n        boid.ax = 0; boid.ay = 0;\n        const sep = boid.separate(boids);\n        const ali = boid.align(boids);\n        const coh = boid.cohere(boids);\n        boid.applyForce(sep.fx * 1.5, sep.fy * 1.5);\n        boid.applyForce(ali.fx * 1.0, ali.fy * 1.0);\n        boid.applyForce(coh.fx * 1.0, coh.fy * 1.0);\n        const attr = boid.attractTo(mouseX, mouseY, attractionPower);\n        boid.applyForce(attr.fx, attr.fy);\n        if (repelEffect > 0) {\n          const rep = boid.repelFrom(mouseX, mouseY, 150);\n          boid.applyForce(rep.fx * repelEffect, rep.fy * repelEffect);\n        }\n        boid.update();\n      }\n      if (repelEffect > 0) repelEffect *= 0.9;\n      attractPulse += 0.1;\n      if (levelTime - lastAttractSound > 30 && mouseX > 0) {\n        const nearBirds = boids.filter(b => {\n          const dx = b.x - mouseX, dy = b.y - mouseY;\n          return Math.sqrt(dx * dx + dy * dy) < 200;\n        });\n        if (nearBirds.length > 0) {\n          playAttract();\n          lastAttractSound = levelTime;\n        }\n      }\n      const match = calculateMatch();\n      document.getElementById('progress').textContent = `Match: ${Math.round(match * 100)}%`;\n      const starsEarned = match >= 0.85 ? getStars(levelTime / 60, lvl.parTime) : 0;\n      let starStr = '';\n      for (let i = 0; i < 3; i++) starStr += i < starsEarned ? '⭐' : '☆';\n      document.getElementById('stars').textContent = starStr;\n      document.getElementById('timer').textContent = formatTime(levelTime);\n      if (match >= 0.85 && gameState === 'playing') {\n        gameState = 'complete';\n        const earned = starsEarned * 100 + Math.max(0, Math.round((1 - match) * 500));\n        score += earned;\n        playSuccess();\n        spawnSuccessParticles();\n        successFlash = 20;\n        const panel = document.getElementById('levelComplete');\n        let cs = '';\n        for (let i = 0; i < 3; i++) cs += i < starsEarned ? '⭐' : '☆';\n        document.getElementById('completeStars').textContent = cs;\n        document.getElementById('completeTime').textContent = `Time: ${formatTime(levelTime)} | +${earned} pts`;\n        document.getElementById('nextBtn').textContent = currentLevel < levels.length - 1 ? 'Next Level' : 'Finish';\n        setTimeout(() => panel.classList.add('show'), 500);\n      }\n      for (let i = particles.length - 1; i >= 0; i--) {\n        particles[i].update();\n        if (particles[i].life <= 0) particles.splice(i, 1);\n      }\n      if (successFlash > 0) successFlash--;\n    }\n\n    function draw() {\n      // Background\n      const grad = ctx.createLinearGradient(0, 0, 0, height);\n      grad.addColorStop(0, '#0a0a12');\n      grad.addColorStop(1, '#1a1a2e');\n      ctx.fillStyle = grad;\n      ctx.fillRect(0, 0, width, height);\n      // Stars\n      for (const s of stars) {\n        s.twinkle += s.speed;\n        const alpha = 0.3 + Math.sin(s.twinkle) * 0.2;\n        ctx.beginPath();of the draw function, game loop, event handlers, etc.
+</think> code naturally from where it left off.
+</think>ctx.arc(s.x % width, s.y % height, s.size, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+        ctx.fill();
+      }
+      
+      // Pattern Preview (faded target)
+      const lvl = levels[currentLevel];
+      const pat = lvl.pattern;
+      ctx.globalAlpha = 0.15;
+      for (const pt of pat) {
+        ctx.beginPath();
+        ctx.arc(width / 2 + pt.x, height / 2 + pt.y, 12, 0, Math.PI * 2);
+        ctx.fillStyle = '#f4a261';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(width / 2 + pt.x, height / 2 + pt.y, 16, 0, Math.PI * 2);
+        ctx.strokeStyle = '#f4a261';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      
+      // Attraction indicator
+      if (mouseX > 0) {
+        const pulseR = 30 + Math.sin(attractPulse) * 10 + attractionPower * 20;
+        const grad = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, pulseR);
+        grad.addColorStop(0, 'rgba(244, 162, 97, 0.3)');
+        grad.addColorStop(1, 'rgba(244, 162, 97, 0)');
+        ctx.beginPath();
+        ctx.arc(mouseX, mouseY, pulseR, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+        
+        if (repelEffect > 0) {
+          ctx.beginPath();
+          ctx.arc(mouseX, mouseY, 150, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(0, 217, 255, ${repelEffect * 0.5})`;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+      
+      // Draw Boids
+      for (const boid of boids) {
+        // Trail
+        for (let i = 0; i < boid.trail.length; i++) {
+          const t = boid.trail[i];
+          const alpha = 1 - i / boid.trail.length;
+          const size = 3 * alpha;
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(244, 162, 97, ${alpha * 0.5})`;
+          ctx.fill();
+        }
+        
+        // Body
+        const angle = Math.atan2(boid.vy, boid.vx);
+        ctx.save();
+        ctx.translate(boid.x, boid.y);
+        ctx.rotate(angle);
+        
+        // Wing shimmer
+        const wingOffset = Math.sin(levelTime * 0.2 + boid.x * 0.01) * 2;
+        
+        // Main body
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 12, 6, 0, 0, Math.PI * 2);
+        const bodyGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 12);
+        bodyGrad.addColorStop(0, '#fff8f0');
+        bodyGrad.addColorStop(0.5, '#f4a261');
+        bodyGrad.addColorStop(1, '#e76f51');
+        ctx.fillStyle = bodyGrad;
+        ctx.fill();
+        
+        // Wing
+        ctx.beginPath();
+        ctx.moveTo(-2, -3);
+        ctx.quadraticCurveTo(-8, -8 + wingOffset, -14, -2 + wingOffset);
+        ctx.quadraticCurveTo(-8, 0, -2, 3);
+        ctx.fillStyle = '#e9c46a';
+        ctx.fill();
+        
+        // Beak
+        ctx.beginPath();
+        ctx.moveTo(12, 0);
+        ctx.lineTo(18, 0);
+        ctx.lineTo(12, 3);
+        ctx.closePath();
+        ctx.fillStyle = '#f4a261';
+        ctx.fill();
+        
+        // Eye
+        ctx.beginPath();
+        ctx.arc(6, -1, 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#1a1a2e';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(6.5, -1.5, 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        
+        ctx.restore();
+      }
+      
+      // Particles
+      for (const p of particles) p.draw();
+      
+      // Success flash
+      if (successFlash > 0) {
+        ctx.fillStyle = `rgba(255, 215, 0, ${successFlash * 0.02})`;
+        ctx.fillRect(0, 0, width, height);
+      }
+    }
+    
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+    
+    // Input handling
+    canvas.addEventListener('mousemove', (e) => {
+      initAudio();
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+    });
+    
+    canvas.addEventListener('touchmove', (e) => {
+      initAudio();
+      e.preventDefault();
+      mouseX = e.touches[0].clientX;
+      mouseY = e.touches[0].clientY;
+    }, { passive: false });
+    
+    canvas.addEventListener('touchstart', (e) => {
+      initAudio();
+      e.preventDefault();
+      mouseX = e.touches[0].clientX;
+      mouseY = e.touches[0].clientY;
+    }, { passive: false });
+    
+    canvas.addEventListener('mouseleave', () => {
+      mouseX = -1000;
+      mouseY = -1000;
+    });
+    
+    canvas.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      attractionPower = Math.max(1, Math.min(5, attractionPower + e.deltaY * -0.001));
+      document.getElementById('attractionFill').style.width = ((attractionPower - 1) / 4) * 100 + '%';
+    }, { passive: false });
+    
+    canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      repelEffect = 1;
+      playRepel();
+    });
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (gameState === 'complete') {
+          if (currentLevel < levels.length - 1) {
+            currentLevel++;
+            document.getElementById('levelComplete').classList.remove('show');
+            setTimeout(initLevel, 300);
+          } else {
+            // Game finished
+            const hs = getHighScore();
+            document.getElementById('finalScore').textContent = score;
+            if (score > hs) {
+              setHighScore(score);
+              document.getElementById('highScoreText').textContent = 'New High Score!';
+            } else {
+              document.getElementById('highScoreText').textContent = `Best: ${hs}`;
+            }
+            document.getElementById('levelComplete').classList.remove('show');
+            setTimeout(() => document.getElementById('gameOver').classList.add('show'), 500);
+          }
+        } else if (gameState === 'playing') {
+          currentLevel = 0;
+          score = 0;
+          initLevel();
+        }
+      }
+    });
+    
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      if (currentLevel < levels.length - 1) {
+        currentLevel++;
+        document.getElementById('levelComplete').classList.remove('show');
+        setTimeout(initLevel, 300);
+      } else {
+        // Game finished
+        const hs = getHighScore();
+        document.getElementById('finalScore').textContent = score;
+        if (score > hs) {
+          setHighScore(score);
+          document.getElementById('highScoreText').textContent = 'New High Score!';
+        } else {
+          document.getElementById('highScoreText').textContent = `Best: ${hs}`;
+        }
+        document.getElementById('levelComplete').classList.remove('show');
+        setTimeout(() => document.getElementById('gameOver').classList.add('show'), 500);
+      }
+      initAudio();
+    });
+    
+    document.getElementById('playAgainBtn').addEventListener('click', () => {
+      document.getElementById('gameOver').classList.remove('show');
+      currentLevel = 0;
+      score = 0;
+      setTimeout(initLevel, 300);
+      initAudio();
+    });
+    
+    // Start game
+    initLevel();
+    gameLoop();
+  </script>
+</body>
+</html>
