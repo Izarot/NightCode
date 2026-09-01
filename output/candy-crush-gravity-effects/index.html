@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🍬 Candy Cascade — Match-3 Puzzle</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍬</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body {
+    width: 100%; height: 100%;
+    background: radial-gradient(ellipse at center, #2d1b4e 0%, #1a0a2e 70%, #0a0418 100%);
+    font-family: 'Quicksand', Arial, sans-serif;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #wrap {
+    position: relative;
+    width: 480px; height: 640px;
+    max-width: 100vw; max-height: 100vh;
+    aspect-ratio: 480 / 640;
+  }
+  #gameCanvas {
+    display: block;
+    width: 100%; height: 100%;
+    background: linear-gradient(180deg, #1a0a2e 0%, #2d1b4e 100%);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(240, 198, 116, 0.15);
+    touch-action: none;
+    cursor: pointer;
+  }
+  #startOverlay, #gameOverOverlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-radius: 16px;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+    text-align: center; padding: 20px;
+  }
+  #gameOverOverlay { display: none; }
+  .title {
+    font-family: 'Fredoka One', Verdana, sans-serif;
+    font-size: 42px;
+    color: #f0c674;
+    text-shadow: 0 0 20px rgba(240,198,116,0.6), 0 4px 8px rgba(0,0,0,0.5);
+    margin-bottom: 10px;
+  }
+  .subtitle {
+    font-size: 14px; color: #c9b3e0;
+    margin-bottom: 24px; max-width: 320px;
+  }
+  .btn {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 22px;
+    background: linear-gradient(180deg, #f0c674 0%, #d4af37 100%);
+    color: #1a0a2e;
+    border: none;
+    padding: 14px 36px;
+    border-radius: 30px;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(240,198,116,0.4), inset 0 2px 0 rgba(255,255,255,0.3);
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+    letter-spacing: 1px;
+  }
+  .btn:hover { transform: scale(1.05); box-shadow: 0 8px 24px rgba(240,198,116,0.6), inset 0 2px 0 rgba(255,255,255,0.4); }
+  .btn:active { transform: scale(0.98); }
+  .final-score {
+    font-family: 'Fredoka One', sans-serif;
+    font-size: 28px; color: #fff;
+    margin: 16px 0 8px;
+  }
+  .new-badge {
+    font-family: 'Fredoka One', sans-serif;
+    color: #ffd700;
+    font-size: 20px;
+    margin-bottom: 12px;
+    text-shadow: 0 0 10px rgba(255,215,0,0.8);
+    display: none;
+    animation: pulse 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.1); } }
+  @media (max-width: 500px) {
+    #wrap { border-radius: 0; }
+    #gameCanvas { border-radius: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="gameCanvas" width="480" height="640"></canvas>
+  <div id="startOverlay">
+    <div class="title">🍬 Candy Cascade</div>
+    <div class="subtitle">Swap adjacent candies to match 3 or more of the same color. Score big, chain combos, and beat your high score!</div>
+    <button class="btn" id="startBtn">PLAY NOW</button>
+  </div>
+  <div id="gameOverOverlay">
+    <div class="title">GAME OVER</div>
+    <div class="final-score" id="finalScore">0</div>
+    <div class="new-badge" id="newBadge">✨ NEW HIGH SCORE! ✨</div>
+    <button class="btn" id="restartBtn">PLAY AGAIN</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   CANDY CASCADE — Single-file Match-3 Game
+   ============================================================ */
+
+// ---------- Constants ----------
+const GRID_COLS = 8;
+const GRID_ROWS = 8;
+const CELL = 50;
+const GRID_OFFSET_X = 40;
+const GRID_OFFSET_Y = 140;
+const CANDY_SIZE = 44;
+const CANDY_TYPES = 6;
+
+const CANDY_COLORS = [
+  { primary: '#e74c3c', secondary: '#c0392b', name: 'Cherry' },
+  { primary: '#f39c12', secondary: '#d68910', name: 'Orange' },
+  { primary: '#f1c40f', secondary: '#d4ac0d', name: 'Lemon' },
+  { primary: '#2ecc71', secondary: '#27ae60', name: 'Lime' },
+  { primary: '#3498db', secondary: '#2980b9', name: 'Blueberry' },
+  { primary: '#9b59b6', secondary: '#8e44ad', name: 'Grape' }
+];
+
+// ---------- Utility ----------
+const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+const easeInQuad = t => t * t;
+const easeOutQuad = t => 1 - (1 - t) * (1 - t);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const randInt = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+// ============================================================
+// AUDIO MANAGER — Web Audio API synthesis
+// ============================================================
+class AudioManager {
+  constructor() {
+    this.ctx = null;
+    this.enabled = true;
+  }
+  init() {
+    if (this.ctx) return;
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch (e) { this.enabled = false; }
+  }
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  }
+  tone(freq, dur, type = 'sine', vol = 0.15, attack = 0.005, release = null) {
+    if (!this.enabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, t);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(vol, t + attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    osc.connect(gain).connect(this.ctx.destination);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  }
+  noise(dur, vol = 0.1, filterFreq = 1000) {
+    if (!this.enabled || !this.ctx) return;
+    const t = this.ctx.currentTime;
+    const bufferSize = Math.floor(this.ctx.sampleRate * dur);
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = filterFreq;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(vol, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(filter).connect(gain).connect(this.ctx.destination);
+    src.start(t);
+    src.stop(t + dur);
+  }
+  select() { this.tone(600, 0.06, 'sine', 0.08); this.tone(900, 0.05, 'sine', 0.05); }
+  swap() { this.noise(0.1, 0.08, 800); }
+  match(level = 1) {
+    const base = 440 + level * 80;
+    this.tone(base, 0.18, 'sine', 0.15);
+    this.tone(base * 2, 0.18, 'sine', 0.1);
+  }
+  invalid() { this.tone(100, 0.15, 'sawtooth', 0.12); }
+  gameOver() {
+    setTimeout(() => this.tone(440, 0.12, 'sine', 0.15), 0);
+    setTimeout(() => this.tone(330, 0.12, 'sine', 0.15), 100);
+    setTimeout(() => this.tone(220, 0.25, 'sine', 0.15), 200);
+  }
+}
+
+// ============================================================
+// ANIMATOR — Tweening system
+// ============================================================
+class Animator {
+  constructor() { this.tweens = []; }
+  add(tween) { this.tweens.push(tween); }
+  update(dt) {
+    for (let i = this.tweens.length - 1; i >= 0; i--) {
+      const t = this.tweens[i];
+      t.elapsed += dt;
+      const p = Math.min(t.elapsed / t.duration, 1);
+      t.onUpdate(t.ease ? t.ease(p) : p, p);
+      if (p >= 1) {
+        if (t.onComplete) t.onComplete();
+        this.tweens.splice(i, 1);
+      }
+    }
+  }
+  clear() { this.tweens = []; }
+}
+
+// ============================================================
+// CANDY — Individual candy entity
+// ============================================================
+class Candy {
+  constructor(type, col, row) {
+    this.type = type;
+    this.col = col;
+    this.row = row;
+    this.x = GRID_OFFSET_X + col * CELL + CELL / 2;
+    this.y = GRID_OFFSET_Y + row * CELL + CELL / 2;
+    this.targetX = this.x;
+    this.targetY = this.y;
+    this.scale = 1;
+    this.alpha = 1;
+    this.special = null; // 'h-stripe', 'v-stripe', 'rainbow'
+    this.state = 'idle'; // idle, swapping, falling, matching, spawning
+    this.settleTime = 0;
+    this.settleAmp = 0;
+    this.flashTime = 0;
+  }
+  setGridPosition(col, row) {
+    this.col = col; this.row = row;
+    this.targetX = GRID_OFFSET_X + col * CELL + CELL / 2;
+    this.targetY = GRID_OFFSET_Y + row * CELL + CELL / 2;
+  }
+  draw(ctx) {
+    if (this.alpha <= 0) return;
+    const colors = CANDY_COLORS[this.type];
+    const size = CANDY_SIZE * this.scale;
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    ctx.translate(this.x, this.y);
+
+    // Settle wobble
+    let wobble = 0;
+    if (this.settleTime > 0) {
+      const t = this.settleTime;
+      wobble = Math.sin(t * 60) * this.settleAmp * Math.exp(-t * 6);
+      ctx.translate(0, wobble);
+    }
+
+    // Drop shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+
+    // Glow
+    ctx.shadowColor = colors.primary;
+    ctx.shadowBlur = 10;
+
+    // Body
+    ctx.fillStyle = colors.primary;
+    ctx.strokeStyle = colors.secondary;
+    ctx.lineWidth = 2;
+    this.drawShape(ctx, size);
+    ctx.fill();
+    ctx.stroke();
+
+    // Inner detail
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    // Special stripe overlay
+    if (this.special === 'h-stripe') {
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillRect(-size/2, -4, size, 8);
+    } else if (this.special === 'v-stripe') {
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillRect(-4, -size/2, 8, size);
+    } else if (this.special === 'rainbow') {
+      // rainbow ring
+      const grad = ctx.createConicGradient(0, 0, 0);
+      grad.addColorStop(0, '#e74c3c');
+      grad.addColorStop(0.2, '#f39c12');
+      grad.addColorStop(0.4, '#f1c40f');
+      grad.addColorStop(0.6, '#2ecc71');
+      grad.addColorStop(0.8, '#3498db');
+      grad.addColorStop(1, '#9b59b6');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, size/2 + 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Highlight shine
+    const shine = ctx.createRadialGradient(-size/4, -size/4, 1, -size/4, -size/4, size/2);
+    shine.addColorStop(0, 'rgba(255,255,255,0.6)');
+    shine.addColorStop(0.4, 'rgba(255,255,255,0.15)');
+    shine.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = shine;
+    this.drawShape(ctx, size);
+    ctx.fill();
+
+    // Match flash
+    if (this.flashTime > 0) {
+      ctx.globalAlpha = this.flashTime * 2;
+      ctx.fillStyle = '#ffffff';
+      this.drawShape(ctx, size);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+  drawShape(ctx, size) {
+    const r = size / 2;
+    ctx.beginPath();
+    switch (this.type) {
+      case 0: // Circle (Cherry)
+        ctx.arc(0, 0, r - 2, 0, Math.PI * 2);
+        break;
+      case 1: // Diamond (Orange)
+        ctx.moveTo(0, -r + 2); ctx.lineTo(r - 2, 0);
+        ctx.lineTo(0, r - 2); ctx.lineTo(-r + 2, 0);
+        ctx.closePath();
+        break;
+      case 2: // Hexagon (Lemon)
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+          const px = Math.cos(a) * (r - 2);
+          const py = Math.sin(a) * (r - 2);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        break;
+      case 3: // Rounded Square (Lime)
+        const rr = 8;
+        const s = r - 2;
+        ctx.moveTo(-s + rr, -s);
+        ctx.lineTo(s - rr, -s);
+        ctx.quadraticCurveTo(s, -s, s, -s + rr);
+        ctx.lineTo(s, s - rr);
+        ctx.quadraticCurveTo(s, s, s - rr, s);
+        ctx.lineTo(-s + rr, s);
+        ctx.quadraticCurveTo(-s, s, -s, s - rr);
+        ctx.lineTo(-s, -s + rr);
+        ctx.quadraticCurveTo(-s, -s, -s + rr, -s);
+        ctx.closePath();
+        break;
+      case 4: // Triangle (Blueberry)
+        ctx.moveTo(0, -r + 2);
+        ctx.lineTo(r - 2, r - 4);
+        ctx.lineTo(-r + 2, r - 4);
+        ctx.closePath();
+        break;
+      case 5: // Star (Grape)
+        const spikes = 5;
+        const outerR = r - 2;
+        const innerR = outerR * 0.45;
+        for (let i = 0; i < spikes * 2; i++) {
+          const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
+          const rad = i % 2 === 0 ? outerR : innerR;
+          const px = Math.cos(a) * rad;
+          const py = Math.sin(a) * rad;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        break;
+    }
+  }
+}
+
+// ============================================================
+// GRID — Board state and match detection
+// ============================================================
+class Grid {
+  constructor() {
+    this.cells = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+      this.cells[r] = [];
+      for (let c = 0; c < GRID_COLS; c++) {
+        this.cells[r][c] = null;
+      }
+    }
+  }
+  get(col, row) {
+    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return null;
+    return this.cells[row][col];
+  }
+  set(col, row, candy) {
+    this.cells[row][col] = candy;
+    if (candy) { candy.col = col; candy.row = row; }
+  }
+  swap(a, b) {
+    const tmp = this.cells[a.row][a.col];
+    this.cells[a.row][a.col] = this.cells[b.row][b.col];
+    this.cells[b.row][b.col] = tmp;
+    if (this.cells[a.row][a.col]) { this.cells[a.row][a.col].col = a.col; this.cells[a.row][a.col].row = a.row; }
+    if (this.cells[b.row][b.col]) { this.cells[b.row][b.col].col = b.col; this.cells[b.row][b.col].row = b.row; }
+  }
+  fillRandom() {
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        let type;
+        do {
+          type = randInt(0, CANDY_TYPES - 1);
+        } while (this.wouldMatch(c, r, type));
+        const candy = new Candy(type, c, r);
+        this.cells[r][c] = candy;
+      }
+    }
+  }
+  wouldMatch(col, row, type) {
+    if (col >= 2 && this.cells[row][col-1] && this.cells[row][col-2] &&
+        this.cells[row][col-1].type === type && this.cells[row][col-2].type === type) return true;
+    if (row >= 2 && this.cells[row-1][col] && this.cells[row-2][col] &&
+        this.cells[row-1][col].type === type && this.cells[row-2][col].type === type) return true;
+    return false;
+  }
+  findMatches() {
+    const matched = new Set();
+    const matches = []; // List of match groups with metadata
+
+    // Horizontal
+    for (let r = 0; r < GRID_ROWS; r++) {
+      let runStart = 0;
+      for (let c = 1; c <= GRID_COLS; c++) {
+        const same = c < GRID_COLS && this.cells[r][c] && this.cells[r][runStart] &&
+                     this.cells[r][c].type === this.cells[r][runStart].type;
+        if (!same) {
+          const len = c - runStart;
+          if (len >= 3 && this.cells[r][runStart]) {
+            const group = [];
+            for (let k = runStart; k < c; k++) group.push(this.cells[r][k]);
+            matches.push({ cells: group, dir: 'h', len });
+            group.forEach(cn => matched.add(`${cn.col},${cn.row}`));
+          }
+          runStart = c;
+        }
+      }
+    }
+    // Vertical
+    for (let c = 0; c < GRID_COLS; c++) {
+      let runStart = 0;
+      for (let r = 1; r <= GRID_ROWS; r++) {
+        const same = r < GRID_ROWS && this.cells[r][c] && this.cells[runStart][c] &&
+                     this.cells[r][c].type === this.cells[runStart][c].type;
+        if (!same) {
+          const len = r - runStart;
+          if (len >= 3 && this.cells[runStart][c]) {
+            const group = [];
+            for (let k = runStart; k < r; k++) group.push(this.cells[k][c]);
+            matches.push({ cells: group, dir: 'v', len });
+            group.forEach(cn => matched.add(`${cn.col},${cn.row}`));
+          }
+          runStart = r;
+        }
+      }
+    }
+    return { matched, matches };
+  }
+  hasValidMove() {
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        if (c + 1 < GRID_COLS && this.cells[r][c] && this.cells[r][c+1]) {
+          const a = this.cells[r][c], b = this.cells[r][c+1];
+          if (a.type === b.type) continue;
+          this.cells[r][c] = b; this.cells[r][c+1] = a;
+          b.col = c+1; b.row = r; a.col = c; a.row = r;
+          const m = this.findMatches();
+          this.cells[r][c] = a; this.cells[r][c+1] = b;
+          a.col = c; a.row = r; b.col = c+1; b.row = r;
+          if (m.matched.size > 0) return true;
+        }
+        if (r + 1 < GRID_ROWS && this.cells[r][c] && this.cells[r+1][c]) {
+          const a = this.cells[r][c], b = this.cells[r+1][c];
+          if (a.type === b.type) continue;
+          this.cells[r][c] = b; this.cells[r+1][c] = a;
+          b.col = c; b.row = r+1; a.col = c; a.row = r;
+          const m = this.findMatches();
+          this.cells[r][c] = a; this.cells[r+1][c] = b;
+          a.col = c; a.row = r; b.col = c; b.row = r+1;
+          if (m.matched.size > 0) return true;
+        }
+      }
+    }
+    return false;
+  }
+}
+
+// ============================================================
+// RENDERER — Canvas drawing operations
+// ============================================================
+class Renderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+  }
+  clear() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+  drawBackground() {
+    const ctx = this.ctx;
+    const grad = ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+    grad.addColorStop(0, '#1a0a2e');
+    grad.addColorStop(1, '#2d1b4e');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    // Subtle starfield
+    ctx.save();
+    for (let i = 0; i < 30; i++) {
+      const x = (i * 137) % this.canvas.width;
+      const y = (i * 91) % this.canvas.height;
+      const r = (i % 3) * 0.5 + 0.5;
+      ctx.fillStyle = `rgba(255,255,255,${0.05 + (i % 4) * 0.04})`;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  drawHUD(score, highScore, moves, speedrunTime) {
+    const ctx = this.ctx;
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetY = 2;
+
+    // Title
+    ctx.fillStyle = '#f0c674';
+    ctx.font = 'bold 28px "Fredoka One", Verdana, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🍬 Candy Cascade', 16, 12);
+
+    // Speedrun timer top right
+    ctx.fillStyle = '#a0e7e5';
+    ctx.font = 'bold 16px "Quicksand", sans-serif';
+    ctx.textAlign = 'right';
+    const mins = Math.floor(speedrunTime / 60);
+    const secs = Math.floor(speedrunTime % 60);
+    const ms = Math.floor((speedrunTime * 100) % 100);
+    ctx.fillText(`⏱ ${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}.${String(ms).padStart(2,'0')}`, 464, 16);
+
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    // Stats row
+    const statY = 56;
+    const cellW = 145;
+    const labels = ['⭐ SCORE', '📊 HIGH', '🎯 MOVES'];
+    const values = [score.toLocaleString(), highScore.toLocaleString(), moves];
+    const colors = ['#f5f5f5', '#f5f5f5', moves <= 5 ? '#e74c3c' : '#f5f5f5'];
+
+    for (let i = 0; i < 3; i++) {
+      const x = 16 + i * cellW;
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.font = '11px "Quicksand", sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(labels[i], x, statY);
+
+      ctx.fillStyle = colors[i];
+      ctx.font = 'bold 22px "Quicksand", sans-serif';
+      ctx.fillText(values[i], x, statY + 14);
+
+      if (i === 2 && moves <= 5 && moves > 0) {
+        // Pulse indicator
+        ctx.fillStyle = `rgba(231,76,60,${0.4 + Math.sin(Date.now() / 200) * 0.3})`;
+        ctx.beginPath();
+        ctx.arc(x + ctx.measureText(values[i]).width + 8, statY + 24, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Divider line
+    ctx.strokeStyle = 'rgba(240,198,116,0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(20, 130);
+    ctx.lineTo(460, 130);
+    ctx.stroke();
+  }
+  drawGrid() {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    this.roundRect(ctx, GRID_OFFSET_X, GRID_OFFSET_Y, GRID_COLS * CELL, GRID_ROWS * CELL, 8);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(212,175,55,0.2)';
+    ctx.lineWidth = 1;
+    for (let r = 0; r <= GRID_ROWS; r++) {
+      ctx.beginPath();
+      ctx.moveTo(GRID_OFFSET_X, GRID_OFFSET_Y + r * CELL);
+      ctx.lineTo(GRID_OFFSET_X + GRID_COLS * CELL, GRID_OFFSET_Y + r * CELL);
+      ctx.stroke();
+    }
+    for (let c = 0; c <= GRID_COLS; c++) {
+      ctx.beginPath();
+      ctx.moveTo(GRID_OFFSET_X + c * CELL, GRID_OFFSET_Y);
+      ctx.lineTo(GRID_OFFSET_X + c * CELL, GRID_OFFSET_Y + GRID_ROWS * CELL);
+      ctx.stroke();
+    }
+  }
+  drawSelection(candy, time) {
+    if (!candy) return;
+    const ctx = this.ctx;
+    const pulse = Math.sin(time / 150) * 0.5 + 0.5;
+    const size = CANDY_SIZE * 1.05 + pulse * 4;
+    ctx.save();
+    ctx.translate(candy.x, candy.y);
+    ctx.strokeStyle = `rgba(240,198,116,${0.7 + pulse * 0.3})`;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#f0c674';
+    ctx.shadowBlur = 12;
+    this.candyShape(ctx, candy.type, size);
+    ctx.stroke();
+    ctx.restore();
+  }
+  candyShape(ctx, type, size) {
+    const r = size / 2;
+    ctx.beginPath();
+    switch (type) {
+      case 0: ctx.arc(0, 0, r - 2, 0, Math.PI * 2); break;
+      case 1: ctx.moveTo(0, -r + 2); ctx.lineTo(r - 2, 0); ctx.lineTo(0, r - 2); ctx.lineTo(-r + 2, 0); ctx.closePath(); break;
+      case 2:
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+
+          const px = Math.cos(a) * (r - 2);
+          const py = Math.sin(a) * (r - 2);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        break;
+      case 3:
+        const rr = 8;
+        const s = r - 2;
+        ctx.moveTo(-s + rr, -s);
+        ctx.lineTo(s - rr, -s);
+        ctx.quadraticCurveTo(s, -s, s, -s + rr);
+        ctx.lineTo(s, s - rr);
+        ctx.quadraticCurveTo(s, s, s - rr, s);
+        ctx.lineTo(-s + rr, s);
+        ctx.quadraticCurveTo(-s, s, -s, s - rr);
+        ctx.lineTo(-s, -s + rr);
+        ctx.quadraticCurveTo(-s, -s, -s + rr, -s);
+        ctx.closePath();
+        break;
+      case 4:
+        ctx.moveTo(0, -r + 2);
+        ctx.lineTo(r - 2, r - 4);
+        ctx.lineTo(-r + 2, r - 4);
+        ctx.closePath();
+        break;
+      case 5:
+        const spikes = 5;
+        const outerR = r - 2;
+        const innerR = outerR * 0.45;
+        for (let i = 0; i < spikes * 2; i++) {
+          const a = (i / (spikes * 2)) * Math.PI * 2 - Math.PI / 2;
+          const rad = i % 2 === 0 ? outerR : innerR;
+          const px = Math.cos(a) * rad;
+          const py = Math.sin(a) * rad;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        break;
+    }
+  }
+  roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+  drawCombo(combos) {
+    const ctx = this.ctx;
+    combos.forEach(combo => {
+      const { text, x, y, age } = combo;
+      const alpha = Math.max(0, 1 - age / 1.5);
+      const scale = 1 + age * 0.3;
+      const offsetY = age * 80;
+      ctx.save();
+      ctx.translate(x, y - offsetY);
+      ctx.scale(scale, scale);
+      ctx.globalAlpha = alpha;
+      ctx.font = 'bold 20px "Fredoka One", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#f0c674';
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 4;
+      ctx.fillText(text, 0, 0);
+      ctx.restore();
+    });
+  }
+}
+
+// ============================================================
+// PARTICLE SYSTEM — Visual effects
+// ============================================================
+class Particle {
+  constructor(x, y, color) {
+    this.x = x; this.y = y;
+    this.vx = (Math.random() - 0.5) * 6;
+    this.vy = (Math.random() - 0.5) * 6 - 2;
+    this.life = 1;
+    this.decay = 0.8 + Math.random() * 0.5;
+    this.size = 4 + Math.random() * 6;
+    this.color = color;
+    this.gravity = 0.15;
+    this.rotation = Math.random() * Math.PI * 2;
+    this.rotSpeed = (Math.random() - 0.5) * 0.3;
+  }
+  update(dt) {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += this.gravity;
+    this.life -= this.decay * dt;
+    this.rotation += this.rotSpeed;
+  }
+  draw(ctx) {
+    if (this.life <= 0) return;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.rotation);
+    ctx.globalAlpha = this.life;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+    ctx.restore();
+  }
+}
+
+class ParticleSystem {
+  constructor() { this.particles = []; }
+  emit(x, y, color, count = 8) {
+    for (let i = 0; i < count; i++) {
+      this.particles.push(new Particle(x, y, color));
+    }
+  }
+  burst(x, y, color, count = 12) {
+    for (let i = 0; i < count; i++) {
+      const p = new Particle(x, y, color);
+      const angle = (i / count) * Math.PI * 2;
+      const speed = 3 + Math.random() * 4;
+      p.vx = Math.cos(angle) * speed;
+      p.vy = Math.sin(angle) * speed - 2;
+      this.particles.push(p);
+    }
+  }
+  update(dt) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      this.particles[i].update(dt);
+      if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+    }
+  }
+  draw(ctx) {
+    this.particles.forEach(p => p.draw(ctx));
+  }
+  clear() { this.particles = []; }
+}
+
+// ============================================================
+// GAME — Main game loop and state machine
+// ============================================================
+class Game {
+  constructor() {
+    this.canvas = document.getElementById('gameCanvas');
+    this.renderer = new Renderer(this.canvas);
+    this.audio = new AudioManager();
+    this.animator = new Animator();
+    this.particles = new ParticleSystem();
+    this.grid = new Grid();
+    this.state = 'start'; // start, playing, swapping, matching, falling, gameover
+    this.score = 0;
+    this.highScore = parseInt(localStorage.getItem('candyCascadeHighScore') || '0');
+    this.moves = 30;
+    this.selected = null;
+    this.speedrunTime = 0;
+    this.combos = [];
+    this.swapAnim = null;
+    this.lastTime = 0;
+    this.gameOverTriggered = false;
+
+    // Touch/mouse tracking
+    this.touchStart = null;
+    this.isDragging = false;
+    this.dragCandies = [];
+
+    this.setupEvents();
+    this.loop = this.loop.bind(this);
+    requestAnimationFrame(this.loop);
+  }
+  setupEvents() {
+    const canvas = this.canvas;
+
+    const getPos = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    };
+
+    const onStart = (e) => {
+      e.preventDefault();
+      if (this.state !== 'playing') return;
+      const pos = getPos(e);
+      const candy = this.getCandyAt(pos.x, pos.y);
+      if (candy) {
+        this.selected = candy;
+        this.touchStart = pos;
+        this.isDragging = true;
+        this.audio.select();
+      }
+    };
+
+    const onMove = (e) => {
+      e.preventDefault();
+      if (!this.isDragging || !this.selected || this.state !== 'playing') return;
+      const pos = getPos(e);
+      const dx = pos.x - this.touchStart.x;
+      const dy = pos.y - this.touchStart.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist > CELL * 0.6) {
+        let target = null;
+        if (Math.abs(dx) > Math.abs(dy)) {
+          target = this.grid.get(this.selected.col + (dx > 0 ? 1 : -1), this.selected.row);
+        } else {
+          target = this.grid.get(this.selected.col, this.selected.row + (dy > 0 ? 1 : -1));
+        }
+        if (target) {
+          this.trySwap(this.selected, target);
+          this.isDragging = false;
+          this.selected = null;
+        } else {
+          this.isDragging = false;
+        }
+      }
+    };
+
+    const onEnd = (e) => {
+      e.preventDefault();
+      if (this.state === 'playing' && this.selected && !this.isDragging) {
+        // Tap - try to select adjacent
+        const neighbors = [
+          this.grid.get(this.selected.col - 1, this.selected.row),
+          this.grid.get(this.selected.col + 1, this.selected.row),
+          this.grid.get(this.selected.col, this.selected.row - 1),
+          this.grid.get(this.selected.col, this.selected.row + 1)
+        ].filter(Boolean);
+        if (neighbors.length > 0) {
+          const n = neighbors[Math.floor(Math.random() * neighbors.length)];
+          this.trySwap(this.selected, n);
+        }
+      }
+      this.isDragging = false;
+      this.selected = null;
+    };
+
+    canvas.addEventListener('mousedown', onStart);
+    canvas.addEventListener('mousemove', onMove);
+    canvas.addEventListener('mouseup', onEnd);
+    canvas.addEventListener('mouseleave', onEnd);
+    canvas.addEventListener('touchstart', onStart, { passive: false });
+    canvas.addEventListener('touchmove', onMove, { passive: false });
+    canvas.addEventListener('touchend', onEnd, { passive: false });
+
+    document.getElementById('startBtn').addEventListener('click', () => this.startGame());
+    document.getElementById('restartBtn').addEventListener('click', () => this.startGame());
+  }
+  getCandyAt(x, y) {
+    const col = Math.floor((x - GRID_OFFSET_X) / CELL);
+    const row = Math.floor((y - GRID_OFFSET_Y) / CELL);
+    if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) return null;
+    return this.grid.cells[row][col];
+  }
+  startGame() {
+    this.audio.init();
+    this.audio.resume();
+    this.score = 0;
+    this.moves = 30;
+    this.speedrunTime = 0;
+    this.selected = null;
+    this.combos = [];
+    this.gameOverTriggered = false;
+    this.animator.clear();
+    this.particles.clear();
+    this.grid = new Grid();
+    this.grid.fillRandom();
+    this.state = 'playing';
+    document.getElementById('startOverlay').style.display = 'none';
+    document.getElementById('gameOverOverlay').style.display = 'none';
+  }
+  trySwap(a, b) {
+    if (this.state !== 'playing') return;
+    this.state = 'swapping';
+    this.audio.swap();
+
+    // Animate swap
+    const dur = 0.2;
+    const ax = a.x, ay = a.y, bx = b.x, by = b.y;
+
+    this.animator.add({
+      duration: dur, elapsed: 0,
+      onUpdate: (p) => {
+        a.x = lerp(ax, bx, easeOutQuad(p));
+        a.y = lerp(ay, by, easeOutQuad(p));
+        b.x = lerp(bx, ax, easeOutQuad(p));
+        b.y = lerp(by, ay, easeOutQuad(p));
+      },
+      onComplete: () => {
+        // Swap in grid
+        this.grid.swap(a, b);
+        const temp = { x: a.x, y: a.y };
+        a.x = bx; a.y = by; b.x = ax; b.y = ay;
+        a.setGridPosition(a.col, a.row);
+        b.setGridPosition(b.col, b.row);
+
+        const { matched } = this.grid.findMatches();
+        if (matched.size > 0) {
+          this.moves--;
+          this.processMatches();
+        } else {
+          // Swap back
+          this.audio.invalid();
+          this.grid.swap(a, b);
+          const ax2 = a.x, ay2 = a.y;
+          const bx2 = b.x, by2 = b.y;
+          this.animator.add({
+            duration: dur, elapsed: 0,
+            onUpdate: (p) => {
+              a.x = lerp(ax2, bx2, easeOutQuad(p));
+              a.y = lerp(ay2, by2, easeOutQuad(p));
+              b.x = lerp(bx2, ax2, easeOutQuad(p));
+              b.y = lerp(by2, ay2, easeOutQuad(p));
+            },
+            onComplete: () => {
+              a.setGridPosition(a.col, a.row);
+              b.setGridPosition(b.col, b.row);
+              this.state = 'playing';
+              this.checkGameOver();
+            }
+          });
+        }
+      }
+    });
+  }
+  processMatches() {
+    const { matched, matches } = this.grid.findMatches();
+    if (matched.size === 0) {
+      this.state = 'playing';
+      this.checkGameOver();
+      return;
+    }
+
+    this.state = 'matching';
+
+    // Calculate score
+    let totalScore = 0;
+    let comboLevel = 0;
+
+    matches.forEach(m => {
+      let base = m.len === 3 ? 50 : m.len === 4 ? 100 : 150;
+      if (m.len >= 5) base = 200;
+      totalScore += base;
+      comboLevel++;
+
+      // Combo text
+      const cx = m.cells[0].x;
+      const cy = m.cells[0].y;
+      let comboText = m.len === 3 ? 'NICE!' : m.len === 4 ? 'GREAT!' : m.len >= 5 ? 'AMAZING!' : 'COMBO!';
+      if (m.len >= 5) comboText = 'LEGENDARY!';
+      this.combos.push({ text: comboText, x: cx, y: cy, age: 0 });
+    });
+
+    this.audio.match(comboLevel);
+    this.score += totalScore * comboLevel;
+
+    // Animate matched candies
+    matched.forEach(key => {
+      const [c, r] = key.split(',').map(Number);
+      const candy = this.grid.get(c, r);
+      if (candy) {
+        candy.flashTime = 1;
+        this.particles.burst(candy.x, candy.y, CANDY_COLORS[candy.type].primary, 10);
+      }
+    });
+
+    // Remove matched after delay
+    setTimeout(() => {
+      matched.forEach(key => {
+        const [c, r] = key.split(',').map(Number);
+        const candy = this.grid.get(c, r);
+        if (candy) {
+          this.particles.burst(candy.x, candy.y, CANDY_COLORS[candy.type].primary, 15);
+          this.grid.set(c, r, null);
+        }
+      });
+      this.dropCandies();
+    }, 300);
+  }
+  dropCandies() {
+    this.state = 'falling';
+    let maxFall = 0;
+
+    for (let c = 0; c < GRID_COLS; c++) {
+      let empty = 0;
+      for (let r = GRID_ROWS - 1; r >= 0; r--) {
+        if (!this.grid.cells[r][c]) {
+          empty++;
+        } else if (empty > 0) {
+          const candy = this.grid.cells[r][c];
+          this.grid.cells[r][c] = null;
+          this.grid.cells[r + empty][c] = candy;
+          candy.row = r + empty;
+          candy.settleTime = 0;
+          candy.settleAmp = 0.1;
+          const targetY = GRID_OFFSET_Y + (r + empty) * CELL + CELL / 2;
+          const startY = candy.y;
+          const fallDist = targetY - startY;
+          const fallTime = Math.sqrt(fallDist / 800) * 0.4;
+          maxFall = Math.max(maxFall, fallTime);
+
+          this.animator.add({
+            duration: fallTime, elapsed: 0,
+            onUpdate: (p) => {
+              candy.y = lerp(startY, targetY, easeInQuad(p));
+            },
+            onComplete: () => {
+              candy.y = targetY;
+              candy.settleTime = 0.3;
+            }
+          });
+        }
+      }
+
+      // Spawn new candies
+      for (let i = 0; i < empty; i++) {
+        const type = randInt(0, CANDY_TYPES - 1);
+        const candy = new Candy(type, c, i);
+        this.grid.cells[i][c] = candy;
+        const startY = GRID_OFFSET_Y - (empty - i) * CELL;
+        const targetY = GRID_OFFSET_Y + i * CELL + CELL / 2;
+        candy.y = startY;
+        const fallDist = targetY - startY;
+        const fallTime = Math.sqrt(fallDist / 800) * 0.4;
+        maxFall = Math.max(maxFall, fallTime);
+
+        this.animator.add({
+          duration: fallTime, elapsed: 0,
+          onUpdate: (p) => {
+            candy.y = lerp(startY, targetY, easeInQuad(p));
+          },
+          onComplete: () => {
+            candy.y = targetY;
+            candy.settleTime = 0.3;
+          }
+        });
+      }
+    }
+
+    setTimeout(() => {
+      if (this.grid.hasValidMove()) {
+        this.state = 'playing';
+        this.checkGameOver();
+      } else {
+        this.shuffleBoard();
+      }
+    }, maxFall * 1000 + 100);
+  }
+  shuffleBoard() {
+    // Collect all candy types
+    const types = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        if (this.grid.cells[r][c]) {
+          types.push(this.grid.cells[r][c].type);
+        }
+      }
+    }
+
+    // Shuffle types
+    for (let i = types.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [types[i], types[j]] = [types[j], types[i]];
+    }
+
+    // Reassign
+    let idx = 0;
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        if (this.grid.cells[r][c]) {
+          this.grid.cells[r][c].type = types[idx++];
+        }
+      }
+    }
+
+    // Check again
+    if (!this.grid.hasValidMove()) {
+      this.shuffleBoard();
+    } else {
+      this.state = 'playing';
+    }
+  }
+  checkGameOver() {
+    if (this.moves <= 0 && !this.gameOverTriggered) {
+      this.gameOverTriggered = true;
+      this.audio.gameOver();
+      setTimeout(() => {
+        this.state = 'gameover';
+        const isNew = this.score > this.highScore;
+        if (isNew) {
+          this.highScore = this.score;
+          localStorage.setItem('candyCascadeHighScore', this.highScore.toString());
+        }
+        document.getElementById('finalScore').textContent = this.score.toLocaleString();
+        document.getElementById('newBadge').style.display = isNew ? 'block' : 'none';
+        document.getElementById('gameOverOverlay').style.display = 'flex';
+      }, 500);
+    }
+  }
+  loop(timestamp) {
+    const dt = Math.min((timestamp - this.lastTime) / 1000, 0.05);
+    this.lastTime = timestamp;
+
+    // Update
+    if (this.state === 'playing' || this.state === 'swapping' || this.state === 'matching' || this.state === 'falling') {
+      this.speedrunTime += dt;
+    }
+    this.animator.update(dt);
+    this.particles.update(dt);
+
+    // Update combos
+    for (let i = this.combos.length - 1; i >= 0; i--) {
+      this.combos[i].age += dt;
+      if (this.combos[i].age > 1.5) this.combos.splice(i, 1);
+    }
+
+    // Update settle times
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        const candy = this.grid.cells[r][c];
+        if (candy && candy.settleTime > 0) {
+          candy.settleTime -= dt;
+        }
+        if (candy && candy.flashTime > 0) {
+          candy.flashTime -= dt * 3;
+        }
+      }
+    }
+
+    // Draw
+    this.renderer.clear();
+    this.renderer.drawBackground();
+
+    if (this.state === 'start') {
+      // Draw static board preview
+      this.renderer.drawGrid();
+      for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+          const candy = this.grid.cells[r][c];
+          if (candy) candy.draw(this.renderer.ctx);
+        }
+      }
+    } else {
+      this.renderer.drawHUD(this.score, this.highScore, this.moves, this.speedrunTime);
+      this.renderer.drawGrid();
+
+      for (let r = 0; r < GRID_ROWS; r++) {
+        for (let c = 0; c < GRID_COLS; c++) {
+          const candy = this.grid.cells[r][c];
+          if (candy) candy.draw(this.renderer.ctx);
+        }
+      }
+
+      if (this.selected) {
+        this.renderer.drawSelection(this.selected, timestamp);
+      }
+
+      this.particles.draw(this.renderer.ctx);
+      this.renderer.drawCombo(this.combos);
+    }
+
+    requestAnimationFrame(this.loop);
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+const game = new Game();
+</script>
+</body>
+</html>

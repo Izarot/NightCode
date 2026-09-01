@@ -1,0 +1,272 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 26351 (char 26350)
+
+Raw: {"glow-orb.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0\">\n    <title>Glow Orb</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>\">\n    <link href=\"https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap\" rel=\"stylesheet\">\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        html, body {\n            width: 100%;\n            height: 100%;\n            overflow: hidden;\n            background: #0a0a12;\n            font-family: 'Orbitron', 'Courier New', monospace;\n        }\n        #gameCanvas {\n            display: block;\n            touch-action: none;\n        }\n        #loading {\n            position: fixed;\n            top: 50%;\n            left: 50%;\n            transform: translate(-50%, -50%);\n            color: #00f5ff;\n            font-size: 24px;\n            text-align: center;\n        }\n    </style>\n</head>\n<body>\n    <div id=\"loading\">Loading...</div>\n    <canvas id=\"gameCanvas\"></canvas>\n    <script type=\"module\">\nimport Game from 'data:application/javascript;base64,' + btoa(`\n// ============================================\n// GLOW ORB - Complete Game Implementation\n// ============================================\n\nconst CONFIG = {\n    GRAVITY: 0.15,\n    AIR_RESISTANCE: 0.995,\n    BOUNCE_DAMPING: 0.75,\n    ORB_MASS: 1.0,\n    PROJECTILE_MASS: 2.5,\n    ORB_RADIUS: 20,\n    PROJECTILE_RADIUS: 15,\n    LAUNCH_SPEED: 18,\n    MAX_PROJECTILES: 3,\n    LAUNCH_COOLDOWN: 500,\n    COMBO_WINDOW: 1000,\n    MAX_COMBO: 5,\n    MIN_GRAVITY: 0.15,\n    MAX_GRAVITY: 0.25,\n    MIN_COOLDOWN: 300\n};\n\nconst COLORS = {\n    background: '#0a0a12',\n    orbCore: '#00f5ff',\n    orbAura: '#4da6ff',\n    launcher: '#3a3a4a',\n    projectile: '#ff6b35',\n    text: '#ffffff',\n    accent: '#39ff14',\n    stars: '#ffffff'\n};\n\n// ============================================\n// AUDIO MANAGER - Web Audio API Sound Effects\n// ============================================\nclass AudioManager {\n    constructor() {\n        this.ctx = null;\n        this.initialized = false;\n    }\n\n    init() {\n        if (this.initialized) return;\n        try {\n            this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n            this.initialized = true;\n        } catch (e) {\n            console.warn('Web Audio not supported');\n        }\n    }\n\n    playSound(type) {\n        if (!this.ctx || this.ctx.state === 'suspended') {\n            this.ctx?.resume();\n        }\n        if (!this.ctx) return;\n\n        const now = this.ctx.currentTime;\n\n        switch(type) {\n            case 'fire':\n                this.playWhoosh(now);\n                break;\n            case 'bounce':\n                this.playBoop(now);\n                break;\n            case 'combo':\n                this.playChime(now);\n                break;\n            case 'gameover':\n                this.playBuzz(now);\n                break;\n        }\n    }\n\n    playWhoosh(time) {\n        const bufferSize = this.ctx.sampleRate * 0.1;\n        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);\n        const data = buffer.getChannelData(0);\n        for (let i = 0; i < bufferSize; i++) {\n            data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);\n        }\n        const source = this.ctx.createBufferSource();\n        source.buffer = buffer;\n        const filter = this.ctx.createBiquadFilter();\n        filter.type = 'highpass';\n        filter.frequency.value = 1000;\n        const gain = this.ctx.createGain();\n        gain.gain.setValueAtTime(0.3, time);\n        gain.gain.exponentialDecayTo?.(0.01, time + 0.1) || gain.gain.setTargetAtTime(0.01, time, 0.05);\n        source.connect(filter).connect(gain).connect(this.ctx.destination);\n        source.start(time);\n    }\n\n    playBoop(time) {\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.type = 'sine';\n        osc.frequency.setValueAtTime(400, time);\n        osc.frequency.exponentialRampToValueAtTime(200, time + 0.05);\n        gain.gain.setValueAtTime(0.2, time);\n        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);\n        osc.connect(gain).connect(this.ctx.destination);\n        osc.start(time);\n        osc.stop(time + 0.1);\n    }\n\n    playChime(time) {\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.type = 'sine';\n        osc.frequency.setValueAtTime(600, time);\n        osc.frequency.exponentialRampToValueAtTime(900, time + 0.1);\n        gain.gain.setValueAtTime(0.15, time);\n        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);\n        osc.connect(gain).connect(this.ctx.destination);\n        osc.start(time);\n        osc.stop(time + 0.15);\n    }\n\n    playBuzz(time) {\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.type = 'sawtooth';\n        osc.frequency.value = 80;\n        gain.gain.setValueAtTime(0.2, time);\n        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.5);\n        osc.connect(gain).connect(this.ctx.destination);\n        osc.start(time);\n        osc.stop(time + 0.5);\n    }\n}\n\n// ============================================\n// PARTICLE SYSTEM\n// ============================================\nclass Particle {\n    constructor(x, y, vx, vy, color, size, lifetime) {\n        this.x = x;\n        this.y = y;\n        this.vx = vx;\n        this.vy = vy;\n        this.color = color;\n        this.size = size;\n        this.lifetime = lifetime;\n        this.maxLifetime = lifetime;\n    }\n\n    update() {\n        this.x += this.vx;\n        this.y += this.vy;\n        this.lifetime--;\n        return this.lifetime > 0;\n    }\n\n    render(ctx) {\n        const alpha = this.lifetime / this.maxLifetime;\n        ctx.beginPath();\n        ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);\n        ctx.fillStyle = this.color.replace('1)', `${alpha})`);\n        ctx.fill();\n    }\n}\n\nclass ParticleSystem {\n    constructor() {\n        this.particles = [];\n    }\n\n    emit(x, y, count, color, speedRange, sizeRange, lifetimeRange) {\n        for (let i = 0; i < count; i++) {\n            const angle = Math.random() * Math.PI * 2;\n            const speed = speedRange[0] + Math.random() * (speedRange[1] - speedRange[0]);\n            const size = sizeRange[0] + Math.random() * (sizeRange[1] - sizeRange[0]);\n            const lifetime = lifetimeRange[0] + Math.random() * (lifetimeRange[1] - lifetimeRange[0]);\n            this.particles.push(new Particle(\n                x, y,\n                Math.cos(angle) * speed,\n                Math.sin(angle) * speed,\n                color, size, lifetime\n            ));\n        }\n    }\n\n    emitCollisionSparks(x, y) {\n        this.emit(x, y, 6 + Math.floor(Math.random() * 3), 'rgba(255, 255, 255, 1)', [2, 6], [2, 4], [10, 20]);\n    }\n\n    update() {\n        this.particles = this.particles.filter(p => p.update());\n    }\n\n    render(ctx) {\n        this.particles.forEach(p => p.render(ctx));\n    }\n}\n\n// ============================================\n// ORB\n// ============================================\nclass Orb {\n    constructor(x, y) {\n        this.x = x;\n        this.y = y;\n        this.vx = 0;\n        this.vy = 0;\n        this.radius = CONFIG.ORB_RADIUS;\n        this.mass = CONFIG.ORB_MASS;\n        this.pulsePhase = 0;\n        this.trailTimer = 0;\n    }\n\n    update(gravity, particles, game) {\n        this.vy += gravity;\n        this.vx *= CONFIG.AIR_RESISTANCE;\n        this.vy *= CONFIG.AIR_RESISTANCE;\n        this.x += this.vx;\n        this.y += this.vy;\n\n        // Trail particles\n        this.trailTimer++;\n        if (this.trailTimer >= 2) {\n            this.trailTimer = 0;\n            const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);\n            if (speed > 0.5) {\n                particles.emit(this.x, this.y, 1, 'rgba(77, 166, 255, 1)', [0.5, 1.5], [3, 6], [15, 25]);\n            }\n        }\n\n        this.pulsePhase += 0.1;\n\n        // Boundaries\n        if (this.x - this.radius < 0) {\n            this.x = this.radius;\n            this.vx *= -CONFIG.BOUNCE_DAMPING;\n        }\n        if (this.x + this.radius > game.canvas.width) {\n            this.x = game.canvas.width - this.radius;\n            this.vx *= -CONFIG.BOUNCE_DAMPING;\n        }\n        if (this.y - this.radius < 30) {\n            this.y = 30 + this.radius;\n            this.vy *= -CONFIG.BOUNCE_DAMPING;\n            particles.emitCollisionSparks(this.x, 30);\n        }\n\n        // Floor - game over\n        if (this.y + this.radius > game.canvas.height - 50) {\n            return true; // Game over\n        }\n\n        return false;\n    }\n\n    render(ctx) {\n        const pulse = 0.8 + 0.2 * Math.sin(this.pulsePhase);\n\n        // Outer glow\n        const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 2.5);\n        gradient.addColorStop(0, `rgba(0, 245, 255, ${0.3 * pulse})`);\n        gradient.addColorStop(0.4, `rgba(77, 166, 255, ${0.15 * pulse})`);\n        gradient.addColorStop(1, 'rgba(77, 166, 255, 0)');\n        ctx.beginPath();\n        ctx.arc(this.x, this.y, this.radius * 2.5, 0, Math.PI * 2);\n        ctx.fillStyle = gradient;\n        ctx.fill();\n\n        // Core\n        const coreGradient = ctx.createRadialGradient(this.x - this.radius * 0.3, this.y - this.radius * 0.3, 0, this.x, this.y, this.radius);\n        coreGradient.addColorStop(0, '#ffffff');\n        coreGradient.addColorStop(0.3, COLORS.orbCore);\n        coreGradient.addColorStop(1, COLORS.orbAura);\n        ctx.beginPath();\n        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);\n        ctx.fillStyle = coreGradient;\n        ctx.globalAlpha = pulse;\n        ctx.fill();\n        ctx.globalAlpha = 1;\n    }\n\n    reset(x, y) {\n        this.x = x;\n        this.y = y;\n        this.vx = 0;\n        this.vy = 0;\n    }\n}\n\n// ============================================\n// PROJECTILE\n// ============================================\nclass Projectile {\n    constructor(x, y, vx, vy) {\n        this.x = x;\n        this.y = y;\n        this.vx = vx;\n        this.vy = vy;\n        this.radius = CONFIG.PROJECTILE_RADIUS;\n        this.mass = CONFIG.PROJECTILE_MASS;\n        this.active = true;\n        this.lifetime = 600;\n    }\n\n    update(gravity, canvas) {\n        if (!this.active) return false;\n\n        this.vy += gravity * 0.5;\n        this.vx *= CONFIG.AIR_RESISTANCE;\n        this.vy *= CONFIG.AIR_RESISTANCE;\n        this.x += this.vx;\n        this.y += this.vy;\n        this.lifetime--;\n\n        // Boundary checks\n        if (this.x - this.radius < 0 || this.x + this.radius > canvas.width) {\n            this.vx *= -CONFIG.BOUNCE_DAMPING;\n            this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));\n        }\n        if (this.y - this.radius < 30) {\n            this.vy *= -CONFIG.BOUNCE_DAMPING;\n            this.y = 30 + this.radius;\n        }\n\n        // Remove conditions\n        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);\n        if ((speed < 0.5 && this.lifetime < 500) || this.lifetime <= 0 || this.y > canvas.height + 50) {\n            this.active = false;\n        }\n\n        return this.active;\n    }\n\n    render(ctx) {\n        if (!this.active) return;\n\n        // Glow\n        const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 1.8);\n        gradient.addColorStop(0, 'rgba(255, 107, 53, 0.4)');\n        gradient.addColorStop(1, 'rgba(255, 107, 53, 0)');\n        ctx.beginPath();\n        ctx.arc(this.x, this.y, this.radius * 1.8, 0, Math.PI * 2);\n        ctx.fillStyle = gradient;\n        ctx.fill();\n\n        // Core\n        ctx.beginPath();\n        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);\n        ctx.fillStyle = COLORS.projectile;\n        ctx.fill();\n\n        // Highlight\n        ctx.beginPath();\n        ctx.arc(this.x - this.radius * 0.3, this.y - this.radius * 0.3, this.radius * 0.4, 0, Math.PI * 2);\n        ctx.fillStyle = 'rgba(255, 200, 150, 0.6)';\n        ctx.fill();\n    }\n}\n\n// ============================================\n// LAUNCHER\n// ============================================\nclass Launcher {\n    constructor(x, y) {\n        this.x = x;\n        this.y = y;\n        this.angle = -Math.PI / 4;\n        this.cooldown = 0;\n        this.maxCooldown = CONFIG.LAUNCH_COOLDOWN;\n        this.barrelLength = 40;\n        this.barrelWidth = 12;\n    }\n\n    setAngle(mouseX, mouseY) {\n        const dx = mouseX - this.x;\n        const dy = mouseY - this.y;\n        this.angle = Math.atan2(dy, dx);\n        // Clamp angle to upward directions\n        if (this.angle > 0) this.angle = this.angle > Math.PI / 2 ? -Math.PI + 0.1 : 0.1;\n    }\n\n    update(deltaTime) {\n        if (this.cooldown > 0) {\n            this.cooldown -= deltaTime;\n        }\n    }\n\n    canFire() {\n        return this.cooldown <= 0;\n    }\n\n    fire() {\n        if (!this.canFire()) return null;\n        this.cooldown = this.maxCooldown;\n        const vx = Math.cos(this.angle) * CONFIG.LAUNCH_SPEED;\n        const vy = Math.sin(this.angle) * CONFIG.LAUNCH_SPEED;\n        const spawnX = this.x + Math.cos(this.angle) * this.barrelLength;\n        const spawnY = this.y + Math.sin(this.angle) * this.barrelLength;\n        return new Projectile(spawnX, spawnY, vx, vy);\n    }\n\n    render(ctx) {\n        ctx.save();\n        ctx.translate(this.x, this.y);\n\n        // Base\n        ctx.beginPath();\n        ctx.arc(0, 0, 25, 0, Math.PI * 2);\n        ctx.fillStyle = COLORS.launcher;\n        ctx.fill();\n        ctx.strokeStyle = '#5a5a6a';\n        ctx.lineWidth = 2;\n        ctx.stroke();\n\n        // Barrel\n        ctx.rotate(this.angle);\n        ctx.fillStyle = '#4a4a5a';\n        ctx.fillRect(0, -this.barrelWidth / 2, this.barrelLength, this.barrelWidth);\n        ctx.strokeStyle = '#6a6a7a';\n        ctx.strokeRect(0, -this.barrelWidth / 2, this.barrelLength, this.barrelWidth);\n\n        // Barrel opening\n        ctx.beginPath();\n        ctx.arc(this.barrelLength, 0, this.barrelWidth / 2 + 2, 0, Math.PI * 2);\n        ctx.fillStyle = '#2a2a3a';\n        ctx.fill();\n\n        ctx.restore();\n\n        // Cooldown indicator\n        if (this.cooldown > 0) {\n            const progress = 1 - (this.cooldown / this.maxCooldown);\n            ctx.beginPath();\n            ctx.arc(this.x, this.y, 30, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);\n            ctx.strokeStyle = '#666666';\n            ctx.lineWidth = 3;\n            ctx.stroke();\n        } else {\n            ctx.beginPath();\n            ctx.arc(this.x, this.y, 30, 0, Math.PI * 2);\n            ctx.strokeStyle = COLORS.accent;\n            ctx.lineWidth = 3;\n            ctx.stroke();\n        }\n    }\n\n    setPosition(x, y) {\n        this.x = x;\n        this.y = y;\n    }\n\n    setCooldown(cooldown) {\n        this.maxCooldown = cooldown;\n    }\n}\n\n// ============================================\n// HUD\n// ============================================\nclass HUD {\n    constructor() {\n        this.score = 0;\n        this.combo = 1;\n        this.maxCombo = 1;\n        this.comboTimer = 0;\n        this.highScore = parseInt(localStorage.getItem('glowOrbHighScore')) || 0;\n        this.time = 0;\n        this.comboPulse = 0;\n    }\n\n    addScore(points, orbY, canvasHeight) {\n        let totalPoints = points;\n        if (orbY < canvasHeight / 2) {\n            totalPoints += 5;\n        }\n        this.score += totalPoints * this.combo;\n        if (this.score > this.highScore) {\n            this.highScore = this.score;\n            localStorage.setItem('glowOrbHighScore', this.highScore.toString());\n        }\n        return totalPoints * this.combo;\n    }\n\n    incrementCombo() {\n        if (this.comboTimer > 0) {\n            this.combo = Math.min(this.combo + 1, CONFIG.MAX_COMBO);\n            if (this.combo > this.maxCombo) this.maxCombo = this.combo;\n        }\n        this.comboTimer = CONFIG.COMBO_WINDOW;\n        this.comboPulse = 1;\n    }\n\n    resetCombo() {\n        this.combo = 1;\n        this.comboTimer = 0;\n    }\n\n    update(deltaTime) {\n        if (this.comboTimer > 0) {\n            this.comboTimer -= deltaTime;\n            if (this.comboTimer <= 0) {\n                this.combo = 1;\n            }\n        }\n        if (this.comboPulse > 0) {\n            this.comboPulse -= 0.05;\n        }\n        this.time += deltaTime;\n    }\n\n    formatTime(ms) {\n        const totalSeconds = Math.floor(ms / 1000);\n        const minutes = Math.floor(totalSeconds / 60);\n        const seconds = totalSeconds % 60;\n        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;\n    }\n\n    render(ctx, canvas) {\n        // Background bar\n        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';\n        ctx.fillRect(0, 0, canvas.width, 45);\n\n        ctx.font = '18px Orbitron, monospace';\n        ctx.textBaseline = 'middle';\n        ctx.letterSpacing = '2px';\n\n        const y = 25;\n        let x = 20;\n\n        // Score\n        ctx.fillStyle = COLORS.text;\n        ctx.fillText(`SCORE: ${this.score.toString().padStart(4, '0')}`, x, y);\n        x += 200;\n\n        // Combo\n        if (this.combo > 1 || this.comboPulse > 0) {\n            const scale = 1 + this.comboPulse * 0.2;\n            ctx.save();\n            ctx.translate(x + 50, y);\n            ctx.scale(scale, scale);\n            ctx.fillStyle = COLORS.accent;\n            ctx.fillText(`COMBO: x${this.combo}`, -50, 0);\n            ctx.restore();\n        } else {\n            ctx.fillStyle = '#888888';\n            ctx.fillText('COMBO: x1', x, y);\n        }\n        x += 200;\n\n        // High Score\n        ctx.fillStyle = '#aaaaaa';\n        ctx.fillText(`HIGH: ${this.highScore.toString().padStart(4, '0')}`, x, y);\n        x += 180;\n\n        // Timer\n        ctx.fillStyle = COLORS.text;\n        ctx.fillText(`${this.formatTime(this.time)}`, x, y);\n    }\n\n    reset() {\n        this.score = 0;\n        this.combo = 1;\n        this.maxCombo = 1;\n        this.comboTimer = 0;\n        this.time = 0;\n        this.comboPulse = 0;\n        this.highScore = parseInt(localStorage.getItem('glowOrbHighScore')) || 0;\n    }\n}\n\n// ============================================\n// INPUT MANAGER\n// ============================================\nclass InputManager {\n    constructor(canvas) {\n        this.canvas = canvas;\n        this.mouseX = 0;\n        this.mouseY = 0;\n        this.mouseDown = false;\n        this.touchActive = false;\n        this.keys = {};\n\n        this.setupListeners();\n    }\n\n    setupListeners() {\n        this.canvas.addEventListener('mousemove', (e) => {\n            const rect = this.canvas.getBoundingClientRect();\n            const scaleX = this.canvas.width / rect.width;\n            const scaleY = this.canvas.height / rect.height;\n            this.mouseX = (e.clientX - rect.left) * scaleX;\n            this.mouseY = (e.clientY - rect.top) * scaleY;\n        });\n\n        this.canvas.addEventListener('mousedown', (e) => {\n            e.preventDefault();\n            this.mouseDown = true;\n        });\n\n        this.canvas.addEventListener('mouseup', (e) => {\n            e.preventDefault();\n            this.mouseDown = false;\n        });\n\n        this.canvas.addEventListener('touchstart', (e) => {\n            e.preventDefault();\n            this.touchActive = true;\n            this.handleTouch(e.touches[0]);\n        }, { passive: false });\n\n        this.canvas.addEventListener('touchmove', (e) => {\n            e.preventDefault();\n            if (e.touches.length > 0) {\n                this.handleTouch(e.touches[0]);\n            }\n        }, { passive: false });\n\n        this.canvas.addEventListener('touchend', (e) => {\n            e.preventDefault();\n            this.touchActive = false;\n            this.mouseDown = false;\n        }, { passive: false });\n\n        document.addEventListener('keydown', (e) => {\n            this.keys[e.key.toLowerCase()] = true;\n        });\n\n        document.addEventListener('keyup', (e) => {\n            this.keys[e.key.toLowerCase()] = false;\n        });\n    }\n\n    handleTouch(touch) {\n        const rect = this.canvas.getBoundingClientRect();\n        const scaleX = this.canvas.width / rect.width;\n        const scaleY = this.canvas.height / rect.height;\n        this.mouseX = (touch.clientX - rect.left) * scaleX;\n        this.mouseY = (touch.clientY - rect.top) * scaleY;\n        this.mouseDown = true;\n    }\n\n    isKeyPressed(key) {\n        return this.keys[key.toLowerCase()] || false;\n    }\n}\n\n// ============================================\n// STAR FIELD BACKGROUND\n// ============================================\nclass StarField {\n    constructor(canvas) {\n        this.stars = [];\n        this.canvas = canvas;\n        this.generateStars();\n    }\n\n    generateStars() {\n        this.stars = [];\n        for (let i = 0; i < 50; i++) {\n            this.stars.push({\n                x: Math.random() * this.canvas.width,\n                y: Math.random() * this.canvas.height,\n                size: 0.5 + Math.random() * 1.5,\n                opacity: 0.2 + Math.random() * 0.4\n            });\n        }\n    }\n\n    render(ctx) {\n        this.stars.forEach(star => {\n            ctx.beginPath();\n            ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);\n            ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;\n            ctx.fill();\n        });\n    }\n\n    resize(canvas) {\n        this.canvas = canvas;\n        this.generateStars();\n    }\n}\n\n// ============================================\n// MAIN GAME CLASS\n// ============================================\nclass Game {\n    constructor() {\n        this.canvas = document.getElementById('gameCanvas');\n        this.ctx = this.canvas.getContext('2d');\n        this.audio = new AudioManager();\n        this.input = new InputManager(this.canvas);\n        this.particles = new ParticleSystem();\n        this.hud = new HUD();\n        this.starField = new StarField(this.canvas);\n\n        this.state = 'title'; // title, playing, paused, gameover\n        this.orb = null;\n        this.projectiles = [];\n        this.launcher = null;\n\n        this.gravity = CONFIG.GRAVITY;\n        this.launchCooldown = CONFIG.LAUNCH_COOLDOWN;\n        this.lastTime = 0;\n        this.difficultyTimer = 0;\n        this.orbHitCooldown = new Set();\n\n        this.resize();\n        this.setupEventListeners();\n        this.init();\n\n        document.getElementById('loading').style.display = 'none';\n        requestAnimationFrame((t) => this.gameLoop(t));\n    }\n\n    init() {\n        this.orb = new Orb(this.canvas.width / 2, this.canvas.height / 3);\n        this.launcher = new Launcher(80, this.canvas.height - 80);\n        this.launcher.setCooldown(this.launchCooldown);\n        this.projectiles = [];\n        this.hud.reset();\n        this.gravity = CONFIG.GRAVITY;\n        this.launchCooldown = CONFIG.LAUNCH_COOLDOWN;\n        this.launcher.setCooldown(this.launchCooldown);\n        this.difficultyTimer = 0;\n        this.orbHitCooldown.clear();\n    }\n\n    resize() {\n        const minWidth = 800;\n        const minHeight = 600;\n        const maxWidth = window.innerWidth;\n        const maxHeight = window.innerHeight;\n\n        // Calculate aspect ratio maintaining minimum size\n        let width = Math.max(minWidth, maxWidth);\n        let height = Math.max(minHeight, maxHeight);\n\n        // Scale down for mobile\n        const scale = Math.min(1, Math.min(width / minWidth, height / minHeight));\n        width = Math.floor(minWidth * scale);\n        height = Math.floor(minHeight * scale);\n\n        // For responsive scaling, use CSS instead\n        this.canvas.style.width = maxWidth + 'px';\n        this.canvas.style.height = maxHeight + 'px';\n        this.canvas.width = maxWidth;\n        this.canvas.height = maxHeight;\n\n        if (this.starField) {\n            this.starField.resize(this.canvas);\n        }\n        if (this.launcher) {\n            this.launcher.setPosition(80, this.canvas.height - 80);\n        }\n    }\n\n    setupEventListeners() {\n        window.addEventListener('resize', () => this.resize());\n    }\n\n    handleInput() {\n        // Update launcher aim\n        this.launcher.setAngle(this.input.mouseX, this.input.mouseY);\n\n        // Fire projectile\n        if ((this.input.mouseDown || this.input.isKeyPressed(' ')) && this.state === 'playing') {\n            this.tryFireProjectile();\n            this.input.mouseDown = false;\n        }\n\n        // Keyboard controls\n        if (this.input.isKeyPressed('r')) {\n            this.restart();\n        }\n        if (this.input.isKeyPressed('p') && this.state === 'playing') {\n            this.state = 'paused';\n        } else if (this.input.isKeyPressed('p') && this.state === 'paused') {\n            this.state = 'playing';\n        }\n\n        // Click to start/restart\n        if (this.input.mouseDown) {\n            if (this.state === 'title') {\n                this.state = 'playing';\n                this.audio.init();\n            } else if (this.state === 'gameover') {\n                this.restart();\n            }\n            this.input.mouseDown = false;\n        }\n    }\n\n    tryFireProjectile() {\n        if (this.launcher.canFire() && this.projectiles.length < CONFIG.MAX_PROJECTILES) {\n            const projectile= this.launcher.fire();
+            if (projectile) {
+                this.projectiles.push(projectile);
+                this.audio.playSound('fire');
+                this.particles.emit(projectile.x, projectile.y, 5, 'rgba(255, 107, 53, 1)', [2, 5], [2, 5], [10, 20]);
+            }
+        }
+
+        checkCollisions() {
+            for (let i = this.projectiles.length - 1; i >= 0; i--) {
+                const proj = this.projectiles[i];
+                if (!proj.active) continue;
+
+                // Projectile-Orb collision
+                const dx = proj.x - this.orb.x;
+                const dy = proj.y - this.orb.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const minDist = proj.radius + this.orb.radius;
+
+                if (dist < minDist) {
+                    // Elastic collision response
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    const dvx = proj.vx - this.orb.vx;
+                    const dvy = proj.vy - this.orb.vy;
+                    const dvn = dvx * nx + dvy * ny;
+
+                    if (dvn > 0) {
+                        const m1 = proj.mass;
+                        const m2 = this.orb.mass;
+                        const impulse = (2 * dvn) / (m1 + m2);
+
+                        proj.vx -= impulse * m2 * nx * 0.8;
+                        proj.vy -= impulse * m2 * ny * 0.8;
+                        this.orb.vx += impulse * m1 * nx * 1.2;
+                        this.orb.vy += impulse * m1 * ny * 1.2;
+
+                        // Separate objects
+                        const overlap = minDist - dist;
+                        proj.x += nx * overlap * 0.5;
+                        proj.y += ny * overlap * 0.5;
+                        this.orb.x -= nx * overlap * 0.5;
+                        this.orb.y -= ny * overlap * 0.5;
+
+                        // Score and effects
+                        const points = this.hud.addScore(10, this.orb.y, this.canvas.height);
+                        this.hud.incrementCombo();
+                        this.particles.emitCollisionSparks((proj.x + this.orb.x) / 2, (proj.y + this.orb.y) / 2);
+                        this.particles.emit((proj.x + this.orb.x) / 2, (proj.y + this.orb.y) / 2, 8, 'rgba(255, 200, 100, 1)', [3, 7], [3, 6], [15, 30]);
+                        this.audio.playSound('bounce');
+
+                        if (this.hud.combo >= 3) {
+                            this.audio.playSound('combo');
+                        }
+                    }
+                }
+
+                // Wall collisions for scoring
+                if (proj.x - proj.radius < 5 || proj.x + proj.radius > this.canvas.width - 5) {
+                    if (!this.orbHitCooldown.has('wall')) {
+                        this.hud.addScore(2, this.orb.y, this.canvas.height);
+                        this.orbHitCooldown.add('wall');
+                        setTimeout(() => this.orbHitCooldown.delete('wall'), 100);
+                    }
+                }
+            }
+        }
+
+        updateDifficulty() {
+            this.difficultyTimer++;
+            if (this.difficultyTimer % 600 === 0) { // Every 10 seconds
+                this.gravity = Math.min(CONFIG.MAX_GRAVITY, this.gravity + 0.005);
+                this.launchCooldown = Math.max(CONFIG.MIN_COOLDOWN, this.launchCooldown - 10);
+                this.launcher.setCooldown(this.launchCooldown);
+            }
+        }
+
+        update(deltaTime) {
+            if (this.state !== 'playing') return;
+
+            this.hud.update(deltaTime);
+            this.launcher.update(deltaTime);
+
+            const orbHitFloor = this.orb.update(this.gravity, this.particles, this);
+
+            this.projectiles = this.projectiles.filter(p => p.update(this.gravity, this.canvas));
+            this.particles.update();
+            this.checkCollisions();
+            this.updateDifficulty();
+
+            if (orbHitFloor) {
+                this.gameOver();
+            }
+        }
+
+        gameOver() {
+            this.state = 'gameover';
+            this.audio.playSound('gameover');
+            this.particles.emit(this.orb.x, this.orb.y, 30, 'rgba(255, 50, 50, 1)', [5, 15], [5, 10], [30, 60]);
+        }
+
+        restart() {
+            this.init();
+            this.state = 'playing';
+            this.audio.init();
+        }
+
+        render() {
+            // Background
+            this.ctx.fillStyle = COLORS.background;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            // Stars
+            this.starField.render(this.ctx);
+
+            // Floor
+            this.ctx.fillStyle = 'rgba(50, 50, 70, 0.5)';
+            this.ctx.fillRect(0, this.canvas.height - 50, this.canvas.width, 50);
+
+            // Floor glow line
+            const floorGradient = this.ctx.createLinearGradient(0, this.canvas.height - 50, 0, this.canvas.height - 45);
+            floorGradient.addColorStop(0, 'rgba(255, 50, 50, 0.8)');
+            floorGradient.addColorStop(1, 'rgba(255, 50, 50, 0)');
+            this.ctx.fillStyle = floorGradient;
+            this.ctx.fillRect(0, this.canvas.height - 50, this.canvas.width, 5);
+
+            // Danger zone indicator
+            this.ctx.fillStyle = 'rgba(255, 50, 50, 0.1)';
+            this.ctx.fillRect(0, this.canvas.height - 100, this.canvas.width, 50);
+
+            // Top boundary
+            this.ctx.fillStyle = 'rgba(100, 100, 150, 0.3)';
+            this.ctx.fillRect(0, 0, this.canvas.width, 30);
+            this.ctx.strokeStyle = 'rgba(100, 100, 150, 0.5)';
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, 30);
+            this.ctx.lineTo(this.canvas.width, 30);
+            this.ctx.stroke();
+
+            // Render game objects
+            this.projectiles.forEach(p => p.render(this.ctx));
+            if (this.state !== 'gameover') {
+                this.orb.render(this.ctx);
+            }
+            this.particles.render(this.ctx);
+            this.launcher.render(this.ctx);
+
+            // HUD
+            if (this.state === 'playing' || this.state === 'paused' || this.state === 'gameover') {
+                this.hud.render(this.ctx, this.canvas);
+            }
+
+            // State overlays
+            if (this.state === 'title') {
+                this.renderTitleScreen();
+            } else if (this.state === 'paused') {
+                this.renderPauseScreen();
+            } else if (this.state === 'gameover') {
+                this.renderGameOverScreen();
+            }
+        }
+
+        renderTitleScreen() {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+
+            // Title
+            this.ctx.font = 'bold 64px Orbitron, monospace';
+            this.ctx.fillStyle = COLORS.orbCore;
+            this.ctx.shadowColor = COLORS.orbCore;
+            this.ctx.shadowBlur = 30;
+            this.ctx.fillText('GLOW ORB', this.canvas.width / 2, this.canvas.height / 3);
+            this.ctx.shadowBlur = 0;
+
+            // Instructions
+            this.ctx.font = '24px Orbitron, monospace';
+            this.ctx.fillStyle = COLORS.text;
+            this.ctx.fillText('Aim with mouse, click or SPACE to fire', this.canvas.width / 2, this.canvas.height / 2);
+            this.ctx.fillText('Keep the orb in the air!', this.canvas.width / 2, this.canvas.height / 2 + 40);
+
+            // Start prompt
+            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300);
+            this.ctx.fillStyle = `rgba(57, 255, 20, ${pulse})`;
+            this.ctx.fillText('Click or tap to start', this.canvas.width / 2, this.canvas.height / 2 + 120);
+
+            this.ctx.textAlign = 'left';
+        }
+
+        renderPauseScreen() {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.font = 'bold 48px Orbitron, monospace';
+            this.ctx.fillStyle = COLORS.text;
+            this.ctx.fillText('PAUSED', this.canvas.width / 2, this.canvas.height / 2);
+
+            this.ctx.font = '24px Orbitron, monospace';
+            this.ctx.fillStyle = '#aaaaaa';
+            this.ctx.fillText('Press P or click to continue', this.canvas.width / 2, this.canvas.height / 2 + 50);
+
+            this.ctx.textAlign = 'left';
+        }
+
+        renderGameOverScreen() {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+
+            // Game Over
+            this.ctx.font = 'bold 56px Orbitron, monospace';
+            this.ctx.fillStyle = '#ff4444';
+            this.ctx.shadowColor = '#ff4444';
+            this.ctx.shadowBlur = 20;
+            this.ctx.fillText('GAME OVER', this.canvas.width / 2, this.canvas.height / 3 - 40);
+            this.ctx.shadowBlur = 0;
+
+            // Final score
+            this.ctx.font = '32px Orbitron, monospace';
+            this.ctx.fillStyle = COLORS.text;
+            this.ctx.fillText(`Final Score: ${this.hud.score}`, this.canvas.width / 2, this.canvas.height / 2 - 30);
+
+            // High score
+            this.ctx.font = '24px Orbitron, monospace';
+            this.ctx.fillStyle = COLORS.accent;
+            this.ctx.fillText(`High Score: ${this.hud.highScore}`, this.canvas.width / 2, this.canvas.height / 2 + 20);
+
+            // Max combo
+            this.ctx.fillStyle = '#aaaaaa';
+            this.ctx.fillText(`Max Combo: x${this.hud.maxCombo}`, this.canvas.width / 2, this.canvas.height / 2 + 60);
+
+            // Restart prompt
+            const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300);
+            this.ctx.fillStyle = `rgba(57, 255, 20, ${pulse})`;
+            this.ctx.fillText('Click or press R to restart', this.canvas.width / 2, this.canvas.height / 2 + 130);
+
+            this.ctx.textAlign = 'left';
+        }
+
+        gameLoop(currentTime) {
+            const deltaTime = currentTime - this.lastTime;
+            this.lastTime = currentTime;
+
+            this.handleInput();
+            this.update(deltaTime);
+            this.render();
+
+            requestAnimationFrame((t) => this.gameLoop(t));
+        }
+    }
+
+    // Start the game
+    window.addEventListener('load', () => {
+        new Game();
+    });
+`);
+
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.textContent = Game;
+        document.body.appendChild(script);
+    </script>
+</body>
+</html>", "title": "Glow Orb - Keep the orb bouncing!", "description": "A physics-based arcade game where you launch projectiles to keep a glowing orb bouncing.", "instructions": "Use mouse to aim the launcher, click or press SPACE to fire projectiles at the glowing orb to keep it bouncing. Don't let it hit the floor!"}
