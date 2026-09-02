@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Block Tower Puzzle</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧱</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="game-wrap">
+<canvas id="game"></canvas>
+</div>
+<div id="ui">
+<div id="top-bar">
+<div id="stars">
+<span class="star-icon">&#9733;</span>
+<span id="star-count">0</span>/<span id="star-total">0</span>
+</div>
+<div id="level-num">LEVEL <span id="lvl-num">1</span></div>
+<div id="time-box">
+<span id="time-icon">&#9201;</span> <span id="time-val">0:00</span>
+</div>
+<div id="highscore-box" title="Best Time">
+<span id="hs-icon">&#127942;</span> <span id="hs-val">--</span>
+</div>
+<button id="btn-undo" title="Undo">&#8630;</button>
+<button id="btn-restart" title="Restart">&#8634;</button>
+<button id="btn-menu" title="Menu">&#8801;</button>
+</div>
+<div id="left-panel">
+<h3>BLOCKS</h3>
+<div id="palette"></div>
+</div>
+<div id="right-panel">
+<h3>TARGET</h3>
+<div class="target-row">Height: <span id="target-h">0</span></div>
+<div class="target-row">Current: <span id="current-h">0</span></div>
+<div id="progress-track"><div id="progress-fill"></div></div>
+<div class="stability-row">
+STABILITY: <span id="stab-pct">100%</span> <span id="stab-label">BALANCED</span>
+<div id="stab-track"><div id="stab-fill"></div></div>
+</div>
+</div>
+</div>
+<div id="screen-title" class="screen">
+<h1>BLOCK TOWER</h1>
+<p>Build the tallest tower!</p>
+<button class="btn-big" id="btn-play">PLAY</button>
+<button class="btn-big" id="btn-howto">HOW TO PLAY</button>
+<div id="total-stars-display">Total Stars: <span id="total-stars">0</span></div>
+<div id="best-time-display">Best Time: <span id="best-time">--</span></div>
+</div>
+<div id="screen-levels" class="screen hidden">
+<h2>SELECT LEVEL</h2>
+<div id="level-grid"></div>
+<button class="btn-big" id="btn-back-title">BACK</button>
+</div>
+<div id="screen-pause" class="screen hidden">
+<h2>PAUSED</h2>
+<button class="btn-big" id="btn-resume">RESUME</button>
+<button class="btn-big" id="btn-pause-restart">RESTART</button>
+<button class="btn-big" id="btn-pause-levels">LEVELS</button>
+<button class="btn-big" id="btn-pause-title">TITLE</button>
+</div>
+<div id="screen-victory" class="screen hidden">
+<h2>LEVEL COMPLETE!</h2>
+<div id="victory-stars"></div>
+<p>Blocks Remaining: <span id="blocks-left">0</span></p>
+<p>Time: <span id="victory-time">0:00</span></p>
+<p>Best: <span id="victory-best">--</span></p>
+<button class="btn-big" id="btn-next">NEXT LEVEL</button>
+<button class="btn-big" id="btn-replay">REPLAY</button>
+<button class="btn-big" id="btn-victory-levels">LEVELS</button>
+</div>
+<div id="screen-howto" class="screen hidden">
+<h2>HOW TO PLAY</h2>
+<ul>
+<li>Click a block, then click grid to place</li>
+<li>Right-click or ESC to deselect</li>
+<li>R to restart, U to undo</li>
+<li>Reach target height to win!</li>
+<li>Fewer blocks = more stars</li>
+</ul>
+<button class="btn-big" id="btn-close-howto">GOT IT</button>
+</div>
+<div id="toast"></div>
+<script src="state.js"></script>
+<script src="levels.js"></script>
+<script src="audio.js"></script>
+<script src="renderer.js"></script>
+<script src="input.js"></script>
+<script src="ui.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎈 ZERO-G: FRISBEE OMEGA 🎈</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; font-family: 'Orbitron', monospace; }
+canvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); cursor: crosshair; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+const C = document.getElementById('gameCanvas');
+const X = C.getContext('2d');
+let W, H, CX, CY, SC;
+
+function resize() {
+  const r = 16/9;
+  let w = window.innerWidth, h = window.innerHeight;
+  if (w/h > r) { h = h; w = h*r; } else { w = w; h = w/r; }
+  C.width = 1920; C.height = 1080;
+  W = 1920; H = 1080; CX = W/2; CY = H/2;
+  const sx = w/W, sy = h/H;
+  SC = Math.min(sx, sy);
+  C.style.width = w+'px'; C.style.height = h+'px';
+}
+window.addEventListener('resize', resize); resize();
+
+const PI = Math.PI, PI2 = PI*2;
+function rnd(a,b) { return a + Math.random()*(b-a); }
+function dist(a,b) { return Math.hypot(a.x-b.x, a.y-b.y); }
+function clamp(v,a,b) { return Math.max(a, Math.min(b,v)); }
+function lerp(a,b,t) { return a + (b-a)*t; }
+
+class Audio {
+  constructor() { this.ctx = null; this.vol = 0.5; }
+  init() { if (!this.ctx) this.ctx = new (window.AudioContext||window.webkitAudioContext)(); }
+  beep(freq, dur, type='sine', vol=1) {
+    if (!this.ctx) return;
+    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(this.vol*vol, this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime+dur);
+    o.connect(g); g.connect(this.ctx.destination);
+    o.start(); o.stop(this.ctx.currentTime+dur);
+  }
+  throw() { this.beep(300, 0.2, 'sawtooth', 0.4); setTimeout(()=>this.beep(150, 0.1, 'sine', 0.3), 50); }
+  catch() { this.beep(800, 0.1, 'sine', 0.5); }
+  goal() { [0,100,200,300].forEach((d,i)=>setTimeout(()=>this.beep(400+i*100, 0.2, 'square', 0.4), d)); }
+  boost() { this.beep(200, 0.3, 'sawtooth', 0.3); }
+  hit() { this.beep(100, 0.15, 'triangle', 0.3); }
+  click() { this.beep(1200, 0.05, 'sine', 0.2); }
+}
+const SFX = new Audio();
+
+class Particle {
+  constructor(x,y,vx,vy,life,color,size) {
+    this.x=x; this.y=y; this.vx=vx; this.vy=vy;
+    this.life=life; this.maxLife=life; this.color=color; this.size=size;
+  }
+  update(dt) {
+    this.x += this.vx*dt; this.y += this.vy*dt;
+    this.vx *= 0.98; this.vy *= 0.98;
+    this.life -= dt;
+  }
+  draw(X) {
+    const a = this.life/this.maxLife;
+    X.globalAlpha = a;
+    X.fillStyle = this.color;
+    X.beginPath();
+    X.arc(this.x, this.y, this.size*a, 0, PI2);
+    X.fill();
+    X.globalAlpha = 1;
+  }
+}
+
+class WindZone {
+  constructor() {
+    this.x = rnd(W*0.2, W*0.8);
+    this.y = rnd(H*0.2, H*0.8);
+    this.r = rnd(120, 200);
+    this.angle = rnd(0, PI2);
+    this.targetAngle = this.angle;
+    this.strength = rnd(50, 200);
+    this.timer = rnd(8, 15);
+    this.particles = [];
+    for (let i=0; i<30; i++) {
+      this.particles.push({
+        x: rnd(this.x-this.r, this.x+this.r),
+        y: rnd(this.y-this.r, this.y+this.r),
+        life: rnd(1, 3)
+      });
+    }
+  }
+  update(dt) {
+    this.timer -= dt;
+    if (this.timer <= 0) {
+      this.targetAngle = rnd(0, PI2);
+      this.timer = rnd(8, 15);
+    }
+    let diff = this.targetAngle - this.angle;
+    while (diff > PI) diff -= PI2;
+    while (diff < -PI) diff += PI2;
+    this.angle += diff * dt * 0.5;
+    for (let p of this.particles) {
+      p.x += Math.cos(this.angle) * 80 * dt;
+      p.y += Math.sin(this.angle) * 80 * dt;
+      p.life -= dt;
+      if (p.life <= 0 || dist(p, {x:this.x, y:this.y}) > this.r) {
+        p.x = this.x + rnd(-this.r, this.r);
+        p.y = this.y + rnd(-this.r, this.r);
+        p.life = rnd(1, 3);
+      }
+    }
+  }
+  getForce(x, y) {
+    const d = Math.hypot(x-this.x, y-this.y);
+    if (d > this.r) return {fx:0, fy:0};
+    const f = (1 - d/this.r) * this.strength;
+    return {fx: Math.cos(this.angle)*f, fy: Math.sin(this.angle)*f};
+  }
+  draw(X) {
+    X.save();
+    X.globalAlpha = 0.15;
+    X.fillStyle = '#00ffaa';
+    X.beginPath();
+    X.arc(this.x, this.y, this.r, 0, PI2);
+    X.fill();
+    X.globalAlpha = 1;
+    X.strokeStyle = '#00ffaa';
+    X.lineWidth = 2;
+    X.setLineDash([5,5]);
+    X.beginPath();
+    X.arc(this.x, this.y, this.r, 0, PI2);
+    X.stroke();
+    X.setLineDash([]);
+    for (let p of this.particles) {
+      X.globalAlpha = p.life/3;
+      X.fillStyle = '#00ffcc';
+      X.beginPath();
+      X.arc(p.x, p.y, 2, 0, PI2);
+      X.fill();
+    }
+    X.globalAlpha = 1;
+    X.save();
+    X.translate(this.x, this.y);
+    X.rotate(this.angle);
+    X.strokeStyle = '#00ffaa';
+    X.lineWidth = 3;
+    X.beginPath();
+    X.moveTo(-15, 0); X.lineTo(15, 0);
+    X.moveTo(10, -5); X.lineTo(15, 0); X.lineTo(10, 5);
+    X.stroke();
+    X.restore();
+    X.restore();
+  }
+}
+
+class Player {
+  constructor(x, y, color, isAI) {
+    this.x = x; this.y = y;
+    this.vx = 0; this.vy = 0;
+    this.angle = 0;
+    this.color = color;
+    this.isAI = isAI;
+    this.hasFrisbee = false;
+    this.boostCD = 0;
+    this.boostActive = false;
+    this.chargePower = 0;
+    this.charging = false;
+    this.spin = 0;
+    this.r = 25;
+  }
+  update(dt, keys, windZones) {
+    let ax = 0, ay = 0;
+    if (this.isAI) {
+      // AI input handled externally
+    } else {
+      if (keys['w']) ay -= 1;
+      if (keys['s']) ay += 1;
+      if (keys['a']) ax -= 1;
+      if (keys['d']) ax += 1;
+      if (keys['q']) this.angle -= 4*dt;
+      if (keys['e']) this.angle += 4*dt;
+      if (keys['shift'] && this.boostCD <= 0) {
+        this.boostActive = true;
+        this.boostCD = 3;
+        SFX.boost();
+      }
+    }
+    let mag = Math.hypot(ax, ay);
+    if (mag > 0) { ax/=mag; ay/=mag; }
+    let acc = 600;
+    if (this.boostActive) acc *= 2;
+    this.vx += ax * acc * dt;
+    this.vy += ay * acc * dt;
+    for (let wz of windZones) {
+      const f = wz.getForce(this.x, this.y);
+      this.vx += f.fx * 0.5 * dt;
+      this.vy += f.fy * 0.5 * dt;
+    }
+    const sp = Math.hypot(this.vx, this.vy);
+    const maxSp = 400;
+    if (sp > maxSp) { this.vx = this.vx/sp*maxSp; this.vy = this.vy/sp*maxSp; }
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    const ar = 380;
+    const d = Math.hypot(this.x-CX, this.y-CY);
+    if (d > ar - this.r) {
+      const nx = (this.x-CX)/d, ny = (this.y-CY)/d;
+      this.x = CX + nx*(ar-this.r);
+      this.y = CY + ny*(ar-this.r);
+      const dot = this.vx*nx + this.vy*ny;
+      this.vx -= 2*dot*nx*0.8;
+      this.vy -= 2*dot*ny*0.8;
+    }
+    if (this.boostActive) {
+      this.boostCD -= dt;
+      if (this.boostCD < 2) this.boostActive = false;
+    }
+    if (this.boostCD > 0 && !this.boostActive) this.boostCD -= dt;
+  }
+  draw(X) {
+    X.save();
+    X.translate(this.x, this.y);
+    X.rotate(this.angle);
+    X.fillStyle = this.color;
+    X.shadowColor = this.color;
+    X.shadowBlur = 20;
+    X.beginPath();
+    X.arc(0, 0, this.r, 0, PI2);
+    X.fill();
+    X.shadowBlur = 0;
+    X.fillStyle = '#ffffff';
+    X.beginPath();
+    X.arc(0, 0, 8, 0, PI2);
+    X.fill();
+    X.strokeStyle = this.color;
+    X.lineWidth = 2;
+    X.beginPath();
+    X.moveTo(this.r, 0); X.lineTo(this.r+10, 0);
+    X.stroke();
+    if (this.boostActive) {
+      X.fillStyle = '#ffff00';
+      for (let i=0; i<5; i++) {
+        X.globalAlpha = 0.5 + Math.random()*0.5;
+        X.beginPath();
+        X.arc(-this.r-rnd(0,15), rnd(-5,5), rnd(2,5), 0, PI2);
+        X.fill();
+      }
+      X.globalAlpha = 1;
+    }
+    X.restore();
+  }
+}
+
+class Frisbee {
+  constructor() {
+    this.x = CX; this.y = CY;
+    this.vx = 0; this.vy = 0;
+    this.r = 15;
+    this.spin = 0;
+    this.owner = null;
+    this.heldTime = 0;
+  }
+  update(dt, windZones) {
+    if (this.owner) {
+      this.x = this.owner.x + Math.cos(this.owner.angle)*40;
+      this.y = this.owner.y + Math.sin(this.owner.angle)*40;
+      this.vx = this.owner.vx;
+      this.vy = this.owner.vy;
+      if (this.heldTime > 0) this.heldTime -= dt;
+      return;
+    }
+    for (let wz of windZones) {
+      const f = wz.getForce(this.x, this.y);
+      this.vx += f.fx * 1.5 * dt;
+      this.vy += f.fy * 1.5 * dt;
+    }
+    this.vx *= 0.998;
+    this.vy *= 0.998;
+    this.spin += this.vx * 0.001;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    const ar = 380;
+    const d = Math.hypot(this.x-CX, this.y-CY);
+    if (d > ar - this.r) {
+      const nx = (this.x-CX)/d, ny = (this.y-CY)/d;
+      this.x = CX + nx*(ar-this.r);
+      this.y = CY + ny*(ar-this.r);
+      const dot = this.vx*nx + this.vy*ny;
+      this.vx -= 2*dot*nx*0.7;
+      this.vy -= 2*dot*ny*0.7;
+    }
+  }
+  draw(X) {
+    X.save();
+    X.translate(this.x, this.y);
+    X.rotate(this.spin);
+    X.fillStyle = '#ff6600';
+    X.shadowColor = '#ff6600';
+    X.shadowBlur = 15;
+    X.beginPath();
+    X.ellipse(0, 0, this.r*1.2, this.r*0.5, 0, 0, PI2);
+    X.fill();
+    X.shadowBlur = 0;
+    X.fillStyle = '#ffaa00';
+    X.beginPath();
+    X.ellipse(0, 0, this.r*0.8, this.r*0.3, 0, 0, PI2);
+    X.fill();
+    X.strokeStyle = '#ffffff';
+    X.lineWidth = 2;
+    X.setLineDash([3,3]);
+    X.beginPath();
+    X.arc(0, 0, this.r+5, 0, PI2);
+    X.stroke();
+    X.setLineDash([]);
+    X.restore();
+  }
+}
+
+class Star {
+  constructor() { this.reset(); this.y = rnd(0, H); }
+  reset() { this.x = rnd(0, W); this.y = rnd(0, H); this.s = rnd(0.5, 2); this.sp = rnd(5, 20); }
+  update(dt) { this.x -= this.sp*dt; if (this.x < 0) this.reset(); }
+  draw(X) { X.fillStyle = '#ffffff'; X.globalAlpha = this.s/2; X.fillRect(this.x, this.y, this.s, this.s); X.globalAlpha = 1; }
+}
+
+class Game {
+  constructor() {
+    this.state = 'title';
+    this.score = [0, 0];
+    this.time = 180;
+    this.keys = {};
+    this.mouse = {x: CX, y: CY, down: false};
+    this.players = [
+      new Player(CX-200, CY, '#00f5ff', false),
+      new Player(CX+200, CY, '#ff00aa', true)
+    ];
+    this.frisbee = new Frisbee();
+    this.windZones = [];
+    for (let i=0; i<4; i++) this.windZones.push(new WindZone());
+    this.particles = [];
+    this.stars = [];
+    for (let i=0; i<100; i++) this.stars.push(new Star());
+    this.lastTime = 0;
+    this.aiState = 'defend';
+    this.aiTimer = 0;
+    this.aiTarget = {x:0, y:0};
+    this.goalFlash = 0;
+    this.catchFlash = 0;
+    this.chargeStart = 0;
+    this.highScore = parseInt(localStorage.getItem('zerog_high')||'0');
+    this.bind();
+  }
+  bind() {
+    window.addEventListener('keydown', e => {
+      this.keys[e.key.toLowerCase()] = true;
+      if (e.key === ' ') {
+        e.preventDefault();
+        SFX.init();
+        if (this.state === 'title') this.start();
+        else if (this.state === 'gameover') this.start();
+        else if (this.state === 'play') this.handleSpace();
+        else if (this.state === 'pause') this.state = 'play';
+      }
+      if (e.key === 'Escape' && this.state === 'play') this.state = 'pause';
+    });
+    window.addEventListener('keyup', e => { this.keys[e.key.toLowerCase()] = false; });
+    C.addEventListener('mousemove', e => {
+      const r = C.getBoundingClientRect();
+      this.mouse.x = (e.clientX-r.left)/r.width*W;
+      this.mouse.y = (e.clientY-r.top)/r.height*H;
+    });
+    C.addEventListener('mousedown', e => { this.mouse.down = true; });
+    C.addEventListener('mouseup', e => { this.mouse.down = false; });
+  }
+  start() {
+    this.state = 'play';
+    this.score = [0, 0];
+    this.time = 180;
+    this.players[0].x = CX-200; this.players[0].y = CY;
+    this.players[1].x = CX+200; this.players[1].y = CY;
+    this.players[0].vx = this.players[0].vy = 0;
+    this.players[1].vx = this.players[1].vy = 0;
+    this.frisbee = new Frisbee();
+    this.particles = [];
+  }
+  handleSpace() {
+    const p = this.players[0];
+    if (this.frisbee.owner === p) {
+      p.charging = true;
+      p.chargePower = 0;
+      this.chargeStart = performance.now();
+    } else if (!this.frisbee.owner && dist(p, this.frisbee) < 60) {
+      this.tryCatch(p);
+    } else if (p.charging) {
+      this.releaseThrow(p);
+    }
+  }
+  releaseThrow(p) {
+    if (!p.charging) return;
+    const power = 200 + (p.chargePower/100)*800;
+    const dx = this.mouse.x - p.x, dy = this.mouse.y - p.y;
+    const m = Math.hypot(dx, dy) || 1;
+    this.frisbee.vx = dx/m*power;
+    this.frisbee.vy = dy/m*power;
+    this.frisbee.owner = null;
+    this.frisbee.x = p.x + dx/m*40;
+    this.frisbee.y = p.y + dy/m*40;
+    this.frisbee.spin = p.spin;
+    p.charging = false;
+    p.chargePower = 0;
+    SFX.throw();
+    for (let i=0; i<8; i++) {
+      this.particles.push(new Particle(p.x, p.y, dx/m*rnd(100,300), dy/m*rnd(100,300), 0.5, '#ff6600', 3));
+    }
+  }
+  tryCatch(p) {
+    const d = dist(p, this.frisbee);
+    const chance = 0.95 - (d/60)*0.45;
+    if (Math.random() < chance) {
+      this.frisbee.owner = p;
+      p.hasFrisbee = true;
+      this.catchFlash = 0.2;
+      SFX.catch();
+      for (let i=0; i<12; i++) {
+        this.particles.push(new Particle(this.frisbee.x, this.frisbee.y, rnd(-100,100), rnd(-100,100), 0.4, '#ffff00', 3));
+      }
+    }
+  }
+  updateAI(dt) {
+    const ai = this.players[1];
+    this.aiTimer -= dt;
+    if (this.aiTimer > 0) return;
+    this.aiTimer = 0.2;
+    const goalX = CX-340, goalY = CY;
+    const p1GoalX = CX+340, p1GoalY = CY;
+    if (this.frisbee.owner === ai) {
+      const dToGoal = Math.hypot(goalX-ai.x, goalY-ai.y);
+      if (dToGoal < 150) {
+        // Throw at goal
+        const dx = goalX-ai.x + rnd(-30,30);
+        const dy = goalY-ai.y + rnd(-30,30);
+        const m = Math.hypot(dx, dy);
+        this.frisbee.vx = dx/m*rnd(700,900);
+        this.frisbee.vy = dy/m*rnd(700,900);
+        this.frisbee.owner = null;
+        this.frisbee.x = ai.x + dx/m*40;
+        this.frisbee.y = ai.y + dy/m*40;
+        SFX.throw();
+        return;
+      }
+      // Move to goal
+      this.aiTarget.x = goalX; this.aiTarget.y = goalY;
+      const dx = this.aiTarget.x - ai.x, dy = this.aiTarget.y - ai.y;
+      const m = Math.hypot(dx, dy) || 1;
+      ai.vx += dx/m*400*dt;
+      ai.vy += dy/m*400*dt;
+      ai.angle = Math.atan2(dy, dx);
+    } else if (!this.frisbee.owner) {
+      const dToFrisbee = dist(ai, this.frisbee);
+      if (dToFrisbee < 250) {
+        this.aiTarget.x = this.frisbee.x; this.aiTarget.y = this.frisbee.y;
+      } else {
+        this.aiTarget.x = goalX; this.aiTarget.y = goalY;
+      }
+      const dx = this.aiTarget.x - ai.x, dy = this.aiTarget.y - ai.y;
+      const m = Math.hypot(dx, dy) || 1;
+      ai.vx += dx/m*500*dt;
+      ai.vy += dy/m*500*dt;
+      ai.angle = Math.atan2(dy, dx);
+      // Catch attempt
+      if (dToFrisbee < 60 && Math.random() < 0.85) {
+        this.tryCatch(ai);
+      }
+    } else {
+      // Defend
+      this.aiTarget.x = goalX; this.aiTarget.y = goalY;
+      const dx = this.aiTarget.x - ai.x, dy = this.aiTarget.y - ai.y;
+      const m = Math.hypot(dx, dy) || 1;
+      ai.vx += dx/m*400*dt;
+      ai.vy += dy/m*400*dt;
+    }
+  }
+  checkGoal() {
+    const f = this.frisbee;
+    const p1Goal = {x: CX+340, y: CY, r: 80};
+    const p2Goal = {x: CX-340, y: CY, r: 80};
+    if (f.owner === this.players[0] && dist(f, p1Goal) < 80) {
+      this.score[0]++;
+      this.goalFlash = 0.5;
+      SFX.goal();
+      this.checkWin();
+      this.frisbee = new Frisbee();
+    } else if (f.owner === this.players[1] && dist(f, p2Goal) < 80) {
+      this.score[1]++;
+      this.goalFlash = 0.5;
+      SFX.goal();
+      this.checkWin();
+      this.frisbee = new Frisbee();
+    }
+  }
+  checkWin() {
+    if (this.score[0] >= 5 || this.score[1] >= 5 || this.time <= 0) {
+      this.state = 'gameover';
+      const hs = Math.max(this.score[0], this.score[1]);
+      if (hs > this.highScore) {
+        this.highScore = hs;
+        localStorage.setItem('zerog_high', hs);
+      }
+    }
+  }
+  update(dt) {
+    if (this.state !== 'play') return;
+    this.time -= dt;
+    for (let s of this.stars) s.update(dt);
+    for (let wz of this.windZones) wz.update(dt);
+    const p1 = this.players[0], p2 = this.players[1];
+    p1.update(dt, this.keys, this.windZones);
+    this.updateAI(dt);
+    p2.update(dt, {}, this.windZones);
+    // Charge power update
+    if (p1.charging) {
+      p1.chargePower = Math.min(100, (performance.now()-this.chargeStart)/15);
+    }
+    if (this.keys[' '] && p1.charging) {
+      // Keep charging
+    } else if (p1.charging) {
+      this.releaseThrow(p1);
+    }
+    this.frisbee.update(dt, this.windZones);
+    // Player collision
+    const pd = dist(p1, p2);
+    if (pd < p1.r + p2.r) {
+      const nx = (p2.x-p1.x)/pd, ny = (p2.y-p1.y)/pd;
+      const overlap = p1.r+p2.r-pd;
+      p1.x -= nx*overlap/2; p1.y -= ny*overlap/2;
+      p2.x += nx*overlap/2; p2.y += ny*overlap/2;
+      const v1 = p1.vx*nx + p1.vy*ny, v2 = p2.vx*nx + p2.vy*ny;
+      p1.vx += (v2-v1)*nx*0.5; p1.vy += (v2-v1)*ny*0.5;
+      p2.vx += (v1-v2)*nx*0.5; p2.vy += (v1-v2)*ny*0.5;
+    }
+    // Frisbee-player collision
+    if (!this.frisbee.owner) {
+      [p1, p2].forEach(p => {
+        if (dist(p, this.frisbee) < p.r + this.frisbee.r + 5) {
+          if (this.frisbee.vx*p.vx + this.frisbee.vy*p.vy > 0) {
+            const relV = Math.hypot(this.frisbee.vx-p.vx, this.frisbee.vy-p.vy);
+            if (relV > 50) SFX.hit();
+          }
+        }
+      });
+    }
+    // Catch zone check
+    if (!this.frisbee.owner) {
+      [p1, p2].forEach(p => {
+        if (dist(p, this.frisbee) < 60) {
+          this.tryCatch(p);
+        }
+      });
+    }
+    this.checkGoal();
+    // Particles
+    this.particles = this.particles.filter(p => { p.update(dt); return p.life > 0; });
+    // Trail for frisbee
+    if (!this.frisbee.owner && Math.random() < 0.6) {
+      this.particles.push(new Particle(this.frisbee.x, this.frisbee.y, rnd(-30,30), rnd(-30,30), 0.4, '#ffaa00', 3));
+    }
+    if (this.particles.length > 200) this.particles.splice(0, this.particles.length-200);
+    if (this.goalFlash > 0) this.goalFlash -= dt;
+    if (this.catchFlash > 0) this.catchFlash -= dt;
+    if (this.time <= 0) this.checkWin();
+  }
+  draw() {
+    X.fillStyle = '#0a0a1a';
+    X.fillRect(0, 0, W, H);
+    // Stars
+    for (let s of this.stars) s.draw(X);
+    if (this.state === 'title') { this.drawTitle(); return; }
+    if (this.state === 'gameover') { this.drawGameOver(); return; }
+    // Arena
+    X.save();
+    const ar = 380;
+    X.strokeStyle = '#c0c0d0';
+    X.lineWidth = 4;
+    X.shadowColor = '#00f5ff';
+    X.shadowBlur = 20;
+    X.beginPath();
+    X.arc(CX, CY, ar, 0, PI2);
+    X.stroke();
+    X.shadowBlur = 0;
+    // Inner glow
+    X.strokeStyle = '#00f5ff';
+    X.globalAlpha = 0.4;
+    X.lineWidth = 2;
+    X.beginPath();
+    X.arc(CX, CY, ar-3, 0, PI2);
+    X.stroke();
+    X.globalAlpha = 1;
+    // Goals
+    X.fillStyle = 'rgba(0,245,255,0.2)';
+    X.strokeStyle = '#00f5ff';
+    X.lineWidth = 3;
+    X.beginPath();
+    X.arc(CX+340, CY, 80, 0, PI2);
+    X.fill(); X.stroke();
+    X.fillStyle = 'rgba(255,0,170,0.2)';
+    X.strokeStyle = '#ff00aa';
+    X.beginPath();
+    X.arc(CX-340, CY, 80, 0, PI2);
+    X.fill(); X.stroke();
+    X.restore();
+    // Wind
+    for (let wz of this.windZones) wz.draw(X);
+    // Particles
+    for (let p of this.particles) p.draw(X);
+    // Aim line when charging
+    const p1 = this.players[0];
+    if (p1.charging) {
+      X.strokeStyle = '#ffff00';
+      X.lineWidth = 3;
+      X.setLineDash([5,5]);
+      X.beginPath();
+      X.moveTo(p1.x, p1.y);
+      X.lineTo(this.mouse.x, this.mouse.y);
+      X.stroke();
+      X.setLineDash([]);
+    }
+    // Frisbee
+    this.frisbee.draw(X);
+    // Players
+    this.players[0].draw(X);
+    this.players[1].draw(X);
+    // Goal flash
+    if (this.goalFlash > 0) {
+      X.fillStyle = '#ffffff';
+      X.globalAlpha = this.goalFlash;
+      X.fillRect(0, 0, W, H);
+      X.globalAlpha = 1;
+    }
+    // HUD
+    this.drawHUD();
+    if (this.state === 'pause') this.drawPause();
+  }
+  drawHUD() {
+    X.fillStyle = 'rgba(10,10,26,0.85)';
+    X.fillRect(30, 30, 200, 60);
+    X.fillRect(W-230, 30, 200, 60);
+    X.font = 'bold 36px Orbitron';
+    X.fillStyle = '#00f5ff';
+    X.textAlign = 'center';
+    X.fillText(this.score[0], 130, 75);
+    X.fillStyle = '#ff00aa';
+    X.fillText(this.score[1], W-130, 75);
+    X.font = 'bold 24px Orbitron';
+    X.fillStyle = '#ffffff';
+    X.textAlign = 'left';
+    X.fillText('TIME: ' + Math.ceil(Math.max(0,this.time)), W/2-80, 55);
+    X.fillStyle = '#888888';
+    X.font = '16px Orbitron';
+    X.textAlign = 'right';
+    X.fillText('HIGH: ' + this.highScore, W-40, H-30);
+    // Charge bar
+    const p1 = this.players[0];
+    if (p1.charging) {
+      X.fillStyle = 'rgba(10,10,26,0.85)';
+      X.fillRect(p1.x-40, p1.y-50, 80, 12);
+      X.fillStyle = '#ffff00';
+      X.fillRect(p1.x-40, p1.y-50, 80*p1.chargePower/100, 12);
+      X.strokeStyle = '#ffffff';
+      X.strokeRect(p1.x-40, p1.y-50, 80, 12);
+    }
+  }
+  drawTitle() {
+    X.save();
+    X.fillStyle = '#0a0a1a';
+    X.fillRect(0, 0, W, H);
+    for (let s of this.stars) s.draw(X);
+    // Animated title
+    const t = performance.now()*0.001;
+    X.font = 'bold 140px Orbitron';
+    X.textAlign = 'center';
+    X.fillStyle = '#00f5ff';
+    X.shadowColor = '#00f5ff';
+    X.shadowBlur = 30 + Math.sin(t*2)*10;
+    X.fillText('ZERO-G', CX, CY-100);
+    X.font = 'bold 100px Orbitron';
+    X.fillStyle = '#ff6600';
+    X.shadowColor = '#ff6600';
+    X.fillText('FRISBEE', CX, CY);
+    X.font = 'bold 60px Orbitron';
+    X.fillStyle = '#ff00aa';
+    X.shadowColor = '#ff00aa';
+    X.shadowBlur = 20;
+    X.fillText('OMEGA', CX, CY+80);
+    X.shadowBlur = 0;
+    X.font = 'bold 28px Orbitron';
+    X.fillStyle = '#ffffff';
+    const blink = Math.sin(t*4) > 0;
+    if (blink) {
+      X.fillText('PRESS SPACE TO START', CX, CY+200);
+    }
+    X.font = '20px Orbitron';
+    X.fillStyle = '#888888';
+    X.fillText('WASD/ARROWS - MOVE | Q/E - ROTATE | SHIFT - BOOST', CX, CY+280);
+    X.fillText('SPACE - CATCH/CHARGE | RELEASE - THROW AT MOUSE', CX, CY+320);
+    X.fillText('SCORE IN OPPONENT\'S GOAL | FIRST TO 5 WINS', CX, CY+360);
+    X.fillText('HIGH SCORE: ' + this.highScore, CX, CY+420);
+    X.restore();
+  }
+  drawGameOver() {
+    X.save();
+    X.fillStyle = 'rgba(10,10,26,0.95)';
+    X.fillRect(0, 0, W, H);
+    X.textAlign = 'center';
+    X.font = 'bold 120px Orbitron';
+    X.fillStyle = '#ffffff';
+    X.shadowColor = '#00f5ff';
+    X.shadowBlur = 30;
+    X.fillText('GAME OVER', CX, CY-100);
+    X.shadowBlur = 0;
+    X.font = 'bold 80px Orbitron';
+    if (this.score[0] > this.score[1]) {
+      X.fillStyle = '#00f5ff';
+      X.fillText('CYAN WINS!', CX, CY);
+    } else if (this.score[1] > this.score[0]) {
+      X.fillStyle = '#ff00aa';
+      X.fillText('PINK WINS!', CX, CY);
+    } else {
+      X.fillStyle = '#ffff00';
+      X.fillText('DRAW!', CX, CY);
+    }
+    X.font = 'bold 50px Orbitron';
+    X.fillStyle = '#ffffff';
+    X.fillText(this.score[0] + ' - ' + this.score[1], CX, CY+100);
+    X.font = 'bold 24px Orbitron';
+    const blink = Math.sin(performance.now()*0.004) > 0;
+    if (blink) {
+      X.fillStyle = '#ffff00';
+      X.fillText('PRESS SPACE TO PLAY AGAIN', CX, CY+220);
+    }
+    X.font = '20px Orbitron';
+    X.fillStyle = '#888888';
+    X.fillText('HIGH SCORE: ' + this.highScore, CX, CY+290);
+    X.restore();
+  }
+  drawPause() {
+    X.save();
+    X.fillStyle = 'rgba(10,10,26,0.85)';
+    X.fillRect(0, 0, W, H);
+    X.textAlign = 'center';
+    X.font = 'bold 100px Orbitron';
+    X.fillStyle = '#ffffff';
+    X.shadowColor = '#00f5ff';
+    X.shadowBlur = 20;
+    X.fillText('PAUSED', CX, CY);
+    X.shadowBlur = 0;
+    X.font = '24px Orbitron';
+    X.fillStyle = '#888888';
+    X.fillText('PRESS SPACE TO RESUME | ESC TO PAUSE', CX, CY+80);
+    X.restore();
+  }
+  loop(time) {
+    if (!this.lastTime) this.lastTime = time;
+    let dt = (time - this.lastTime)/1000;
+    if (dt > 0.1) dt = 0.1;
+    this.lastTime = time;
+    this.update(dt);
+    this.draw();
+    requestAnimationFrame(t => this.loop(t));
+  }
+}
+
+const G = new Game();
+requestAnimationFrame(t => G.loop(t));
+</script>
+</body>
+</html>

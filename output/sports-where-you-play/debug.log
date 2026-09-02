@@ -1,0 +1,898 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 28783 (char 28782)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n    <title>ZERO-G: FRISBEE OMEGA</title>\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n    <link href=\"https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap\" rel=\"stylesheet\">\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        \n        html, body {\n            width: 100%;\n            height: 100%;\n            overflow: hidden;\n            background: #0a0a1a;\n            font-family: 'Orbitron', monospace;\n        }\n        \n        #gameContainer {\n            position: relative;\n            width: 100%;\n            height: 100%;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n        }\n        \n        #gameCanvas {\n            display: block;\n            background: linear-gradient(180deg, #0a0a1a 0%, #1a1a3a 100%);\n        }\n        \n        #hud {\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            pointer-events: none;\n            padding: 15px;\n        }\n        \n        .hud-top {\n            display: flex;\n            justify-content: space-between;\n            align-items: flex-start;\n        }\n        \n        .score-panel {\n            font-size: clamp(16px, 3vw, 28px);\n            font-weight: 700;\n            text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;\n            transition: transform 0.3s ease;\n        }\n        \n        .score-panel.p1 {\n            color: #00f5ff;\n        }\n        \n        .score-panel.p2 {\n            color: #ff00aa;\n        }\n        \n        .score-panel.pulse {\n            transform: scale(1.3);\n        }\n        \n        .hud-middle {\n            position: absolute;\n            top: 50px;\n            left: 15px;\n            right: 15px;\n            display: flex;\n            justify-content: space-between;\n        }\n        \n        .wind-panel {\n            background: rgba(10, 10, 26, 0.85);\n            border: 2px solid #00ffaa;\n            border-radius: 10px;\n            padding: 10px 15px;\n            color: #00ffaa;\n            box-shadow: 0 0 15px rgba(0, 255, 170, 0.3);\n        }\n        \n        .wind-panel .label {\n            font-size: clamp(10px, 1.5vw, 14px);\n            margin-bottom: 5px;\n            opacity: 0.8;\n        }\n        \n        .wind-panel .arrow {\n            font-size: clamp(20px, 3vw, 32px);\n            text-align: center;\n            transition: transform 0.5s ease;\n        }\n        \n        .wind-panel .strength {\n            display: flex;\n            gap: 3px;\n            margin-top: 5px;\n        }\n        \n        .wind-panel .strength-bar {\n            width: 8px;\n            height: 16px;\n            background: rgba(0, 255, 170, 0.2);\n            border-radius: 2px;\n        }\n        \n        .wind-panel .strength-bar.active {\n            background: #00ffaa;\n            box-shadow: 0 0 5px #00ffaa;\n        }\n        \n        .timer-panel {\n            background: rgba(10, 10, 26, 0.85);\n            border: 2px solid #ffffff;\n            border-radius: 10px;\n            padding: 10px 20px;\n            color: #ffffff;\n            text-align: center;\n            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);\n        }\n        \n        .timer-panel.warning {\n            border-color: #ff3333;\n            color: #ff3333;\n            animation: timerPulse 0.5s infinite;\n        }\n        \n        @keyframes timerPulse {\n            0%, 100% { box-shadow: 0 0 15px rgba(255, 51, 51, 0.5); }\n            50% { box-shadow: 0 0 30px rgba(255, 51, 51, 0.8); }\n        }\n        \n        .timer-panel .label {\n            font-size: clamp(10px, 1.5vw, 12px);\n            opacity: 0.8;\n        }\n        \n        .timer-panel .time {\n            font-size: clamp(18px, 3vw, 28px);\n            font-weight: 700;\n        }\n        \n        .hud-bottom {\n            position: absolute;\n            bottom: 15px;\n            left: 15px;\n            right: 15px;\n            display: flex;\n            justify-content: space-between;\n            align-items: flex-end;\n        }\n        \n        .meter {\n            background: rgba(10, 10, 26, 0.85);\n            border-radius: 8px;\n            padding: 8px 12px;\n            min-width: 150px;\n        }\n        \n        .meter .label {\n            font-size: clamp(8px, 1.2vw, 11px);\n            margin-bottom: 4px;\n            opacity: 0.8;\n        }\n        \n        .meter .bar {\n            height: 14px;\n            background: rgba(255, 255, 255, 0.1);\n            border-radius: 4px;\n            overflow: hidden;\n            position: relative;\n        }\n        \n        .meter .fill {\n            height: 100%;\n            border-radius: 4px;\n            transition: width 0.1s linear;\n        }\n        \n        .boost-meter .fill {\n            background: linear-gradient(90deg, #00f5ff, #00ffaa);\n            box-shadow: 0 0 10px #00f5ff;\n        }\n        \n        .boost-meter .fill.cooldown {\n            background: linear-gradient(90deg, #ff6600, #ff3333);\n            box-shadow: 0 0 10px #ff6600;\n        }\n        \n        .power-meter {\n            opacity: 0;\n            transition: opacity 0.2s;\n        }\n        \n        .power-meter.visible {\n            opacity: 1;\n        }\n        \n        .power-meter .fill {\n            background: linear-gradient(90deg, #ffaa00, #ff6600, #ff3333);\n            box-shadow: 0 0 10px #ff6600;\n        }\n        \n        .speedrun-timer {\n            position: absolute;\n            top: 100px;\n            left: 50%;\n            transform: translateX(-50%);\n            background: rgba(10, 10, 26, 0.9);\n            border: 2px solid #ffcc00;\n            border-radius: 10px;\n            padding: 8px 20px;\n            color: #ffcc00;\n            font-size: clamp(14px, 2vw, 20px);\n            font-weight: 700;\n            box-shadow: 0 0 20px rgba(255, 204, 0, 0.4);\n            text-align: center;\n        }\n        \n        .speedrun-timer .label {\n            font-size: clamp(8px, 1vw, 11px);\n            opacity: 0.8;\n            margin-bottom: 2px;\n        }\n        \n        .high-score {\n            position: absolute;\n            top: 15px;\n            left: 50%;\n            transform: translateX(-50%);\n            color: #ffcc00;\n            font-size: clamp(10px, 1.5vw, 14px);\n            text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);\n        }\n        \n        #menuOverlay {\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            background: rgba(10, 10, 26, 0.95);\n            display: flex;\n            flex-direction: column;\n            justify-content: center;\n            align-items: center;\n            z-index: 100;\n            transition: opacity 0.5s;\n        }\n        \n        #menuOverlay.hidden {\n            opacity: 0;\n            pointer-events: none;\n        }\n        \n        .menu-title {\n            font-size: clamp(32px, 8vw, 72px);\n            font-weight: 900;\n            color: #00f5ff;\n            text-shadow: 0 0 30px #00f5ff, 0 0 60px #00f5ff;\n            margin-bottom: 10px;\n            text-align: center;\n        }\n        \n        .menu-subtitle {\n            font-size: clamp(18px, 4vw, 36px);\n            font-weight: 700;\n            color: #ff00aa;\n            text-shadow: 0 0 20px #ff00aa;\n            margin-bottom: 40px;\n        }\n        \n        .menu-prompt {\n            font-size: clamp(14px, 2.5vw, 24px);\n            color: #ffffff;\n            animation: blink 1s infinite;\n        }\n        \n        @keyframes blink {\n            0%, 100% { opacity: 1; }\n            50% { opacity: 0.3; }\n        }\n        \n        .menu-controls {\n            margin-top: 40px;\n            color: #888;\n            font-size: clamp(10px, 1.5vw, 14px);\n            text-align: center;\n            line-height: 2;\n        }\n        \n        .menu-controls span {\n            color: #00ffaa;\n        }\n        \n        .game-over-panel {\n            text-align: center;\n        }\n        \n        .game-over-panel .result {\n            font-size: clamp(36px, 10vw, 80px);\n            font-weight: 900;\n            margin-bottom: 20px;\n        }\n        \n        .game-over-panel .result.victory {\n            color: #00f5ff;\n            text-shadow: 0 0 40px #00f5ff;\n        }\n        \n        .game-over-panel .result.defeat {\n            color: #ff00aa;\n            text-shadow: 0 0 40px #ff00aa;\n        }\n        \n        .game-over-panel .final-score {\n            font-size: clamp(20px, 4vw, 36px);\n            color: #ffffff;\n            margin-bottom: 30px;\n        }\n        \n        .game-over-panel .new-record {\n            color: #ffcc00;\n            font-size: clamp(14px, 2.5vw, 24px);\n            animation: blink 0.5s infinite;\n            margin-bottom: 20px;\n        }\n        \n        .menu-button {\n            background: transparent;\n            border: 2px solid #00ffaa;\n            color: #00ffaa;\n            font-family: 'Orbitron', monospace;\n            font-size: clamp(14px, 2vw, 20px);\n            padding: 12px 30px;\n            margin: 10px;\n            cursor: pointer;\n            border-radius: 8px;\n            transition: all 0.3s;\n            pointer-events: auto;\n        }\n        \n        .menu-button:hover {\n            background: #00ffaa;\n            color: #0a0a1a;\n            box-shadow: 0 0 20px #00ffaa;\n        }\n    </style>\n</head>\n<body>\n    <div id=\"gameContainer\">\n        <canvas id=\"gameCanvas\"></canvas>\n        \n        <div id=\"hud\">\n            <div class=\"hud-top\">\n                <div class=\"score-panel p1\">P1: <span id=\"p1Score\">0</span></div>\n                <div class=\"score-panel p2\">CPU: <span id=\"p2Score\">0</span></div>\n            </div>\n            \n            <div class=\"high-score\">🏆 BEST: <span id=\"highScore\">0</span> pts</div>\n            \n            <div class=\"hud-middle\">\n                <div class=\"wind-panel\">\n                    <div class=\"label\">WIND</div>\n                    <div class=\"arrow\" id=\"windArrow\">➡️</div>\n                    <div class=\"strength\" id=\"windStrength\">\n                        <div class=\"strength-bar\"></div>\n                        <div class=\"strength-bar\"></div>\n                        <div class=\"strength-bar\"></div>\n                        <div class=\"strength-bar\"></div>\n                        <div class=\"strength-bar\"></div>\n                    </div>\n                </div>\n                \n                <div class=\"timer-panel\" id=\"timerPanel\">\n                    <div class=\"label\">TIME</div>\n                    <div class=\"time\" id=\"gameTimer\">3:00</div>\n                </div>\n            </div>\n            \n            <div class=\"speedrun-timer\" id=\"speedrunTimer\">\n                <div class=\"label\">⏱️ SPEEDRUN</div>\n                <div id=\"speedrunTime\">00:00.000</div>\n            </div>\n            \n            <div class=\"hud-bottom\">\n                <div class=\"meter boost-meter\">\n                    <div class=\"label\">BOOST [SHIFT]</div>\n                    <div class=\"bar\">\n                        <div class=\"fill\" id=\"boostFill\" style=\"width: 100%\"></div>\n                    </div>\n                </div>\n                \n                <div class=\"meter power-meter\" id=\"powerMeter\">\n                    <div class=\"label\">POWER [SPACE]</div>\n                    <div class=\"bar\">\n                        <div class=\"fill\" id=\"powerFill\" style=\"width: 0%\"></div>\n                    </div>\n                </div>\n            </div>\n        </div>\n        \n        <div id=\"menuOverlay\">\n            <div class=\"menu-title\">ZERO-G</div>\n            <div class=\"menu-subtitle\">🌌 FRISBEE OMEGA 🚀</div>\n            <div class=\"menu-prompt\" id=\"menuPrompt\">PRESS SPACE TO START</div>\n            <div class=\"menu-controls\">\n                <span>WASD</span> Move | <span>Q/E</span> Rotate | <span>SPACE</span> Throw/Catch<br>\n                <span>SHIFT</span> Boost | <span>ESC</span> Pause\n            </div>\n        </div>\n    </div>\n    \n    <script>\n        // ==================== AUDIO SYSTEM ====================\n        class AudioSystem {\n            constructor() {\n                this.ctx = null;\n                this.masterGain = null;\n                this.volume = 0.7;\n                this.initialized = false;\n            }\n            \n            init() {\n                if (this.initialized) return;\n                try {\n                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n                    this.masterGain = this.ctx.createGain();\n                    this.masterGain.gain.value = this.volume;\n                    this.masterGain.connect(this.ctx.destination);\n                    this.initialized = true;\n                } catch (e) {\n                    console.warn('Web Audio not supported');\n                }\n            }\n            \n            playThrow(power = 0.5) {\n                if (!this.ctx) return;\n                const osc = this.ctx.createOscillator();\n                const gain = this.ctx.createGain();\n                const filter = this.ctx.createBiquadFilter();\n                \n                osc.type = 'sawtooth';\n                osc.frequency.setValueAtTime(200 + power * 300, this.ctx.currentTime);\n                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.2);\n                \n                filter.type = 'lowpass';\n                filter.frequency.value = 1500 + power * 1000;\n                \n                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);\n                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);\n                \n                osc.connect(filter);\n                filter.connect(gain);\n                gain.connect(this.masterGain);\n                \n                osc.start();\n                osc.stop(this.ctx.currentTime + 0.2);\n            }\n            \n            playCatch() {\n                if (!this.ctx) return;\n                const osc = this.ctx.createOscillator();\n                const gain = this.ctx.createGain();\n                \n                osc.type = 'sine';\n                osc.frequency.setValueAtTime(600, this.ctx.currentTime);\n                osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.1);\n                \n                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);\n                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);\n                \n                osc.connect(gain);\n                gain.connect(this.masterGain);\n                \n                osc.start();\n                osc.stop(this.ctx.currentTime + 0.1);\n            }\n            \n            playGoal() {\n                if (!this.ctx) return;\n                const notes = [523, 659, 784, 1047];\n                notes.forEach((freq, i) => {\n                    const osc = this.ctx.createOscillator();\n                    const gain = this.ctx.createGain();\n                    \n                    osc.type = 'square';\n                    osc.frequency.value = freq;\n                    \n                    gain.gain.setValueAtTime(0.15, this.ctx.currentTime + i * 0.1);\n                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + i * 0.1 + 0.3);\n                    \n                    osc.connect(gain);\n                    gain.connect(this.masterGain);\n                    \n                    osc.start(this.ctx.currentTime + i * 0.1);\n                    osc.stop(this.ctx.currentTime + i * 0.1 + 0.3);\n                });\n            }\n            \n            playBoost() {\n                if (!this.ctx) return;\n                const osc = this.ctx.createOscillator();\n                const gain = this.ctx.createGain();\n                \n                osc.type = 'sawtooth';\n                osc.frequency.setValueAtTime(150, this.ctx.currentTime);\n                osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.15);\n                osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.3);\n                \n                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);\n                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);\n                \n                osc.connect(gain);\n                gain.connect(this.masterGain);\n                \n                osc.start();\n                osc.stop(this.ctx.currentTime + 0.3);\n            }\n            \n            playCollision() {\n                if (!this.ctx) return;\n                const osc = this.ctx.createOscillator();\n                const gain = this.ctx.createGain();\n                \n                osc.type = 'sine';\n                osc.frequency.setValueAtTime(80, this.ctx.currentTime);\n                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.15);\n                \n                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);\n                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);\n                \n                osc.connect(gain);\n                gain.connect(this.masterGain);\n                \n                osc.start();\n                osc.stop(this.ctx.currentTime + 0.15);\n            }\n            \n            playUIClick() {\n                if (!this.ctx) return;\n                const osc = this.ctx.createOscillator();\n                const gain = this.ctx.createGain();\n                \n                osc.type = 'sine';\n                osc.frequency.value = 800;\n                \n                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);\n                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);\n                \n                osc.connect(gain);\n                gain.connect(this.masterGain);\n                \n                osc.start();\n                osc.stop(this.ctx.currentTime + 0.05);\n            }\n        }\n        \n        // ==================== PARTICLE SYSTEM ====================\n        class Particle {\n            constructor(x, y, vx, vy, color, size, life) {\n                this.x = x;\n                this.y = y;\n                this.vx = vx;\n                this.vy = vy;\n                this.color = color;\n                this.size = size;\n                this.life = life;\n                this.maxLife = life;\n            }\n            \n            update(dt) {\n                this.x += this.vx * dt;\n                this.y += this.vy * dt;\n                this.life -= dt;\n                return this.life > 0;\n            }\n            \n            draw(ctx) {\n                const alpha = this.life / this.maxLife;\n                ctx.globalAlpha = alpha;\n                ctx.fillStyle = this.color;\n                ctx.beginPath();\n                ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);\n                ctx.fill();\n                ctx.globalAlpha = 1;\n            }\n        }\n        \n        class ParticleSystem {\n            constructor(maxParticles = 200) {\n                this.particles = [];\n                this.maxParticles = maxParticles;\n            }\n            \n            emit(x, y, count, config) {\n                for (let i = 0; i < count && this.particles.length < this.maxParticles; i++) {\n                    const angle = config.angleMin + Math.random() * (config.angleMax - config.angleMin);\n                    const speed = config.speedMin + Math.random() * (config.speedMax - config.speedMin);\n                    const vx = Math.cos(angle) * speed;\n                    const vy = Math.sin(angle) * speed;\n                    const color = config.colors[Math.floor(Math.random() * config.colors.length)];\n                    const size = config.sizeMin + Math.random() * (config.sizeMax - config.sizeMin);\n                    const life = config.lifeMin + Math.random() * (config.lifeMax - config.lifeMin);\n                    \n                    this.particles.push(new Particle(x, y, vx, vy, color, size, life));\n                }\n            }\n            \n            update(dt) {\n                this.particles = this.particles.filter(p => p.update(dt));\n            }\n            \n            draw(ctx) {\n                this.particles.forEach(p => p.draw(ctx));\n            }\n            \n            emitCatch(x, y) {\n                this.emit(x, y, 20, {\n                    angleMin: 0, angleMax: Math.PI * 2,\n                    speedMin: 50, speedMax: 200,\n                    colors: ['#00f5ff', '#00ffaa', '#ffffff'],\n                    sizeMin: 2, sizeMax: 5,\n                    lifeMin: 0.3, lifeMax: 0.6\n                });\n            }\n            \n            emitGoal(x, y, teamColor) {\n                this.emit(x, y, 50, {\n                    angleMin: 0, angleMax: Math.PI * 2,\n                    speedMin: 100, speedMax: 400,\n                    colors: [teamColor, '#ffffff', '#ffcc00'],\n                    sizeMin: 3, sizeMax: 8,\n                    lifeMin: 0.5, lifeMax: 1.2\n                });\n            }\n            \n            emitFrisbeeTrail(x, y) {\n                this.emit(x, y, 1, {\n                    angleMin: 0, angleMax: Math.PI * 2,\n                    speedMin: 5, speedMax: 20,\n                    colors: ['#ff6600', '#ffaa00'],\n                    sizeMin: 3, sizeMax: 6,\n                    lifeMin: 0.15, lifeMax: 0.3\n                });\n            }\n            \n            emitBoost(x, y, angle) {\n                this.emit(x, y, 3, {\n                    angleMin: angle + Math.PI - 0.3, angleMax: angle + Math.PI + 0.3,\n                    speedMin: 100, speedMax: 200,\n                    colors: ['#00f5ff', '#00ffaa', '#ffffff'],\n                    sizeMin: 2, sizeMax: 4,\n                    lifeMin: 0.2, lifeMax: 0.4\n                });\n            }\n        }\n        \n        // ==================== WIND ZONE ====================\n        class WindZone {\n            constructor(x, y, radius, direction, strength) {\n                this.x = x;\n                this.y = y;\n                this.radius = radius;\n                this.direction = direction;\n                this.strength = strength;\n                this.targetDirection = direction;\n                this.targetStrength = strength;\n                this.changeTimer = 8 + Math.random() * 7;\n                this.transitionTime = 0;\n                this.particles = [];\n                this.particleTimer = 0;\n            }\n            \n            update(dt, arenaRadius, centerX, centerY) {\n                this.changeTimer -= dt;\n                this.transitionTime = Math.max(0, this.transitionTime - dt);\n                \n                if (this.changeTimer <= 0) {\n                    this.targetDirection = Math.random() * Math.PI * 2;\n                    this.targetStrength = 50 + Math.random() * 250;\n                    this.changeTimer = 8 + Math.random() * 7;\n                    this.transitionTime = 2;\n                }\n                \n                // Smooth interpolation\n                const t = this.transitionTime > 0 ? dt / 2 : 1;\n                this.direction += (this.targetDirection - this.direction) * t * 0.1;\n                this.strength += (this.targetStrength - this.strength) * t * 0.1;\n                \n                // Update particles\n                this.particleTimer += dt;\n                if (this.particleTimer > 0.05) {\n                    this.particleTimer = 0;\n                    const angle = Math.random() * Math.PI * 2;\n                    const dist = Math.random() * this.radius * 0.8;\n                    const px = this.x + Math.cos(angle) * dist;\n                    const py = this.y + Math.sin(angle) * dist;\n                    const speed = this.strength * 0.5;\n                    this.particles.push({\n                        x: px, y: py,\n                        vx: Math.cos(this.direction) * speed,\n                        vy: Math.sin(this.direction) * speed,\n                        life: 1.5,\n                        maxLife: 1.5\n                    });\n                }\n                \n                this.particles = this.particles.filter(p => {\n                    p.x += p.vx * dt;\n                    p.y += p.vy * dt;\n                    p.life -= dt;\n                    const dx = p.x - this.x;\n                    const dy = p.y - this.y;\n                    if (Math.sqrt(dx*dx + dy*dy) > this.radius || p.life <= 0) {\n                        return false;\n                    }\n                    return true;\n                });\n                \n                // Keep zone in arena\n                const dx = this.x - centerX;\n                const dy = this.y - centerY;\n                const dist = Math.sqrt(dx*dx + dy*dy);\n                if (dist + this.radius > arenaRadius * 0.8) {\n                    const maxDist = arenaRadius * 0.8 - this.radius;\n                    this.x = centerX + (dx / dist) * maxDist;\n                    this.y = centerY + (dy / dist) * maxDist;\n                }\n            }\n            \n            getForceAt(x, y) {\n                const dx = x - this.x;\n                const dy = y - this.y;\n                const dist = Math.sqrt(dx*dx + dy*dy);\n                if (dist > this.radius) return { x: 0, y: 0 };\n                \n                const factor = 1 - (dist / this.radius);\n                return {\n                    x: Math.cos(this.direction) * this.strength * factor,\n                    y: Math.sin(this.direction) * this.strength * factor\n                };\n            }\n            \n            draw(ctx) {\n                // Draw zone overlay\n                ctx.save();\n                ctx.globalAlpha = 0.1 + (this.strength / 300) * 0.15;\n                ctx.fillStyle = '#00ffaa';\n                ctx.beginPath();\n                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);\n                ctx.fill();\n                \n                ctx.globalAlpha = 0.3;\n                ctx.strokeStyle = '#00ffaa';\n                ctx.lineWidth = 1;\n                ctx.setLineDash([5, 10]);\n                ctx.stroke();\n                ctx.setLineDash([]);\n                ctx.restore();\n                \n                // Draw particles\n                this.particles.forEach(p => {\n                    ctx.globalAlpha = (p.life / p.maxLife) * 0.6;\n                    ctx.fillStyle = '#00ffaa';\n                    ctx.beginPath();\n                    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);\n                    ctx.fill();\n                });\n                ctx.globalAlpha = 1;\n            }\n        }\n        \n        // ==================== ENTITIES ====================\n        class Player {\n            constructor(x, y, color, isAI = false) {\n                this.x = x;\n                this.y = y;\n                this.vx = 0;\n                this.vy = 0;\n                this.radius = 25;\n                this.rotation = 0;\n                this.color = color;\n                this.isAI = isAI;\n                this.hasFrisbee = false;\n                this.boostCooldown = 0;\n                this.boostActive = false;\n                this.boostMeter = 1;\n                this.catchTimer = 0;\n            }\n            \n            update(dt, windForce, arenaRadius, centerX, centerY) {\n                const accel = this.boostActive ? 1200 : 600;\n                const maxSpeed = this.boostActive ? 1200 : 600;
+                const friction = 0.96;
+                
+                // Apply acceleration
+                this.vx += Math.cos(this.rotation) * accel * dt;
+                this.vy += Math.sin(this.rotation) * accel * dt;
+                
+                // Apply wind force
+                this.vx += windForce.x * dt;
+                this.vy += windForce.y * dt;
+                
+                // Apply friction
+                this.vx *= friction;
+                this.vy *= friction;
+                
+                // Clamp speed
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > maxSpeed) {
+                    this.vx = (this.vx / speed) * maxSpeed;
+                    this.vy = (this.vy / speed) * maxSpeed;
+                }
+                
+                // Update position
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                
+                // Arena bounds
+                const dx = this.x - centerX;
+                const dy = this.y - centerY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist + this.radius > arenaRadius) {
+                    const angle = Math.atan2(dy, dx);
+                    this.x = centerX + Math.cos(angle) * (arenaRadius - this.radius);
+                    this.y = centerY + Math.sin(angle) * (arenaRadius - this.radius);
+                    
+                    // Bounce off wall
+                    const normalX = Math.cos(angle);
+                    const normalY = Math.sin(angle);
+                    const dot = this.vx * normalX + this.vy * normalY;
+                    this.vx -= 2 * dot * normalX * 0.5;
+                    this.vy -= 2 * dot * normalY * 0.5;
+                }
+                
+                // Boost cooldown
+                if (this.boostActive) {
+                    this.boostMeter -= dt * 0.5;
+                    if (this.boostMeter <= 0) {
+                        this.boostMeter = 0;
+                        this.boostActive = false;
+                        this.boostCooldown = 2;
+                    }
+                } else if (this.boostCooldown > 0) {
+                    this.boostCooldown -= dt;
+                    if (this.boostCooldown <= 0) {
+                        this.boostMeter = Math.min(1, this.boostMeter + dt * 0.5);
+                    }
+                } else {
+                    this.boostMeter = Math.min(1, this.boostMeter + dt * 0.3);
+                }
+                
+                // Catch timer
+                if (this.catchTimer > 0) {
+                    this.catchTimer -= dt;
+                }
+            }
+            
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                
+                // Glow
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 15;
+                
+                // Body
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner circle
+                ctx.fillStyle = '#0a0a1a';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Direction indicator
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.moveTo(this.radius * 0.7, 0);
+                ctx.lineTo(this.radius * 0.3, -this.radius * 0.3);
+                ctx.lineTo(this.radius * 0.3, this.radius * 0.3);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Boost effect
+                if (this.boostActive) {
+                    ctx.fillStyle = '#00f5ff';
+                    ctx.globalAlpha = 0.5;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius * 1.3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+                
+                ctx.restore();
+                
+                // Has frisbee indicator
+                if (this.hasFrisbee) {
+                    ctx.fillStyle = '#ffcc00';
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y - this.radius - 10, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+        }
+        
+        class Frisbee {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.rotation = 0;
+                this.rotationSpeed = 5;
+                this.radius = 15;
+                this.owner = null;
+                this.inFlight = false;
+                this.spinEffect = 0;
+            }
+            
+            update(dt, windForce, arenaRadius, centerX, centerY, particles) {
+                if (this.inFlight) {
+                    // Apply wind
+                    this.vx += windForce.x * dt * 0.8;
+                    this.vy += windForce.y * dt * 0.8;
+                    
+                    // Apply friction
+                    this.vx *= 0.995;
+                    this.vy *= 0.995;
+                    
+                    // Update position
+                    this.x += this.vx * dt;
+                    this.y += this.vy * dt;
+                    
+                    // Spin
+                    this.rotation += this.rotationSpeed * dt;
+                    this.spinEffect = Math.sin(this.rotation * 2) * 0.1;
+                    
+                    // Trail particles
+                    if (particles && Math.random() < 0.5) {
+                        particles.emitFrisbeeTrail(this.x, this.y);
+                    }
+                    
+                    // Arena bounds
+                    const dx = this.x - centerX;
+                    const dy = this.y - centerY;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist + this.radius > arenaRadius) {
+                        this.inFlight = false;
+                        this.vx = 0;
+                        this.vy = 0;
+                        return 'outOfBounds';
+                    }
+                    
+                    // Check if stopped
+                    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                    if (speed < 20) {
+                        this.inFlight = false;
+                        this.vx = 0;
+                        this.vy = 0;
+                        return 'stopped';
+                    }
+                }
+                
+                return null;
+            }
+            
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation + this.spinEffect);
+                
+                // Glow
+                ctx.shadowColor = '#ff6600';
+                ctx.shadowBlur = 20;
+                
+                // Frisbee body
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius);
+                gradient.addColorStop(0, '#ffaa00');
+                gradient.addColorStop(0.5, '#ff6600');
+                gradient.addColorStop(1, '#ff3300');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Inner ring
+                ctx.strokeStyle = '#ffcc00';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Center
+                ctx.fillStyle = '#ffcc00';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+            
+            throw(power, angle) {
+                this.inFlight = true;
+                this.vx = Math.cos(angle) * power * 800;
+                this.vy = Math.sin(angle) * power * 800;
+                this.rotationSpeed = 10 + power * 20;
+                this.owner = null;
+            }
+        }
+        
+        class GoalZone {
+            constructor(x, y, width, height, isLeft) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.isLeft = isLeft;
+            }
+            
+            contains(frisbee) {
+                return frisbee.x > this.x && 
+                       frisbee.x < this.x + this.width &&
+                       frisbee.y > this.y && 
+                       frisbee.y < this.y + this.height;
+            }
+            
+            draw(ctx) {
+                ctx.save();
+                
+                const gradient = ctx.createLinearGradient(
+                    this.isLeft ? this.x : this.x + this.width,
+                    0,
+                    this.isLeft ? this.x + this.width : this.x,
+                    0
+                );
+                
+                const color = this.isLeft ? '#00f5ff' : '#ff00aa';
+                gradient.addColorStop(0, 'rgba(0, 245, 255, 0.1)');
+                gradient.addColorStop(1, 'rgba(0, 245, 255, 0.4)');
+                
+                ctx.fillStyle = gradient;
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                ctx.setLineDash([10, 5]);
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+                ctx.setLineDash([]);
+                
+                ctx.restore();
+            }
+        }
+        
+        // ==================== CPU AI ====================
+        class CPUAI {
+            constructor(player, frisbee, goalZone, isLeft) {
+                this.player = player;
+                this.frisbee = frisbee;
+                this.goalZone = goalZone;
+                this.isLeft = isLeft;
+                this.state = 'defend';
+                this.targetX = 0;
+                this.targetY = 0;
+                this.reactionTime = 0.3;
+                this.timer = 0;
+            }
+            
+            update(dt, playerHasFrisbee, particles, audio) {
+                this.timer += dt;
+                
+                // Update target every reaction time
+                if (this.timer > this.reactionTime) {
+                    this.timer = 0;
+                    this.calculateTarget(playerHasFrisbee);
+                }
+                
+                // Move towards target
+                const dx = this.targetX - this.player.x;
+                const dy = this.targetY - this.player.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 10) {
+                    this.player.rotation = Math.atan2(dy, dx);
+                    
+                    // Use boost when chasing
+                    if (dist > 300 && this.player.boostMeter > 0.3 && !this.player.boostActive) {
+                        this.player.boostActive = true;
+                        if (audio) audio.playBoost();
+                        if (particles) particles.emitBoost(this.player.x, this.player.y, this.player.rotation);
+                    }
+                }
+                
+                // Try to catch frisbee
+                if (!this.frisbee.inFlight && !this.player.hasFrisbee) {
+                    const catchDist = Math.sqrt(
+                        Math.pow(this.frisbee.x - this.player.x, 2) +
+                        Math.pow(this.frisbee.y - this.player.y, 2)
+                    );
+                    
+                    if (catchDist < 50) {
+                        this.player.catchTimer = 0.3;
+                    }
+                }
+                
+                // Throw frisbee
+                if (this.player.hasFrisbee && this.frisbee.inFlight === false) {
+                    const throwPower = 0.7 + Math.random() * 0.3;
+                    const throwAngle = this.player.rotation;
+                    
+                    // Add some randomness
+                    const angleOffset = (Math.random() - 0.5) * 0.3;
+                    
+                    this.frisbee.throw(throwPower, throwAngle + angleOffset);
+                    this.player.hasFrisbee = false;
+                    
+                    if (audio) audio.playThrow(throwPower);
+                    if (particles) particles.emitGoal(this.frisbee.x, this.frisbee.y, this.player.color);
+                }
+            }
+            
+            calculateTarget(playerHasFrisbee) {
+                if (this.frisbee.inFlight) {
+                    // Predict frisbee landing
+                    const predictionTime = 1;
+                    this.targetX = this.frisbee.x + this.frisbee.vx * predictionTime;
+                    this.targetY = this.frisbee.y + this.frisbee.vy * predictionTime;
+                    this.state = 'intercept';
+                } else if (this.frisbee.owner === null) {
+                    // Go for loose frisbee
+                    this.targetX = this.frisbee.x;
+                    this.targetY = this.frisbee.y;
+                    this.state = 'chase';
+                } else if (playerHasFrisbee) {
+                    // Defend goal
+                    const goalCenter = {
+                        x: this.isLeft ? this.goalZone.x + this.goalZone.width : this.goalZone.x,
+                        y: this.goalZone.y + this.goalZone.height / 2
+                    };
+                    
+                    this.targetX = goalCenter.x + (this.isLeft ? -100 : 100);
+                    this.targetY = this.frisbee.y * 0.7 + goalCenter.y * 0.3;
+                    this.state = 'defend';
+                } else {
+                    // Support offensive position
+                    this.targetX = this.goalZone.x + this.goalZone.width / 2;
+                    this.targetY = this.goalZone.y + this.goalZone.height / 2 + Math.sin(this.timer * 2) * 50;
+                    this.state = 'support';
+                }
+                
+                // Keep target in arena
+                this.targetX = Math.max(50, Math.min(window.innerWidth - 50, this.targetX));
+                this.targetY = Math.max(50, Math.min(window.innerHeight - 50, this.targetY));
+            }
+        }
+        
+        // ==================== GAME ====================
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.audio = new AudioSystem();
+                this.particles = new ParticleSystem();
+                
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                
+                // Game state
+                this.state = 'menu'; // menu, playing, paused, gameOver
+                this.scores = { p1: 0, p2: 0 };
+                this.highScore = parseInt(localStorage.getItem('zeroGHighScore') || '0');
+                this.gameTime = 180; // 3 minutes
+                this.speedrunTime = 0;
+                this.lastTime = 0;
+                
+                // Arena
+                this.arenaRadius = 0;
+                this.centerX = 0;
+                this.centerY = 0;
+                
+                // Entities
+                this.player1 = null;
+                this.player2 = null;
+                this.frisbee = null;
+                this.goalZoneLeft = null;
+                this.goalZoneRight = null;
+                this.windZones = [];
+                
+                // Input
+                this.keys = {};
+                this.setupInput();
+                
+                // UI Elements
+                this.p1ScoreEl = document.getElementById('p1Score');
+                this.p2ScoreEl = document.getElementById('p2Score');
+                this.highScoreEl = document.getElementById('highScore');
+                this.timerEl = document.getElementById('gameTimer');
+                this.timerPanelEl = document.getElementById('timerPanel');
+                this.boostFillEl = document.getElementById('boostFill');
+                this.powerMeterEl = document.getElementById('powerMeter');
+                this.powerFillEl = document.getElementById('powerFill');
+                this.windArrowEl = document.getElementById('windArrow');
+                this.windStrengthEl = document.getElementById('windStrength');
+                this.speedrunTimeEl = document.getElementById('speedrunTime');
+                this.menuOverlayEl = document.getElementById('menuOverlay');
+                this.menuPromptEl = document.getElementById('menuPrompt');
+                
+                this.highScoreEl.textContent = this.highScore;
+                
+                // Power meter
+                this.powerCharging = false;
+                this.powerLevel = 0;
+                this.cpuAI = null;
+                
+                // Start game loop
+                this.gameLoop = this.gameLoop.bind(this);
+                requestAnimationFrame(this.gameLoop);
+            }
+            
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.arenaRadius = Math.min(this.canvas.width, this.canvas.height) * 0.42;
+                this.centerX = this.canvas.width / 2;
+                this.centerY = this.canvas.height / 2;
+                
+                // Update goal zones
+                const goalWidth = 30;
+                const goalHeight = 120;
+                this.goalZoneLeft = new GoalZone(
+                    this.centerX - this.arenaRadius - goalWidth + 10,
+                    this.centerY - goalHeight / 2,
+                    goalWidth,
+                    goalHeight,
+                    true
+                );
+                this.goalZoneRight = new GoalZone(
+                    this.centerX + this.arenaRadius - 10,
+                    this.centerY - goalHeight / 2,
+                    goalWidth,
+                    goalHeight,
+                    false
+                );
+            }
+            
+            setupInput() {
+                window.addEventListener('keydown', (e) => {
+                    this.keys[e.code] = true;
+                    
+                    if (e.code === 'Space') {
+                        e.preventDefault();
+                        
+                        if (this.state === 'menu') {
+                            this.startGame();
+                        } else if (this.state === 'playing') {
+                            if (this.player1.hasFrisbee) {
+                                this.powerCharging = true;
+                            }
+                        } else if (this.state === 'gameOver') {
+                            this.startGame();
+                        }
+                    }
+                    
+                    if (e.code === 'Escape' && this.state === 'playing') {
+                        this.state = 'paused';
+                        this.showMenu('PAUSED', 'PRESS SPACE TO RESUME');
+                    } else if (e.code === 'Escape' && this.state === 'paused') {
+                        this.state = 'playing';
+                        this.menuOverlayEl.classList.add('hidden');
+                    }
+                });
+                
+                window.addEventListener('keyup', (e) => {
+                    this.keys[e.code] = false;
+                    
+                    if (e.code === 'Space' && this.powerCharging && this.state === 'playing') {
+                        this.throwFrisbee();
+                        this.powerCharging = false;
+                    }
+                });
+            }
+            
+            startGame() {
+                this.audio.init();
+                this.state = 'playing';
+                this.scores = { p1: 0, p2: 0 };
+                this.gameTime = 180;
+                this.speedrunTime = 0;
+                
+                // Create players
+                this.player1 = new Player(this.centerX - 150, this.centerY, '#00f5ff', false);
+                this.player2 = new Player(this.centerX + 150, this.centerY, '#ff00aa', true);
+                
+                // Create frisbee
+                this.frisbee = new Frisbee(this.centerX, this.centerY);
+                this.player1.hasFrisbee = true;
+                
+                // CPU AI
+                this.cpuAI = new CPUAI(this.player2, this.frisbee, this.goalZoneRight, false);
+                
+                // Wind zones
+                this.windZones = [];
+                for (let i = 0; i < 3; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const dist = Math.random() * this.arenaRadius * 0.5;
+                    this.windZones.push(new WindZone(
+                        this.centerX + Math.cos(angle) * dist,
+                        this.centerY + Math.sin(angle) * dist,
+                        80 + Math.random() * 60,
+                        Math.random() * Math.PI * 2,
+                        50 + Math.random() * 200
+                    ));
+                }
+                
+                this.menuOverlayEl.classList.add('hidden');
+                this.updateScoreDisplay();
+            }
+            
+            showMenu(title, subtitle) {
+                this.menuOverlayEl.classList.remove('hidden');
+                this.menuPromptEl.innerHTML = `<div class="game-over-panel">
+                    <div class="result ${this.scores.p1 >= this.scores.p2 ? 'victory' : 'defeat'}">${title}</div>
+                    <div class="final-score">${this.scores.p1} - ${this.scores.p2}</div>
+                    ${subtitle}
+                    <br><br>
+                    <button class="menu-button" onclick="game.startGame()">PLAY AGAIN</button>
+                </div>`;
+            }
+            
+            throwFrisbee() {
+                if (this.powerLevel < 0.1) this.powerLevel = 0.3;
+                const angle = this.player1.rotation;
+                this.frisbee.throw(this.powerLevel, angle);
+                this.player1.hasFrisbee = false;
+                this.powerLevel = 0;
+                this.audio.playThrow(this.powerLevel);
+                this.particles.emitGoal(this.frisbee.x, this.frisbee.y, this.player1.color);
+            }
+            
+            getTotalWindForce() {
+                let totalForce = { x: 0, y: 0 };
+                
+                // Global wind
+                const globalWind = {
+                    x: Math.cos(this.globalWindDirection) * this.globalWindStrength,
+                    y: Math.sin(this.globalWindDirection) * this.globalWindStrength
+                };
+                totalForce.x += globalWind.x;
+                totalForce.y += globalWind.y;
+                
+                // Wind zones
+                this.windZones.forEach(zone => {
+                    const force = zone.getForceAt(this.player1.x, this.player1.y);
+                    totalForce.x += force.x;
+                    totalForce.y += force.y;
+                });
+                
+                return totalForce;
+            }
+            
+            updateScoreDisplay() {
+                this.p1ScoreEl.textContent = this.scores.p1;
+                this.p2ScoreEl.textContent = this.scores.p2;
+                
+                // Pulse animation
+                this.p1ScoreEl.parentElement.classList.add('pulse');
+                this.p2ScoreEl.parentElement.classList.add('pulse');
+                setTimeout(() => {
+                    this.p1ScoreEl.parentElement.classList.remove('pulse');
+                    this.p2ScoreEl.parentElement.classList.remove('pulse');
+                }, 300);
+            }
+            
+            score(player) {
+                if (player === 1) {
+                    this.scores.p1++;
+                    this.frisbee.x = this.centerX;
+                    this.frisbee.y = this.centerY;
+                    this.frisbee.inFlight = false;
+                    this.player1.hasFrisbee = true;
+                    this.player1.x = this.centerX - 150;
+                    this.player1.y = this.centerY;
+                    this.player2.x = this.centerX + 150;
+                    this.player2.y = this.centerY;
+                } else {
+                    this.scores.p2++;
+                    this.frisbee.x = this.centerX;
+                    this.frisbee.y = this.centerY;
+                    this.frisbee.inFlight = false;
+                    this.player2.hasFrisbee = true;
+                    this.player1.x = this.centerX - 150;
+                    this.player1.y = this.centerY;
+                    this.player2.x = this.centerX + 150;
+                    this.player2.y = this.centerY;
+                }
+                
+                this.particles.emitGoal(this.frisbee.x, this.frisbee.y, player === 1 ? '#00f5ff' : '#ff00aa');
+                this.audio.playGoal();
+                this.updateScoreDisplay();
+            }
+            
+            gameLoop(currentTime) {
+                const dt = Math.min((currentTime - this.lastTime) / 1000, 0.1);
+                this.lastTime = currentTime;
+                
+                this.update(dt);
+                this.draw();
+                
+                requestAnimationFrame(this.gameLoop);
+            }
+            
+            update(dt) {
+                if (this.state !== 'playing') return;
+                
+                // Speedrun timer
+                this.speedrunTime += dt;
+                const minutes = Math.floor(this.speedrunTime / 60);
+                const seconds = Math.floor(this.speedrunTime % 60);
+                const ms = Math.floor((this.speedrunTime % 1) * 1000);
+                this.speedrunTimeEl.textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+                
+                // Game timer
+                this.gameTime -= dt;
+                if (this.gameTime <= 0) {
+                    this.gameTime = 0;
+                    this.endGame();
+                    return;
+                }
+                
+                const minutes = Math.floor(this.gameTime / 60);
+                const seconds = Math.floor(this.gameTime % 60);
+                this.timerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (this.gameTime <= 30) {
+                    this.timerPanelEl.classList.add('warning');
+                } else {
+                    this.timerPanelEl.classList.remove('warning');
+                }
+                
+                // Player 1 input
+                let moveX = 0, moveY = 0;
+                if (this.keys['KeyW'] || this.keys['ArrowUp']) moveY -= 1;
+                if (this.keys['KeyS'] || this.keys['ArrowDown']) moveY += 1;
+                if (this.keys['KeyA'] || this.keys['ArrowLeft']) moveX -= 1;
+                if (this.keys['KeyD'] || this.keys['ArrowRight']) moveX += 1;
+                
+                if (moveX !== 0 || moveY !== 0) {
+                    this.player1.rotation = Math.atan2(moveY, moveX);
+                }
+                
+                // Boost
+                if (this.keys['ShiftLeft'] || this.keys['ShiftRight']) {
+                    if (!this.player1.boostActive && this.player1.boostMeter > 0) {
+                        this.player1.boostActive = true;
+                        this.audio.playBoost();
+                        this.particles.emitBoost(this.player1.x, this.player1.y, this.player1.rotation);
+                    }
+                } else {
+                    this.player1.boostActive = false;
+                }
+                
+                // Rotation
+                if (this.keys['KeyQ']) this.player1.rotation -= 4 * dt;
+                if (this.keys['KeyE']) this.player1.rotation += 4 * dt;
+                
+                // Power meter
+                if (this.powerCharging) {
+                    this.powerLevel = Math.min(1, this.powerLevel + dt * 0.8);
+                    this.powerMeterEl.classList.add('visible');
+                    this.powerFillEl.style.width = `${this.powerLevel * 100}%`;
+                } else {
+                    this.powerMeterEl.classList.remove('visible');
+                }
+                
+                // Boost meter UI
+                this.boostFillEl.style.width = `${this.player1.boostMeter * 100}%`;
+                if (this.player1.boostCooldown > 0) {
+                    this.boostFillEl.classList.add('cooldown');
+                } else {
+                    this.boostFillEl.classList.remove('cooldown');
+                }
+                
+                // Global wind
+                if (!this.globalWindDirection) this.globalWindDirection = Math.random() * Math.PI * 2;
+                if (!this.globalWindStrength) this.globalWindStrength = 30 + Math.random() * 70;
+                
+                // Update wind zones
+                this.windZones.forEach(zone => {
+                    zone.update(dt, this.arenaRadius, this.centerX, this.centerY);
+                });
+                
+                // Update wind UI
+                const arrows = ['➡️', '⬇️', '⬅️', '⬆️', '↗️', '↘️', '↙️', '↖️'];
+                const arrowIndex = Math.round(this.globalWindDirection / (Math.PI / 4)) % 8;
+                this.windArrowEl.textContent = arrows[arrowIndex];
+                
+                const strengthBars = this.windStrengthEl.querySelectorAll('.strength-bar');
+                const strengthLevel = Math.ceil((this.globalWindStrength / 300) * 5);
+                strengthBars.forEach((bar, i) => {
+                    bar.classList.toggle('active', i < strengthLevel);
+                });
+                
+                // Get wind force
+                const windForce = this.getTotalWindForce();
+                
+                // Update entities
+                this.player1.update(dt, windForce, this.arenaRadius, this.centerX, this.centerY);
+                this.player2.update(dt, { x: 0, y: 0 }, this.arenaRadius, this.centerX, this.centerY);
+                
+                // CPU AI
+                this.cpuAI.update(dt, this.player1.hasFrisbee, this.particles, this.audio);
+                
+                // Update frisbee
+                const frisbeeState = this.frisbee.update(dt, windForce, this.arenaRadius, this.centerX, this.centerY, this.particles);
+                
+                // Follow owner
+                if (this.frisbee.owner === this.player1 && !this.frisbee.inFlight) {
+                    this.frisbee.x = this.player1.x + Math.cos(this.player1.rotation) * (this.player1.radius + this.frisbee.radius + 5);
+                    this.frisbee.y = this.player1.y + Math.sin(this.player1.rotation) * (this.player1.radius + this.frisbee.radius + 5);
+                } else if (this.frisbee.owner === this.player2 && !this.frisbee.inFlight) {
+                    this.frisbee.x = this.player2.x + Math.cos(this.player2.rotation) * (this.player2.radius + this.frisbee.radius + 5);
+                    this.frisbee.y = this.player2.y + Math.sin(this.player2.rotation) * (this.player2.radius + this.frisbee.radius + 5);
+                }
+                
+                // Catch logic
+                if (!this.frisbee.inFlight && frisbeeState !== 'stopped') {
+                    [this.player1, this.player2].forEach(player => {
+                        if (!player.hasFrisbee && player.catchTimer > 0) {
+                            const dist = Math.sqrt(
+                                Math.pow(this.frisbee.x - player.x, 2) +
+                                Math.pow(this.frisbee.y - player.y, 2)
+                            );
+                            
+                            if (dist < player.radius + this.frisbee.radius + 20) {
+                                player.hasFrisbee = true;
+                                this.frisbee.owner = player;
+                                this.frisbee.inFlight = false;
+                                this.frisbee.vx = 0;
+                                this.frisbee.vy = 0;
+                                this.audio.playCatch();
+                                this.particles.emitCatch(player.x, player.y);
+                            }
+                        }
+                    });
+                }
+                
+                // Check catches when frisbee is near
+                if (!this.frisbee.inFlight) {
+                    [this.player1, this.player2].forEach(player => {
+                        if (!player.hasFrisbee) {
+                            const dist = Math.sqrt(
+                                Math.pow(this.frisbee.x - player.x, 2) +
+                                Math.pow(this.frisbee.y - player.y, 2)
+                            );
+                            
+                            if (dist < player.radius + this.frisbee.radius + 10) {
+                                player.hasFrisbee = true;
+                                this.frisbee.owner = player;
+                                this.audio.playCatch();
+                                this.particles.emitCatch(player.x, player.y);
+                            }
+                        }
+                    });
+                }
+                
+                // Goal detection
+                if (this.goalZoneLeft.contains(this.frisbee)) {
+                    this.score(2); // CPU scores
+                } else if (this.goalZoneRight.contains(this.frisbee)) {
+                    this.score(1); // Player scores
+                }
+                
+                // Player collision
+                const playerDist = Math.sqrt(
+                    Math.pow(this.player1.x - this.player2.x, 2) +
+                    Math.pow(this.player1.y - this.player2.y, 2)
+                );
+                
+                if (playerDist < this.player1.radius + this.player2.radius) {
+                    const angle = Math.atan2(
+                        this.player1.y - this.player2.y,
+                        this.player1.x - this.player2.x
+                    );
+                    
+                    const overlap = this.player1.radius + this.player2.radius - playerDist;
+                    this.player1.x += Math.cos(angle) * overlap / 2;
+                    this.player1.y += Math.sin(angle) * overlap / 2;
+                    this.player2.x -= Math.cos(angle) * overlap / 2;
+                    this.player2.y -= Math.sin(angle) * overlap / 2;
+                    
+                    // Transfer frisbee on collision
+                    if (this.frisbee.owner) {
+                        this.frisbee.owner.hasFrisbee = false;
+                        this.frisbee.owner = null;
+                        this.frisbee.inFlight = true;
+                        const throwAngle = angle;
+                        this.frisbee.throw(0.5, throwAngle);
+                        this.audio.playCollision();
+                    }
+                }
+                
+                // Particles
+                this.particles.update(dt);
+            }
+            
+            draw() {
+                const ctx = this.ctx;
+                ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw arena
+                ctx.save();
+                
+                // Arena background
+                ctx.fillStyle = '#0a0a1a';
+                ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Arena circle
+                ctx.strokeStyle = '#334466';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(this.centerX, this.centerY, this.arenaRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Center line
+                ctx.strokeStyle = '#334466';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([10, 10]);
+                ctx.beginPath();
+                ctx.moveTo(this.centerX, this.centerY - this.arenaRadius);
+                ctx.lineTo(this.centerX, this.centerY + this.arenaRadius);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(this.centerX - this.arenaRadius, this.centerY);
+                ctx.lineTo(this.centerX + this.arenaRadius, this.centerY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                // Center circle
+                ctx.beginPath();
+                ctx.arc(this.centerX, this.centerY, 50, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                ctx.restore();
+                
+                // Draw goal zones
+                this.goalZoneLeft.draw(ctx);
+                this.goalZoneRight.draw(ctx);
+                
+                // Draw wind zones
+                this.windZones.forEach(zone => zone.draw(ctx));
+                
+                // Draw particles
+                this.particles.draw(ctx);
+                
+                // Draw entities
+                if (this.player1) this.player1.draw(ctx);
+                if (this.player2) this.player2.draw(ctx);
+                if (this.frisbee) this.frisbee.draw(ctx);
+            }
+            
+            endGame() {
+                this.state = 'gameOver';
+                
+                const winner = this.scores.p1 > this.scores.p2 ? 'VICTORY!' : 
+                               this.scores.p1 < this.scores.p2 ? 'DEFEAT' : 'DRAW';
+                const isRecord = this.scores.p1 > this.highScore;
+                
+                if (isRecord) {
+                    this.highScore = this.scores.p1;
+                    localStorage.setItem('zeroGHighScore', this.highScore.toString());
+                    this.highScoreEl.textContent = this.highScore;
+                }
+                
+                this.showMenu(winner, isRecord ? '<div class="new-record">🎉 NEW HIGH SCORE! 🎉</div>' : '');
+            }
+        }
+        
+        // Initialize game
+        const game = new Game();
+    </script>
+</body>
+</html>", "style.css": "/* ZERO-G: FRISBEE OMEGA Styles */\n\n/* Reset and base styles */\n* {\n    margin: 0;\n    padding: 0;\n    box-sizing: border-box;\n}\n\nhtml, body {\n    width: 100%;\n    height: 100%;\n    overflow: hidden;\n    background: #0a0a1a;\n    font-family: 'Orbitron', monospace;\n}\n\n#gameContainer {\n    position: relative;\n    width: 100%;\n    height: 100%;\
