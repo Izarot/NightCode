@@ -1,0 +1,1 @@
+function getHighScore() {\n  return localStorage.getItem(CONFIG.highScoreKey) || 0;\n}\n\nfunction setHighScore(score) {\n  localStorage.setItem(CONFIG.highScoreKey, score);\n}

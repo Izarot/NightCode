@@ -1,0 +1,1 @@
+class Pool {\n  constructor(createFunc, maxSize) {\n    this.createFunc = createFunc;\n    this.maxSize = maxSize;\n    this.objects = [];\n  }\n  acquire() {\n    if (this.objects.length > 0) {\n      return this.objects.pop();\n    }\n    return this.createFunc();\n  }\n  release(obj) {\n    if (this.objects.length < this.maxSize) {\n      this.objects.push(obj);\n    }\n  }\n}

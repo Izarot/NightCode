@@ -1,0 +1,1 @@
+function drawHUD() {\n  ctx.fillStyle = CONFIG.playerColor;\n  ctx.font = '20px monospace';\n  ctx.fillText(`Score: ${score}`, 10, 30);\n  ctx.fillText(`Lives: ${player.lives}`, 10, 50);\n  ctx.fillText(`High Score: ${highScore}`, 10, 70);\n  const elapsed = (performance.now() - startTime) / 1000;\n  ctx.fillText(`Time: ${elapsed.toFixed(1)}s`, canvas.width - 120, 30);\n}

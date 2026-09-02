@@ -1,0 +1,1 @@
+class Projectile {\n  constructor(x, y, dy) {\n    this.x = x;\n    this.y = y;\n    this.dy = dy;\n    this.width = 4;\n    this.height = 8;\n  }\n  update(delta) {\n    this.y += this.dy * (delta / 1000);\n  }\n  draw(ctx) {\n    ctx.fillStyle = this.dy > 0 ? CONFIG.bulletColor : CONFIG.enemyBulletColor;\n    ctx.fillRect(this.x, this.y, this.width, this.height);\n  }\n}
