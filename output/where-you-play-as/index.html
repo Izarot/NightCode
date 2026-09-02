@@ -1,128 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<meta name="theme-color" content="#1a0e08" />
-<title>🦌 Crimson Trail: The Hunt for the Hollow Stag</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍂</text></svg>" />
-<link rel="stylesheet" href="css/hud.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STACK TRACE</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐛</text></svg>"> 
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; background: #0D1117; overflow: hidden; font-family: 'JetBrains Mono', monospace; }
+        canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; }
+        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .hud-element { position: absolute; color: #58A6FF; text-shadow: 0 0 5px #000; }
+    </style>
 </head>
 <body>
-<div id="game-wrapper">
-    <canvas id="game-canvas"></canvas>
-
-    <!-- Start Screen -->
-    <div id="start-screen" class="screen active">
-        <div class="title-block">
-            <h1>Crimson Trail</h1>
-            <h2>The Hunt for the Hollow Stag</h2>
-            <p class="lore">The forest breathes. The stag remembers. Track it, but do not be found.</p>
-            <button id="begin-btn" class="menu-btn">Begin Hunt</button>
-            <div class="high-score-display">
-                <span class="hs-label">Best Time</span>
-                <span id="hs-time" class="hs-value">--:--.--</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Encounter Complete Screen -->
-    <div id="encounter-screen" class="screen">
-        <div class="encounter-block">
-            <h1>Encounter Complete</h1>
-            <div class="stat-row"><span>Time</span><span id="stat-time">--:--:--</span></div>
-            <div class="stat-row"><span>Distance Tracked</span><span id="stat-distance">0 u</span></div>
-            <div class="stat-row"><span>Times Detected</span><span id="stat-detected">0</span></div>
-            <div class="stat-row"><span>Caches Found</span><span id="stat-caches">0/5</span></div>
-            <button id="restart-btn" class="menu-btn">Hunt Again</button>
-        </div>
-    </div>
-
-    <!-- Game Over Screen -->
-    <div id="gameover-screen" class="screen">
-        <div class="gameover-block">
-            <h1>The Forest Remembers.</h1>
-            <p>You were seen.</p>
-            <button id="respawn-btn" class="menu-btn">Rise Again</button>
-        </div>
-    </div>
-
-    <!-- HUD -->
-    <div id="hud">
-        <!-- Speedrun Timer -->
-        <div id="speedrun-timer" class="hud-corner top-center">
-            <span class="timer-label">RUN</span>
-            <span id="timer-display">00:00.00</span>
-        </div>
-
-        <!-- Detection Compass (top-left) -->
-        <div id="compass" class="hud-corner top-left">
-            <div class="compass-ring">
-                <div id="compass-arrow"></div>
-                <div class="compass-center"></div>
-            </div>
-            <div id="compass-distance">---</div>
-        </div>
-
-        <!-- Beast Detection Meter (top-right) -->
-        <div id="detection-meter" class="hud-corner top-right">
-            <div class="meter-label">AWARENESS</div>
-            <div class="meter-track">
-                <div id="meter-fill"></div>
-            </div>
-            <div id="meter-value">0%</div>
-        </div>
-
-        <!-- Tool Belt (bottom-center) -->
-        <div id="tool-belt" class="hud-corner bottom-center">
-            <div class="tool-slot" data-slot="0">
-                <div class="tool-hex"><span>1</span><div class="tool-icon">🔍</div></div>
-                <div class="tool-cooldown"></div>
-                <div class="tool-name">Tracker Lens</div>
-            </div>
-            <div class="tool-slot" data-slot="1">
-                <div class="tool-hex"><span>2</span><div class="tool-icon">💥</div></div>
-                <div class="tool-cooldown"></div>
-                <div class="tool-name">Sound Flare</div>
-            </div>
-            <div class="tool-slot" data-slot="2">
-                <div class="tool-hex"><span>3</span><div class="tool-icon">👻</div></div>
-                <div class="tool-cooldown"></div>
-                <div class="tool-name">Stealth Cloak</div>
-            </div>
-        </div>
-
-        <!-- Stealth & Stamina (bottom-right) -->
-        <div id="status-bars" class="hud-corner bottom-right">
-            <div class="vbar-wrap">
-                <div class="vbar-label">N</div>
-                <div class="vbar-track"><div id="noise-fill" class="vbar-fill"></div></div>
-            </div>
-            <div class="vbar-wrap">
-                <div class="vbar-label">S</div>
-                <div class="vbar-track"><div id="stamina-fill" class="vbar-fill"></div></div>
-            </div>
-        </div>
-
-        <!-- Interaction Prompt -->
-        <div id="interact-prompt"></div>
-
-        <!-- Minimap (bottom-left) -->
-        <div id="minimap-wrap" class="hud-corner bottom-left">
-            <canvas id="minimap"></canvas>
-        </div>
-    </div>
-</div>
-
-<script src="js/modules/utils.js"></script>
-<script src="js/modules/audio.js"></script>
-<script src="js/modules/world.js"></script>
-<script src="js/modules/physics.js"></script>
-<script src="js/modules/player.js"></script>
-<script src="js/modules/beastAI.js"></script>
-<script src="js/modules/tools.js"></script>
-<script src="js/modules/renderer.js"></script>
-<script src="js/modules/ui.js"></script>
-<script src="js/main.js"></script>
+    <canvas id="gameCanvas"></canvas>
+    <div id="hud"></div>
+    <script type="module" src="game.js"></script>
 </body>
 </html>
