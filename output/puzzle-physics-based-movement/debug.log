@@ -1,3 +1,504 @@
-JSON Decode Error after continuation: Expecting value: line 1 column 1 (char 0)
+JSON Decode Error after continuation: Invalid control character at: line 1 column 14058 (char 14057)
 
-Raw: User Safety: safeUser Safety: safe
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n    <title>Physics Puzzle</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>\">\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        html, body {\n            width: 100%;\n            height: 100%;\n            overflow: hidden;\n            background: #0a0a1a;\n            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n        }\n        #gameCanvas {\n            display: block;\n            width: 100%;\n            height: 100%;\n            touch-action: none;\n        }\n        #mobileControls {\n            display: none;\n            position: fixed;\n            bottom: 20px;\n            left: 0;\n            right: 0;\n            justify-content: space-between;\n            padding: 0 20px;\n            pointer-events: none;\n            z-index: 100;\n        }\n        .control-group {\n            display: flex;\n            gap: 15px;\n            pointer-events: auto;\n        }\n        .control-btn {\n            width: 60px;\n            height: 60px;\n            border-radius: 50%;\n            background: rgba(255,255,255,0.15);\n            border: 2px solid rgba(255,255,255,0.3);\n            color: white;\n            font-size: 24px;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            backdrop-filter: blur(5px);\n            user-select: none;\n            -webkit-user-select: none;\n        }\n        .control-btn:active {\n            background: rgba(0,255,204,0.4);\n            border-color: #00ffcc;\n        }\n        @media (pointer: coarse) {\n            #mobileControls {\n                display: flex;\n            }\n        }\n    </style>\n</head>\n<body>\n    <canvas id=\"gameCanvas\"></canvas>\n    <div id=\"mobileControls\">\n        <div class=\"control-group\">\n            <div class=\"control-btn\" id=\"btnLeft\">◀</div>\n            <div class=\"control-btn\" id=\"btnRight\">▶</div>\n        </div>\n        <div class=\"control-group\">\n            <div class=\"control-btn\" id=\"btnJump\">▲</div>\n        </div>\n    </div>\n    <script>\n        const canvas = document.getElementById('gameCanvas');\n        const ctx = canvas.getContext('2d');\n        \n        // High DPI support\n        function resizeCanvas() {\n            const dpr = window.devicePixelRatio || 1;\n            const rect = canvas.getBoundingClientRect();\n            canvas.width = rect.width * dpr;\n            canvas.height = rect.height * dpr;\n            ctx.scale(dpr, dpr);\n            canvas.style.width = rect.width + 'px';\n            canvas.style.height = rect.height + 'px';\n        }\n        resizeCanvas();\n        window.addEventListener('resize', resizeCanvas);\n        \n        // Audio\n        let audioCtx = null;\n        let masterGain = null;\n        let audioInitialized = false;\n        \n        function initAudio() {\n            if (!audioInitialized) {\n                audioCtx = new (window.AudioContext || window.webkitAudioContext)();\n                masterGain = audioCtx.createGain();\n                masterGain.gain.value = 0.3;\n                masterGain.connect(audioCtx.destination);\n                audioInitialized = true;\n            }\n            if (audioCtx.state === 'suspended') audioCtx.resume();\n        }\n        \n        function playJumpSound() {\n            if (!audioCtx) return;\n            const osc = audioCtx.createOscillator();\n            const gain = audioCtx.createGain();\n            osc.type = 'sine';\n            osc.frequency.setValueAtTime(300, audioCtx.currentTime);\n            osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.1);\n            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);\n            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);\n            osc.connect(gain);\n            gain.connect(masterGain);\n            osc.start();\n            osc.stop(audioCtx.currentTime + 0.15);\n        }\n        \n        function playCollisionSound() {\n            if (!audioCtx) return;\n            const bufferSize = audioCtx.sampleRate * 0.1;\n            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);\n            const data = buffer.getChannelData(0);\n            for (let i = 0; i < bufferSize; i++) {\n                data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);\n            }\n            const source = audioCtx.createBufferSource();\n            const gain = audioCtx.createGain();\n            const filter = audioCtx.createBiquadFilter();\n            filter.type = 'lowpass';\n            filter.frequency.value = 800;\n            source.buffer = buffer;\n            gain.gain.value = 0.15;\n            source.connect(filter);\n            filter.connect(gain);\n            gain.connect(masterGain);\n            source.start();\n        }\n        \n        function playGoalSound() {\n            if (!audioCtx) return;\n            [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {\n                const osc = audioCtx.createOscillator();\n                const gain = audioCtx.createGain();\n                osc.type = 'sine';\n                osc.frequency.value = freq;\n                gain.gain.setValueAtTime(0, audioCtx.currentTime + i * 0.1);\n                gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + i * 0.1 + 0.05);\n                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + i * 0.1 + 0.4);\n                osc.connect(gain);\n                gain.connect(masterGain);\n                osc.start(audioCtx.currentTime + i * 0.1);\n                osc.stop(audioCtx.currentTime + i * 0.1 + 0.4);\n            });\n        }\n        \n        function playGameOverSound() {\n            if (!audioCtx) return;\n            const osc = audioCtx.createOscillator();\n            const gain = audioCtx.createGain();\n            osc.type = 'sawtooth';\n            osc.frequency.setValueAtTime(200, audioCtx.currentTime);\n            osc.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime + 0.6);\n            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);\n            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);\n            osc.connect(gain);\n            gain.connect(masterGain);\n            osc.start();\n            osc.stop(audioCtx.currentTime + 0.6);\n        }\n        \n        // Game State\n        const colors = {\n            bg: '#0f0f2a',\n            player: '#00ffcc',\n            playerGlow: 'rgba(0,255,204,0.3)',\n            platform: '#2a2a4a',\n            platformStroke: '#4a4a7a',\n            ice: '#87ceeb',\n            trampoline: '#ff6b9d',\n            goal: '#ffd700',\n            goalGlow: 'rgba(255,215,0,0.2)',\n            movable: '#ff6b6b',\n            movable2: '#4ecdc4',\n            text: '#ffffff',\n            textShadow: '#00ffcc'\n        };\n        \n        const levels = [\n            {\n                name: 'Level 1',\n                bgGradient: ['#1a1a3a', '#2a2a5a'],\n                playerStart: { x: 80, y: 400 },\n                platforms: [\n                    { x: 0, y: 500, width: 200, height: 30, type: 'normal' },\n                    { x: 300, y: 450, width: 200, height: 30, type: 'normal' },\n                    { x: 600, y: 400, width: 250, height: 30, type: 'normal' }\n                ],\n                movables: [\n                    { id: 'box1', x: 350, y: 400, width: 50, height: 50, mass: 2, color: colors.movable }\n                ],\n                goal: { x: 700, y: 350, width: 80, height: 50 },\n                instruction: 'Push the block to the platform!'\n            },\n            {\n                name: 'Level 2',\n                bgGradient: ['#2a1a3a', '#4a2a5a'],\n                playerStart: { x: 80, y: 350 },\n                platforms: [\n                    { x: 0, y: 400, width: 150, height: 30, type: 'normal' },\n                    { x: 200, y: 350, width: 100, height: 30, type: 'trampoline' },\n                    { x: 400, y: 300, width: 200, height: 30, type: 'normal' },\n                    { x: 650, y: 250, width: 200, height: 30, type: 'ice' }\n                ],\n                movables: [\n                    { id: 'box1', x: 250, y: 300, width: 40, height: 40, mass: 1.5, color: colors.movable },\n                    { id: 'box2', x: 500, y: 250, width: 60, height: 40, mass: 2.5, color: colors.movable2 }\n                ],\n                goal: { x: 750, y: 200, width: 80, height: 50 },\n                instruction: 'Bounce on trampolines!'\n            },\n            {\n                name: 'Level 3',\n                bgGradient: ['#1a2a3a', '#2a4a6a'],\n                playerStart: { x: 60, y: 500 },\n                platforms: [\n                    { x: 0, y: 550, width: 120, height: 30, type: 'normal' },\n                    { x: 150, y: 480, width: 80, height: 20, type: 'trampoline' },\n                    { x: 280, y: 400, width: 150, height: 25, type: 'normal' },\n                    { x: 480, y: 320, width: 100, height: 20, type: 'trampoline' },\n                    { x: 620, y: 250, width: 180, height: 25, type: 'normal' },\n                    { x: 850, y: 180, width: 150, height: 25, type: 'ice' }\n                ],\n                movables: [\n                    { id: 'box1', x: 300, y: 350, width: 45, height: 45, mass: 2, color: colors.movable },\n                    { id: 'box2', x: 350, y: 350, width: 35, height: 35, mass: 1, color: colors.movable2 },\n                    { id: 'box3', x: 650, y: 200, width: 55, height: 55, mass: 3, color: '#ffa500' }\n                ],\n                goal: { x: 870, y: 130, width: 80, height: 50 },\n                instruction: 'Use everything wisely!'\n            }\n        ];\n        \n        const gameState = {\n            phase: 'menu',\n            levelIndex: 0,\n            score: 0,\n            highScore: parseInt(localStorage.getItem('physicsPuzzleHighScore') || '0'),\n            timer: 90,\n            speedrunTime: 0,\n            screenShake: 0\n        };\n        \n        let player = { x: 0, y: 0, vx: 0, vy: 0, width: 40, height: 40, isGrounded: false, facingRight: true };\n        let currentLevel = null;\n        let particles = [];\n        let levelObjects = [];\n        \n        const input = { left: false, right: false, jump: false, jumpPressed: false };\n        \n        // Physics\n        const GRAVITY = 980;\n        const PLAYER_ACCEL = 2000;\n        const PLAYER_MAX_SPEED = 400;\n        const JUMP_FORCE = 500;\n        const FRICTION = 0.88;\n        const ICE_FRICTION = 0.98;\n        \n        // Input handlers\n        document.addEventListener('keydown', e => {\n            if (e.code === 'ArrowLeft' || e.code === 'KeyA') { input.left = true; e.preventDefault(); }\n            if (e.code === 'ArrowRight' || e.code === 'KeyD') { input.right = true; e.preventDefault(); }\n            if ((e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') && !input.jumpPressed) {\n                input.jump = true;\n                input.jumpPressed = true;\n                e.preventDefault();\n            }\n            if (e.code === 'Enter' || e.code === 'Space') {\n                if (gameState.phase === 'menu') startGame();\n                else if (gameState.phase === 'levelcomplete') nextLevel();\n                else if (gameState.phase === 'gameover' || gameState.phase === 'gamecomplete') {\n                    gameState.phase = 'menu';\n                }\n            }\n        });\n        \n        document.addEventListener('keyup', e => {\n            if (e.code === 'ArrowLeft' || e.code === 'KeyA') input.left = false;\n            if (e.code === 'ArrowRight' || e.code === 'KeyD') input.right = false;\n            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') {\n                input.jump = false;\n                input.jumpPressed = false;\n            }\n        });\n        \n        // Touch controls\n        const btnLeft = document.getElementById('btnLeft');\n        const btnRight = document.getElementById('btnRight');\n        const btnJump = document.getElementById('btnJump');\n        \n        function handleTouchStart(e, action) {\n            e.preventDefault();\n            initAudio();\n            if (action === 'left') input.left = true;\n            if (action === 'right') input.right = true;\n            if (action === 'jump' && !input.jumpPressed) {\n                input.jump = true;\n                input.jumpPressed = true;\n            }\n        }\n        \n        function handleTouchEnd(e, action) {\n            e.preventDefault();\n            if (action === 'left') input.left = false;\n            if (action === 'right') input.right = false;\n            if (action === 'jump') {\n                input.jump = false;\n                input.jumpPressed = false;\n            }\n        }\n        \n        btnLeft.addEventListener('touchstart', e => handleTouchStart(e, 'left'));\n        btnLeft.addEventListener('touchend', e => handleTouchEnd(e, 'left'));\n        btnRight.addEventListener('touchstart', e => handleTouchStart(e, 'right'));\n        btnRight.addEventListener('touchend', e => handleTouchEnd(e, 'right'));\n        btnJump.addEventListener('touchstart', e => handleTouchStart(e, 'jump'));\n        btnJump.addEventListener('touchend', e => handleTouchEnd(e, 'jump'));\n        \n        canvas.addEventListener('click', e => {\n            initAudio().resume();
+            if (gameState.phase === 'menu') startGame();
+            else if (gameState.phase === 'levelcomplete') nextLevel();
+            else if (gameState.phase === 'gameover' || gameState.phase === 'gamecomplete') {
+                gameState.phase = 'menu';
+            }
+        });
+        
+        // Game functions
+        function startGame() {
+            gameState.phase = 'playing';
+            gameState.levelIndex = 0;
+            gameState.score = 0;
+            gameState.timer = 90;
+            gameState.speedrunTime = 0;
+            loadLevel(0);
+        }
+        
+        function loadLevel(index) {
+            const level = levels[index];
+            currentLevel = JSON.parse(JSON.stringify(level));
+            player.x = level.playerStart.x;
+            player.y = level.playerStart.y;
+            player.vx = 0;
+            player.vy = 0;
+            player.isGrounded = false;
+            particles = [];
+            levelObjects = currentLevel.platforms.map(p => ({
+                ...p,
+                vy: 0
+            }));
+        }
+        
+        function nextLevel() {
+            if (gameState.levelIndex < levels.length - 1) {
+                gameState.levelIndex++;
+                loadLevel(gameState.levelIndex);
+                gameState.phase = 'playing';
+            } else {
+                gameState.phase = 'gamecomplete';
+                if (gameState.score > gameState.highScore) {
+                    gameState.highScore = gameState.score;
+                    localStorage.setItem('physicsPuzzleHighScore', gameState.highScore.toString());
+                }
+                playGameOverSound();
+            }
+        }
+        
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 300,
+                    vy: (Math.random() - 0.5) * 300 - 100,
+                    life: 1,
+                    color,
+                    size: Math.random() * 6 + 2
+                });
+            }
+        }
+        
+        function rectIntersect(a, b) {
+            return a.x < b.x + b.width &&
+                   a.x + a.width > b.x &&
+                   a.y < b.y + b.height &&
+                   a.y + a.height > b.y;
+        }
+        
+        function resolveCollision(obj, platform) {
+            const overlapLeft = (obj.x + obj.width) - platform.x;
+            const overlapRight = (platform.x + platform.width) - obj.x;
+            const overlapTop = (obj.y + obj.height) - platform.y;
+            const overlapBottom = (platform.y + platform.height) - obj.y;
+            
+            const minOverlapX = Math.min(overlapLeft, overlapRight);
+            const minOverlapY = Math.min(overlapTop, overlapBottom);
+            
+            if (minOverlapX < minOverlapY) {
+                if (overlapLeft < overlapRight) {
+                    obj.x = platform.x - obj.width;
+                    if (obj.vx > 0) obj.vx *= -0.5;
+                } else {
+                    obj.x = platform.x + platform.width;
+                    if (obj.vx < 0) obj.vx *= -0.5;
+                }
+            } else {
+                if (overlapTop < overlapBottom) {
+                    obj.y = platform.y - obj.height;
+                    if (obj.vy > 0) {
+                        if (platform.type === 'trampoline') {
+                            obj.vy = -JUMP_FORCE * 1.5;
+                            playJumpSound();
+                            createParticles(obj.x + obj.width/2, obj.y + obj.height, colors.trampoline, 10);
+                        } else {
+                            obj.vy = 0;
+                            obj.isGrounded = true;
+                        }
+                    }
+                } else {
+                    obj.y = platform.y + platform.height;
+                    if (obj.vy < 0) obj.vy = 0;
+                }
+            }
+        }
+        
+        function update(dt) {
+            if (gameState.phase !== 'playing') return;
+            
+            gameState.speedrunTime += dt;
+            
+            // Player movement
+            if (input.left) {
+                player.vx -= PLAYER_ACCEL * dt;
+                player.facingRight = false;
+            }
+            if (input.right) {
+                player.vx += PLAYER_ACCEL * dt;
+                player.facingRight = true;
+            }
+            
+            player.vx = Math.max(-PLAYER_MAX_SPEED, Math.min(PLAYER_MAX_SPEED, player.vx));
+            
+            // Jump
+            if (input.jump && player.isGrounded) {
+                player.vy = -JUMP_FORCE;
+                player.isGrounded = false;
+                playJumpSound();
+                createParticles(player.x + player.width/2, player.y + player.height, colors.player, 8);
+            }
+            
+            // Gravity
+            player.vy += GRAVITY * dt;
+            
+            // Apply friction
+            const currentPlatform = levelObjects.find(p => 
+                player.x + player.width > p.x && 
+                player.x < p.x + p.width &&
+                Math.abs((player.y + player.height) - p.y) < 5
+            );
+            const friction = (currentPlatform && currentPlatform.type === 'ice') ? ICE_FRICTION : FRICTION;
+            player.vx *= friction;
+            
+            // Move player
+            player.x += player.vx * dt;
+            player.y += player.vy * dt;
+            player.isGrounded = false;
+            
+            // Collision with platforms
+            levelObjects.forEach(platform => {
+                if (rectIntersect(player, platform)) {
+                    resolveCollision(player, platform);
+                }
+            });
+            
+            // Collision with movables
+            currentLevel.movables.forEach(movable => {
+                if (rectIntersect(player, movable)) {
+                    const overlapLeft = (player.x + player.width) - movable.x;
+                    const overlapRight = (movable.x + movable.width) - player.x;
+                    
+                    if (overlapLeft < 30 && player.vx > 0 && player.y + player.height > movable.y + 10) {
+                        movable.x += player.vx * dt * 0.5;
+                        player.x = movable.x - player.width;
+                    } else if (overlapRight < 30 && player.vx < 0 && player.y + player.height > movable.y + 10) {
+                        movable.x += player.vx * dt * 0.5;
+                        player.x = movable.x + movable.width;
+                    } else {
+                        resolveCollision(player, movable);
+                    }
+                }
+            });
+            
+            // Movable physics
+            currentLevel.movables.forEach(movable => {
+                if (!movable.vy) movable.vy = 0;
+                if (!movable.vx) movable.vx = 0;
+                
+                movable.vy += GRAVITY * dt;
+                movable.x += movable.vx * dt;
+                movable.y += movable.vy * dt;
+                
+                // Platform collision for movables
+                levelObjects.forEach(platform => {
+                    if (rectIntersect(movable, platform)) {
+                        resolveCollision(movable, platform);
+                    }
+                });
+                
+                // Bounds
+                if (movable.y > canvas.height / (window.devicePixelRatio || 1) + 100) {
+                    movable.y = -50;
+                    movable.x = movable.originalX || movable.x;
+                    movable.vy = 0;
+                    movable.vx = 0;
+                }
+            });
+            
+            // Fall off screen
+            if (player.y > canvas.height / (window.devicePixelRatio || 1) + 100) {
+                gameState.phase = 'gameover';
+                gameState.screenShake = 20;
+                playGameOverSound();
+            }
+            
+            // Goal check
+            if (rectIntersect(player, currentLevel.goal)) {
+                gameState.phase = 'levelcomplete';
+                gameState.score += Math.floor(gameState.timer * 10);
+                playGoalSound();
+                createParticles(player.x + player.width/2, player.y + player.height/2, colors.goal, 30);
+            }
+            
+            // Update particles
+            particles.forEach(p => {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += 400 * dt;
+                p.life -= dt * 2;
+            });
+            particles = particles.filter(p => p.life > 0);
+            
+            // Screen shake decay
+            if (gameState.screenShake > 0) {
+                gameState.screenShake *= 0.9;
+            }
+            
+            // Timer
+            gameState.timer -= dt;
+            if (gameState.timer <= 0) {
+                gameState.timer = 0;
+                gameState.phase = 'gameover';
+                gameState.screenShake = 20;
+                playGameOverSound();
+            }
+        }
+        
+        function drawText(text, x, y, size, color, align = 'center') {
+            ctx.font = `bold ${size}px 'Segoe UI', sans-serif`;
+            ctx.textAlign = align;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.fillText(text, x + 2, y + 2);
+            ctx.fillStyle = color;
+            ctx.fillText(text, x, y);
+        }
+        
+        function draw() {
+            const w = canvas.getBoundingClientRect().width;
+            const h = canvas.getBoundingClientRect().height;
+            
+            ctx.save();
+            
+            // Screen shake
+            if (gameState.screenShake > 0.5) {
+                ctx.translate(
+                    (Math.random() - 0.5) * gameState.screenShake,
+                    (Math.random() - 0.5) * gameState.screenShake
+                );
+            }
+            
+            // Background
+            if (currentLevel && gameState.phase === 'playing') {
+                const gradient = ctx.createLinearGradient(0, 0, 0, h);
+                gradient.addColorStop(0, currentLevel.bgGradient[0]);
+                gradient.addColorStop(1, currentLevel.bgGradient[1]);
+                ctx.fillStyle = gradient;
+            } else {
+                ctx.fillStyle = colors.bg;
+            }
+            ctx.fillRect(0, 0, w, h);
+            
+            // Grid pattern
+            ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < w; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, h);
+                ctx.stroke();
+            }
+            for (let i = 0; i < h; i += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, i);
+                ctx.lineTo(w, i);
+                ctx.stroke();
+            }
+            
+            if (gameState.phase === 'menu') {
+                // Menu
+                const centerX = w / 2;
+                const centerY = h / 2;
+                
+                // Title
+                ctx.font = "bold 64px 'Segoe UI', sans-serif";
+                ctx.textAlign = 'center';
+                ctx.fillStyle = colors.player;
+                ctx.shadowColor = colors.player;
+                ctx.shadowBlur = 30;
+                ctx.fillText('PHYSICS PUZZLE', centerX, centerY - 80);
+                ctx.shadowBlur = 0;
+                
+                // Subtitle
+                ctx.font = "24px 'Segoe UI', sans-serif";
+                ctx.fillStyle = colors.text;
+                ctx.fillText('Push blocks, reach goals!', centerX, centerY - 30);
+                
+                // Instructions
+                ctx.font = "18px 'Segoe UI', sans-serif";
+                ctx.fillStyle = 'rgba(255,255,255,0.6)';
+                ctx.fillText('Arrow Keys / WASD to move • Space to jump', centerX, centerY + 20);
+                ctx.fillText('Touch controls on mobile', centerX, centerY + 50);
+                
+                // Start prompt
+                const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
+                ctx.font = "bold 28px 'Segoe UI', sans-serif";
+                ctx.fillStyle = `rgba(0,255,204,${pulse})`;
+                ctx.fillText('Press ENTER or TAP to Start', centerX, centerY + 120);
+                
+                // High score
+                if (gameState.highScore > 0) {
+                    ctx.font = "20px 'Segoe UI', sans-serif";
+                    ctx.fillStyle = colors.goal;
+                    ctx.fillText(`High Score: ${gameState.highScore}`, centerX, centerY + 170);
+                }
+                
+            } else if (gameState.phase === 'playing' && currentLevel) {
+                // Draw platforms
+                levelObjects.forEach(platform => {
+                    if (platform.type === 'ice') {
+                        ctx.fillStyle = colors.ice;
+                        ctx.shadowColor = colors.ice;
+                        ctx.shadowBlur = 10;
+                    } else if (platform.type === 'trampoline') {
+                        ctx.fillStyle = colors.trampoline;
+                        ctx.shadowColor = colors.trampoline;
+                        ctx.shadowBlur = 15;
+                    } else {
+                        ctx.fillStyle = colors.platform;
+                        ctx.shadowBlur = 0;
+                    }
+                    ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = colors.platformStroke;
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(platform.x, platform.y, platform.width, platform.height);
+                    
+                    // Platform label
+                    if (platform.type !== 'normal') {
+                        ctx.font = "10px 'Segoe UI', sans-serif";
+                        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(platform.type.toUpperCase(), platform.x + platform.width/2, platform.y + platform.height/2 + 4);
+                    }
+                });
+                
+                // Draw movables
+                currentLevel.movables.forEach(movable => {
+                    ctx.fillStyle = movable.color;
+                    ctx.shadowColor = movable.color;
+                    ctx.shadowBlur = 10;
+                    ctx.fillRect(movable.x, movable.y, movable.width, movable.height);
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(movable.x, movable.y, movable.width, movable.height);
+                });
+                
+                // Draw goal
+                const goalPulse = Math.sin(Date.now() / 200) * 0.2 + 0.8;
+                ctx.fillStyle = colors.goal;
+                ctx.shadowColor = colors.goal;
+                ctx.shadowBlur = 20 * goalPulse;
+                ctx.fillRect(currentLevel.goal.x, currentLevel.goal.y, currentLevel.goal.width, currentLevel.goal.height);
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(currentLevel.goal.x, currentLevel.goal.y, currentLevel.goal.width, currentLevel.goal.height);
+                
+                // Goal icon (star)
+                ctx.fillStyle = '#fff';
+                ctx.font = "bold 24px 'Segoe UI', sans-serif";
+                ctx.textAlign = 'center';
+                ctx.fillText('★', currentLevel.goal.x + currentLevel.goal.width/2, currentLevel.goal.y + currentLevel.goal.height/2 + 8);
+                
+                // Draw player
+                ctx.fillStyle = colors.player;
+                ctx.shadowColor = colors.player;
+                ctx.shadowBlur = 20;
+                ctx.fillRect(player.x, player.y, player.width, player.height);
+                ctx.shadowBlur = 0;
+                
+                // Player eyes
+                ctx.fillStyle = '#0a0a1a';
+                const eyeOffset = player.facingRight ? 5 : -5;
+                ctx.fillRect(player.x + player.width/2 + eyeOffset - 8, player.y + 10, 5, 8);
+                ctx.fillRect(player.x + player.width/2 + eyeOffset + 3, player.y + 10, 5, 8);
+                
+                // Draw particles
+                particles.forEach(p => {
+                    ctx.globalAlpha = p.life;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.globalAlpha = 1;
+                
+                // HUD
+                ctx.textAlign = 'left';
+                drawText(`Level ${gameState.levelIndex + 1}: ${currentLevel.name}`, 20, 40, 24, colors.text, 'left');
+                drawText(`Score: ${gameState.score}`, 20, 70, 18, colors.goal, 'left');
+                drawText(`Time: ${Math.ceil(gameState.timer)}s`, 20, 95, 18, colors.text, 'left');
+                
+                // Instruction
+                if (currentLevel.instruction) {
+                    ctx.font = "16px 'Segoe UI', sans-serif";
+                    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(currentLevel.instruction, w/2, h - 30);
+                }
+                
+            } else if (gameState.phase === 'levelcomplete') {
+                ctx.textAlign = 'center';
+                ctx.font = "bold 48px 'Segoe UI', sans-serif";
+                ctx.fillStyle = colors.goal;
+                ctx.shadowColor = colors.goal;
+                ctx.shadowBlur = 30;
+                ctx.fillText('LEVEL COMPLETE!', w/2, h/2 - 40);
+                ctx.shadowBlur = 0;
+                
+                ctx.font = "28px 'Segoe UI', sans-serif";
+                ctx.fillStyle = colors.text;
+                ctx.fillText(`Score: ${gameState.score}`, w/2, h/2 + 20);
+                
+                const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
+                ctx.font = "bold 24px 'Segoe UI', sans-serif";
+                ctx.fillStyle = `rgba(0,255,204,${pulse})`;
+                ctx.fillText('Press ENTER or TAP for next level', w/2, h/2 + 80);
+                
+            } else if (gameState.phase === 'gameover') {
+                ctx.textAlign = 'center';
+                ctx.font = "bold 48px 'Segoe UI', sans-serif";
+                ctx.fillStyle = '#ff4444';
+                ctx.shadowColor = '#ff4444';
+                ctx.shadowBlur = 30;
+                ctx.fillText('GAME OVER', w/2, h/2 - 40);
+                ctx.shadowBlur = 0;
+                
+                ctx.font = "28px 'Segoe UI', sans-serif";
+                ctx.fillStyle = colors.text;
+                ctx.fillText(`Final Score: ${gameState.score}`, w/2, h/2 + 20);
+                
+                const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
+                ctx.font = "bold 24px 'Segoe UI', sans-serif";
+                ctx.fillStyle = `rgba(255,255,255,${pulse})`;
+                ctx.fillText('Press ENTER or TAP to return to menu', w/2, h/2 + 80);
+                
+            } else if (gameState.phase === 'gamecomplete') {
+                ctx.textAlign = 'center';
+                ctx.font = "bold 48px 'Segoe UI', sans-serif";
+                ctx.fillStyle = colors.goal;
+                ctx.shadowColor = colors.goal;
+                ctx.shadowBlur = 30;
+                ctx.fillText('CONGRATULATIONS!', w/2, h/2 - 60);
+                ctx.shadowBlur = 0;
+                
+                ctx.font = "28px 'Segoe UI', sans-serif";
+                ctx.fillStyle = colors.text;
+                ctx.fillText('You completed all levels!', w/2, h/2 - 10);
+                ctx.fillText(`Final Score: ${gameState.score}`, w/2, h/2 + 30);
+                ctx.fillText(`Time: ${gameState.speedrunTime.toFixed(1)}s`, w/2, h/2 + 70);
+                
+                if (gameState.score >= gameState.highScore && gameState.score > 0) {
+                    ctx.font = "bold 24px 'Segoe UI', sans-serif";
+                    ctx.fillStyle = colors.player;
+                    ctx.fillText('NEW HIGH SCORE!', w/2, h/2 + 110);
+                }
+                
+                const pulse = Math.sin(Date.now() / 300) * 0.3 + 0.7;
+                ctx.font = "bold 24px 'Segoe UI', sans-serif";
+                ctx.fillStyle = `rgba(255,255,255,${pulse})`;
+                ctx.fillText('Press ENTER or TAP to return to menu', w/2, h/2 + 160);
+            }
+            
+            ctx.restore();
+        }
+        
+        // Game loop
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+            lastTime = timestamp;
+            
+            update(dt);
+            draw();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>"}
