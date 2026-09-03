@@ -12,6 +12,7 @@ export class Engine {
         this.score = 0;
         this.callStack = ['main', 'renderLoop'];
         this.memoryUsage = 0;
+        this.keys = {};
         this.resize(canvas);
     }
 
@@ -35,6 +36,11 @@ export class Engine {
     }
 
     update() {
+        // Update keys from Game instance
+        if (typeof game !== 'undefined' && game.keys) {
+            this.keys = game.keys;
+        }
+        
         // CPU Cycles regeneration
         this.cpuCycles = Math.min(100, this.cpuCycles + 8 * 0.016);
         
@@ -49,7 +55,7 @@ export class Engine {
             if (p.life <= 0) return false;
             p.x += p.vx * 0.016;
             p.y += p.vy * 0.016;
-            p.vy += 0.5 * 0.016; // Gravity
+            p.vy += 0.5 * 0.016;
             return true;
         });
         
@@ -134,8 +140,10 @@ export class Engine {
         
         // Check stack overflow
         if (this.memoryUsage > 80) {
-            this.callStack.push('StackOverflow');
-            this.cpuCycles *= 0.5; // Slow down
+            if (!this.callStack.includes('StackOverflow')) {
+                this.callStack.push('StackOverflow');
+            }
+            this.cpuCycles *= 0.5;
         }
     }
 
@@ -220,10 +228,9 @@ export class Engine {
         });
         
         // Audio effect
-        import('./audio.js').then(({ AudioSystem }) => {
-            const audio = new AudioSystem();
-            audio.playSound('garbageCollect');
-        });
+        if (this.audio) {
+            this.audio.playSound('garbageCollect');
+        }
     }
 
     gameOver() {
@@ -246,7 +253,9 @@ export class Engine {
             this.cpuCycles = 100;
             this.entities = [];
             this.callStack = ['main', 'renderLoop'];
-            this.world.init();
+            if (this.world) {
+                this.world.init();
+            }
         }, 2000);
     }
 
@@ -256,6 +265,8 @@ export class Engine {
         this.entities = [];
         this.particles = [];
         this.callStack = ['main', 'renderLoop'];
-        this.world.init();
+        if (this.world) {
+            this.world.init();
+        }
     }
 }
