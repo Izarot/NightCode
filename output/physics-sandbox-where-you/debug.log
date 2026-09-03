@@ -1,0 +1,762 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 6048 (char 6047)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n<title>InkBridge - Lemming Physics Sandbox</title>\n<link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖋️</text></svg>\">\n<style>\n* { margin:0; padding:0; box-sizing:border-box; }\nhtml, body { width:100%; height:100%; overflow:hidden; background:#0a0a14; font-family:'Segoe UI',system-ui,sans-serif; touch-action:none; user-select:none; }\ncanvas { display:block; width:100%; height:100%; cursor:crosshair; }\n\n#hud { position:fixed; top:0; left:0; right:0; bottom:0; pointer-events:none; z-index:10; }\n#hud > * { pointer-events:auto; }\n\n/* Top Left - Level Status */\n#levelInfo {\n  position:absolute; top:16px; left:16px;\n  background:rgba(15,15,26,0.85); backdrop-filter:blur(12px);\n  border:1px solid rgba(0,212,255,0.2); border-radius:12px;\n  padding:14px 20px; color:#F0E6D3; min-width:220px;\n}\n#levelInfo h2 { font-size:14px; font-weight:700; letter-spacing:2px; color:#00D4FF; margin-bottom:8px; text-transform:uppercase; }\n#levelInfo .stat { font-size:13px; margin:4px 0; display:flex; justify-content:space-between; }\n#levelInfo .stat span.val { font-weight:700; color:#FFD700; }\n#progressBar { width:100%; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; margin-top:8px; overflow:hidden; }\n#progressFill { height:100%; background:linear-gradient(90deg,#00D4FF,#39FF14); border-radius:3px; transition:width 0.3s; width:0%; }\n\n/* Top Right - Timer & Controls */\n#timer { position:absolute; top:16px; right:16px; background:rgba(15,15,26,0.85); backdrop-filter:blur(12px); border:1px solid rgba(255,46,99,0.2); border-radius:12px; padding:10px 18px; color:#F0E6D3; font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }\n#timer .label { font-size:10px; color:#888; letter-spacing:2px; text-transform:uppercase; }\n#timer .time { color:#FF2E63; }\n#highScore { font-size:11px; color:#FFD700; margin-top:4px; }\n\n/* Sandbox Controls */\n#sandboxControls {\n  position:absolute; top:16px; right:180px;\n  background:rgba(15,15,26,0.85); backdrop-filter:blur(12px);\n  border:1px solid rgba(153,102,255,0.2); border-radius:12px;\n  padding:12px 16px; color:#F0E6D3; font-size:12px;\n}\n#sandboxControls label { display:block; margin:6px 0; font-size:11px; color:#aaa; letter-spacing:1px; text-transform:uppercase; }\n#sandboxControls input[type=range] { width:120px; accent-color:#9B5DE5; }\n.ctrl-row { display:flex; gap:6px; margin-top:8px; }\n.ctrl-btn { background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:8px; padding:6px 12px; color:#F0E6D3; cursor:pointer; font-size:11px; font-weight:600; transition:all 0.2s; }\n.ctrl-btn:hover { background:rgba(0,212,255,0.15); border-color:#00D4FF; }\n.ctrl-btn.active { background:rgba(0,212,255,0.2); border-color:#00D4FF; color:#00D4FF; }\n\n/* Bottom Center - Tool Bar */\n#toolBar {\n  position:absolute; bottom:20px; left:50%; transform:translateX(-50%);\n  background:rgba(15,15,26,0.9); backdrop-filter:blur(16px);\n  border:1px solid rgba(0,212,255,0.15); border-radius:16px;\n  padding:10px 16px; display:flex; align-items:center; gap:14px;\n}\n.tool-btn {\n  width:44px; height:44px; border-radius:50%; border:2px solid rgba(255,255,255,0.1);\n  background:rgba(255,255,255,0.05); display:flex; align-items:center; justify-content:center;\n  cursor:pointer; transition:all 0.2s; font-size:18px; position:relative;\n}\n.tool-btn:hover { border-color:rgba(0,212,255,0.5); background:rgba(0,212,255,0.1); }\n.tool-btn.active { border-color:#00D4FF; background:rgba(0,212,255,0.2); box-shadow:0 0 12px rgba(0,212,255,0.3); }\n.tool-btn.eraser.active { border-color:#FF2E63; background:rgba(255,46,99,0.2); box-shadow:0 0 12px rgba(255,46,99,0.3); }\n\n.color-palette { display:flex; gap:6px; }\n.color-swatch {\n  width:28px; height:28px; border-radius:50%; border:2px solid rgba(255,255,255,0.15);\n  cursor:pointer; transition:all 0.2s; position:relative;\n}\n.color-swatch:hover { transform:scale(1.15); }\n.color-swatch.active { border-color:#fff; transform:scale(1.2); box-shadow:0 0 8px currentColor; }\n.color-swatch[data-color=\"#00D4FF\"] { background:#00D4FF; }\n.color-swatch[data-color=\"#FF2E63\"] { background:#FF2E63; }\n.color-swatch[data-color=\"#39FF14\"] { background:#39FF14; }\n.color-swatch[data-color=\"#9B5DE5\"] { background:#9B5DE5; }\n\n#inkGauge { width:28px; height:100px; background:rgba(255,255,255,0.05); border-radius:14px; border:1px solid rgba(255,255,255,0.1); position:relative; overflow:hidden; }\n#inkFill { position:absolute; bottom:0; left:0; right:0; background:linear-gradient(to top,#00D4FF,#39FF14); border-radius:14px; transition:height 0.15s; }\n#inkFill::after { content:''; position:absolute; top:0; left:0; right:0; height:30%; background:linear-gradient(to bottom,rgba(255,255,255,0.3),transparent); border-radius:14px 14px 0 0; }\n#inkLabel { position:absolute; bottom:-18px; left:50%; transform:translateX(-50%); font-size:9px; color:#888; white-space:nowrap; letter-spacing:1px; }\n\n#brushSizeDisplay { width:44px; height:44px; border-radius:50%; border:2px dashed rgba(255,255,255,0.2); display:flex; align-items:center; justify-content:center; font-size:10px; color:#888; }\n\n/* Start Screen */\n#startScreen {\n  position:fixed; top:0; left:0; right:0; bottom:0; z-index:100;\n  background:rgba(10,10,20,0.95); backdrop-filter:blur(20px);\n  display:flex; flex-direction:column; align-items:center; justify-content:center;\n  transition:opacity 0.5s;\n}\n#startScreen.hidden { opacity:0; pointer-events:none; }\n#startScreen h1 {\n  font-size:clamp(36px,8vw,72px); font-weight:900; letter-spacing:-2px;\n  background:linear-gradient(135deg,#00D4FF,#9B5DE5,#FF2E63); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; margin-bottom:8px; }
+#startScreen .subtitle { font-size:clamp(14px,2.5vw,18px); color:#aaa; letter-spacing:3px; text-transform:uppercase; margin-bottom:40px; }
+.start-btn { background:linear-gradient(135deg,#00D4FF,#9B5DE5); border:none; border-radius:50px; padding:16px 48px; font-size:16px; font-weight:700; color:#fff; cursor:pointer; letter-spacing:2px; text-transform:uppercase; transition:all 0.3s; box-shadow:0 4px 24px rgba(0,212,255,0.3); }
+.start-btn:hover { transform:translateY(-2px); box-shadow:0 8px 32px rgba(0,212,255,0.5); }
+.mode-btns { display:flex; gap:16px; margin-bottom:40px; }
+.mode-btn { background:rgba(255,255,255,0.05); border:2px solid rgba(255,255,255,0.1); border-radius:12px; padding:14px 28px; color:#F0E6D3; cursor:pointer; font-size:13px; font-weight:600; transition:all 0.3s; }
+.mode-btn:hover { background:rgba(255,255,255,0.1); border-color:rgba(0,212,255,0.5); }
+.mode-btn.active { background:rgba(0,212,255,0.15); border-color:#00D4FF; color:#00D4FF; }
+.level-select { display:flex; gap:8px; margin-top:20px; }
+.level-btn { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:8px 16px; color:#888; cursor:pointer; font-size:11px; transition:all 0.2s; }
+.level-btn:hover { background:rgba(255,255,255,0.1); color:#F0E6D3; }
+.level-btn.active { background:rgba(255,215,0,0.15); border-color:#FFD700; color:#FFD700; }
+
+/* Instructions Panel */
+#instructions { position:absolute; bottom:100px; left:16px; background:rgba(15,15,26,0.9); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:14px; max-width:240px; color:#aaa; font-size:11px; line-height:1.6; }
+#instructions h3 { color:#00D4FF; font-size:11px; letter-spacing:2px; margin-bottom:8px; text-transform:uppercase; }
+#instructions kbd { background:rgba(255,255,255,0.1); border-radius:4px; padding:2px 6px; font-size:10px; color:#fff; }
+.tip { margin:6px 0; }
+.tip-icon { color:#FFD700; margin-right:4px; }
+
+/* Notification Toast */
+#toast { position:fixed; bottom:100px; left:50%; transform:translateX(-50%) translateY(20px); background:rgba(15,15,26,0.95); border:1px solid #00D4FF; border-radius:12px; padding:12px 24px; color:#00D4FF; font-size:13px; font-weight:600; opacity:0; transition:all 0.3s; pointer-events:none; z-index:50; }
+#toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* Level Complete Overlay */
+#levelComplete { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(10,10,20,0.9); backdrop-filter:blur(10px); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:80; opacity:0; pointer-events:none; transition:opacity 0.5s; }
+#levelComplete.show { opacity:1; pointer-events:auto; }
+#levelComplete h2 { font-size:48px; color:#39FF14; text-shadow:0 0 20px rgba(57,255,20,0.5); margin-bottom:20px; }
+#levelComplete .stats { color:#F0E6D3; font-size:18px; margin:10px 0; }
+#levelComplete .stats span { color:#FFD700; font-weight:700; }
+.next-btn { background:linear-gradient(135deg,#39FF14,#00D4FF); border:none; border-radius:50px; padding:14px 36px; font-size:14px; font-weight:700; color:#0a0a14; cursor:pointer; margin-top:20px; transition:all 0.3s; }
+.next-btn:hover { transform:scale(1.05); }
+
+/* Particles Canvas */
+#particles { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+</style>
+</head>
+<body>
+<canvas id="particles"></canvas>
+<canvas id="canvas"></canvas>
+
+<div id="hud">
+  <div id="levelInfo">
+    <h2 id="levelTitle">Level 1</h2>
+    <div class="stat">Lemmings: <span class="val" id="lemmingCount">0</span></div>
+    <div class="stat">Goal: <span class="val" id="goalCount">10</span></div>
+    <div id="progressBar"><div id="progressFill"></div></div>
+  </div>
+
+  <div id="timer">
+    <div class="label">Time</div>
+    <div class="time" id="timeDisplay">02:00</div>
+    <div id="highScore">Best: --:--</div>
+  </div>
+
+  <div id="sandboxControls">
+    <label>Gravity</label>
+    <input type="range" id="gravitySlider" min="0" max="20" value="10">
+    <div class="ctrl-row">
+      <button class="ctrl-btn" id="pauseBtn">⏸️ Pause</button>
+      <button class="ctrl-btn" id="resetBtn">🔄 Reset</button>
+      <button class="ctrl-btn" id="clearBtn">🗑️ Clear</button>
+    </div>
+  </div>
+
+  <div id="instructions">
+    <h3>How to Play</h3>
+    <div class="tip"><span class="tip-icon">🎨</span>Draw bridges & ramps</div>
+    <div class="tip"><span class="tip-icon">⬆️</span>Click to create paths</div>
+    <div class="tip"><span class="tip-icon">⌨️</span><kbd>1-5</kbd> Brush size</div>
+    <div class="tip"><span class class="tip-icon">🔄</span><kbd>E</kbd> Eraser</div>
+    <div class="tip"><span class="tip-icon">⬇️</span><kbd>Space</kbd> Drop lemmings</div>
+  </div>
+
+  <div id="toolBar">
+    <div id="inkGauge">
+      <div id="inkFill" style="height:80%"></div>
+      <div id="inkLabel">INK</div>
+    </div>
+    <div class="color-palette">
+      <div class="color-swatch active" data-color="#00D4FF"></div>
+      <div class="color-swatch" data-color="#FF2E63"></div>
+      <div class="color-swatch" data-color="#39FF14"></div>
+      <div class="color-swatch" data-color="#9B5DE5"></div>
+    </div>
+    <div id="brushSizeDisplay">10</div>
+    <button class="tool-btn eraser" data-tool="eraser" title="Eraser (E)">🧹</button>
+    <button class="tool-btn active" data-tool="brush" title="Brush (B)">🖌️</button>
+  </div>
+</div>
+
+<div id="startScreen">
+  <h1>InkBridge</h1>
+  <p class="subtitle">Lemming Physics Sandbox</p>
+  <div class="mode-btns">
+    <button class="mode-btn active" data-mode="challenge">🎯 Challenge</button>
+    <button class="mode-btn" data-mode="sandbox">🏖️ Sandbox</button>
+  </div>
+  <div class="level-select">
+    <button class="level-btn active" data-level="1">Level 1</button>
+    <button class="level-btn" data-level="2">Level 2</button>
+    <button class="level-btn" data-level="3">Level 3</button>
+    <button class="level-btn" data-level="4">Level 4</button>
+    <button class="level-btn" data-level="5">Level 5</button>
+  </div>
+  <button class="start-btn" id="startBtn">Start Game</button>
+</div>
+
+<div id="levelComplete">
+  <h2>Level Complete!</h2>
+  <div class="stats">Lemmings Saved: <span id="savedCount">0</span>/<span id="totalCount">0</span></div>
+  <div class="stats">Time: <span id="finalTime">00:00</span></div>
+  <div class="stats">Rating: <span id="starRating">⭐⭐⭐</span></div>
+  <button class="next-btn" id="nextLevelBtn">Next Level</button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// InkBridge - Lemming Physics Sandbox
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const particlesCanvas = document.getElementById('particles');
+const pCtx = particlesCanvas.getContext('2d');
+
+let width, height;
+let bridges = [];
+let ink = 100;
+let brushSize = 10;
+let brushColor = '#00D4FF';
+let currentTool = 'brush';
+let isDrawing = false;
+let lastDrawPoint = null;
+let currentPath = [];
+let gameMode = 'challenge';
+let currentLevel = 1;
+let lemmings = [];
+let timeLeft = 120;
+let timerInterval = null;
+let isPaused = false;
+let gameStarted = false;
+let spawnInterval = null;
+let reachedGoal = 0;
+let totalSpawned = 0;
+let highScores = {};
+
+const levelConfigs = {
+  1: { name: 'Tutorial Valley', goal: 5, time: 120, spawnRate: 3000, totalLemmings: 10, spawnPoint: { x: 0.5, y: 0.1 }, goalZone: { x: 0.7, y: 0.85, w: 0.2, h: 0.1 }, obstacles: [] },
+  2: { name: 'Canyon Crossing', goal: 8, time: 100, spawnRate: 2500, totalLemmings: 15, spawnPoint: { x: 0.2, y: 0.1 }, goalZone: { x: 0.75, y: 0.85, w: 0.18, h: 0.1 }, obstacles: [{ type: 'gap', x: 0.35, y: 0.5, w: 0.3, h: 0.05 }] },
+  3: { name: 'Steep Ascent', goal: 10, time: 90, spawnRate: 2000, totalLemmings: 18, spawnPoint: { x: 0.5, y: 0.85 }, goalZone: { x: 0.5, y: 0.05, w: 0.15, h: 0.08 }, obstacles: [{ type: 'platform', x: 0.3, y: 0.4, w: 0.4, h: 0.03 }] },
+  4: { name: 'Lava Pit', goal: 12, time: 80, spawnRate: 1800, totalLemmings: 20, spawnPoint: { x: 0.15, y: 0.1 }, goalZone: { x: 0.8, y: 0.85, w: 0.15, h: 0.1 }, obstacles: [{ type: 'lava', x: 0.25, y: 0.7, w: 0.5, h: 0.05 }] },
+  5: { name: 'Final Challenge', goal: 15, time: 120, spawnRate: 1500, totalLemmings: 25, spawnPoint: { x: 0.5, y: 0.05 }, goalZone: { x: 0.85, y: 0.85, w: 0.12, h: 0.1 }, obstacles: [{ type: 'gap', x: 0.3, y: 0.4, w: 0.4, h: 0.05 }, { type: 'bounce', x: 0.6, y: 0.6, w: 0.1, h: 0.05 }] }
+};
+
+function resize() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  canvas.width = width;
+  canvas.height = height;
+  particlesCanvas.width = width;
+  particlesCanvas.height = height;
+}
+
+window.addEventListener('resize', resize);
+resize();
+
+// Drawing functions
+function drawBridgeSegment(x1, y1, x2, y2, color, size) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  
+  // Glow effect
+  ctx.strokeStyle = color + '40';
+  ctx.lineWidth = size * 2;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+}
+
+function drawBridges() {
+  bridges.forEach(bridge => {
+    if (bridge.points.length < 2) return;
+    for (let i = 1; i < bridge.points.length; i++) {
+      drawBridgeSegment(
+        bridge.points[i-1].x, bridge.points[i-1].y,
+        bridge.points[i].x, bridge.points[i].y,
+        bridge.color, bridge.size
+      );
+    }
+  });
+  
+  // Draw current path
+  if (currentPath.length > 1) {
+    for (let i = 1; i < currentPath.length; i++) {
+      drawBridgeSegment(
+        currentPath[i-1].x, currentPath[i-1].y,
+        currentPath[i].x, currentPath[i].y,
+        brushColor, brushSize
+      );
+    }
+  }
+}
+
+function getCanvasPoint(e) {
+  const rect = canvas.getBoundingClientRect();
+  if (e.touches) {
+    return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+  }
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+function startDrawing(e) {
+  if (isPaused || !gameStarted) return;
+  e.preventDefault();
+  const point = getCanvasPoint(e);
+  
+  if (currentTool === 'eraser') {
+    eraseAt(point);
+  } else {
+    isDrawing = true;
+    lastDrawPoint = point;
+    currentPath = [point];
+  }
+}
+
+function draw(e) {
+  if (!isDrawing || isPaused) return;
+  e.preventDefault();
+  const point = getCanvasPoint(e);
+  
+  if (currentTool === 'brush') {
+    const dist = Math.hypot(point.x - lastDrawPoint.x, point.y - lastDrawPoint.y);
+    if (dist > 5) {
+      if (ink > 0) {
+        currentPath.push(point);
+        drawBridgeSegment(lastDrawPoint.x, lastDrawPoint.y, point.x, point.y, brushColor, brushSize);
+        ink = Math.max(0, ink - 0.5);
+        updateInkGauge();
+        lastDrawPoint = point;
+        
+        // Particle effect
+        createDrawParticles(point.x, point.y);
+      }
+    }
+  }
+}
+
+function stopDrawing(e) {
+  if (!isDrawing) return;
+  e.preventDefault();
+  isDrawing = false;
+  
+  if (currentPath.length > 1) {
+    bridges.push({
+      points: [...currentPath],
+      color: brushColor,
+      size: brushSize
+    });
+  }
+  currentPath = [];
+  lastDrawPoint = null;
+}
+
+function eraseAt(point) {
+  bridges = bridges.filter(bridge => {
+    for (let i = 1; i < bridge.points.length; i++) {
+      const dist = pointToSegmentDist(point, bridge.points[i-1], bridge.points[i]);
+      if (dist < brushSize * 1.5) return false;
+    }
+    return true;
+  });
+  bridges = bridges.filter(b => b.points.length > 0);
+}
+
+function pointToSegmentDist(p, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
+  const nearX = a.x + t * dx;
+  const nearY = a.y + t * dy;
+  return Math.hypot(p.x - nearX, p.y - nearY);
+}
+
+canvas.addEventListener('mousedown', startDrawing);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', stopDrawing);
+canvas.addEventListener('mouseleave', stopDrawing);
+canvas.addEventListener('touchstart', startDrawing, { passive: false });
+canvas.addEventListener('touchmove', draw, { passive: false });
+canvas.addEventListener('touchend', stopDrawing, { passive: false });
+
+// Lemming class
+class Lemming {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = 0;
+    this.radius = 12;
+    this.color = `hsl(${Math.random() * 360}, 70%, 60%)`;
+    this.grounded = false;
+    this.walkFrame = 0;
+    this.alive = true;
+    this.reachedGoal = false;
+    this.facingRight = Math.random() > 0.5;
+    this.bounceCount = 0;
+  }
+  
+  update(gravity) {
+    if (!this.alive || this.reachedGoal) return;
+    
+    this.vy += gravity * 0.5;
+    this.vy = Math.min(this.vy, 15);
+    
+    // Check bridge collisions
+    let onBridge = false;
+    bridges.forEach(bridge => {
+      for (let i = 1; i < bridge.points.length; i++) {
+        const a = bridge.points[i-1];
+        const b = bridge.points[i];
+        
+        // Check if lemming is above the bridge segment
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const len = Math.hypot(dx, dy);
+        if (len < 1) continue;
+        
+        const t = Math.max(0, Math.min(1, ((this.x - a.x) * dx + (this.y - a.y) * dy) / (len * len)));
+        const nearX = a.x + t * dx;
+        const nearY = a.y + t * dy;
+        const dist = Math.hypot(this.x - nearX, this.y - nearY);
+        
+        // Slope check
+        const slope = dy / dx;
+        const expectedY = nearY - this.radius - 2;
+        const onSlope = Math.abs(this.y - expectedY) < 10;
+        
+        if (dist < this.radius + bridge.size / 2 && onSlope && this.vy >= 0) {
+          onBridge = true;
+          // Slide along bridge
+          const slideFactor = Math.abs(dx) > Math.abs(dy) ? 1 : 0;
+          this.x += this.facingRight ? 1.5 * slideFactor : -1.5 * slideFactor;
+          this.y = nearY - this.radius - bridge.size / 2;
+          this.vy = 0;
+          this.grounded = true;
+          
+          // Update facing direction based on slope
+          if (Math.abs(slope) > 0.1) {
+            this.facingRight = slope > 0;
+          }
+        }
+      }
+    });
+    
+    // Ground collision
+    if (this.y + this.radius > height - 20) {
+      this.y = height - 20 - this.radius;
+      this.vy = 0;
+      this.grounded = true;
+    }
+    
+    // Wall collisions
+    if (this.x - this.radius < 0) {
+      this.x = this.radius;
+      this.vx = Math.abs(this.vx);
+      this.facingRight = true;
+    }
+    if (this.x + this.radius > width) {
+      this.x = width - this.radius;
+      this.vx = -Math.abs(this.vx);
+      this.facingRight = false;
+    }
+    
+    // Apply gravity if not on bridge or ground
+    if (!onBridge && !this.grounded) {
+      this.x += this.vx;
+      this.y += this.vy;
+    } else {
+      this.x += this.vx * 0.5;
+      this.grounded = false;
+    }
+    
+    // Random direction change
+    if (Math.random() < 0.005) {
+      this.vx = (Math.random() - 0.5) * 3;
+      this.facingRight = this.vx > 0;
+    }
+    
+    // Check goal zone
+    const config = levelConfigs[currentLevel];
+    const goalX = config.goalZone.x * width;
+    const goalY = config.goalZone.y * height;
+    const goalW = config.goalZone.w * width;
+    const goalH = config.goalZone.h * height;
+    
+    if (this.x > goalX && this.x < goalX + goalW && this.y > goalY && this.y < goalY + goalH) {
+      this.reachedGoal = true;
+      this.alive = false;
+      reachedGoal++;
+      updateProgress();
+      createSuccessParticles(this.x, this.y);
+      showToast('🎉 Lemming saved!');
+    }
+    
+    // Check if fallen off screen
+    if (this.y > height + 50) {
+      this.alive = false;
+    }
+    
+    this.walkFrame += 0.15;
+  }
+  
+  draw() {
+    if (!this.alive) return;
+    
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    if (!this.facingRight) ctx.scale(-1, 1);
+    
+    // Body
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Hair/helmet
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(0, -5, this.radius * 0.6, Math.PI, Math.PI * 2);
+    ctx.fill();
+    
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(4, -2, 4, 0, Math.PI * 2);
+    ctx.arc(10, -2, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(5, -2, 2, 0, Math.PI * 2);
+    ctx.arc(11, -2, 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Legs animation
+    const legOffset = Math.sin(this.walkFrame) * 4;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(-6, this.radius - 4, 4, 6 + legOffset);
+    ctx.fillRect(2, this.radius - 4, 4, 6 - legOffset);
+    
+    ctx.restore();
+  }
+}
+
+// Particles
+let particles = [];
+
+function createDrawParticles(x, y) {
+  for (let i = 0; i < 3; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 4,
+      vy: (Math.random() - 0.5) * 4,
+      life: 1,
+      color: brushColor,
+      size: Math.random() * 3 + 1
+    });
+  }
+}
+
+function createSuccessParticles(x, y) {
+  for (let i = 0; i < 20; i++) {
+    const angle = (Math.PI * 2 * i) / 20;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * (3 + Math.random() * 3),
+      vy: Math.sin(angle) * (3 + Math.random() * 3),
+      life: 1,
+      color: '#FFD700',
+      size: Math.random() * 4 + 2
+    });
+  }
+}
+
+function updateParticles() {
+  particles = particles.filter(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1;
+    p.life -= 0.02;
+    return p.life > 0;
+  });
+}
+
+function drawParticles() {
+  pCtx.clearRect(0, 0, width, height);
+  particles.forEach(p => {
+    pCtx.globalAlpha = p.life;
+    pCtx.fillStyle = p.color;
+    pCtx.beginPath();
+    pCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    pCtx.fill();
+  });
+  pCtx.globalAlpha = 1;
+}
+
+// Game logic
+function spawnLemming() {
+  if (totalSpawned >= levelConfigs[currentLevel].totalLemmings) return;
+  
+  const config = levelConfigs[currentLevel];
+  const x = config.spawnPoint.x * width;
+  const y = config.spawnPoint.y * height;
+  
+  lemmings.push(new Lemming(x, y));
+  totalSpawned++;
+  updateLemmingCount();
+}
+
+function updateLemmingCount() {
+  document.getElementById('lemmingCount').textContent = lemmings.filter(l => l.alive && !l.reachedGoal).length;
+}
+
+function updateProgress() {
+  const config = levelConfigs[currentLevel];
+  const progress = Math.min(100, (reachedGoal / config.goal) * 100);
+  document.getElementById('progressFill').style.width = progress + '%';
+  
+  if (reachedGoal >= config.goal) {
+    levelComplete();
+  }
+}
+
+function startTimer() {
+  timerInterval = setInterval(() => {
+    if (isPaused) return;
+    timeLeft--;
+    updateTimerDisplay();
+    
+    if (timeLeft <= 0) {
+      gameOver();
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay() {
+  const mins = Math.floor(timeLeft / 60);
+  const secs = timeLeft % 60;
+  document.getElementById('timeDisplay').textContent = 
+    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+function startGame() {
+  document.getElementById('startScreen').classList.add('hidden');
+  gameStarted = true;
+  bridges = [];
+  lemmings = [];
+  ink = 100;
+  reachedGoal = 0;
+  totalSpawned = 0;
+  
+  const config = levelConfigs[currentLevel];
+  timeLeft = config.time;
+  document.getElementById('levelTitle').textContent = config.name;
+  document.getElementById('goalCount').textContent = config.goal;
+  document.getElementById('progressFill').style.width = '0%';
+  updateTimerDisplay();
+  updateInkGauge();
+  
+  if (gameMode === 'challenge') {
+    startTimer();
+    spawnInterval = setInterval(spawnLemming, config.spawnRate);
+    spawnLemming();
+  }
+  
+  showToast(`Level ${currentLevel}: ${config.name}`);
+}
+
+function pauseGame() {
+  isPaused = !isPaused;
+  document.getElementById('pauseBtn').textContent = isPaused ? '▶️ Play' : '⏸️ Pause';
+  if (isPaused) {
+    showToast('Game Paused');
+  }
+}
+
+function resetLevel() {
+  clearInterval(timerInterval);
+  clearInterval(spawnInterval);
+  bridges = [];
+  lemmings = [];
+  ink = 100;
+  reachedGoal = 0;
+  totalSpawned = 0;
+  isPaused = false;
+  document.getElementById('pauseBtn').textContent = '⏸️ Pause';
+  updateInkGauge();
+  document.getElementById('progressFill').style.width = '0%';
+  startGame();
+}
+
+function clearCanvas() {
+  bridges = [];
+  showToast('Canvas cleared');
+}
+
+function levelComplete() {
+  clearInterval(timerInterval);
+  clearInterval(spawnInterval);
+  
+  const config = levelConfigs[currentLevel];
+  const timeUsed = config.time - timeLeft;
+  const mins = Math.floor(timeUsed / 60);
+  const secs = timeUsed % 60;
+  
+  document.getElementById('savedCount').textContent = reachedGoal;
+  document.getElementById('totalCount').textContent = config.totalLemmings;
+  document.getElementById('finalTime').textContent = 
+    `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  
+  // Calculate stars
+  const percentage = reachedGoal / config.goal;
+  let stars = percentage >= 1.5 ? '⭐⭐⭐' : percentage >= 1.2 ? '⭐⭐' : '⭐';
+  document.getElementById('starRating').textContent = stars;
+  
+  document.getElementById('levelComplete').classList.add('show');
+  
+  // Save high score
+  if (!highScores[currentLevel] || timeUsed < highScores[currentLevel]) {
+    highScores[currentLevel] = timeUsed;
+    showToast('🏆 New High Score!');
+  }
+}
+
+function gameOver() {
+  clearInterval(timerInterval);
+  clearInterval(spawnInterval);
+  showToast('⏰ Time\'s up! Try again.');
+  setTimeout(resetLevel, 2000);
+}
+
+function nextLevel() {
+  document.getElementById('levelComplete').classList.remove('show');
+  if (currentLevel < 5) {
+    currentLevel++;
+    updateLevelButtons();
+    setTimeout(startGame, 500);
+  } else {
+    showToast('🎊 Congratulations! All levels complete!');
+    currentLevel = 1;
+    updateLevelButtons();
+    setTimeout(() => {
+      document.getElementById('startScreen').classList.remove('hidden');
+    }, 2000);
+  }
+}
+
+function updateLevelButtons() {
+  document.querySelectorAll('.level-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.level) === currentLevel);
+  });
+}
+
+function updateInkGauge() {
+  document.getElementById('inkFill').style.height = ink + '%';
+  if (ink < 20) {
+    document.getElementById('inkFill').style.background = 'linear-gradient(to top,#FF2E63,#FF6B6B)';
+  } else {
+    document.getElementById('inkFill').style.background = 'linear-gradient(to top,#00D4FF,#39FF14)';
+  }
+}
+
+function showToast(message) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+// Tool bar events
+document.querySelectorAll('.tool-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTool = btn.dataset.tool;
+  });
+});
+
+document.querySelectorAll('.color-swatch').forEach(swatch => {
+  swatch.addEventListener('click', () => {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    swatch.classList.add('active');
+    brushColor = swatch.dataset.color;
+  });
+});
+
+document.getElementById('gravitySlider').addEventListener('input', (e) => {
+  // Gravity is handled in lemming update
+});
+
+// Mode and level selection
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    gameMode = btn.dataset.mode;
+  });
+});
+
+document.querySelectorAll('.level-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    currentLevel = parseInt(btn.dataset.level);
+    updateLevelButtons();
+  });
+});
+
+// Main buttons
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('pauseBtn').addEventListener('click', pauseGame);
+document.getElementById('resetBtn').addEventListener('click', resetLevel);
+document.getElementById('clearBtn').addEventListener('click', clearCanvas);
+document.getElementById('nextLevelBtn').addEventListener('click', nextLevel);
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.key >= '1' && e.key <= '5') {
+    brushSize = parseInt(e.key) * 5;
+    document.getElementById('brushSizeDisplay').textContent = brushSize;
+  }
+  if (e.key.toLowerCase() === 'e') {
+    document.querySelector('[data-tool="eraser"]').click();
+  }
+  if (e.key.toLowerCase() === 'b') {
+    document.querySelector('[data-tool="brush"]').click();
+  }
+  if (e.key === ' ') {
+    e.preventDefault();
+    spawnLemming();
+  }
+  if (e.key === 'Escape') {
+    pauseGame();
+  }
+});
+
+// Main game loop
+function drawGoalZone() {
+  const config = levelConfigs[currentLevel];
+  const goal = config.goalZone;
+  const x = goal.x * width;
+  const y = goal.y * height;
+  const w = goal.w * width;
+  const h = goal.h * height;
+  
+  ctx.fillStyle = 'rgba(57,

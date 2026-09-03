@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>InkBridge</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌈</text></svg>" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { overflow: hidden; background: #0d0d1a; font-family: 'Segoe UI', sans-serif; }
+    #game { width: 100vw; height: 100vh; display: block; }
+    .hud { position: absolute; color: #fff; text-shadow: 0 0 5px rgba(0,0,0,.7); pointer-events: none; }
+    .top-left { left: 15px; top: 15px; }
+    .top-right { right: 15px; top: 15px; }
+    .bottom-center { left: 50%; bottom: 20px; transform: translateX(-50%); }
+    .ink-bar-container { width: 12px; height: 150px; background: rgba(255,255,255,.1); border-radius: 6px; margin: 0 auto 8px; overflow: hidden; }
+    .ink-bar-fill { width: 100%; height: 100%; background: linear-gradient(180deg, #00f, #0ff); transition: height .3s; }
+    .toast { position: fixed; left: 20px; bottom: 80px; background: rgba(0,0,0,.7); padding: 8px 14px; border-radius: 6px; opacity: 0; transition: opacity .4s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+    button { cursor: pointer; border: none; padding: 6px 12px; margin: 4px; border-radius: 6px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div class="hud top-left">
+    <div>LEVEL: <span id="level-name">The Great Chasm</span></div>
+    <div>SURVIVORS: <span id="survivors">0</span> / <span id="total">10</span></div>
+    <div>TARGET: <span id="target">8</span></div>
+    <div id="progress-container" style="width:150px;height:8px;background:rgba(255,255,255,.2);border-radius:4px;margin-top:6px;overflow:hidden;">
+      <div id="progress-fill" style="width:0%;height:100%;background:#0f0;"></div>
+    </div>
+    <div id="timer" style="margin-top:8px;font-size:16px;">⏱ 0.00s</div>
+  </div>
+  <div class="hud top-right">
+    <div>Gravity: <input id="gravity-slider" type="range" min="0" max="200" value="100" style="vertical-align:middle;width:100px;"/></div>
+    <div>Speed: <button id="speed-btn">1x</button> <button id="reset-btn">Reset</button></div>
+  </div>
+  <div class="hud bottom-center">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div>
+        <button id="brush-btn">🖌</button>
+        <div class="ink-bar-container"><div id="ink-fill" class="ink-bar-fill" style="height:100%;"></div></div>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button id="color-blue" style="background:#00f;">🔵</button>
+        <button id="color-pink" style="background:#f0f;">🟣</button>
+        <button id="color-green" style="background:#0f0;">🟢</button>
+        <button id="color-violet" style="background:#80f;">💧</button>
+      </div>
+      <button id="eraser-btn">🧹</button>
+    </div>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="game.js"></script>
+</body>
+</html>
