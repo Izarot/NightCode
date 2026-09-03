@@ -1,0 +1,37 @@
+export class GameState{
+  constructor(){
+    this.score=0;
+    this.combo=0;
+    this.progress=0;
+    this.target=5000;
+    this.level=1;
+    this.bpm=100;
+    this.beatTime=0;
+    this.beatIndex=0;
+    this.chargeStart=0;
+    this.chargeAmt=0;
+    this.dashing=false;
+    this.dashTarget=null;
+    this.dashCd=0;
+    this.muted=false;
+    this.showGrid=false;
+    this.ingredients=[];
+    this.queue=[];
+    this.avatar={x:640,y:400,r:30};
+    this.cauldron={x:640,y:400,r:80};
+    this.elapsed=0;
+    this.scale=1;
+    this.highScore=parseInt(localStorage.getItem('ar_high')||'0',10);
+    this.speedrunStart=performance.now();
+  }
+  update(dt,audio){
+    this.beatTime=audio.getBeatTime(this.bpm,this.beatIndex);
+    this.beatIndex=audio.getBeatIndex(this.elapsed,this.bpm);
+    this.dashCd=Math.max(0,this.dashCd-dt);
+    if(this.highScore<this.score){
+      this.highScore=this.score;
+      localStorage.setItem('ar_high',String(this.highScore));
+    }
+  }
+  addScore(n){this.score+=n;}
+}

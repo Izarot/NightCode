@@ -1,0 +1,1 @@
+import {Game} from './Game.js';const game=new Game(document.getElementById('gameCanvas'));game.init();window.game=game;
