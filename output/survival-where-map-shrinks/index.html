@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Void Closure</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚫</text></svg>" />
+<style>
+  html,body{margin:0;padding:0;height:100%;width:100%;background:#0a0a1a;overflow:hidden;font-family:'Courier New',monospace;color:#e0e0ff;user-select:none;-webkit-user-select:none;touch-action:none;}
+  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  canvas{background:#0a0a1a;display:block;image-rendering:pixelated;box-shadow:0 0 40px #ff00ff55,0 0 80px #00f0ff33 inset;border:2px solid #00f0ff;}
+  #ui{position:absolute;inset:0;pointer-events:none;}
+  .btn{pointer-events:auto;background:transparent;color:#00f0ff;border:2px solid #00f0ff;padding:12px 28px;margin:8px;font-family:inherit;font-size:18px;letter-spacing:2px;cursor:pointer;transition:all .2s ease-out;}
+  .btn:hover{transform:scale(1.1);background:#00f0ff;color:#0a0a1a;box-shadow:0 0 20px #00f0ff;}
+  #menu,#death,#victory{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,10,26,0.85);text-align:center;}
+  .hidden{display:none;}
+  h1{font-size:64px;letter-spacing:8px;margin:0 0 10px;color:#ff00ff;text-shadow:0 0 12px #ff00ff,0 0 24px #00f0ff;}
+  h2{color:#39ff14;text-shadow:0 0 8px #39ff14;}
+  p{max-width:520px;line-height:1.5;color:#a0c0ff;}
+  .row{display:flex;gap:10px;}
+  .stat{color:#ff8c00;}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game" width="1280" height="720"></canvas></div>
+<div id="ui">
+  <div id="menu">
+    <h1>VOID CLOSURE</h1>
+    <p>1–12 players spawn on a shrinking island consumed by a singularity. Scavenge, fight, and be the last one standing.</p>
+    <div class="row">
+      <button class="btn" id="playBtn">PLAY SOLO</button>
+      <button class="btn" id="aiBtn">PLAY +11 BOTS</button>
+    </div>
+    <p style="margin-top:30px;font-size:13px;color:#39ff14;">WASD = Move · Mouse = Aim & Shoot · R = Reload · Shift = Scope</p>
+  </div>
+  <div id="death" class="hidden">
+    <h1 style="color:#ff0040;">ELIMINATED</h1>
+    <p id="deathInfo"></p>
+    <button class="btn" id="retryBtn">RETRY</button>
+  </div>
+  <div id="victory" class="hidden">
+    <h1 style="color:#ffd700;text-shadow:0 0 12px #ffd700;">VOID CHAMPION</h1>
+    <p id="winInfo"></p>
+    <button class="btn" id="winBtn">PLAY AGAIN</button>
+  </div>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
