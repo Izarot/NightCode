@@ -1,0 +1,283 @@
+JSON Decode Error: Extra data: line 1 column 40 (char 39)
+
+Raw LLM Output that failed to parse:
+Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - User wants a raw JSON object mapping filenames to their complete code contents.
+   - There are specific "Sneaky Features" to implement:
+     1. Responsive canvas for mobile
+     2. Emoji favicon in HTML head
+     3. Unique, vibrant color palette
+     4. High score saved via LocalStorage
+     5. Simple sound effects using Web Audio API
+     6. Speedrun Timer in top corner
+   - There's also a previous error: "Invalid \escape: line 2 column 365 (char 366)" - so I must output valid JSON only, no markdown formatting, no conversational commentary.
+   - The user provided a huge game specification, but the actual task seems to be: output a JSON object with code files for a simple implementation of this game concept, incorporating the sneaky features. However, the exact request is: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). Do NOT include markdown block formatting like ```json or any conversational commentary."
+   - I need to decide what files to include. Given the architecture strategy provided: `src/` directory structure, but the example shows just `index.html` and `game.js`. I'll probably create a minimal but complete set of files that implement the core concept with the sneaky features. I should keep it concise but functional.
+   - Wait, the user says: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). Do NOT include markdown block formatting like ```json or any conversational commentary."
+   - I need to output just the JSON, no code blocks, no explanations.
+   - I need to make sure the JSON is valid. Special characters like newlines in strings need to be escaped properly, or I can include actual newlines if the JSON parser allows, but standard JSON requires escaping. I'll keep strings as single-line or properly escape newlines. Actually, JSON strings can contain `\n` for newlines. I'll structure the code across files, each as a string value.
+   - I need to include the "sneaky features": responsive canvas, emoji favicon, vibrant color palette, LocalStorage high score, Web Audio API sound effects, Speedrun Timer.
+   - I'll create a set of files: `index.html`, `game.js`, `styles.css` (maybe), `config.js`, `audio.js`. But the example only shows `index.html` and `game.js`. I'll stick to those two, or maybe add a few more if needed, but keep it minimal. The user said "e.g. {"index.html": "...", "game.js": "..."}" - so at least those two. I'll include maybe `config.js` or keep it to two files. I'll do three: `index.html`, `game.js`, `styles.css` but I can fold CSS into JS or HTML. To keep it simple and valid, I'll do `index.html` and `game.js`. I'll put all JS in `game.js` and HTML in `index.html`.
+   - Let me design a simple but complete implementation that covers the sneaky features and core concept minimally.
+
+   Let's outline the files:
+
+   **index.html**:
+   - HTML5 structure
+   - Canvas element responsive
+   - Emoji favicon (e.g., 🤸)
+   - HUD with safety meter, fatigue meter, speedrun timer
+   - LocalStorage high score
+   - Web Audio API sound effects (simple oscillators)
+   - Color palette defined
+   - UI elements for stretch selection, reset, pause
+
+   **game.js**:
+   - Game loop with requestAnimationFrame
+   - Canvas resize/responsive handling
+   - Simple skeleton/avatar physics (joints, angles, safety)
+   - Stretch force model
+   - Fatigue model
+   - Safety meter
+   - Speedrun timer
+   - Sound effects generation
+   - Color coding based on safety
+   - LocalStorage high score save/load
+
+   I need to write actual code that works, but keep it concise enough to fit in JSON strings. I'll minimize but ensure it's functional.
+
+   Let me draft `index.html`:
+   - DOCTYPE html
+   - head with charset, viewport, title, style tag for basic CSS, favicon with emoji (using data URI or just `<link rel="icon" href="data:image/svg+xml,..."` or just use the emoji as favicon via `<meta>`? Actually, you can set favicon to an emoji using `<link rel="icon" href="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Ctext%20x%3D0%20y%3D0%33%3E🤸%3C/text%3E%3C/svg%3E")` but that's messy. Simpler: just use a regular image or use `<title>` emoji. But the requirement says "Add a cool emoji favicon in the HTML head." I'll use a data URI with a simple SVG text emoji. I'll make it work.
+   - body with canvas, HUD elements
+   - Buttons: Reset, Pause, Hint
+   - LocalStorage high score display
+   - Speedrun timer in top corner
+
+   **game.js**:
+   - Initialize canvas, resize handling
+   - Web Audio API setup for sound effects (click, danger flash, maybe a stretch sound)
+   - Game state, joint model, safety/fatigue
+   - Physics integration loop
+   - Rendering: draw bones, joints, safety color
+   - Input: mouse/touch drag to set target angle
+   - Speedrun timer start/stop
+   - High score save/load via localStorage
+   - Color palette definition
+
+   I'll write the code carefully, ensuring no unescaped newlines in JSON strings. I'll use `\n` for newlines within strings, and escape quotes properly.
+
+   Let me structure the JSON. I'll have two keys: "index.html" and "game.js". I'll put all code as strings.
+
+   Potential issues: The code might be long. I'll try to keep it as compact as possible while functional. I'll use minimal but complete code.
+
+   Let me start drafting `index.html` content:
+
+   ```html
+   <!DOCTYPE html>
+   <html lang="en">
+   <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>FlexiForm: Safe Stretch Simulator</title>
+     <link rel="icon" href="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%3E%3Ctext%20x='0'%20y='0'%3E🤸%3C/text%3E%3C/svg%3E" type="image/svg+xml">
+     <style>
+       body { margin:0; background:#111; color:#fff; font-family:sans-serif; }
+       canvas { display:block; background:#222; }
+       .hud { position:fixed; top:10px; left:50%; transform:translateX(-50%); display:flex; gap:20px; background:rgba(0,0,0,0.5); padding:8px 16px; border-radius:4px; }
+       .meter { width:120px; height:10px; background:#333; border-radius:4px; overflow:hidden; }
+       .meter-fill { height:100%; transition:width 0.1s; }
+       .safety { background:#4CAF50; }
+       .fatigue { background:#FFC107; }
+       .timer { font-size:1.2rem; }
+       .btn { position:fixed; bottom:20px; right:20px; padding:8px 16px; background:#4CAF50; color:#fff; border:none; border-radius:4px; cursor:pointer; }
+     </style>
+   </head>
+   <body>
+     <div class="hud">
+       <div><span class="timer">00:00</span></div>
+       <div><div class="meter"><div class="meter-fill safety" id="safetyMeter"></div></div><span>Safety</span></div>
+       <div><div class="meter"><div class="meter-fill fatigue" id="fatigueMeter"></div></div><span>Fatigue</span></div>
+     </div>
+     <button class="btn" id="resetBtn">Reset</button>
+     <canvas id="gameCanvas"></canvas>
+     <script src="game.js"></script>
+   </body>
+   </html>
+   ```
+
+   But I need to put this as a JSON string value. I'll escape newlines and quotes. Actually, I can just write the HTML as a minified string or with escaped newlines. To keep it manageable, I'll write it as a single-line string with `\n` for line breaks, or I can minify it. I'll likely just use a template literal approach but in JSON I have to escape.
+
+   Given the complexity, maybe I should output just two files, and keep the code very concise. The user said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". I need to output valid JSON. I'll make sure the JSON is valid.
+
+   Let me think about how to represent the code. I'll use `\n` for newlines inside the JSON strings. I'll also escape `"` as `\"`. I'll keep the code as short as possible while implementing the features.
+
+   Actually, I can write the code without newlines by using spaces, but it's easier to have newlines escaped. I'll just use `\n` frequently.
+
+   Let me draft the JSON structure:
+
+   ```json
+   {
+     "index.html": "<!DOCTYPE html>...",
+     "game.js": "..."
+   }
+   ```
+
+   I need to ensure the strings are valid JSON. I'll minify the HTML and JS to reduce size and escaping issues.
+
+   Let me write the HTML as a minified string:
+   `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>FlexiForm: Safe Stretch Simulator</title><link rel="icon" href="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Ctext%20x=%220%22%20y=%220%22%3E🤸%3C/text%3E%3C/svg%3E" type="image/svg+xml"><style>body{margin:0;background:#111;color:#fff;font-family:sans-serif}canvas{display:block;background:#222}.hud{position:fixed;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:20px;background:rgba(0,0,0,0.5);padding:8px 16px;border-radius:4px}.meter{width:120px;height:10;background:#333;border-radius:4;overflow:hidden}.meter-fill{height:100%;width:100%;transition:width 0.1s}.safety{background:#4CAF50}.fatigue{background:#FFC107}.timer{font-size:1.2rem}</style></head><body><div class="hud"><div><span class="timer" id="timer">00:00</span></div><div><div class="meter"><div class="meter-fill safety" id="safetyMeter" style="width:100%"></div></div><span>Safety</span></div><div><div class="meter"><div class="meter-fill fatigue" id="fatigueMeter" style="width:100%"></div></div><span>Fatigue</span></div></div><button class="btn" id="resetBtn">Reset</button><canvas id="gameCanvas"></canvas><script src="game.js"></script></body></html>`
+
+   That's a valid minified HTML string. I'll use that.
+
+   Now for `game.js`. I need to implement:
+   - Canvas responsive
+   - Web Audio API sound effects
+   - LocalStorage high score
+   - Speedrun timer
+   - Simple physics/skeleton (maybe simplified, just a few joints)
+   - Safety meter, fatigue meter
+   - Color palette
+   - Input (mouse drag to set angle)
+   - Game loop
+
+   I'll write a compact but functional game.js. I'll try to keep it under a few hundred characters minified, but realistically it'll be longer. I'll write it carefully.
+
+   Let me outline the JS code structure:
+
+   ```javascript
+   // Config
+   const palette = { safe: '#4CAF50', warning '#FFC107', danger '#F44336', bg '#111' };
+   const highScore = localStorage.getItem('ffHighScore') || 0;
+   let startTime = Date.now();
+   let elapsed = 0;
+   let isPaused = false;
+
+   // Web Audio API
+   const ctx = new (window.AudioContext || window.webkitAudioContext)();
+   function playSound(type) { ... }
+
+   // Canvas & Resize
+   const canvas = document.getElementById('gameCanvas');
+   const ctx2d = canvas.getContext('2d');
+   function resizeCanvas() { canvas.width = window.innerWidth * 0.9; canvas.height = window.innerHeight * 0.5; ... }
+
+   // Game state
+   let safety = 100, fatigue = 0;
+   let targetAngle = 0, currentAngle = 0;
+   let jointCount = 1; // simplified
+   let speedrunTimerRunning = true;
+
+   // Input
+   let isDragging = false;
+   canvas.addEventListener('mousedown', e => { isDragging = true; ... });
+   canvas.addEventListener('mouseup', () => isDragging = false);
+   canvas.addEventListener('mousemove', e => { if(isDragging) { ... set target angle ... play sound ... });
+
+   // Physics simple
+   function update(dt) {
+     // integrate angle towards target with damping
+     // update safety/fatigue
+     // update meters
+   }
+
+   // Loop
+   function loop() {
+     if(!isPaused) {
+       const dt = 1/60;
+       update(dt);
+       elapsed = Date.now() - startTime - (isPaused ? pausedTime : 0);
+       updateTimer();
+       draw();
+     }
+     requestAnimationFrame(loop);
+   }
+
+   // Draw
+   function draw() {
+     // clear, draw simple line representing stretch, color based on safety
+     // draw meters
+   }
+
+   // LocalStorage save
+   function saveHighScore(score) { if(score > highScore) { localStorage.setItem('ffHighScore', score); document.getElementById('highScore').innerText = score; } }
+
+   // Timer update
+   function updateTimer() { const seconds = Math.floor((elapsed)/1000); const m = Math.floor(seconds/60), s = seconds%60; document.getElementById('timer').innerText = `${m}:${s<10?'0':''}${s}`; }
+   ```
+
+   I'll minify this heavily. I need to output it as a JSON string. I'll be very careful with escaping.
+
+   Given the complexity and length, maybe I should output just the two files, and the JS will be a compact implementation. I'll try to keep it under ~1500 characters minified.
+
+   Let me actually write the full JS minified code in my mind, then format as JSON string.
+
+   I'll start:
+
+   ```javascript
+   (()=>{const p={s:'#4CAF50',w:'#FFC107',d:'#F44336',b:'#111'};let H=localStorage.getItem('ffHS')||0;let T=Date.now();let P=0;let A=0;let S=100;let F=0;let R=0;let z=document.getElementById('gameCanvas');let c=z.getContext('2d');let d=!1;let x=!1;z.width=window.innerWidth*0.9;z.height=window.innerHeight*0.5;window.onresize=()=>{z.width=window.innerWidth*0.9;z.height=window.innerHeight*0.5};const ac=new (window.AudioContext||window.webkitAudioContext)();function q(t){const o=ac.createOscillator();o.type='sine';o.frequency[t||'click']?440:220;o.connect(ac.destination);o.start();o.stop(ac.currentTime+0.1)}z.onmousedown=e=>{x=!0;const r=e.touches?e.touches[0]:e;R=r.clientY/z.height*360};z.onmouseup=()=>{if(x){const a=R;const t=A;if(Math.abs(a-t)>5){A=a;q('stretch')}x=!0}else{x=!1}};z.onmousemove=e=>{if(x&&e.buttons){const n=e.clientY/z.height*360;const delta=n-A;A=n;S=Math.max(0,Math.min(100,100-(Math.abs(delta)%180)/90));F=Math.min(100,F+delta*0.01);q()} };// ... etc
+   ```
+
+   This is getting messy. I need a more structured but compact approach.
+
+   Maybe I can simplify the game logic significantly to fit in a JSON string reasonably. The user didn't specify that the code has to be a full implementation, just "complete code contents" for the files mapping. I'll do my best to provide a functional minimal implementation.
+
+   Given the constraints, I'll output a JSON with two files: `index.html` and `game.js`. I'll make the JS implement the core sneaky features and a very basic stretch simulation.
+
+   Let me write the JS as a single IIFE with all code, minified.
+
+   I'll draft it properly now.
+
+   Actually, I realize outputting large code blocks as JSON strings with proper escaping is extremely error-prone manually. I need to be very careful. Maybe I can output a very minimal but correct JSON with the two files, and the code is simple enough.
+
+   Let me think of an alternative: I could output the JSON with the code using base64 or something, but the user expects "mapping filenames to their complete code contents". I'll stick to raw strings.
+
+   I'll write the HTML and JS, then manually escape for JSON. I'll use a systematic approach: write the code, replace `"` with `\"`, replace line breaks with `\n`, and wrap in JSON.
+
+   Let me draft the HTML minified string first (already did):
+
+   `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>FlexiForm: Safe Stretch Simulator</title><link rel="icon" href="data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Ctext%20x=%220%22%20y=%220%22%3E🤸%3C/text%3E%3C/svg%3E" type="image/svg+xml"><style>body{margin:0;background:#111;color:#fff;font-family:sans-serif}canvas{display:block;background:#222}.hud{position:fixed;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:20px;background:rgba(0,0,0,0.5);padding:8px 16px;border-radius:4px}.meter{width:120px;height:10;background:#333;border-radius:4;overflow:hidden}.meter-fill{height:100%;width:100%;transition:width 0.1s}.safety{background:#4CAF50}.fatigue{background:#FFC107}.timer{font-size:1.2rem}</style></head><body><div class="hud"><div><span class="timer" id="timer">00:00</span></div><div><div class="meter"><div class="meter-fill safety" id="safetyMeter" style="width:100%"></div></div><span>Safety</span></div><div><div class="meter"><div class="meter-fill fatigue" id="fatigueMeter" style="width:100%"></div></div><span>Fatigue</span></div></div><button class="btn" id="resetBtn">Reset</button><canvas id="gameCanvas"></canvas><script src="game.js"></script></body></html>`
+
+   That's valid as a JSON string value if I escape the outer quotes properly. In JSON, I'll have `"index.html": "..."` and inside the string, I need to escape any `"` characters. The HTML above has no unescaped `"` except the ones I'll wrap in the JSON. Actually, the string itself contains `"` attributes? Let's check: `meta charset="UTF-8"` - yes, there are `=` and `"` inside. I need to escape those `"` as `\"` if the JSON string contains them. But if I'm putting the HTML inside a JSON string value, all internal `"` must be escaped. That's doable but tedious. Alternatively, I can avoid `"` inside the HTML by using single quotes for attributes, but HTML often uses double quotes. I can write HTML with single quotes: `charset='UTF-8'` etc. Or I can minimize and use no-quotes where possible, but it's tricky.
+
+   Better approach: I'll write the HTML without any double quotes inside, using single quotes or attribute omission. Or I can just use a `<style>` block with CSS that uses no double quotes interfering. Actually, JSON strings can contain newlines if I escape them as `\n`, but the `"` issue remains.
+
+   I could base64 encode the files, but the user said "mapping filenames to their complete code contents", implying raw text. I'll just escape the double quotes.
+
+   Let me rewrite the HTML using single quotes for all HTML attributes, and the CSS using single quotes or escaping. Actually, I can just use double quotes in JSON and escape the internal double quotes. I'll do that systematically.
+
+   Let me draft the HTML with a plan: I'll use `'` for HTML attributes where possible, but some like `type="text/javascript"` I'll change to `type='text/javascript'`. I'll also use single quotes in CSS: `font-family:sans-serif` no quotes needed. Color values no quotes. I'll set `charset='UTF-8'`. `name='viewport'`. `rel='icon'`. `href='...'`. `id='...'`. `class='...'`. I'll make sure all attribute values use single quotes.
+
+   Let me reconstruct the HTML with single quotes:
+
+   `<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>FlexiForm: Safe Stretch Simulator</title><link rel='icon' href='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Ctext%20x=%220%22%20y=%220%22%3E🤸%3C/text%3E%3C/svg%3E' type='image/svg+xml'><style>body{margin:0;background:#111;color:#fff;font-family:sans-serif}canvas{display:block;background:#222}.hud{position:fixed;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:20px;background:rgba(0,0,0,0.5);padding:8px 16px;border-radius:4px}.meter{width:120px;height:10;background:#333;border-radius:4;overflow:hidden}.meter-fill{height:100%;width:100%;transition:width 0.1s}.safety{background:#4CAF50}.fatigue{background:#FFC107}.timer{font-size:1.2rem}</style></head><body><div class='hud'><div><span class='timer' id='timer'>00:00</span></div><div><div class='meter'><div class='meter-fill safety' id='safetyMeter' style='width:100%'></div></div><span>Safety</span></div><div><div class='meter'><div class='meter-fill fatigue' id='fatigueMeter' style='width:100%'></div></div><span>Fatigue</span></div></div><button class='btn' id='resetBtn'>Reset</button><canvas id='gameCanvas'></canvas><script src='game.js'></script></body></html>`
+
+   Check for any double quotes left: `xmlns=%22http://www.w3.org/2000/svg%22` has `%22` which is URL-encoded `"`, but in the data URI, it's fine as is. The `%22` are literal characters `%`, `2`, `2` in the string, not JSON `"` issues. Actually, `%22` is the URL encoding for `"`, but inside the JSON string, it's just characters. The `=` and `%22` are fine. The only `"` that could cause issues are if I have unescaped `"` characters. In this string, I have `%22` which is not a `"` character, it's `%`, `2`, `2`. So it's fine. I also have `xmlns=%22` - wait, I wrote `xmlns=%22http://www.w3.org/2000/svg%22`. That contains `%22` but no actual `"` . So it's JSON-safe regarding `"` characters. However, the `=` sign is fine. The `%22` will be part of the string. That's actually correct for a data URI. But normally data URI uses `\"` or URL encoding. `%22` is fine as literal characters. So no `"` in the string except the ones I use to delimit the JSON string value. Wait, the JSON string will be enclosed in `"` around the value. So any `"` inside must be escaped. In my HTML string, do I have any `"` characters? Let's scan: `<!DOCTYPE html>` no. `<html lang='en'>` has `'` not `"`. `<head>` no. `<meta charset='UTF-8'>` has `'`. `<meta name='viewport' ...>` has `'`. `<title>FlexiForm: Safe Stretch Simulator</title>` no `"`. `<link rel='icon' href='data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%3E%3Ctext%20x=%220%22%20y=%220%22%3E🤸%3C/text%3E%3C/svg%3E' type='image/svg+xml'>` - here I have `%22` which is not `"`, it's percent-encoded. But wait, there's also `x=%220%22` - that's `x=` followed by `%220%22`. No actual `"` . `type='image/svg+xml'` has `'`. `<style>body{margin:0;background:#111;color:#fff;font-family:sans-serif}canvas{display:block;background:#222}.hud{position:fixed;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:20px;background:rgba(0,0,0,0.5);padding:8px 16px;border-radius:4px}.meter{width:120px;height:10;background:#333;border-radius:4;overflow:hidden}.meter-fill{height:100%;width:100%;transition:width 0.1s}.safety{background:#4CAF50}.fatigue{background:#FFC107}.timer{font-size:1.2rem}</style>` no `"`. `<body>` no. `<div class='hud'>` has `'`. `<div><span class='timer' id='timer'>00:00</span></div>` has `'`. `<div><div class='meter'><div class='meter-fill safety' id='safetyMeter' style='width:100%'></div></div><span>Safety</span></div>` has `'`. `<div><div class='meter'><div class='meter-fill fatigue' id='fatigueMeter' style='width:100%'></div></div><span>Fatigue</span></div>` has `'`. `<button class='btn' id='resetBtn'>Reset</button>` has `>` but no `"`. Actually `>` is fine. `<canvas id='gameCanvas'></canvas>` no `"`. `<script src='game.js'></script>` has `'`. So indeed, the entire HTML string has zero `"` characters! It only has `'`, `>`, `<`, `=`, `%`, etc. That's perfect. I can put this entire string as a JSON string value without escaping any internal `"` because there are none. The only thing is I need to make sure the JSON enclosing `"` don't conflict, but since the string itself contains no `"`, it's safe. Wait, JSON string delimiters are `"`. If the string value contains `"`, it must be escaped. Since it doesn't, I'm good. I just need to ensure the outer JSON has `{"index.html": "...", "game.js": "..."}` and the `...` parts are the strings. The strings can contain `'` freely. So this HTML minified string is valid as a JSON string value.
+
+   Great! Now for `game.js`. I need to write a minified JS that implements the features. I'll also make sure it has no `"` characters inside, or if it does, I'll escape them. But I'll try to design it with single quotes and no double quotes, similar to HTML. However, JS often needs strings with `"`. I can use template literals with backticks, but backticks are fine in JSON as long as they're not `"`. Actually, backticks are not `"` so they're fine. But I need to be careful. I'll just use single-quoted strings in JS where possible, and for strings that need `"`, I'll escape them or use string concatenation. But to keep it simple, I'll avoid string literals that use `"` by using `'`. JS allows single-quoted strings. I'll write the whole JS using single quotes for string literals. For HTML strings inside JS, I can use template literals with `${}` but that's fine. Actually, I can just write code that creates elements via `document.createElement` and sets `textContent`, avoiding inner HTML strings. That's safer.
+
+   Let me draft a minimal JS game loop with the required features. I'll keep it very compact.
+
+   Plan for game.js:
+   - IIFE to avoid global pollution
+   - Config palette object with single-quoted keys/values? Values are hex strings, I can quote with `'` but hex doesn't have `"` so fine.
+   - localStorage high score
+   - Web Audio API simple beep
+   - Canvas resize on load and window resize
+   - Mouse/touch input for angle control
+   - Simple physics: angle moves towards target with damping, safety/fatigue calculations
+   - Draw: a line representing the stretch, color based on safety
+   - HUD updates: timer, safety meter, fatigue meter
+   - Reset button handler
+   - Speedrun timer: start on load, display in top bar (already in HTML, JS just updates it)
+
+   I'll write the JS code, using single quotes for all string literals. I'll avoid `"` entirely. For object properties, I'll use `['key']` or just `.key` if no spaces. I'll use template literals for strings that need interpolation, but template literals use backticks, which are fine. However, inside template literals, I can use `"` freely, but that would be inside the string value of JSON, and since the whole JS code is a JSON string value, any `"` inside would need escaping. So I should avoid `"` entirely in the JS code string. I'll use single quotes everywhere, and for template literals, I'll use string concatenation or just not interpolate. Or I can use backtick template literals but ensure no `"` inside. Actually, backticks are just characters `, `, and ` in JSON. They don't need escaping. But if I put `"` inside a template literal, that `"` would be inside the JSON string value and would need escaping. So I'll just avoid `"` completely in the JS code. I'll use `'string'` for all strings. For numbers, no quotes. For array access, I'll use `['id']` but the `'` around `id` is a single quote, which is fine as long as the overall JSON string doesn't have unescaped `"` . Wait, the JSON string is delimited by `"` from the outside. Inside, `'` is just a regular character, no escaping needed. Only `"` needs escaping. So I can freely use `'` inside the JSON string. That's perfect.
+
+   So I'll write JS with single-quoted strings. For example: `const canvas = document.getElementById('gameCanvas');` is fine. `const ctx = canvas.getContext('2d');` fine. `localStorage.setItem('ffHighScore', score);` fine. I'll just make sure no `"` appears. I'll use `/* ... */` comments? Comments can contain `"` but I'll avoid. I'll keep comments minimal or none.
+
+   Let me draft the JS code mentally:
+
+   ```javascript
+   (()=>{const P={s:'#4CAF50',w:'#FFC107',d:'#F44336',b:'#111'};let H=Number(localStorage.getItem('ffHS'))||0;let T=Date.now();let E=0;let A=0;let S=100;let F=0;let z=document.getElementById('gameCanvas');let c=z.getContext('2d');let R=!1;let x=!1;let Y=0;z.width=window.innerWidth*0.9;z.height=window.innerHeight*0.5;window.onresize=()=>{z.width=window.innerWidth*0.9;z.height=window.innerHeight*0.5};const U=(new(window.AudioContext||window.webkitAudioContext)());function V(t){const o=U.createOscillator();o.type='sine';o.frequency.value=t||440;o.connect(U.destination);o.start();o.stop(U.currentTime+0.1)};z.onmousedown=e=>{x=!0;Y=e.touches?e.t
