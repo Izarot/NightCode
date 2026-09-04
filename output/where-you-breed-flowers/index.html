@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FLORAGENESIS</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&family=Cinzel:wght@600;700&display=swap" rel="stylesheet>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌸</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #FDF6E3; 
+            font-family: 'Quicksand', sans-serif; 
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #game-container {
+            position: relative;
+            width: 1280px;
+            height: 720px;
+        }
+        canvas {
+            background: #87CEEB;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .hud {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            z-index: 10;
+        }
+        .timer {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255,255,255,0.8);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 18px;
+            z-index: 10;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 10;
+        }
+        button {
+            background: #FFB6C1;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-family: 'Quicksand', sans-serif;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover { background: #FF69B4; transform: scale(1.05); }
+        .sidebar {
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 250px;
+            background: rgba(255,255,255,0.9);
+            padding: 20px;
+            z-index: 5;
+            transform: translateX(-100%);
+            transition: transform 0.3s;
+        }
+        .sidebar.open { transform: translateX(0); }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="1280" height="720"></canvas>
+        <div class="hud">
+            <div class="title" style="font-family:'Cinzel'; font-size:28px; color:#8B4513;">🌸 FLORAGENESIS</div>
+            <div class="resources">
+                <span>🪙 <span id="coins">0</span></span>
+                <span style="margin-left:15px;">💎 <span id="shards">0</span></span>
+            </div>
+        </div>
+        <div class="timer" id="timer">00:00.00</div>
+        <div class="controls">
+            <button id="pauseBtn">⏸</button>
+            <button id="speedBtn">▶</button>
+        </div>
+        <div class="sidebar" id="sidebar">
+            <h3>Genome Inspector</h3>
+            <div id="genomeInfo">Select a flower</div>
+        </div>
+    </div>
+    <script type="module" src="src/main.js"></script>
+</body>
+</html>
