@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>🧲 Magnetic Breakout</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧲</text></svg>" />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0e27;
+    --north: #00f0ff;
+    --south: #ff00aa;
+    --white: #ffffff;
+    --accent: #b794f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: radial-gradient(ellipse at center, #1a1f4a 0%, var(--bg) 70%);
+    overflow: hidden;
+    font-family: 'Orbitron', sans-serif;
+    color: var(--white);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #wrap {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  canvas {
+    background: var(--bg);
+    box-shadow: 0 0 60px rgba(0, 240, 255, 0.25), 0 0 120px rgba(255, 0, 170, 0.15);
+    border-radius: 8px;
+    max-width: 100vw; max-height: 100vh;
+    width: auto; height: auto;
+    aspect-ratio: 4 / 3;
+    image-rendering: optimizeQuality;
+    cursor: none;
+  }
+  .hidden { display: none !important; }
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(10, 14, 39, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+  }
+  .panel {
+    background: linear-gradient(135deg, rgba(0,240,255,0.08), rgba(255,0,170,0.08));
+    border: 2px solid rgba(0, 240, 255, 0.4);
+    border-radius: 16px;
+    padding: 32px 48px;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(0, 240, 255, 0.2);
+    max-width: 90%;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 56px);
+    font-weight: 900;
+    letter-spacing: 4px;
+    background: linear-gradient(90deg, var(--north), var(--south));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 8px;
+  }
+  h2 {
+    font-size: clamp(20px, 3vw, 32px);
+    color: var(--north);
+    margin-bottom: 16px;
+  }
+  .btn {
+    display: inline-block;
+    margin: 8px;
+    padding: 12px 28px;
+    background: rgba(0, 240, 255, 0.08);
+    border: 2px solid var(--north);
+    color: var(--white);
+    font-family: inherit;
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-size: clamp(12px, 1.5vw, 16px);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease-out;
+  }
+  .btn:hover, .btn:active {
+    background: rgba(0, 240, 255, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
+  }
+  .btn.alt { border-color: var(--south); }
+  .btn.alt:hover { background: rgba(255, 0, 170, 0.2); box-shadow: 0 0 20px rgba(255, 0, 170, 0.6); }
+  .info { font-size: 12px; color: #aaa; margin-top: 16px; line-height: 1.6; }
+  .info kbd {
+    background: rgba(255,255,255,0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    font-family: inherit;
+  }
+  .scoretable { margin: 12px 0; font-size: 14px; }
+  .scoretable div { padding: 4px 0; }
+  .menu-orbits {
+    position: relative;
+    width: 200px; height: 60px;
+    margin: 0 auto 16px;
+  }
+  .orb {
+    position: absolute;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    top: 20px;
+    animation: orbit 4s linear infinite;
+  }
+  .orb.n { background: var(--north); box-shadow: 0 0 12px var(--north); left: 50%; }
+  .orb.s { background: var(--south); box-shadow: 0 0 12px var(--south); left: 50%; animation-delay: -2s; }
+  @keyframes orbit {
+    0% { transform: translate(-50%, 0) translateX(-60px); }
+    50% { transform: translate(-50%, 0) translateX(60px); }
+    100% { transform: translate(-50%, 0) translateX(-60px); }
+  }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="960" height="720"></canvas>
+  <div id="menu" class="overlay">
+    <div class="panel">
+      <div class="menu-orbits"><div class="orb n"></div><div class="orb s"></div></div>
+      <h1>MAGNETIC BREAKOUT</h1>
+      <div style="color:#aaa; letter-spacing:3px; font-size:12px; margin-bottom:24px;">CONDUCT THE FORCE</div>
+      <button class="btn" id="playBtn">▶ PLAY</button>
+      <button class="btn alt" id="helpBtn">? HOW TO PLAY</button>
+      <button class="btn" id="hsBtn">★ HIGH SCORES</button>
+    </div>
+  </div>
+  <div id="help" class="overlay hidden">
+    <div class="panel">
+      <h2>HOW TO PLAY</h2>
+      <div class="info" style="text-align:left; max-width:520px; font-size:13px;">
+        <p><b>Move:</b> Mouse / <kbd>←</kbd> <kbd>→</kbd> &nbsp; <b>Launch:</b> Click / <kbd>Space</kbd></p>
+        <p><b>Switch Polarity:</b> <kbd>Space</kbd> &nbsp; <b>Force +:</b> <kbd>Q</kbd> &nbsp; <b>Force −:</b> <kbd>E</kbd> &nbsp; <b>Right-Click</b></p>
+        <p><b>Pause:</b> <kbd>P</kbd> or <kbd>Esc</kbd></p>
+        <p style="margin-top:10px;">Your paddle and ball carry <b style="color:var(--north)">NORTH (+)</b> or <b style="color:var(--south)">SOUTH (−)</b> polarity.</p>
+        <p>Opposite polarities <b>attract</b>; like polarities <b>repel</b>. Curve the ball around obstacles, pull it from danger, or rocket it through dense brick formations.</p>
+        <p style="margin-top:10px;">Sustain curved flight to build a <b>combo multiplier</b>. Clear levels without flipping polarity for a +500 style bonus!</p>
+      </div>
+      <button class="btn" id="backBtn">← BACK</button>
+    </div>
+  </div>
+  <div id="hs" class="overlay hidden">
+    <div class="panel">
+      <h2>HIGH SCORES</h2>
+      <div class="scoretable" id="hsList"></div>
+      <button class="btn" id="hsBackBtn">← BACK</button>
+    </div>
+  </div>
+  <div id="pause" class="overlay hidden">
+    <div class="panel">
+      <h2>PAUSED</h2>
+      <button class="btn" id="resumeBtn">▶ RESUME</button>
+      <button class="btn alt" id="restartBtn">↻ RESTART</button>
+      <button class="btn" id="quitBtn">✕ QUIT</button>
+    </div>
+  </div>
+  <div id="levelComplete" class="overlay hidden">
+    <div class="panel">
+      <h2 id="lcTitle">LEVEL COMPLETE</h2>
+      <div class="scoretable" id="lcStats"></div>
+      <button class="btn" id="nextBtn">NEXT LEVEL ▶</button>
+    </div>
+  </div>
+  <div id="gameOver" class="overlay hidden">
+    <div class="panel">
+      <h2 style="color:var(--south)">GAME OVER</h2>
+      <div class="scoretable" id="goStats"></div>
+      <button class="btn" id="retryBtn">↻ RETRY</button>
+      <button class="btn alt" id="menuBtn">⌂ MENU</button>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
