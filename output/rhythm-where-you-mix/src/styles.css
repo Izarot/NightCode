@@ -1,0 +1,96 @@
+/* Global Reset */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #1a1a2e;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+#gameCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: crosshair;
+}
+
+/* Speedrun Timer */
+.speedrun-timer {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 18px;
+    z-index: 10;
+    transition: transform 0.3s ease;
+}
+
+#speedrunTimer:hover { transform: scale(1.05); }
+
+/* HUD */
+.hud {
+    position: absolute;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 24px;
+    z-index: 20;
+}
+
+.score-display {
+    font-size: 48px;
+    font-weight: bold;
+    color: #4ecdc4;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.progress-bar-container {
+    width: 300px;
+    height: 8px;
+    background: #333;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-left: 32px;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+    transition: width 0.5s ease;
+}
+
+.combo-indicator {
+    font-size: 14px;
+    color: #fbbf24;
+    font-weight: bold;
+    pointer-events: none;
+}
+
+.level-indicator {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ff9f43;
+}
+
+/* Responsive adjustments for small screens */
+@media (max-width: 768px) {
+    .hud {
+        left: 10px;
+        gap: 16px;
+    }
+    .score-display { font-size: 36px; }
+    .progress-bar-container { width: 200px; }
+}
