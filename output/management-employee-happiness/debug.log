@@ -1,0 +1,189 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 23032 (char 23031)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n<title>Employee Harmony</title>\n<link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏢</text></svg>\">\n<style>\n*{margin:0;padding:0;box-sizing:border-box}\nhtml,body{width:100%;height:100%;overflow:hidden;background:#1a1a2e;font-family:'Segoe UI',sans-serif}\n#gameContainer{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center}\ncanvas{display:block;max-width:100%;max-height:100%}\n#mobileControls{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:none;gap:10px;z-index:100}\n#mobileControls button{width:50px;height:50px;border-radius:50%;border:none;font-size:24px;background:#4A90D9;color:#fff;cursor:pointer}\n@media(max-width:768px){#mobileControls{display:flex}}\n</style>\n</head>\n<body>\n<div id=\"gameContainer\">\n<canvas id=\"gameCanvas\"></canvas>\n</div>\n<div id=\"mobileControls\">\n<button onclick=\"game.pause()\" id=\"pauseBtn\">⏸</button>\n<button onclick=\"game.speedUp()\">⏩</button>\n<button onclick=\"game.selectTab(0)\">👥</button>\n<button onclick=\"game.selectTab(1)\">📋</button>\n</div>\n<script>\nconst SPEEDRUN_TIMER_HTML = `<div id=\"timer\" style=\"position:fixed;top:10px;left:10px;background:rgba(26,26,46,0.9);color:#7ED321;padding:8px 16px;border-radius:8px;font-family:monospace;font-size:18px;z-index:1000;\">⏱ 00:00:00</div>`;\ndocument.body.insertAdjacentHTML('afterbegin', SPEEDRUN_TIMER_HTML);\n\nclass AudioManager {\n  constructor() {\n    this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n    this.muted = false;\n    this.ambientNode = null;\n  }\n  \n  play(type) {\n    if (this.muted || this.ctx.state === 'suspended') {\n      if (this.ctx.state === 'suspended') this.ctx.resume();\n      return;\n    }\n    const now = this.ctx.currentTime;\n    const osc = this.ctx.createOscillator();\n    const gain = this.ctx.createGain();\n    osc.connect(gain);\n    gain.connect(this.ctx.destination);\n    \n    switch(type) {\n      case 'click':\n        osc.frequency.setValueAtTime(800, now);\n        gain.gain.setValueAtTime(0.1, now);\n        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);\n        osc.start(now);\n        osc.stop(now + 0.05);\n        break;\n      case 'success':\n        osc.frequency.setValueAtTime(523, now);\n        osc.frequency.setValueAtTime(659, now + 0.1);\n        osc.frequency.setValueAtTime(784, now + 0.2);\n        gain.gain.setValueAtTime(0.15, now);\n        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);\n        osc.start(now);\n        osc.stop(now + 0.3);\n        break;\n      case 'error':\n        osc.type = 'sawtooth';\n        osc.frequency.setValueAtTime(150, now);\n        gain.gain.setValueAtTime(0.1, now);\n        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);\n        osc.start(now);\n        osc.stop(now + 0.2);\n        break;\n      case 'hire':\n        osc.frequency.setValueAtTime(1200, now);\n        osc.frequency.setValueAtTime(1400, now + 0.05);\n        gain.gain.setValueAtTime(0.08, now);\n        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);\n        osc.start(now);\n        osc.stop(now + 0.15);\n        break;\n      case 'quit':\n        osc.type = 'triangle';\n        osc.frequency.setValueAtTime(400, now);\n        osc.frequency.exponentialRampToValueAtTime(100, now + 0.5);\n        gain.gain.setValueAtTime(0.1, now);\n        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);\n        osc.start(now);\n        osc.stop(now + 0.5);\n        break;\n    }\n  }\n  \n  startAmbient() {\n    if (this.ambientNode || this.muted) return;\n    const bufferSize = 2 * this.ctx.sampleRate;\n    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);\n    const output = noiseBuffer.getChannelData(0);\n    for (let i = 0; i < bufferSize; i++) output[i] = Math.random() * 2 - 1;\n    this.ambientNode = this.ctx.createBufferSource();\n    this.ambientNode.buffer = noiseBuffer;\n    this.ambientNode.loop = true;\n    const filter = this.ctx.createBiquadFilter();\n    filter.type = 'lowpass';\n    filter.frequency.value = 500;\n    const gain = this.ctx.createGain();\n    gain.gain.value = 0.03;\n    this.ambientNode.connect(filter);\n    filter.connect(gain);\n    gain.connect(this.ctx.destination);\n    this.ambientNode.start();\n  }\n  \n  toggleMute() {\n    this.muted = !this.muted;\n    if (this.ambientNode) {\n      this.ambientNode.stop();\n      this.ambientNode = null;\n    }\n    return this.muted;\n  }\n}\n\nclass Employee {\n  constructor(id, name, dept, x, y) {\n    this.id = id;\n    this.name = name;\n    this.dept = dept;\n    this.x = x;\n    this.y = y;\n    this.happiness = 60 + Math.random() * 20;\n    this.energy = 100;\n    this.stress = 20 + Math.random() * 10;\n    this.skill = Math.floor(Math.random() * 5) + 1;\n    this.salary = 50 + this.skill * 50 + Math.floor(Math.random() * 100);\n    this.assignedTask = null;\n    this.workProgress = 0;\n    this.colors = {\n      'Engineering': '#5DADE2',\n      'Marketing': '#F39C12',\n      'Design': '#9B59B6',\n      'HR': '#27AE60'\n    };\n  }\n  \n  getEmotion() {\n    if (this.happiness > 70 && this.stress < 30) return '😊';\n    if (this.happiness > 40) return '😐';\n    if (this.stress > 70) return '😠';\n    return '😟';\n  }\n  \n  update(dt, isWorking) {\n    if (isWorking) {\n      this.energy -= 0.02 * dt;\n      this.stress += this.assignedTask ? 0.05 * this.assignedTask.difficulty * dt : 0.01 * dt;\n      if (this.assignedTask) {\n        this.workProgress += this.skill * 0.5 * dt;\n        if (this.workProgress >= 100) {\n          this.assignedTask.completed = true;\n          this.assignedTask = null;\n          this.workProgress = 0;\n          this.happiness += 5;\n          this.stress -= 10;\n          return true;\n        }\n      }\n    } else {\n      this.energy = Math.min(100, this.energy + 0.1 * dt);\n      this.stress = Math.max(0, this.stress - 0.05 * dt);\n    }\n    this.happiness = 50 + (100 - this.stress) * 0.3 + (this.energy - 50) * 0.2;\n    this.happiness = Math.max(0, Math.min(100, this.happiness));\n    return false;\n  }\n}\n\nclass Task {\n  constructor(name, difficulty, reward) {\n    this.id = Date.now() + Math.random();\n    this.name = name;\n    this.difficulty = difficulty;\n    this.reward = reward;\n    this.deadline = 5;\n    this.assigned = null;\n    this.completed = false;\n    this.progress = 0;\n  }\n}\n\nclass Furniture {\n  constructor(type, x, y) {\n    this.type = type;\n    this.x = x;\n    this.y = y;\n    this.boost = type === 'plant' ? 5 : type === 'coffee' ? 3 : 0;\n  }\n}\n\nclass Game {\n  constructor() {\n    this.canvas = document.getElementById('gameCanvas');\n    this.ctx = this.canvas.getContext('2d');\n    this.baseWidth = 1280;\n    this.baseHeight = 720;\n    this.audio = new AudioManager();\n    this.employees = [];\n    this.furniture = [];\n    this.tasks = [];\n    this.money = 10000;\n    this.day = 1;\n    this.week = 1;\n    this.gameSpeed = 1;\n    this.paused = false;\n    this.selected = null;\n    this.activeTab = 0;\n    this.notifications = [];\n    this.events = [];\n    this.lastTime = 0;\n    this.elapsedTime = 0;\n    this.isWorkingHours = true;\n    this.highScore = parseInt(localStorage.getItem('employeeHarmonyHighScore')) || 0;\n    this.gameOver = false;\n    this.victory = false;\n    this.totalRevenue = 0;\n    this.hiredCount = 0;\n    this.firedCount = 0;\n    this.avgHappiness = 50;\n    this.resize();\n    this.init();\n    window.addEventListener('resize', () => this.resize());\n    this.setupInput();\n    this.audio.startAmbient();\n  }\n  \n  resize() {\n    const container = document.getElementById('gameContainer');\n    const aspect = 16 / 9;\n    let w = container.clientWidth;\n    let h = container.clientHeight;\n    if (w / h > aspect) w = h * aspect;\n    else h = w / aspect;\n    this.canvas.width = this.baseWidth;\n    this.canvas.height = this.baseHeight;\n    this.canvas.style.width = w + 'px';\n    this.canvas.style.height = h + 'px';\n    this.scale = w / this.baseWidth;\n  }\n  \n  init() {\n    const names = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Quinn', 'Avery', 'Peyton', 'Skyler'];\n    const depts = ['Engineering', 'Marketing', 'Design', 'HR'];\n    for (let i = 0; i < 4; i++) {\n      const x = 150 + i * 180;\n      const y = 200 + Math.floor(i / 2) * 120;\n      this.employees.push(new Employee(i, names[i], depts[i], x, y));\n      this.furniture.push(new Furniture('desk', x - 20, y + 40));\n    }\n    this.furniture.push(new Furniture('plant', 600, 150));\n    this.furniture.push(new Furniture('plant', 100, 250));\n    this.furniture.push(new Furniture('coffee', 650, 350));\n    this.generateTasks();\n    this.setupEvents();\n  }\n  \n  generateTasks() {\n    const taskNames = ['Q1 Report', 'Marketing Campaign', 'Design Mockups', 'Team Meeting', 'Code Review', 'Budget Analysis'];\n    for (let i = 0; i < 3; i++) {\n      const diff = Math.floor(Math.random() * 5) + 1;\n      this.tasks.push(new Task(taskNames[i], diff, diff * 200));\n    }\n  }\n  \n  setupEvents() {\n    this.events = [\n      { name: 'Team Lunch!', effect: () => { this.money -= 200; this.employees.forEach(e => e.happiness += 10); }, chance: 0.1 },\n      { name: 'Server Crash!', effect: () => { this.employees.forEach(e => e.stress += 20); }, chance: 0.08 },\n      { name: 'Birthday Party!', effect: () => { if (this.employees.length > 0) this.employees[0].happiness += 15; }, chance: 0.06 },\n      { name: 'Productivity Bonus', effect: () => { this.money += 500; }, chance: 0.07 }\n    ];\n  }\n  \n  setupInput() {\n    this.canvas.addEventListener('click', (e) => {\n      const rect = this.canvas.getBoundingClientRect();\n      const x = (e.clientX - rect.left) / this.scale;\n      const y = (e.clientY - rect.top) / this.scale;\n      this.handleClick(x, y);\n    });\n    \n    document.addEventListener('keydown', (e) => {\n      switch(e.key) {\n        case ' ': this.pause(); break;\n        case '1': this.activeTab = 0; break;\n        case '2': this.activeTab = 1; break;\n        case '3': this.activeTab = 2; break;\n        case '4': this.activeTab = 3; break;\n        case 'Escape': this.selected = null; break;\n      }\n      this.audio.play('click');\n    });\n  }\n  \n  handleClick(x, y) {\n    this.audio.play('click');\n    \n    // Check top bar buttons\n    if (y < 64) {\n      if (x > 580 && x < 650) { this.paused = !this.paused; return; }\n      if (x > 650 && x < 720) { this.gameSpeed = this.gameSpeed === 1 ? 2 : 1; return; }\n      if (x > 1050 && x < 1100) { this.audio.toggleMute(); return; }\n      return;\n    }\n    \n    // Check bottom panel tabs\n    if (y > 600) {\n      const tab = Math.floor((x - 20) / 120);\n      if (tab >= 0 && tab < 4) { this.activeTab = tab; return; }\n      \n      // Action buttons in tabs\n      if (this.activeTab === 0 && this.selected && this.selected instanceof Employee) {\n        if (x > 900 && x < 980) { this.hireEmployee(); return; }\n        if (x > 1000 && x < 1080) { this.fireEmployee(); return; }\n      }\n      if (this.activeTab === 1 && this.selected) {\n        if (x > 700 && x < 800) { this.assignTask(); return; }\n      }\n      return;\n    }\n    \n    // Check employees in office\n    for (const emp of this.employees) {\n      if (Math.abs(x - emp.x) < 30 && Math.abs(y - emp.y) < 40) {\n        this.selected = emp;\n        return;\n      }\n    }\n    \n    // Check tasks in list\n    if (y > 100 && y < 400 && x > 950) {\n      const taskIdx = Math.floor((y - 100) / 60);\n      if (taskIdx < this.tasks.length) {\n        this.selected = this.tasks[taskIdx];\n        return;\n      }\n    }\n    \n    this.selected = null;\n  }\n  \n  hireEmployee() {\n    const names = ['Sam', 'Chris', 'Pat', 'Jamie', 'Drew', 'Morgan', 'Taylor', 'Alex'];\n    const depts = ['Engineering', 'Marketing', 'Design', 'HR'];\n    const usedNames = this.employees.map(e => e.name);\n    const availableNames = names.filter(n => !usedNames.includes(n));\n    if (availableNames.length === 0) return;\n    \n    const newEmp = new Employee(\n      Date.now(),\n      availableNames[Math.floor(Math.random() * availableNames.length)],\n      depts[Math.floor(Math.random() * depts.length)],\n      100 + Math.random() * 500,\n      150 + Math.random() * 200\n    );\n    this.employees.push(newEmp);\n    this.furniture.push(new Furniture('desk', newEmp.x - 20, newEmp.y + 40));\n    this.hiredCount++;\n    this.audio.play('hire');\n    this.addNotification('New hire: ' + newEmp.name + '!', '#27AE60');\n  }\n  \n  fireEmployee() {\n    if (!this.selected || !(this.selected instanceof Employee)) return;\n    const idx = this.employees.indexOf(this.selected);\n    if (idx > -1) {\n      this.employees.splice(idx, 1);\n      this.firedCount++;\n      this.audio.play('quit');\n      this.addNotification(this.selected.name + ' has left the company.', '#D0021B');\n      this.selected = null;\n    }\n  }\n  \n  assignTask() {\n    if (!this.selected || this.selected.constructor.name !== 'Task') return;\n    const available = this.employees.filter(e => !e.assignedTask);\n    if (available.length > 0) {\n      this.selected.assigned = available[0];\n      available[0].assignedTask = this.selected;\n      this.addNotification('Task assigned!', '#4A90D9');\n    }\n  }\n  \n  addNotification(text, color) {\n    this.notifications.push({ text, color, time: 4 });\n  }\n  \n  pause() {\n    this.paused = !this.paused;\n    document.getElementById('pauseBtn').textContent = this.paused ? '▶' : '⏸';\n  }\n  \n  speedUp() {\n    this.gameSpeed = this.gameSpeed === 1 ? 2 : this.gameSpeed === 2 ? 4 : 1;\n  }\n  \n  selectTab(idx) {\n    this.activeTab = idx;\n  }\n  \n  update(dt) {\n    if (this.paused || this.gameOver || this.victory) return;\n    \n    this.elapsedTime += dt * this.gameSpeed;\n    dt *= this.gameSpeed;\n    \n    // Update employees\n    for (const emp of this.employees) {\n      const completed = emp.update(dt, this.isWorkingHours);\n      if (completed) {\n        this.money += emp.assignedTask?.reward || 100;\n        this.totalRevenue += emp.assignedTask?.reward || 100;\n        this.audio.play('success');\n        this.addNotification('Task completed! +$' + (emp.assignedTask?.reward || 100), '#7ED321');\n        this.tasks = this.tasks.filter(t => !t.completed);\n        if (this.tasks.length < 3) this.generateTasks();\n      }\n    }\n    \n    // Calculate avg happiness\n    if (this.employees.length > 0) {\n      this.avgHappiness = this.employees.reduce((s, e) => s + e.happiness, 0) / this.employees.length;\n    }\n    \n    // Random events\n    if (Math.random() < 0.001 * dt * this.gameSpeed) {\n      const event = this.events[Math.floor(Math.random() * this.events.length)];\n      if (Math.random() < event.chance * 10) {\n        event.effect();\n        this.addNotification(event.name, '#F5A623');\n      }\n    }\n    \n    // Day progression\n    this.elapsedTime += dt * 0.001;\n    if (this.elapsedTime > 60 * this.gameSpeed) {\n      this.elapsedTime = 0;\n      this.day++;\n      if (this.day > 7) { this.day = 1; this.week++; }\n      \n      // Weekly salaries\n      let totalSalary = this.employees.reduce((s, e) => s + e.salary, 0);\n      this.money -= totalSalary;\n      \n      // Check bankruptcy\n      if (this.money < 0) {\n        this.gameOver = true;\n        this.saveHighScore();\n      }\n      \n      // Check victory\n      if (this.week >= 9) {\n        this.victory = true;\n        this.saveHighScore();\n      }\n    }\n    \n    // Working hours simulation\n    this.isWorkingHours = this.day % 2 === 1;\n    \n    // Update notifications\n    this.notifications = this.notifications.filter(n => {\n      n.time -= dt * 0.016;\n      return n.time > 0;\n    });\n    \n    // Update timer display\n    this.updateTimerDisplay();\n  }\n  \n  updateTimerDisplay() {\n    const seconds = Math.floor(this.elapsedTime);\n    const h = Math.floor(seconds / 3600);\n    const m = Math.floor((seconds % 3600) / 60);\n    const s = seconds % 60;\n    document.getElementById('timer').textContent = `⏱ ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;\n  }\n  \n  saveHighScore() {\n    const score = this.calculateScore();\n    if (score > this.highScore) {\n      this.highScore = score;\n      localStorage.setItem('employeeHarmonyHighScore', score);\n    }\n  }\n  \n  calculateScore() {\n    const retention = this.hiredCount > 0 ? (this.hiredCount - this.firedCount) / this.hiredCount : 0;\n    return Math.floor(this.totalRevenue * 0.1 + this.avgHappiness * 100 + retention * 500);\n  }\n  \n  render() {\n    const ctx = this.ctx;\n    \n    // Background\n    ctx.fillStyle = '#F5F7FA';\n    ctx.fillRect(0, 0, this.baseWidth, this.baseHeight);\n    \n    // Isometric grid\n    ctx.strokeStyle = '#E8ECF1';\n    ctx.lineWidth = 1;\n    for (let i = 0; i < 8; i++) {\n      for (let j = 0; j < 6; j++) {\n        const x = 80 + i * 100 + j * 50;\n        const y = 80 + j * 70 - i * 35;\n        ctx.beginPath();\n        ctx.moveTo(x, y);\n        ctx.lineTo(x + 50, y + 35);\n        ctx.lineTo(x, y + 70);\n        ctx.lineTo(x - 50, y + 35);\n        ctx.closePath();\n        ctx.stroke();\n      }\n    }\n    \n    // Render furniture and employees sorted by Y\n    const entities = [...this.furniture, ...this.employees].sort((a, b) => a.y - b.y);\n    for (const entity of entities) {\n      if (entity instanceof Furniture) {\n        this.renderFurniture(entity);\n      } else {\n        this.renderEmployee(entity);\n      }\n    }\n    \n    // HUD\n    this.renderHUD();\n    \n    // Bottom panel\n    this.renderBottomPanel();\n    \n    // Side panel\n    this.renderSidePanel();\n    \n    // Notifications\n    this.renderNotifications();\n    \n    // Game over / Victory\n    if (this.gameOver) this.renderGameOver();\n    if (this.victory) this.renderVictory();\n  }\n  \n  renderFurniture(f) {\n    const ctx = this.ctx;\n    ctx.save();\n    \n    if (f.type === 'desk') {\n      ctx.fillStyle = '#8B7355';\n      ctx.fillRect(f.x - 25, f.y, 50, 30);\n      ctx.fillStyle = '#6B5344';\n      ctx.fillRect(f.x - 25, f.y + 30, 50, 5);\n    } else if (f.type === 'plant') {\n      ctx.fillStyle = '#27AE60';\n      ctx.beginPath();\n      ctx.arc(f.x, f.y, 20, 0, Math.PI * 2);\n      ctx.fill();\n      ctx.fillStyle = '#6B5344';\n      ctx.fillRect(f.x - 5, f.y + 15, 10, 15);\n    } else if (f.type === 'coffee') {\n      ctx.fillStyle = '#4A4A68';\n      ctx.fillRect(f.x - 15, f.y - 20, 30, 35);\n      ctx.fillStyle = '#F5A623';\n      ctx.fillRect(f.x - 10, f.y - 15, 20, 10);\n    }\n    \n    ctx.restore();\n  }\n  \n  renderEmployee(e) {\n    const ctx = this.ctx;\n    const isSelected = this.selected === e;\n    \n    ctx.save();\n    \n    // Shadow\n    ctx.fillStyle = 'rgba(0,0,0,0.1)';\n    ctx.beginPath();\n    ctx.ellipse(e.x, e.y + 35, 25, 10, 0, 0, Math.PI * 2);\n    ctx.fill();\n    \n    // Body\n    ctx.fillStyle = e.colors[e.dept];\n    ctx.beginPath();\n    ctx.roundRect(e.x - 15, e.y, 30, 35, 8);\n    ctx.fill();\n    \n    if (isSelected) {\n      ctx.strokeStyle = '#FFD700';\n      ctx.lineWidth = 3;\n      ctx.stroke();\n    }\n    \n    // Head\n    ctx.fillStyle = '#FFD5B8';\n    ctx.beginPath();\n    ctx.arc(e.x, e.y - 15, 18, 0, Math.PI * 2);\n    ctx.fill();\n    \n    // Emotion\n    ctx.font = '16px Arial';\n    ctx.fillText(e.getEmotion(), e.x - 8, e.y - 25);\n    \n    // Task progress bar\n    if (e.assignedTask) {\n      ctx.fillStyle = '#333';\n      ctx.fillRect(e.x - 20, e.y + 40, 40, 6);\n      ctx.fillStyle = '#7ED321';\n      ctx.fillRect(e.x - 20, e.y + 40, e.workProgress * 0.4, 6);\n    }\n    \n    ctx.restore();\n  }\n  \n  renderHUD() {\n    const ctx = this.ctx;\n    \n    // Top bar background\n    ctx.fillStyle = '#FFFFFF';\n    ctx.fillRect(0, 0, this.baseWidth, 64);\n    ctx.strokeStyle = '#D0D5DD';\n    ctx.lineWidth = 2;\n    ctx.beginPath();\n    ctx.moveTo(0, 64);\n    ctx.lineTo(this.baseWidth, 64);\n    ctx.stroke();\n    \n    // Company name\n    ctx.fillStyle = '#1A1A2E';\n    ctx.font = 'bold 20px Arial';\n    ctx.fillText('🏢 Employee Harmony', 20, 40);\n    \n    // Day/Week\n    ctx.font = '16px Arial';\n    ctx.fillStyle = '#4A4A68';\n    ctx.fillText(`Day ${this.day} • Week ${this.week}`, 20, 58);\n    \n    // Time controls\n    ctx.fillStyle = this.paused ? '#7ED321' : '#4A90D9';\n    ctx.fillRect(580, 20, 60, 30);\n    ctx.fillStyle = '#FFF';\n    ctx.font = '14px Arial';\n    ctx.fillText(this.paused ? '▶ Play' : '⏸ Pause', 590, 40);\n    \n    ctx.fillStyle = '#4A90D9';\n    ctx.fillRect(650, 20, 60, 30);\n    ctx.fillStyle = '#FFF';\n    ctx.fillText(`${this.gameSpeed}x`, 670, 40);\n    \n    // Mute button\n    ctx.fillStyle = '#666';\n    ctx.fillRect(1050, 20, 50, 30);\n    ctx.fillStyle = '#FFF';\n    ctx.font = '18px Arial';\n    ctx.fillText(this.audio.muted ? '🔇' : '🔊', 1060, 42);\n    \n    // Money\n    ctx.fillStyle = '#27AE60';\n    ctx.font = 'bold 24px monospace';\n    ctx.fillText(`$${this.money.toLocaleString()}`, 800, 45);\n    \n    // Happiness meter\n    ctx.fillStyle = '#333';\n    ctx.fillRect(900, 25, 100, 20);\n    const happinessColor = this.avgHappiness > 70 ? '#7ED321' : this.avgHappiness > 40 ? '#F5A623' : '#D0021B';\n    ctx.fillStyle = happinessColor;\n    ctx.fillRect(900, 25, this.avgHappiness, 20);\n    ctx.fillStyle = '#FFF';\n    ctx.font = '12px Arial';\n    ctx.fillText(`${Math.round(this.avgHappiness)}%`, 935, 40);\n    \n    // High score\n    ctx.fillStyle = '#9B59B6';\n    ctx.font = '14px Arial';\n    ctx.fillText(`🏆 High: ${this.highScore}`, 720, 58);\n  }\n  \n  renderBottomPanel() {\n    const ctx = this.ctx;\n    const panelY = 580;\n    const panelH = 140;\n    \n    // Panel background\n    ctx.fillStyle = '#FFFFFF';\n    ctx.beginPath();\n    ctx.roundRect(0, panelY, this.baseWidth, panelH, 12, 12, 0, 0);\n    ctx.fill();\n    ctx.strokeStyle = '#D0D5DD';\n    ctx.lineWidth = 2;\n    ctx.stroke();\n    \n    // Tabs\n    const tabs = ['👥 Employees', '📋 Tasks', '🏢 Facilities', '📊 Reports'];\n    tabs.forEach((tab, i) => {\n      ctx.fillStyle = this.activeTab === i ? '#4A90D9' : '#E8ECF1';\n      ctx.beginPath();\n      ctx.roundRect(20 + i * 150, panelY + 10, 140, 35, 8);\n      ctx.fill();\n      ctx.fillStyle = this.activeTab === i ? '#FFF' : '#4A4A68';\n      ctx.font = '14px Arial';\n      ctx.fillText(tab, 35 + i * 150, panelY + 33);\n    });\n    \n    // Tab content\n    ctx.fillStyle = '#4A4A68';\n    ctx.font= '14px Arial';
+    ctx.fillText(this.selected ? (this.selected.name || this.selected.name) : 'Select an employee', 20, panelY + 65);
+    
+    // Employee info in tab 0
+    if (this.activeTab === 0 && this.selected instanceof Employee) {
+      const emp = this.selected;
+      ctx.fillText(`Dept: ${emp.dept}`, 20, panelY + 85);
+      ctx.fillText(`Skill: ${'⭐'.repeat(emp.skill)}`, 20, panelY + 105);
+      ctx.fillText(`Happiness: ${Math.round(emp.happiness)}%`, 150, panelY + 85);
+      ctx.fillText(`Energy: ${Math.round(emp.energy)}%`, 150, panelY + 105);
+      ctx.fillText(`Stress: ${Math.round(emp.stress)}%`, 300, panelY + 85);
+      ctx.fillText(`Salary: $${emp.salary}/week`, 300, panelY + 105);
+      
+      // Action buttons
+      ctx.fillStyle = '#27AE60';
+      ctx.fillRect(900, panelY + 70, 80, 30);
+      ctx.fillStyle = '#FFF';
+      ctx.font = '12px Arial';
+      ctx.fillText('👤 Hire', 915, panelY + 90);
+      
+      ctx.fillStyle = '#D0021B';
+      ctx.fillRect(1000, panelY + 70, 80, 30);
+      ctx.fillText('❌ Fire', 1015, panelY + 90);
+    }
+    
+    // Task list in tab 1
+    if (this.activeTab === 1) {
+      ctx.fillStyle = '#FFF';
+      ctx.font = '14px Arial';
+      ctx.fillText('Available Tasks:', 20, panelY + 65);
+      this.tasks.forEach((task, i) => {
+        ctx.fillStyle = task.assigned ? '#7ED321' : '#F5A623';
+        ctx.fillRect(20, panelY + 75 + i * 25, 600, 20);
+        ctx.fillStyle = '#FFF';
+        ctx.fillText(`${task.name} (Diff: ${task.difficulty}) - $${task.reward}`, 30, panelY + 90 + i * 25);
+      });
+      
+      if (this.selected && this.selected.constructor.name === 'Task') {
+        ctx.fillStyle = '#4A90D9';
+        ctx.fillRect(700, panelY + 70, 100, 30);
+        ctx.fillStyle = '#FFF';
+        ctx.fillText('📌 Assign', 710, panelY + 90);
+      }
+    }
+    
+    // Facilities in tab 2
+    if (this.activeTab === 2) {
+      ctx.fillStyle = '#4A4A68';
+      ctx.font = '14px Arial';
+      ctx.fillText('🪴 Plants boost happiness by 5%', 20, panelY + 65);
+      ctx.fillText('☕ Coffee stations reduce stress by 3%', 20, panelY + 85);
+      ctx.fillText('💺 Desks needed for each employee', 20, panelY + 105);
+    }
+    
+    // Reports in tab 3
+    if (this.activeTab === 3) {
+      ctx.fillStyle = '#4A4A68';
+      ctx.font = '14px Arial';
+      ctx.fillText(`Total Employees: ${this.employees.length}`, 20, panelY + 65);
+      ctx.fillText(`Tasks Completed: ${Math.floor(this.totalRevenue / 200)}`, 20, panelY + 85);
+      ctx.fillText(`Happiness Score: ${Math.round(this.avgHappiness)}%`, 200, panelY + 65);
+      ctx.fillText(`Retention Rate: ${this.hiredCount > 0 ? Math.round((1 - this.firedCount / this.hiredCount) * 100) : 0}%`, 200, panelY + 85);
+      ctx.fillText(`Total Revenue: $${this.totalRevenue.toLocaleString()}`, 400, panelY + 65);
+      ctx.fillText(`Hired/Fired: ${this.hiredCount}/${this.firedCount}`, 400, panelY + 85);
+    }
+  }
+  
+  renderSidePanel() {
+    const ctx = this.ctx;
+    
+    // Panel background
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.roundRect(920, 70, 340, 500, 12);
+    ctx.fill();
+    ctx.strokeStyle = '#D0D5DD';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Task list
+    ctx.fillStyle = '#1A1A2E';
+    ctx.font = 'bold 16px Arial';
+    ctx.fillText('📋 Active Tasks', 940, 100);
+    
+    this.tasks.forEach((task, i) => {
+      const y = 120 + i * 60;
+      ctx.fillStyle = task.assigned ? '#E8F8E8' : '#FFF3E0';
+      ctx.beginPath();
+      ctx.roundRect(935, y, 310, 55, 8);
+      ctx.fill();
+      
+      ctx.fillStyle = '#4A4A68';
+      ctx.font = '14px Arial';
+      ctx.fillText(task.name, 950, y + 20);
+      
+      ctx.fillText(`${'⭐'.repeat(task.difficulty)}`, 950, y + 40);
+      ctx.fillText(`$${task.reward}`, 1150, y + 20);
+      ctx.fillText(task.assigned ? `👤 ${task.assigned.name}` : '⏳ Unassigned', 1050, y + 40);
+    });
+  }
+  
+  renderNotifications() {
+    const ctx = this.ctx;
+    let y = 80;
+    for (const notif of this.notifications) {
+      ctx.fillStyle = notif.color;
+      ctx.globalAlpha = Math.min(1, notif.time);
+      ctx.beginPath();
+      ctx.roundRect(this.baseWidth - 320, y, 300, 35, 8);
+      ctx.fill();
+      ctx.fillStyle = '#FFF';
+      ctx.font = '14px Arial';
+      ctx.fillText(notif.text, this.baseWidth - 310, y + 22);
+      ctx.globalAlpha = 1;
+      y += 45;
+    }
+  }
+  
+  renderGameOver() {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(0, 0, this.baseWidth, this.baseHeight);
+    
+    ctx.fillStyle = '#D0021B';
+    ctx.font = 'bold 64px Arial';
+    ctx.fillText('💸 BANKRUPTCY!', this.baseWidth / 2 - 250, this.baseHeight / 2 - 50);
+    
+    ctx.fillStyle = '#FFF';
+    ctx.font = '24px Arial';
+    ctx.fillText(`Final Score: ${this.calculateScore()}`, this.baseWidth / 2 - 100, this.baseHeight / 2 + 20);
+    ctx.fillText(`Week ${this.week} - Revenue: $${this.totalRevenue}`, this.baseWidth / 2 - 150, this.baseHeight / 2 + 60);
+    ctx.fillText('Press SPACE or click to restart', this.baseWidth / 2 - 180, this.baseHeight / 2 + 120);
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ' && this.gameOver) location.reload();
+    });
+    this.canvas.addEventListener('click', () => {
+      if (this.gameOver) location.reload();
+    });
+  }
+  
+  renderVictory() {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(0, 0, this.baseWidth, this.baseHeight);
+    
+    ctx.fillStyle = '#7ED321';
+    ctx.font = 'bold 64px Arial';
+    ctx.fillText('🎉 VICTORY!', this.baseWidth / 2 - 200, this.baseHeight / 2 - 50);
+    
+    ctx.fillStyle = '#FFF';
+    ctx.font = '24px Arial';
+    ctx.fillText(`Final Score: ${this.calculateScore()}`, this.baseWidth / 2 - 100, this.baseHeight / 2 + 20);
+    ctx.fillText(`High Score: ${this.highScore}`, this.baseWidth / 2 - 80, this.baseHeight / 2 + 60);
+    ctx.fillText('Press SPACE or click to play again', this.baseWidth / 2 - 200, this.baseHeight / 2 + 120);
+    
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ' && this.victory) location.reload();
+    });
+    this.canvas.addEventListener('click', () => {
+      if (this.victory) location.reload();
+    });
+  }
+  
+  gameLoop(timestamp) {
+    const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1);
+    this.lastTime = timestamp;
+    
+    this.update(dt);
+    this.render();
+    
+    requestAnimationFrame((t) => this.gameLoop(t));
+  }
+  
+  start() {
+    requestAnimationFrame((t) => {
+      this.lastTime = t;
+      this.gameLoop(t);
+    });
+  }
+}
+
+const game = new Game();
+game.start();
+</script>
+</body>
+</html>
