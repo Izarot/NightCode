@@ -168,7 +168,7 @@ function update(){
 
   if(cur.door&&!cur.door.open){
     let all=false;
-    for(let m of cur.mov){if(aabb(m,cur.door))all{true}break;}
+    for(let m of cur.mov){if(aabb(m,cur.door)){all=true;break;}}
     if(all)cur.door.open=true;
   }
 
@@ -280,12 +280,12 @@ function drawHUD(){
   X.textAlign='right';
   X.fillStyle=timer<10?'#ff006e':COLORS.text;
   X.font='bold 22px Courier';
-  X.fillText('⏱ '+timer.toFixed(1)+'s',CW-15,30);
+  X.fillText('\u23f1 '+timer.toFixed(1)+'s',CW-15,30);
   X.font='14px Courier';
   X.fillText('Lvl '+(level+1)+'/'+LEVELS.length,CW-15,50);
 
   X.textAlign='center';X.font='14px Courier';X.fillStyle=COLORS.text;
-  const hints=['← → Move, SPACE Jump, SHIFT Slide','Push blue blocks to the GOAL','Trampolines (orange) bounce you!'];
+  const hints=['\u2190 \u2192 Move, SPACE Jump, SHIFT Slide','Push blue blocks to the GOAL','Trampolines (orange) bounce you!'];
   X.fillText(hints[level]||'',CW/2,30);
 }
 
@@ -296,7 +296,7 @@ function drawMenu(){
   X.fillText('PUZZLE',CW/2,250);
   X.font='bold 24px Courier';
   X.fillStyle=COLORS.bg3;
-  X.fillText('🎮 '+best+' 🎮',CW/2,320);
+  X.fillText('\ud83c\udfae '+best+' \ud83c\udfae',CW/2,320);
   X.font='20px Courier';
   X.fillStyle=state==='menu'?'#ffd60a':'#ffffff';
   X.fillText('Press SPACE or TAP to Start',CW/2,400);
