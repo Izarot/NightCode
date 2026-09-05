@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Cell Breaker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧬</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Exo+2:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #0a0f14;
+    overflow: hidden;
+    font-family: 'Exo 2', sans-serif;
+    color: #b2ebf2;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+  }
+  #wrap {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at center, #0d1620 0%, #05080c 100%);
+  }
+  #stage {
+    position: relative;
+    width: 800px;
+    height: 600px;
+    max-width: 100vw;
+    max-height: 100vh;
+    aspect-ratio: 4 / 3;
+  }
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #0a0f14;
+    border-radius: 8px;
+    box-shadow: 0 0 60px rgba(0, 229, 255, 0.15), inset 0 0 60px rgba(0, 229, 255, 0.05);
+  }
+</style>
+</head>
+<body>
+<div id="wrap"><div id="stage"><canvas id="game" width="800" height="600"></canvas></div></div>
+<script>
+(() => {
+  'use strict';
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = 800, H = 600;
+
+  // Responsive scaling
+  function fit() {
+    const stage = document.getElementById('stage');
+    const r = Math.min(window.innerWidth / 800, window.innerHeight / 600);
+    stage.style.transform = `scale(${r})`;
+    stage.style.transformOrigin = 'center center';
+  }
+  window.addEventListener('resize', fit);
+  fit();
+
+  // Audio
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  function beep(freq, dur, type = 'sine', vol = 0.15) {
+    try {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, audioCtx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + dur);
+    } catch(e){}
+  }
+  const sfx = {
+    paddle: () => beep(180, 0.08, 'square', 0.1),
+    hit:    () => beep(520, 0.07, 'triangle', 0.12),
+    pop:    () => { beep(880, 0.12, 'sine', 0.15); setTimeout(() => beep(440, 0.1, 'sine', 0.1), 40); },
+    divide: () => beep(320, 0.18, 'sine', 0.08),
+    lose:   () => { beep(220, 0.3, 'sawtooth', 0.15); setTimeout(() => beep(110, 0.4, 'sawtooth', 0.12), 100); },
+    win:    () => [523,659,784,1047].forEach((f,i) => setTimeout(() => beep(f, 0.18, 'sine', 0.15), i*120)),
+    over:   () => [440,392,330,262,196].forEach((f,i) => setTimeout(() => beep(f, 0.22, 'sawtooth', 0.15), i*140)),
+  };
+
+  // State
+  const state = {
+    screen: 'title',
+    level: 1, lives: 3, score: 0,
+    cells: [], particles: [],
+    paddle: { x: W/2, y: H-40, w: 120, h: 16, targetX: W/2, tilt: 0, vx: 0 },
+    ball: { x: W/2, y: H-52, vx: 0, vy: 0, docked: true, trail: [] },
+    mouseX: W/2,
+    lastT: 0, dt: 0,
+    danger: 0,
+    timer: 0,
+    elapsed: 0,
+    highScore: parseInt(localStorage.getItem('cellBreakerHS') || '0', 10),
+  };
+
+  const CFG = {
+    BALL_R: 6, BALL_SPEED: 6,
+    CELL_R: 26,
+    DIVISION_MS: 3000, DIV_CHANCE: 0.15,
+    HIT_DMG: 35, MAX_CELLS: 150,
+    LEVELS: [5, 8, 12, 16, 20],
+  };
+
+  // Entities
+  function makeCell(x, y, mature = false) {
+    return {
+      x, y, r: mature ? CFG.CELL_R : CFG.CELL_R*0.6,
+      targetR: CFG.CELL_R,
+      health: 100, age: 0,
+      phase: Math.random()*Math.PI*2,
+      drift: (Math.random()-0.5)*0.5,
+      flash: 0, dividing: 0, mature,
+    };
+  }
+  function makeParticle(x, y, color) {
+    const a = Math.random()*Math.PI*2;
+    const sp = 1 + Math.random()*3;
+    return {
+      x, y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp,
+      life: 1, color, r: 2 + Math.random()*3,
+    };
+  }
+
+  // Spawning
+  function spawnCluster(count) {
+    const clusters = state.level <= 2 ? 1 : state.level <= 4 ? 2 : 3;
+    for (let c = 0; c < clusters; c++) {
+      const cx = W * (0.2 + 0.6 * (c/(clusters-1||1)));
+      const cy = 120 + Math.random()*100;
+      const per = Math.ceil(count/clusters);
+      for (let i = 0; i < per; i++) {
+        if (state.cells.length >= CFG.MAX_CELLS) break;
+        const a = Math.random()*Math.PI*2;
+        const d = Math.random()*60;
+        state.cells.push(makeCell(cx + Math.cos(a)*d, cy + Math.sin(a)*d));
+      }
+    }
+  }
+
+  function resetLevel() {
+    state.cells = []; state.particles = [];
+    state.ball.docked = true;
+    state.ball.x = state.paddle.x;
+    state.ball.y = state.paddle.y - state.paddle.h/2 - CFG.BALL_R;
+    state.ball.vx = 0; state.ball.vy = 0;
+    state.ball.trail = [];
+    spawnCluster(CFG.LEVELS[state.level-1]);
+    state.danger = 0;
+  }
+
+  function startGame() {
+    state.screen = 'playing';
+    state.level = 1; state.lives = 3; state.score = 0;
+    state.elapsed = 0;
+    resetLevel();
+  }
+
+  // Input
+  canvas.addEventListener('mousemove', e => {
+    const r = canvas.getBoundingClientRect();
+    state.mouseX = (e.clientX - r.left) * (W / r.width);
+  });
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    const r = canvas.getBoundingClientRect();
+    state.mouseX = (t.clientX - r.left) * (W / r.width);
+  }, { passive: false });
+  canvas.addEventListener('click', () => {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (state.screen === 'title') startGame();
+    else if (state.screen === 'playing' && state.ball.docked) launchBall();
+    else if (state.screen === 'paused') state.screen = 'playing';
+  });
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (state.screen === 'title') startGame();
+    else if (state.screen === 'playing' && state.ball.docked) launchBall();
+    else if (state.screen === 'paused') state.screen = 'playing';
+  }, { passive: false });
+
+  const keys = {};
+  window.addEventListener('keydown', e => {
+    keys[e.key] = true;
+    if (e.key === 'p' || e.key === 'Escape') {
+      if (state.screen === 'playing') state.screen = 'paused';
+      else if (state.screen === 'paused') state.screen = 'playing';
+    }
+    if (e.key === 'r' && (state.screen === 'gameover' || state.screen === 'victory')) startGame();
+    if (state.screen === 'playing' && state.ball.docked && (e.key === ' ' || e.key === 'ArrowUp')) launchBall();
+  });
+  window.addEventListener('keyup', e => keys[e.key] = false);
+
+  function launchBall() {
+    state.ball.docked = false;
+    const sp = CFG.BALL_SPEED + (state.level-1)*0.5;
+    const angle = -Math.PI/2 + (Math.random()-0.5)*0.6;
+    state.ball.vx = Math.cos(angle)*sp;
+    state.ball.vy = Math.sin(angle)*sp;
+    sfx.paddle();
+  }
+
+  // Update
+  function update(dt) {
+    if (state.screen !== 'playing' && state.screen !== 'gameover') return;
+    if (state.screen === 'gameover') {
+      // keep ambient cells growing
+      state.timer += dt;
+      if (state.timer > CFG.DIVISION_MS) {
+        state.timer = 0;
+        state.cells.forEach(c => { if (Math.random() < 0.2 && state.cells.length < 50) {
+          state.cells.push(makeCell(c.x + (Math.random()-0.5)*30, c.y + (Math.random()-0.5)*30, true));
+        }});
+      }
+      state.cells.forEach(c => { c.x += c.drift*0.3; c.phase += dt*0.003; });
+      return;
+    }
+
+    state.elapsed += dt;
+    state.timer += dt;
+
+    // Paddle
+    let target = state.mouseX;
+    if (keys.ArrowLeft) target -= 15;
+    if (keys.ArrowRight) target += 15;
+    state.paddle.targetX = target;
+    const oldX = state.paddle.x;
+    state.paddle.x += (state.paddle.targetX - state.paddle.x) * 0.25;
+    state.paddle.x = Math.max(state.paddle.w/2, Math.min(W - state.paddle.w/2, state.paddle.x));
+    state.paddle.vx = state.paddle.x - oldX;
+    state.paddle.tilt = Math.max(-0.26, Math.min(0.26, state.paddle.vx * 0.05));
+
+    // Ball
+    const b = state.ball;
+    if (b.docked) {
+      b.x = state.paddle.x;
+      b.y = state.paddle.y - state.paddle.h/2 - CFG.BALL_R - 2;
+    } else {
+      b.x += b.vx; b.y += b.vy;
+      // walls
+      if (b.x < CFG.BALL_R) { b.x = CFG.BALL_R; b.vx = -b.vx; }
+      if (b.x > W - CFG.BALL_R) { b.x = W - CFG.BALL_R; b.vx = -b.vx; }
+      if (b.y < CFG.BALL_R + 48) { b.y = CFG.BALL_R + 48; b.vy = -b.vy; }
+
+      // stuck detection
+      if (Math.abs(b.vy) < 0.5) b.vy += (Math.random()-0.5)*0.3;
+
+      // paddle collision
+      const p = state.paddle;
+      if (b.vy > 0 && b.x > p.x - p.w/2 && b.x < p.x + p.w/2 &&
+          b.y + CFG.BALL_R > p.y - p.h/2 && b.y - CFG.BALL_R < p.y + p.h/2) {
+        b.y = p.y - p.h/2 - CFG.BALL_R;
+        const hit = (b.x - p.x) / (p.w/2);
+        const sp = Math.hypot(b.vx, b.vy);
+        const ang = hit * (Math.PI/3);
+        b.vx = sp * Math.sin(ang);
+        b.vy = -sp * Math.cos(ang);
+        sfx.paddle();
+      }
+
+      // cell collisions
+      for (let i = state.cells.length-1; i >= 0; i--) {
+        const c = state.cells[i];
+        if (c.dividing > 0) continue;
+        const dx = b.x - c.x, dy = b.y - c.y;
+        const d = Math.hypot(dx, dy);
+        if (d < c.r + CFG.BALL_R) {
+          // reflect
+          const nx = dx/d, ny = dy/d;
+          const dot = b.vx*nx + b.vy*ny;
+          b.vx -= 2*dot*nx; b.vy -= 2*dot*ny;
+          b.x = c.x + nx*(c.r + CFG.BALL_R + 1);
+          c.health -= CFG.HIT_DMG;
+          c.flash = 1;
+          sfx.hit();
+          if (c.health <= 0) {
+            for (let k = 0; k < 8; k++) state.particles.push(makeParticle(c.x, c.y, '#ff7043'));
+            state.cells.splice(i, 1);
+            state.score += 10;
+            if (state.score > state.highScore) {
+              state.highScore = state.score;
+              localStorage.setItem('cellBreakerHS', state.highScore);
+            }
+            sfx.pop();
+          }
+          break;
+        }
+      }
+
+      // trail
+      b.trail.push({x: b.x, y: b.y});
+      if (b.trail.length > 8) b.trail.shift();
+
+      // lose life
+      if (b.y > H + 20) {
+        state.lives--;
+        sfx.lose();
+        if (state.lives <= 0) {
+          state.screen = 'gameover';
+          sfx.over();
+        } else {
+          b.docked = true;
+        }
+      }
+    }
+
+    // Cells: division
+    if (state.timer > CFG.DIVISION_MS && state.screen === 'playing') {
+      state.timer = 0;
+      const chance = CFG.DIV_CHANCE + (state.level-1)*0.02;
+      const newCells = [];
+      state.cells.forEach(c => {
+        c.age++;
+        if (Math.random() < chance && state.cells.length + newCells.length < CFG.MAX_CELLS) {
+          c.dividing = 1;
+          sfx.divide();
+          setTimeout(() => {
+            if (state.cells.includes(c) && state.cells.length < CFG.MAX_CELLS) {
+              const a = Math.random()*Math.PI*2;
+              const nc = makeCell(c.x + Math.cos(a)*20, c.y + Math.sin(a)*20, false);
+              state.cells.push(nc);
+            }
+            c.dividing = 0;
+          }, 200);
+        }
+      });
+    }
+
+    // Cells: update
+    state.cells.forEach(c => {
+      c.phase += dt*0.002;
+      c.y += c.drift * 0.4;
+      if (c.x < c.r) c.x = c.r;
+      if (c.x > W - c.r) c.x = W - c.r;
+      if (c.y < 60) c.y = 60;
+      if (c.y > H - 50) c.y = H - 50;
+      c.r += (c.targetR - c.r) * 0.05;
+      c.flash *= 0.9;
+      if (c.dividing > 0) c.r = c.targetR * (1 + Math.sin(c.dividing*10)*0.2);
+      // danger: if any cell in lower 30%
+      if (c.y > H * 0.7) state.danger = Math.max(state.danger, (c.y - H*0.7)/(H*0.3));
+    });
+
+    // Particles
+    for (let i = state.particles.length-1; i >= 0; i--) {
+      const p = state.particles[i];
+      p.x += p.vx; p.y += p.vy;
+      p.vy += 0.1;
+      p.life -= 0.04;
+      if (p.life <= 0) state.particles.splice(i, 1);
+    }
+
+    // Level complete
+    if (state.cells.length === 0 && state.screen === 'playing') {
+      if (state.level >= 5) {
+        state.screen = 'victory';
+        sfx.win();
+      } else {
+        sfx.win();
+        state.level++;
+        setTimeout(resetLevel, 800);
+      }
+    }
+  }
+
+  // Render
+  function drawBg() {
+    ctx.fillStyle = '#0a0f14';
+    ctx.fillRect(0, 0, W, H);
+    // subtle noise
+    for (let i = 0; i < 60; i++) {
+      ctx.fillStyle = `rgba(0, 229, 255, ${0.02 + Math.random()*0.02})`;
+      ctx.fillRect(Math.random()*W, Math.random()*H, 2, 2);
+    }
+    // danger zone glow
+    const dg = Math.min(1, state.danger);
+    if (dg > 0) {
+      ctx.fillStyle = `rgba(255, 23, 68, ${dg*0.3})`;
+      ctx.fillRect(0, H*0.7, W, H*0.3);
+    }
+  }
+
+  function drawHUD() {
+    ctx.fillStyle = 'rgba(10, 15, 20, 0.7)';
+    ctx.fillRect(0, 0, W, 48);
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+    ctx.beginPath(); ctx.moveTo(0, 48); ctx.lineTo(W, 48); ctx.stroke();
+
+    ctx.font = 'bold 14px Orbitron';
+    ctx.fillStyle = '#b2ebf2';
+    ctx.textAlign = 'left';
+    // Lives
+    ctx.fillText('LIVES', 16, 20);
+    for (let i = 0; i < 3; i++) {
+      const lx = 16 + i*22, ly = 32;
+      ctx.fillStyle = i < state.lives ? '#ff1744' : 'rgba(255,23,68,0.2)';
+      ctx.beginPath();
+      ctx.arc(lx, ly, 7, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#b2ebf2';
+    ctx.font = 'bold 14px Orbitron';
+    ctx.fillText(`LEVEL ${state.level}`, W/2, 20);
+    ctx.font = '12px Orbitron';
+    ctx.fillStyle = '#76ff03';
+    ctx.fillText(formatTime(state.elapsed), W/2, 38);
+
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#b2ebf2';
+    ctx.font = 'bold 14px Orbitron';
+    ctx.fillText(`SCORE: ${String(state.score).padStart(6,'0')}`, W-16, 20);
+    ctx.font = '11px Orbitron';
+    const cellColor = state.cells.length < 30 ? '#76ff03' : state.cells.length < 80 ? '#ffeb3b' : '#ff1744';
+    ctx.fillStyle = cellColor;
+    ctx.fillText(`CELLS: ${state.cells.length}`, W-16, 38);
+
+    // High score
+    ctx.textAlign = 'left';
+    ctx.font = '10px Orbitron';
+    ctx.fillStyle = 'rgba(178, 235, 242, 0.5)';
+    ctx.fillText(`HI: ${state.highScore}`, W-100, 58);
+  }
+
+  function formatTime(ms) {
+    const s = Math.floor(ms/1000);
+    const m = Math.floor(s/60);
+    return `${String(m).padStart(2,'0')}:${String(s%60).padStart(2,'0')}.${String(Math.floor((ms%1000)/10)).padStart(2,'0')}`;
+  }
+
+  function drawPaddle() {
+    const p = state.paddle;
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.tilt);
+    const grad = ctx.createLinearGradient(0, -p.h/2, 0, p.h/2);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.5, '#e0f7fa');
+    grad.addColorStop(1, '#80deea');
+    ctx.fillStyle = grad;
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 20;
+    roundRect(-p.w/2, -p.h/2, p.w, p.h, 8);
+    ctx.fill();
+    if (state.ball.docked) {
+      ctx.shadowBlur = 30;
+      ctx.strokeStyle = 'rgba(0, 229, 255, 0.6)';
+      ctx.lineWidth = 2;
+      const pulse = 1 + Math.sin(Date.now()*0.005)*0.15;
+      ctx.beginPath();
+      ctx.arc(0, -p.h/2 - 16, 14*pulse, 0, Math.PI*2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  function drawBall() {
+    const b = state.ball;
+    // trail
+    b.trail.forEach((t, i) => {
+      const a = (i+1)/b.trail.length;
+      ctx.fillStyle = `rgba(118, 255, 3, ${a*0.4})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, CFG.BALL_R*a, 0, Math.PI*2);
+      ctx.fill();
+    });
+    // ball
+    const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, CFG.BALL_R*2);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.3, '#00e5ff');
+    grad.addColorStop(1, 'rgba(118, 255, 3, 0)');
+    ctx.fillStyle = grad;
+    ctx.shadowColor = '#76ff03';
+    ctx.shadowBlur = 24;
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, CFG.BALL_R*2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#00e5ff';
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, CFG.BALL_R, 0, Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  function drawCells() {
+    state.cells.forEach(c => {
+      const breath = 1 + Math.sin(c.phase)*0.04;
+      const r = c.r * breath;
+      const critical = c.health < 30;
+      let color1 = '#4fc3f7', color2 = '#29b6f6';
+      if (c.mature) { color1 = '#29b6f6'; color2 = '#1976d2'; }
+      if (critical) { color1 = '#ff7043'; color2 = '#ffab91'; }
+      if (c.dividing > 0) { color1 = '#ffab91'; color2 = '#ffccbc'; }
+      const grad = ctx.createRadialGradient(c.x - r*0.3, c.y - r*0.3, 0, c.x, c.y, r);
+      grad.addColorStop(0, color1);
+      grad.addColorStop(0.7, color2);
+      grad.addColorStop(1, 'rgba(0,0,0,0.4)');
+      ctx.fillStyle = grad;
+      ctx.shadowColor = color1;
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      // organic shape
+      for (let i = 0; i < 8; i++) {
+        const a = (i/8)*Math.PI*2;
+        const wobble = r + Math.sin(c.phase*2 + i)*r*0.08;
+        if (i === 0) ctx.moveTo(c.x + Math.cos(a)*wobble, c.y + Math.sin(a)*wobble);
+        else ctx.lineTo(c.x + Math.cos(a)*wobble, c.y + Math.sin(a)*wobble);
+      }
+      ctx.closePath();
+      ctx.fill();
+      // membrane ring
+      ctx.strokeStyle = `rgba(255,255,255,${0.2 + (c.flash*0.6)})`;
+      ctx.lineWidth = 2 + c.flash*2;
+      ctx.stroke();
+      // health bar if hit
+      if (c.flash > 0.1) {
+        ctx.fillStyle = '#ff1744';
+        ctx.fillRect(c.x - r, c.y - r - 8, r*2 * (c.health/100), 3);
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+        ctx.strokeRect(c.x - r, c.y - r - 8, r*2, 3);
+      }
+      ctx.shadowBlur = 0;
+    });
+  }
+
+  function drawParticles() {
+    state.particles.forEach(p => {
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = p.life;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI*2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function drawScreen() {
+    if (state.screen === 'title') {
+      ctx.fillStyle = '#0a0f14';
+      ctx.fillRect(0, 0, W, H);
+      // animated background cells
+      for (let i = 0; i < 6; i++) {
+        const x = W/2 + Math.cos(Date.now()*0.0005 + i)*200;
+        const y = H/2 + Math.sin(Date.now()*0.0005 + i)*150;
+        const r = 30 + Math.sin(Date.now()*0.002 + i)*10;
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, 'rgba(79, 195, 247, 0.5)');
+        grad.addColorStop(1, 'rgba(79, 195, 247, 0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x-r, y-r, r*2, r*2);
+      }
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#00e5ff';
+      ctx.shadowColor = '#00e5ff';
+      ctx.shadowBlur = 30;
+      ctx.font = '900 64px Orbitron';
+      ctx.fillText('CELL BREAKER', W/2, H/2 - 40);
+      ctx.shadowBlur = 0;
+      ctx.font = 'bold 18px Orbitron';
+      ctx.fillStyle = `rgba(178, 235, 242, ${0.5 + Math.sin(Date.now()*0.003)*0.5})`;
+      ctx.fillText('CLICK TO BEGIN', W/2, H/2 + 20);
+      ctx.font = '14px Exo 2';
+      ctx.fillStyle = '#b2ebf2';
+      ctx.fillText('Mouse / Arrows: Move Paddle   |   Click / Space: Launch   |   P: Pause', W/2, H/2 + 80);
+      ctx.font = '12px Orbitron';
+      ctx.fillStyle = '#76ff03';
+      ctx.fillText(`HIGH SCORE: ${state.highScore}`, W/2, H/2 + 120);
+    } else if (state.screen === 'paused') {
+      ctx.fillStyle = 'rgba(10, 15, 20, 0.8)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#00e5ff';
+      ctx.font = 'bold 48px Orbitron';
+      ctx.fillText('PAUSED', W/2, H/2);
+      ctx.font = '16px Exo 2';
+      ctx.fillStyle = '#b2ebf2';
+      ctx.fillText('Click or press P to resume', W/2, H/2 + 40);
+    } else if (state.screen === 'gameover') {
+      ctx.fillStyle = 'rgba(10, 15, 20, 0.7)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ff1744';
+      ctx.shadowColor = '#ff1744';
+      ctx.shadowBlur = 30;
+      ctx.font = '900 52px Orbitron';
+      ctx.fillText('CONTAINMENT FAILURE', W/2, H/2 - 40);
+      ctx.shadowBlur = 0;
+      ctx.font = 'bold 24px Orbitron';
+      ctx.fillStyle = '#b2ebf2';
+      ctx.fillText(`FINAL SCORE: ${state.score}`, W/2, H/2 + 10);
+      ctx.fillText(`TIME: ${formatTime(state.elapsed)}`, W/2, H/2 + 40);
+      ctx.font = '16px Exo 2';
+      ctx.fillStyle = '#76ff03';
+      ctx.fillText(`HIGH SCORE: ${state.highScore}`, W/2, H/2 + 70);
+      ctx.font = '14px Orbitron';
+      ctx.fillStyle = `rgba(178, 235, 242, ${0.5 + Math.sin(Date.now()*0.003)*0.5})`;
+      ctx.fillText('Press R to restart', W/2, H/2 + 110);
+    } else if (state.screen === 'victory') {
+      ctx.fillStyle = 'rgba(10, 15, 20, 0.8)';
+      ctx.fillRect(0, 0, W, H);
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#76ff03';
+      ctx.shadowColor = '#76ff03';
+      ctx.shadowBlur = 30;
+      ctx.font = '900 64px Orbitron';
+      ctx.fillText('CULTURE PURIFIED', W/2, H/2 - 60);
+      ctx.shadowBlur = 0;
+      ctx.font = 'bold 28px Orbitron';
+      ctx.fillStyle = '#b2ebf2';
+      ctx.fillText(`FINAL SCORE: ${state.score}`, W/2, H/2);
+      ctx.fillText(`TIME: ${formatTime(state.elapsed)}`, W/2, H/2 + 35);
+      ctx.font = '18px Orbitron';
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillText(`HIGH SCORE: ${state.highScore}`, W/2, H/2 + 75);
+      ctx.font = '14px Orbitron';
+      ctx.fillStyle = `rgba(178, 235, 242, ${0.5 + Math.sin(Date.now()*0.003)*0.5})`;
+      ctx.fillText('Press R to play again', W/2, H/2 + 115);
+    }
+  }
+
+  function render() {
+    drawBg();
+    if (state.screen === 'playing' || state.screen === 'gameover') {
+      drawCells();
+      drawParticles();
+      drawPaddle();
+      drawBall();
+      drawHUD();
+    }
+    drawScreen();
+  }
+
+  function loop(t) {
+    if (!state.lastT) state.lastT = t;
+    state.dt = Math.min(33, t - state.lastT);
+    state.lastT = t;
+    update(state.dt);
+    // fade danger after frame
+    state.danger *= 0.95;
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

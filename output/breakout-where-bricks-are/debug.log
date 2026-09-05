@@ -1,0 +1,759 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 29297 (char 29296)
+
+Raw: {"SPEC.md": "# CELL BREAKER - Biological Breakout Experience\n\n## 1. Concept & Vision\n\nCell Breaker transforms the classic Breakout formula into a microscopic battlefield where the player is a surgical tool fighting against a multiplying cellular infection. Each brick is a living organism that divides over time, creating escalating tension as the screen fills with exponentially growing life. The aesthetic evokes looking through a high-powered microscope — organic shapes pulse with life, membranes glow with bioluminescence, and successful hits feel like popping bubbles in a petri dish.\n\n**Core Feel:** Clinical precision meets organic chaos. Clean, satisfying mechanics battling against uncontrolled biological growth.\n\n---\n\n## 2. Design Language\n\n### Aesthetic Direction\nBioluminescent microscopy — dark field lighting with glowing organic forms. Think \"Journey to the Center of the Earth\" meets \"Flow\" meets \"Osmos.\"\n\n### Color Palette\n- **Background:** `#0a0f14` (deep ocean black)\n- **Paddle:** `#e0f7fa` (pale cyan-white)\n- **Ball:** `#00e5ff` (electric cyan core) with `#76ff03` (bright green) glow trail\n- **Cell States:**\n  - Healthy: `#4fc3f7` (light blue)\n  - Mature: `#29b6f6` (medium blue)\n  - Critical (near division): `#ff7043` (warning orange)\n  - Dividing: `#ffab91` (pale orange pulse)\n- **UI Text:** `#b2ebf2` (soft cyan)\n- **Accent/Danger:** `#ff1744` (vivid red)\n\n### Typography\n- **Primary:** `Orbitron` (Google Font) — sci-fi, clinical feel for HUD\n- **Secondary:** `Exo 2` — readable body text for instructions\n\n### Spatial System\n- Canvas: 800×600 pixels, centered\n- Paddle: 120×16px, rounded ends (8px radius)\n- Ball: 12px diameter with 24px glow radius\n- Cells: Hexagonal-ish organic shapes, 48-64px diameter (varies by health)\n- HUD: Top 48px strip, semi-transparent\n\n### Motion Philosophy\n- **Cells:** Constant subtle \"breathing\" animation (scale 1.0 → 1.05 → 1.0 over 2s, staggered)\n- **Division:** 400ms animation — cell swells, membrane ripples, splits into two that drift apart\n- **Ball:** Leaves a fading trail of 8 ghost positions\n- **Hits:** Satisfying \"pop\" — cell bursts into 6-8 particles that fade over 300ms\n- **Paddle:** Slight tilt based on movement direction\n\n### Visual Assets\n- No external images — all rendered via Canvas API\n- Cells rendered with radial gradients for depth\n- Membrane effect: inner glow + outer soft shadow\n- Background: subtle animated noise texture (Perlin-like)\n\n---\n\n## 3. Layout & Structure\n\n### Screen Regions\n```\n┌─────────────────────────────────────────────┐\n│  HUD BAR (48px)                             │\n│  Lives | Level | Score | Cells Remaining    │\n├─────────────────────────────────────────────┤\n│  SPEEDRUN TIMER (top-right corner)          │\n│                                             │\n│  PLAY FIELD                                 │\n│  (Cells spawn and multiply in upper 70%)    │\n│                                             │\n│  ─ ─ ─ DANGER ZONE (lower 30%) ─ ─ ─       │\n│  (Cells here will overflow = GAME OVER)     │\n│                                             │\n│  [PADDLE ZONE — bottom 40px]                │\n└─────────────────────────────────────────────┘\n```\n\n### Game States\n1. **Title Screen** — \"CELL BREAKER\" with pulsing cell animation, \"CLICK TO BEGIN\"\n2. **Playing** — Active gameplay\n3. **Level Complete** — \"INFECTION CLEARED\" celebration, brief pause\n4. **Game Over** — \"CONTAINMENT FAILURE\" when cells reach danger zone bottom\n5. **Victory** — All 5 levels cleared\n\n### Responsive Strategy\n- Canvas maintains 800×600 internal resolution\n- CSS scales to fit viewport while maintaining aspect ratio\n- Touch controls on mobile: drag paddle, tap to launch ball\n\n---\n\n## 4. Features & Interactions\n\n### Core Mechanics\n\n**Paddle Control**\n- Mouse: Paddle follows cursor X position smoothly (lerp 0.15)\n- Keyboard: Left/Right arrows move paddle at 12px/frame\n- Paddle constrained to canvas bounds\n\n**Ball Physics**\n- Initial speed: 6 pixels/frame\n- Speed increases 0.5 per level (max 9)\n- Angle affected by where ball hits paddle (center = straight, edges = angled up to 60°)\n- Ball bounces off walls and ceiling, NOT bottom (lose life)\n- Trail effect: last 8 positions rendered with decreasing opacity\n\n**Cell Behavior**\n- Each cell has `health` (100 max) and `age` (ticks since spawn)\n- Every 3 seconds, each cell has 15% chance to attempt division\n- Division creates one new cell adjacent to parent\n- New cells start at 50% size, grow to 100% over 1 second\n- Cells have random drift movement (±0.5px/frame) — they float\n- When hit: cell loses 35 health, plays pop animation\n- When health ≤ 0: cell destroyed, score +10\n\n**Multiplication Spread**\n- Cells only spawn in upper 70% of screen\n- Each level starts with fewer initial cells:\n  - Level 1: 5 cells\n  - Level 2: 8 cells\n  - Level 3: 12 cells\n  - Level 4: 16 cells\n  - Level 5: 20 cells\n- Multiplication rate increases each level (+2% per level)\n\n### Progression\n- **Win Condition:** Destroy all cells in a level\n- **Lose Condition:** Any cell reaches bottom boundary (y > 552)\n- **Lives:** Start with 3, lose 1 when ball falls\n- **Levels:** 5 total, then victory screen\n\n### Edge Cases\n- Ball stuck in horizontal bounce: add tiny random angle (±2°)\n- Cell spawned off-screen: teleport to nearest valid position\n- Max cells: If >150 cells exist, disable division for remainder of level\n- Pause: Press `P` or `Escape` to pause/unpause\n\n### Interactions Detail\n- **Click (title):** Start game\n- **Click (playing, ball docked):** Launch ball at 60° angle\n- **Click (paused):** Resume\n- **Mouse move:** Control paddle X\n- **Arrow keys:** Alternative paddle control\n- **P / Escape:** Toggle pause\n- **R (game over):** Restart\n\n---\n\n## 5. Component Inventory\n\n### HUD Elements\n\n**Lives Display**\n- 3 cell-shaped icons (filled = remaining, outline = lost)\n- Position: Top-left (16px margin)\n- States: 3/2/1/0 filled cells\n\n**Level Indicator**\n- \"LEVEL X\" text\n- Position: Top-center\n- Animation: Pulse scale on level change\n\n**Score Counter**\n- \"SCORE: XXXXX\" format with leading zeros (6 digits)\n- Position: Top-right\n- Animation: Flash green on increase, scale bump\n\n**Cell Counter**\n- \"CELLS: XX\" — remaining cells\n- Position: Below score\n- Color shifts from green → yellow → red as cells increase\n\n**Speedrun Timer**\n- \"XX:XX.X\" format (minutes:seconds.tenths)\n- Position: Top-right corner below HUD\n- Persists across levels\n- Resets on game restart\n\n### Game Objects\n\n**Paddle**\n- Default: Solid cyan-white with soft glow\n- Moving: Slight tilt toward movement direction (max ±15°)\n- Ball docked: Pulsing glow ring indicating \"click to launch\"\n\n**Ball**\n- Default: Cyan core with green outer glow\n- Trail: 8 previous positions, decreasing size and opacity\n- Collision: Brief white flash\n\n**Cell (Brick)**\n- Default: Blue radial gradient, breathing animation\n- Mature (age > 5s): Slightly larger, darker blue\n- Critical (health < 30): Orange tint, faster breathing\n- Division: Swelling animation, membrane ripple effect\n- Hit: Flash white, shake, health bar appears above\n- Destroyed: Burst into particles, satisfying pop\n\n### Screens\n\n**Title Screen**\n- Large \"CELL BREAKER\" title with animated cell backgrounds\n- \"Click anywhere to begin\" pulsing text\n- Brief controls hint at bottom\n- High score display\n\n**Game Over Screen**\n- \"CONTAINMENT FAILURE\" in red\n- Final score display\n- New high score celebration if achieved\n- \"Press R to restart\" prompt\n- Background: Cells continue multiplying slowly (atmosphere)\n\n**Victory Screen**\n- \"INFECTION ELIMINATED\" in green\n- Total score with breakdown\n- Total time display\n- \"You cleared all 5 levels\" message\n- \"Press R to play again\"\n\n---\n\n## 6. Technical Approach\n\n### Architecture\n```\n/cell-breaker (single HTML file)\n├── Styles (embedded <style>)\n├── Canvas element\n└── Script (embedded <script>)\n    ├── Configuration constants\n    ├── Game state object\n    ├── Entity classes (Paddle, Ball, Cell, Particle)\n    ├── Rendering functions\n    ├── Physics/collision functions\n    ├── Game loop (requestAnimationFrame)\n    └── Event listeners\n```\n\n### Key Data Structures\n\n```javascript\nconst config = {\n  CANVAS_WIDTH: 800,\n  CANVAS_HEIGHT: 600,\n  PADDLE_WIDTH: 120,\n  PADDLE_HEIGHT: 16,\n  BALL_RADIUS: 6,\n  BALL_SPEED: 6,\n  CELL_BASE_SIZE: 48,\n  DIVISION_INTERVAL: 3000, // ms\n  DIVISION_CHANCE: 0.15,\n  HIT_DAMAGE: 35,\n  MAX_CELLS: 150\n};\n\nconst state = {\n  screen: 'title', // 'title' | 'playing' | 'paused' | 'gameover' | 'victory'\n  level: 1,\n  lives: 3,\n  score: 0,\n  cells: [],\n  particles: [],\n  paddle: { x, y, width, height, targetX, tilt },\n  ball: { x, y, vx, vy, docked, trail: [] },\n  lastTime: 0,\n  deltaTime: 0,\n  speedrunTime: 0\n};\n```\n\n### Collision Detection\n- Ball-Paddle: AABB with circle, reflect based on hit position\n- Ball-Cell: Circle-circle intersection, damage cell, reflect ball\n- Ball-Wall: Simple bounds checking\n\n### Performance Targets\n- 60 FPS on modern browsers\n- Efficient particle pooling (reuse particle objects)\n- Only render visible cells\n- Batch similar draw operations\n\n---\n\n## 7. Sound Design (Web Audio API)\n\n- **Paddle hit:** Soft \"thwack\" — low frequency blip (150Hz, 50ms)\n- **Cell hit:** Satisfying \"pop\" — mid frequency burst (400Hz, 80ms)\n- **Cell destroy:** Deeper pop with slight reverb (300Hz, 100ms)\n- **Division:** Subtle \"分裂\" (split) whisper-like tone (200Hz, 150ms, quiet)\n- **Life lost:** Low ominous drone (100Hz, 300ms)\n- **Level complete:** Ascending chime sequence (C-E-G arpeggio)\n- **Game over:** Descending chromatic fall (400Hz→100Hz, 500ms)\n\n---\n\n## 8. Level Design\n\n### Level 1: \"Initial Contact\"\n- 5 cells, slow multiplication\n- Introduction to mechanics\n- Cells spawn in single cluster\n\n### Level 2: \"Early Spread\"\n- 8 cells, slightly faster\n- Cells spread to two clusters\n\n### Level 3: \"Containment Breach\"\n- 12 cells, moderate speed\n- Three clusters, some drift toward bottom\n\n### Level 4: \"Critical Mass\"\n- 16 cells, fast multiplication\n- Clusters merge, chaotic spread\n\n### Level 5: \"Final Stand\"\n- 20 cells, maximum speed\n- Full-screen chaos, highest difficulty\n\n---\n\n## 9. Special Features (Implemented)\n\n1. **Responsive Canvas** - Scales to fit mobile screens while maintaining aspect ratio\n2. **Emoji Favicon** - 🧬 microscope emoji in HTML head\n3. **Vibrant Color Palette** - Bioluminescent blues, greens, oranges, and reds\n4. **LocalStorage High Score** - Persists across browser refreshes\n5. **Web Audio Sound Effects** - All game events have audio feedback\n6. **Speedrun Timer** - Tracks total playtime across all levels\n\n---\n\n*This specification defines a complete, polished game experience that balances classic Breakout satisfaction with emergent organic chaos. The living cell metaphor creates natural tension as the player races against exponential growth.*", "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n    <title>Cell Breaker - Biological Breakout</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧬</text></svg>\">\n    <link href=\"https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap\" rel=\"stylesheet\">\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n\n        body {\n            background: #050508;\n            min-height: 100vh;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            font-family: 'Exo 2', sans-serif;\n            overflow: hidden;\n            touch-action: none;\n        }\n\n        #gameContainer {\n            position: relative;\n            max-width: 100vw;\n            max-height: 100vh;\n        }\n\n        #gameCanvas {\n            display: block;\n            border-radius: 4px;\n            box-shadow: \n                0 0 60px rgba(0, 229, 255, 0.15),\n                0 0 120px rgba(0, 229, 255, 0.05),\n                inset 0 0 60px rgba(0, 0, 0, 0.5);\n        }\n\n        #instructions {\n            position: absolute;\n            bottom: -40px;\n            left: 50%;\n            transform: translateX(-50%);\n            color: #4a6a72;\n            font-size: 12px;\n            font-family: 'Exo 2', sans-serif;\n            text-align: center;\n            white-space: nowrap;\n        }\n\n        @media (max-width: 820px) {\n            #gameContainer {\n                width: 100vw;\n                height: 75vw;\n                max-height: 100vh;\n            }\n            \n            #gameCanvas {\n                width: 100%;\n                height: 100%;\n            }\n            \n            #instructions {\n                display: none;\n            }\n        }\n    </style>\n</head>\n<body>\n    <div id=\"gameContainer\">\n        <canvas id=\"gameCanvas\"></canvas>\n        <div id=\"instructions\">Mouse/Arrows: Move Paddle | Click: Launch Ball | P/Esc: Pause | R: Restart</div>\n    </div>\n\n    <script>\n        // ============================================\n        // CONFIGURATION\n        // ============================================\n        const config = {\n            CANVAS_WIDTH: 800,\n            CANVAS_HEIGHT: 600,\n            PADDLE_WIDTH: 120,\n            PADDLE_HEIGHT: 16,\n            BALL_RADIUS: 6,\n            BALL_SPEED: 6,\n            CELL_BASE_SIZE: 48,\n            DIVISION_INTERVAL: 3000,\n            DIVISION_CHANCE: 0.15,\n            HIT_DAMAGE: 35,\n            MAX_CELLS: 150,\n            HUD_HEIGHT: 48,\n            DANGER_ZONE_Y: 420\n        };\n\n        const colors = {\n            background: '#0a0f14',\n            paddle: '#e0f7fa',\n            ballCore: '#00e5ff',\n            ballGlow: '#76ff03',\n            cellHealthy: '#4fc3f7',\n            cellMature: '#29b6f6',\n            cellCritical: '#ff7043',\n            cellDividing: '#ffab91',\n            uiText: '#b2ebf2',\n            danger: '#ff1744',\n            success: '#76ff03'\n        };\n\n        // ============================================\n        // GAME STATE\n        // ============================================\n        const state = {\n            screen: 'title',\n            level: 1,\n            lives: 3,\n            score: 0,\n            highScore: parseInt(localStorage.getItem('cellBreakerHighScore')) || 0,\n            cells: [],\n            particles: [],\n            speedrunTime: 0,\n            lastDivisionCheck: 0,\n            levelStartTime: 0,\n            titleCells: []\n        };\n\n        const paddle = {\n            x: config.CANVAS_WIDTH / 2,\n            y: config.CANVAS_HEIGHT - 40,\n            width: config.PADDLE_WIDTH,\n            height: config.PADDLE_HEIGHT,\n            targetX: config.CANVAS_WIDTH / 2,\n            tilt: 0\n        };\n\n        const ball = {\n            x: config.CANVAS_WIDTH / 2,\n            y: config.CANVAS_HEIGHT - 60,\n            vx: 0,\n            vy: 0,\n            radius: config.BALL_RADIUS,\n            docked: true,\n            trail: []\n        };\n\n        // ============================================\n        // AUDIO SYSTEM (Web Audio API)\n        // ============================================\n        let audioCtx = null;\n\n        function initAudio() {\n            if (!audioCtx) {\n                audioCtx = new (window.AudioContext || window.webkitAudioContext)();\n            }\n        }\n\n        function playSound(type) {\n            if (!audioCtx) return;\n            \n            const now = audioCtx.currentTime;\n            const oscillator = audioCtx.createOscillator();\n            const gainNode = audioCtx.createGain();\n            \n            oscillator.connect(gainNode);\n            gainNode.connect(audioCtx.destination);\n            \n            switch(type) {\n                case 'paddleHit':\n                    oscillator.frequency.setValueAtTime(150, now);\n                    oscillator.type = 'sine';\n                    gainNode.gain.setValueAtTime(0.3, now);\n                    gainNode.gain.exponentialDecayTo = 0.01;\n                    gainNode.gain.setTargetAtTime(0.01, now + 0.05, 0.02);\n                    oscillator.start(now);\n                    oscillator.stop(now + 0.05);\n                    break;\n                    \n                case 'cellHit':\n                    oscillator.frequency.setValueAtTime(400, now);\n                    oscillator.type = 'sine';\n                    gainNode.gain.setValueAtTime(0.2, now);\n                    gainNode.gain.setTargetAtTime(0.01, now + 0.08, 0.03);\n                    oscillator.start(now);\n                    oscillator.stop(now + 0.1);\n                    break;\n                    \n                case 'cellDestroy':\n                    oscillator.frequency.setValueAtTime(300, now);\n                    oscillator.frequency.exponentialRampToValueAtTime(100, now + 0.15);\n                    oscillator.type = 'sine';\n                    gainNode.gain.setValueAtTime(0.25, now);\n                    gainNode.gain.setTargetAtTime(0.01, now + 0.1, 0.05);\n                    oscillator.start(now);\n                    oscillator.stop(now + 0.2);\n                    break;\n                    \n                case 'division':\n                    oscillator.frequency.setValueAtTime(200, now);\n                    oscillator.type = 'sine';\n                    gainNode.gain.setValueAtTime(0.08, now);\n                    gainNode.gain.setTargetAtTime(0.01, now + 0.15, 0.05);\n                    oscillator.start(now);\n                    oscillator.stop(now + 0.2);\n                    break;\n                    \n                case 'lifeLost':\n                    oscillator.frequency.setValueAtTime(100, now);\n                    oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.3);\n                    oscillator.type = 'sawtooth';\n                    gainNode.gain.setValueAtTime(0.2, now);\n                    gainNode.gain.setTargetAtTime(0.01, now + 0.2, 0.1);\n                    oscillator.start(now);\n                    oscillator.stop(now + 0.4);\n                    break;\n                    \n                case 'levelComplete':\n                    const notes = [262, 330, 392];\n                    notes.forEach((freq, i) => {\n                        const osc = audioCtx.createOscillator();\n                        const gain = audioCtx.createGain();\n                        osc.connect(gain);\n                        gain.connect(audioCtx.destination);\n                        osc.frequency.setValueAtTime(freq, now + i * 0.1);\n                        osc.type = 'sine';\n                        gain.gain.setValueAtTime(0.15, now + i * 0.1);\n                        gain.gain.setTargetAtTime(0.01, now + i * 0.1 + 0.15, 0.05);\n                        osc.start(now + i * 0.1);\n                        osc.stop(now + i * 0.1 + 0.3);\n                    });\n                    break;\n                    \n                case 'gameOver':\n                    oscillator.frequency.setValueAtTime(400, now);\n                    oscillator.frequency.exponentialRampToValueAtTime(100, now + 0.5);\n                    oscillator.type = 'sawtooth';\n                    gainNode.gain.setValueAtTime(0.2, now);\n                    gainNode.gain.setTargetAtTime(0.01, now + 0.3, 0.15);\n                    oscillator.start(now);\n                    oscillator.stop(now + 0.6);\n                    break;\n            }\n        }\n\n        // ============================================\n        // CELL CLASS\n        // ============================================\n        class Cell {\n            constructor(x, y, size = config.CELL_BASE_SIZE) {\n                this.x = x;\n                this.y = y;\n                this.size = size;\n                this.targetSize = size;\n                this.health = 100;\n                this.maxHealth = 100;\n                this.age = 0;\n                this.breathPhase = Math.random() * Math.PI * 2;\n                this.driftX = (Math.random() - 0.5) * 0.5;\n                this.driftY = (Math.random() - 0.5) * 0.3;\n                this.hitFlash = 0;\n                this.divisionAnimation = 0;\n                this.shakeX = 0;\n                this.shakeY = 0;\n            }\n\n            update(dt) {\n                this.age += dt;\n                this.breathPhase += dt * 0.003;\n                \n                // Smooth size transition\n                this.size += (this.targetSize - this.size) * 0.1;\n                \n                // Drift movement\n                this.x += this.driftX;\n                this.y += this.driftY;\n                \n                // Boundary constraints\n                if (this.x < this.size / 2) {\n                    this.x = this.size / 2;\n                    this.driftX *= -1;\n                }\n                if (this.x > config.CANVAS_WIDTH - this.size / 2) {\n                    this.x = config.CANVAS_WIDTH - this.size / 2;\n                    this.driftX *= -1;\n                }\n                if (this.y < config.HUD_HEIGHT + this.size / 2) {\n                    this.y = config.HUD_HEIGHT + this.size / 2;\n                    this.driftY *= -1;\n                }\n                if (this.y > config.DANGER_ZONE_Y - this.size / 2) {\n                    this.y = config.DANGER_ZONE_Y - this.size / 2;\n                    this.driftY *= -1;\n                }\n                \n                // Decay effects\n                this.hitFlash *= 0.9;\n                this.divisionAnimation *= 0.95;\n                this.shakeX *= 0.8;\n                this.shakeY *= 0.8;\n            }\n\n            render(ctx) {\n                const breathScale = 1 + Math.sin(this.breathPhase) * 0.05;\n                const renderSize = this.size * breathScale;\n                \n                const drawX = this.x + this.shakeX;\n                const drawY = this.y + this.shakeY;\n                \n                // Determine color based on health\n                let baseColor;\n                if (this.health > 60) {\n                    baseColor = colors.cellHealthy;\n                } else if (this.health > 30) {\n                    const t = (this.health - 30) / 30;\n                    baseColor = this.lerpColor(colors.cellCritical, colors.cellMature, t);\n                } else {\n                    baseColor = colors.cellCritical;\n                }\n                \n                // Glow effect\n                const gradient = ctx.createRadialGradient(\n                    drawX, drawY, 0,\n                    drawX, drawY, renderSize * 0.7\n                );\n                gradient.addColorStop(0, baseColor);\n                gradient.addColorStop(0.6, baseColor);\n                gradient.addColorStop(1, 'transparent');\n                \n                ctx.save();\n                ctx.globalAlpha = 0.3;\n                ctx.fillStyle = gradient;\n                ctx.beginPath();\n                ctx.arc(drawX, drawY, renderSize * 0.7, 0, Math.PI * 2);\n                ctx.fill();\n                ctx.restore();\n                \n                // Main cell body\n                ctx.save();\n                ctx.globalAlpha = 1;\n                \n                // Cell membrane\n                ctx.strokeStyle = baseColor;\n                ctx.lineWidth = 3;\n                ctx.beginPath();\n                ctx.arc(drawX, drawY, renderSize * 0.45, 0, Math.PI * 2);\n                ctx.stroke();\n                \n                // Inner fill\n                const innerGradient = ctx.createRadialGradient(\n                    drawX - renderSize * 0.1, drawY - renderSize * 0.1, 0,\n                    drawX, drawY, renderSize * 0.4\n                );\n                innerGradient.addColorStop(0, 'rgba(255,255,255,0.3)');\n                innerGradient.addColorStop(0.5, baseColor);\n                innerGradient.addColorStop(1, this.hexToRgba(baseColor, 0.8));\n                \n                ctx.fillStyle = innerGradient;\n                ctx.beginPath();\n                ctx.arc(drawX, drawY, renderSize * 0.4, 0, Math.PI * 2);\n                ctx.fill();\n                \n                // Hit flash overlay\n                if (this.hitFlash > 0.1) {\n                    ctx.globalAlpha = this.hitFlash;\n                    ctx.fillStyle = '#ffffff';\n                    ctx.beginPath();\n                    ctx.arc(drawX, drawY, renderSize * 0.4, 0, Math.PI * 2);\n                    ctx.fill();\n                }\n                \n                // Health bar (only show when damaged)\n                if (this.health < this.maxHealth) {\n                    const barWidth = renderSize * 0.6;\n                    const barHeight = 4;\n                    const barX = drawX - barWidth / 2;\n                    const barY = drawY - renderSize * 0.55;\n                    \n                    ctx.globalAlpha = 0.8;\n                    ctx.fillStyle = '#333';\n                    ctx.fillRect(barX, barY, barWidth, barHeight);\n                    \n                    const healthPercent = this.health / this.maxHealth;\n                    ctx.fillStyle = healthPercent > 0.3 ? colors.success : colors.danger;\n                    ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);\n                }\n                \n                ctx.restore();\n            }\n\n            hexToRgba(hex, alpha) {\n                const r = parseInt(hex.slice(1, 3), 16);\n                const g = parseInt(hex.slice(3, 5), 16);\n                const b = parseInt(hex.slice(5, 7), 16);\n                return `rgba(${r},${g},${b},${alpha})`;\n            }\n\n            lerpColor(a, b, t) {\n                const ar = parseInt(a.slice(1, 3), 16);\n                const ag = parseInt(a.slice(3, 5), 16);\n                const ab = parseInt(a.slice(5, 7), 16);\n                const br = parseInt(b.slice(1, 3), 16);\n                const bg = parseInt(b.slice(3, 5), 16);\n                const bb = parseInt(b.slice(5, 7), 16);\n                \n                const r = Math.round(ar + (br - ar) * t);\n                const g = Math.round(ag + (bg - ag) * t);\n                const bl = Math.round(ab + (bb - ab) * t);\n                \n                return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`;\n            }\n\n            takeDamage(amount) {\n                this.health -= amount;\n                this.hitFlash = 1;\n                this.shakeX = (Math.random() - 0.5) * 10;\n                this.shakeY = (Math.random() - 0.5) * 10;\n                return this.health <= 0;\n            }\n\n            canDivide() {\n                return this.age > 1000 && this.health > 50;\n            }\n        }\n\n        // ============================================\n        // PARTICLE CLASS\n        // ============================================\n        class Particle {\n            constructor(x, y, color) {\n                this.x = x;\n                this.y = y;\n                this.vx = (Math.random() - 0.5) * 8;\n                this.vy = (Math.random() - 0.5) * 8;\n                this.size = Math.random() * 6 + 2;\n                this.color = color;\n                this.life = 1;\n                this.decay = 0.02 + Math.random() * 0.02;\n            }\n\n            update() {\n                this.x += this.vx;\n                this.y += this.vy;\n                this.vx *= 0.95;\n                this.vy *= 0.95;\n                this.life -= this.decay;\n                this.size *= 0.97;\n            }\n\n            render(ctx) {\n                ctx.save();\n                ctx.globalAlpha = this.life;\n                ctx.fillStyle = this.color;\n                ctx.beginPath();\n                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);\n                ctx.fill();\n                ctx.restore();\n            }\n\n            isDead() {\n                return this.life <= 0;\n            }\n        }\n\n        // ============================================\n        // CANVAS SETUP\n        // ============================================\n        const canvas = document.getElementById('gameCanvas');\n        const ctx = canvas.getContext('2d');\n        canvas.width = config.CANVAS_WIDTH;\n        canvas.height = config.CANVAS_HEIGHT;\n\n        // ============================================\n        // INPUT HANDLING\n        // ============================================\n        let mouseX = config.CANVAS_WIDTH / 2;
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            mouseX = (e.clientX - rect.left) * scaleX;
+        });
+
+        canvas.addEventListener('click', () => {
+            initAudio();
+            handleClick();
+        });
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            initAudio();
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            mouseX = (e.touches[0].clientX - rect.left) * scaleX;
+            handleClick();
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            mouseX = (e.touches[0].clientX - rect.left) * scaleX;
+        });
+
+        const keys = {};
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
+                if (state.screen === 'playing') {
+                    state.screen = 'paused';
+                } else if (state.screen === 'paused') {
+                    state.screen = 'playing';
+                }
+            }
+            if ((e.key === 'r' || e.key === 'R') && (state.screen === 'gameover' || state.screen === 'victory')) {
+                resetGame();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        function handleClick() {
+            if (state.screen === 'title') {
+                startGame();
+            } else if (state.screen === 'playing' && ball.docked) {
+                launchBall();
+            } else if (state.screen === 'paused') {
+                state.screen = 'playing';
+            }
+        }
+
+        // ============================================
+        // GAME FUNCTIONS
+        // ============================================
+        function startGame() {
+            state.screen = 'playing';
+            state.level = 1;
+            state.lives = 3;
+            state.score = 0;
+            state.cells = [];
+            state.particles = [];
+            state.speedrunTime = 0;
+            resetLevel();
+        }
+
+        function resetGame() {
+            state.screen = 'title';
+            state.level = 1;
+            state.lives = 3;
+            state.score = 0;
+            state.cells = [];
+            state.particles = [];
+            state.speedrunTime = 0;
+            initTitleCells();
+        }
+
+        function resetLevel() {
+            state.cells = [];
+            state.particles = [];
+            state.lastDivisionCheck = performance.now();
+            state.levelStartTime = performance.now();
+
+            const levelConfigs = [
+                { count: 5, chance: 0.15 },
+                { count: 8, chance: 0.17 },
+                { count: 12, chance: 0.19 },
+                { count: 16, chance: 0.21 },
+                { count: 20, chance: 0.23 }
+            ];
+
+            const config = levelConfigs[state.level - 1];
+            state.divisionChance = config.chance;
+
+            // Spawn initial cells in upper 70% of screen
+            for (let i = 0; i < config.count; i++) {
+                const x = Math.random() * (config.CANVAS_WIDTH - 100) + 50;
+                const y = Math.random() * (config.DANGER_ZONE_Y - config.HUD_HEIGHT - 100) + config.HUD_HEIGHT + 50;
+                state.cells.push(new Cell(x, y));
+            }
+
+            // Reset ball
+            ball.docked = true;
+            ball.x = paddle.x;
+            ball.y = paddle.y - 20;
+            ball.vx = 0;
+            ball.vy = 0;
+            ball.trail = [];
+
+            // Reset paddle
+            paddle.x = config.CANVAS_WIDTH / 2;
+            paddle.targetX = paddle.x;
+        }
+
+        function launchBall() {
+            ball.docked = false;
+            const speed = config.BALL_SPEED + (state.level - 1) * 0.5;
+            const angle = -Math.PI / 3 + (Math.random() - 0.5) * 0.2;
+            ball.vx = Math.cos(angle) * speed;
+            ball.vy = Math.sin(angle) * speed;
+        }
+
+        function initTitleCells() {
+            state.titleCells = [];
+            for (let i = 0; i < 15; i++) {
+                const x = Math.random() * config.CANVAS_WIDTH;
+                const y = Math.random() * config.CANVAS_HEIGHT;
+                state.titleCells.push(new Cell(x, y));
+            }
+        }
+
+        function updatePaddle() {
+            // Keyboard input
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                paddle.targetX -= 12;
+            }
+            if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                paddle.targetX += 12;
+            }
+
+            // Mouse input
+            paddle.targetX = mouseX;
+
+            // Clamp target
+            paddle.targetX = Math.max(paddle.width / 2, Math.min(config.CANVAS_WIDTH - paddle.width / 2, paddle.targetX));
+
+            // Smooth movement
+            const prevX = paddle.x;
+            paddle.x += (paddle.targetX - paddle.x) * 0.15;
+
+            // Tilt based on movement
+            const movement = paddle.x - prevX;
+            paddle.tilt += (movement * 0.3 - paddle.tilt) * 0.2;
+            paddle.tilt = Math.max(-15, Math.min(15, paddle.tilt));
+
+            // Update ball position if docked
+            if (ball.docked) {
+                ball.x = paddle.x;
+                ball.y = paddle.y - 20;
+            }
+        }
+
+        function updateBall(dt) {
+            if (ball.docked) return;
+
+            // Store trail position
+            ball.trail.unshift({ x: ball.x, y: ball.y });
+            if (ball.trail.length > 8) ball.trail.pop();
+
+            // Move ball
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            // Wall collisions
+            if (ball.x - ball.radius < 0) {
+                ball.x = ball.radius;
+                ball.vx *= -1;
+            }
+            if (ball.x + ball.radius > config.CANVAS_WIDTH) {
+                ball.x = config.CANVAS_WIDTH - ball.radius;
+                ball.vx *= -1;
+            }
+            if (ball.y - ball.radius < config.HUD_HEIGHT) {
+                ball.y = config.HUD_HEIGHT + ball.radius;
+                ball.vy *= -1;
+            }
+
+            // Bottom - lose life
+            if (ball.y > config.CANVAS_HEIGHT) {
+                state.lives--;
+                playSound('lifeLost');
+                if (state.lives <= 0) {
+                    gameOver();
+                } else {
+                    ball.docked = true;
+                    ball.x = paddle.x;
+                    ball.y = paddle.y - 20;
+                    ball.trail = [];
+                }
+            }
+
+            // Paddle collision
+            if (ball.vy > 0) {
+                const paddleTop = paddle.y - paddle.height / 2;
+                const paddleLeft = paddle.x - paddle.width / 2;
+                const paddleRight = paddle.x + paddle.width / 2;
+
+                if (ball.y + ball.radius > paddleTop &&
+                    ball.y - ball.radius < paddle.y + paddle.height / 2 &&
+                    ball.x > paddleLeft &&
+                    ball.x < paddleRight) {
+
+                    ball.y = paddleTop - ball.radius;
+
+                    // Calculate reflection angle based on hit position
+                    const hitPos = (ball.x - paddle.x) / (paddle.width / 2);
+                    const maxAngle = Math.PI / 3;
+                    const angle = hitPos * maxAngle;
+
+                    const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+                    ball.vx = Math.sin(angle) * speed;
+                    ball.vy = -Math.cos(angle) * speed;
+
+                    playSound('paddleHit');
+                }
+            }
+
+            // Prevent stuck horizontal bounce
+            if (Math.abs(ball.vy) < 1) {
+                ball.vy = ball.vy > 0 ? 1 : -1;
+            }
+        }
+
+        function updateCells(dt, currentTime) {
+            // Update existing cells
+            state.cells.forEach(cell => cell.update(dt));
+
+            // Check for cell division
+            if (currentTime - state.lastDivisionCheck > config.DIVISION_INTERVAL) {
+                state.lastDivisionCheck = currentTime;
+
+                if (state.cells.length < config.MAX_CELLS) {
+                    state.cells.forEach(cell => {
+                        if (cell.canDivide() && Math.random() < state.divisionChance) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const dist = cell.size * 0.8;
+                            let newX = cell.x + Math.cos(angle) * dist;
+                            let newY = cell.y + Math.sin(angle) * dist;
+
+                            // Ensure within bounds
+                            newX = Math.max(50, Math.min(config.CANVAS_WIDTH - 50, newX));
+                            newY = Math.max(config.HUD_HEIGHT + 50, Math.min(config.DANGER_ZONE_Y - 50, newY));
+
+                            const newCell = new Cell(newX, newY, config.CELL_BASE_SIZE * 0.5);
+                            state.cells.push(newCell);
+                            playSound('division');
+
+                            cell.divisionAnimation = 1;
+                        }
+                    });
+                }
+            }
+
+            // Check for cells reaching danger zone
+            for (const cell of state.cells) {
+                if (cell.y > config.DANGER_ZONE_Y) {
+                    gameOver();
+                    return;
+                }
+            }
+
+            // Ball-cell collisions
+            if (!ball.docked) {
+                for (let i = state.cells.length - 1; i >= 0; i--) {
+                    const cell = state.cells[i];
+                    const dx = ball.x - cell.x;
+                    const dy = ball.y - cell.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const minDist = ball.radius + cell.size * 0.4;
+
+                    if (dist < minDist) {
+                        // Reflect ball
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+                        const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+
+                        // Add slight randomization to prevent stuck loops
+                        const randAngle = (Math.random() - 0.5) * 0.1;
+                        const cos = Math.cos(randAngle);
+                        const sin = Math.sin(randAngle);
+                        const newVx = (ball.vx * cos - ball.vy * sin) * (nx * ball.vx + ny * ball.vy < 0 ? 1 : -1);
+                        const newVy = (ball.vx * sin + ball.vy * cos) * (nx * ball.vx + ny * ball.vy < 0 ? 1 : -1);
+
+                        ball.vx = nx * speed;
+                        ball.vy = ny * speed;
+
+                        // Separate ball from cell
+                        ball.x = cell.x + nx * minDist;
+                        ball.y = cell.y + ny * minDist;
+
+                        // Damage cell
+                        const destroyed = cell.takeDamage(config.HIT_DAMAGE);
+                        playSound('cellHit');
+
+                        if (destroyed) {
+                            state.score += 10;
+                            playSound('cellDestroy');
+
+                            // Spawn particles
+                            for (let j = 0; j < 8; j++) {
+                                state.particles.push(new Particle(cell.x, cell.y, colors.cellHealthy));
+                            }
+
+                            state.cells.splice(i, 1);
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            // Check for level complete
+            if (state.cells.length === 0) {
+                levelComplete();
+            }
+        }
+
+        function updateParticles() {
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                state.particles[i].update();
+                if (state.particles[i].isDead()) {
+                    state.particles.splice(i, 1);
+                }
+            }
+        }
+
+        function levelComplete() {
+            state.level++;
+            playSound('levelComplete');
+
+            if (state.level > 5) {
+                victory();
+            } else {
+                state.screen = 'levelcomplete';
+                setTimeout(() => {
+                    if (state.screen === 'levelcomplete') {
+                        state.screen = 'playing';
+                        resetLevel();
+                    }
+                }, 2000);
+            }
+        }
+
+        function gameOver() {
+            state.screen = 'gameover';
+            playSound('gameOver');
+
+            if (state.score > state.highScore) {
+                state.highScore = state.score;
+                localStorage.setItem('cellBreakerHighScore', state.highScore);
+            }
+        }
+
+        function victory() {
+            state.screen = 'victory';
+            playSound('levelComplete');
+            playSound('levelComplete');
+
+            if (state.score > state.highScore) {
+                state.highScore = state.score;
+                localStorage.setItem('cellBreakerHighScore', state.highScore);
+            }
+        }
+
+        // ============================================
+        // RENDERING
+        // ============================================
+        function render() {
+            // Clear canvas
+            ctx.fillStyle = colors.background;
+            ctx.fillRect(0, 0, config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
+
+            // Background noise texture
+            renderBackgroundNoise();
+
+            if (state.screen === 'title') {
+                renderTitleScreen();
+            } else if (state.screen === 'playing' || state.screen === 'paused') {
+                renderGame();
+                if (state.screen === 'paused') {
+                    renderPauseOverlay();
+                }
+            } else if (state.screen === 'levelcomplete') {
+                renderGame();
+                renderLevelCompleteOverlay();
+            } else if (state.screen === 'gameover') {
+                renderGame();
+                renderGameOverOverlay();
+            } else if (state.screen === 'victory') {
+                renderGame();
+                renderVictoryOverlay();
+            }
+        }
+
+        function renderBackgroundNoise() {
+            ctx.save();
+            ctx.globalAlpha = 0.03;
+            for (let i = 0; i < 50; i++) {
+                const x = Math.random() * config.CANVAS_WIDTH;
+                const y = Math.random() * config.CANVAS_HEIGHT;
+                const size = Math.random() * 2 + 1;
+                ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#000000';
+                ctx.fillRect(x, y, size, size);
+            }
+            ctx.restore();
+        }
+
+        function renderGame() {
+            // HUD background
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, config.CANVAS_WIDTH, config.HUD_HEIGHT);
+
+            // Danger zone indicator
+            const gradient = ctx.createLinearGradient(0, config.DANGER_ZONE_Y, 0, config.CANVAS_HEIGHT);
+            gradient.addColorStop(0, 'rgba(255, 23, 68, 0)');
+            gradient.addColorStop(0.3, 'rgba(255, 23, 68, 0.1)');
+            gradient.addColorStop(1, 'rgba(255, 23, 68, 0.2)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, config.DANGER_ZONE_Y, config.CANVAS_WIDTH, config.CANVAS_HEIGHT - config.DANGER_ZONE_Y);
+
+            // Danger line
+            ctx.strokeStyle = colors.danger;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.moveTo(0, config.DANGER_ZONE_Y);
+            ctx.lineTo(config.CANVAS_WIDTH, config.DANGER_ZONE_Y);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Render cells
+            state.cells.forEach(cell => cell.render(ctx));
+
+            // Render particles
+            state.particles.forEach(particle => particle.render(ctx));
+
+            // Render ball trail
+            ball.trail.forEach((pos, i) => {
+                const alpha = (1 - i / ball.trail.length) * 0.5;
+                const size = ball.radius * (1 - i / ball.trail.length);
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = colors.ballGlow;
+                ctx.beginPath();
+                ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // Render ball
+            const ballGradient = ctx.createRadialGradient(ball.x, ball.y, 0, ball.x, ball.y, ball.radius * 2);
+            ballGradient.addColorStop(0, colors.ballCore);
+            ballGradient.addColorStop(0.5, colors.ballGlow);
+            ballGradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = ballGradient;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius * 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = colors.ballCore;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Ball docked indicator
+            if (ball.docked) {
+                const pulseSize = 20 + Math.sin(performance.now() * 0.005) * 5;
+                ctx.save();
+                ctx.strokeStyle = colors.ballCore;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.5 + Math.sin(performance.now() * 0.005) * 0.3;
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, pulseSize, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            // Render paddle
+            ctx.save();
+            ctx.translate(paddle.x, paddle.y);
+            ctx.rotate(paddle.tilt * Math.PI / 180);
+
+            // Paddle glow
+            ctx.shadowColor = colors.paddle;
+            ctx.shadowBlur = 20;
+
+            // Paddle body
+            ctx.fillStyle = colors.paddle;
+            ctx.beginPath();
+            ctx.roundRect(-paddle.width / 2, -paddle.height / 2, paddle.width, paddle.height, 8);
+            ctx.fill();
+
+            ctx.restore();
+
+            // Render HUD
+            renderHUD();
+        }
+
+        function renderHUD() {
+            ctx.font = '700 18px Orbitron';
+            ctx.textBaseline = 'middle';
+
+            // Lives
+            ctx.fillStyle = colors.uiText;
+            ctx.textAlign = 'left';
+            ctx.fillText('LIVES', 16, 16);
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.arc(70 + i * 22, 16, 8, 0, Math.PI * 2);
+                if (i < state.lives) {
+                    ctx.fillStyle = colors.cellHealthy;
+                    ctx.fill();
+                } else {
+                    ctx.strokeStyle = colors.cellHealthy;
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            }
+
+            // Level
+            ctx.fillStyle = colors.uiText;
+            ctx.textAlign = 'center';
+            ctx.fillText(`LEVEL ${state.level}`, config.CANVAS_WIDTH / 2, 16);
+
+            // Score
+            ctx.textAlign = 'right';
+            ctx.fillText(`SCORE: ${state.score.toString().padStart(6, '0')}`, config.CANVAS_WIDTH - 16, 16);
+
+            // Cells remaining
+            const cellCount = state.cells.length;
+            let cellColor = colors.success;
+            if (cellCount > 10) cellColor = '#ffeb3b';
+            if (cellCount > 20) cellColor = colors.danger;
+
+            ctx.font = '600 14px Exo 2';
+            ctx.fillStyle = cellColor;
+            ctx.fillText(`CELLS: ${cellCount}`, config.CANVAS_WIDTH - 16, 36);
+
+            // Speedrun timer
+            const minutes = Math.floor(state.speedrunTime / 60000);
+            const seconds = Math.floor((state.speedrunTime % 60000) / 1000);
+            const tenths = Math.floor((state.speedrunTime % 1000) / 100);
+            const timeStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${tenths}`;
+
+            ctx.font = '400 12px Orbitron';
+            ctx.fillStyle = colors.uiText;
+            ctx.globalAlpha = 0.7;
+            ctx.fillText(timeStr, config.CANVAS_WIDTH - 16, config.HUD_HEIGHT + 16);
+            ctx.globalAlpha = 1;
+        }
+
+        function renderTitleScreen() {
+            // Animated title cells
+            state.titleCells.forEach(cell => {
+                cell.update(16);
+                cell.render(ctx);
+            });
+
+            // Title
+            ctx.font = '900 64px Orbitron';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Glow effect
+            ctx.shadowColor = colors.ballCore;
+            ctx.shadowBlur = 30;
+            ctx.fillStyle = colors.ballCore;
+            ctx.fillText('CELL BREAKER', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 - 60);
+            ctx.shadowBlur = 0;
+
+            // Subtitle
+            ctx.font = '300 18px Exo 2';
+            ctx.fillStyle = colors.uiText;
+            ctx.fillText('Biological Breakout Experience', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 - 10);
+
+            // Click to begin
+            const pulse = 0.7 + Math.sin(performance.now() * 0.003) * 0.3;
+            ctx.globalAlpha = pulse;
+            ctx.font = '600 24px Orbitron';
+            ctx.fillStyle = colors.paddle;
+            ctx.fillText('CLICK TO BEGIN', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 + 80);
+            ctx.globalAlpha = 1;
+
+            // High score
+            if (state.highScore > 0) {
+                ctx.font = '400 16px Exo 2';
+                ctx.fillStyle = colors.success;
+                ctx.fillText(`HIGH SCORE: ${state.highScore}`, config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 + 140);
+            }
+
+            // Controls hint
+            ctx.font = '300 12px Exo 2';
+            ctx.fillStyle = colors.uiText;
+            ctx.globalAlpha = 0.6;
+            ctx.fillText('Mouse/Arrows: Move | Click: Launch | P: Pause | R: Restart', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT - 40);
+            ctx.globalAlpha = 1;
+        }
+
+        function renderPauseOverlay() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
+
+            ctx.font = '900 48px Orbitron';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = colors.uiText;
+            ctx.fillText('PAUSED', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2);
+
+            ctx.font = '400 18px Exo 2';
+            ctx.fillText('Press P, Escape, or Click to Resume', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 + 40);
+        }
+
+        function renderLevelCompleteOverlay() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.fillRect(0, 0, config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
+
+            ctx.font = '900 36px Orbitron';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = colors.success;
+            ctx.shadowBlur = 20;
+            ctx.fillStyle = colors.success;
+            ctx.fillText('INFECTION CLEARED', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 - 20);
+            ctx.shadowBlur = 0;
+
+            ctx.font = '400 20px Exo 2';
+            ctx.fillStyle = colors.uiText;
+            ctx.fillText(`Preparing Level ${state.level}...`, config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 + 30);
+        }
+
+        function renderGameOverOverlay() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillRect(0, 0, config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
+
+            ctx.font = '900 42px Orbitron';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = colors.danger;
+            ctx.shadowBlur = 30;
+            ctx.fillStyle = colors.danger;
+            ctx.fillText('CONTAINMENT FAILURE', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 - 60);
+            ctx.shadowBlur = 0;
+
+            ctx.font = '400 24px Exo 2';
+            ctx.fillStyle = colors.uiText;
+            ctx.fillText(`Final Score: ${state.score}`, config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2);
+
+            ctx.font = '300 16px Exo 2';
+            ctx.fillText(`Reached Level ${state.level}`, config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 + 30);
+
+            if (state.score >= state.highScore && state.score > 0) {
+                ctx.font = '600 18px Orbitron';
+                ctx.fillStyle = colors.success;
+                ctx.fillText('NEW HIGH SCORE!', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 + 70);
+            }
+
+            const pulse = 0.7 + Math.sin(performance.now() * 0.003) * 0.3;
+            ctx.globalAlpha = pulse;
+            ctx.font = '400 16px Exo 2';
+            ctx.fillStyle = colors.paddle;
+            ctx.fillText('Press R to Restart', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 + 110);
+            ctx.globalAlpha = 1;
+        }
+
+        function renderVictoryOverlay() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillRect(0, 0, config.CANVAS_WIDTH, config.CANVAS_HEIGHT);
+
+            ctx.font = '900 48px Orbitron';
+            ctx.textAlign = 'center';
+            ctx.shadowColor = colors.success;
+            ctx.shadowBlur = 30;
+            ctx.fillStyle = colors.success;
+            ctx.fillText('INFECTION ELIMINATED', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 - 80);
+            ctx.shadowBlur = 0;
+
+            ctx.font = '600 24px Exo 2';
+            ctx.fillStyle = colors.uiText;
+            ctx.fillText('All 5 Levels Cleared!', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 - 30);
+
+            ctx.font = '400 20px Exo 2';
+            ctx.fillText(`Final Score: ${state.score}`, config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 + 10);
+
+            // Time display
+            const totalSeconds = Math.floor(state.speedrunTime / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            ctx.fillText(`Total Time: ${minutes}:${seconds.toString().padStart(2, '0')}`, config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 + 40);
+
+            if (state.score >= state.highScore) {
+                ctx.font = '600 18px Orbitron';
+                ctx.fillStyle = colors.success;
+                ctx.fillText('NEW HIGH SCORE!', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 + 80);
+            }
+
+            const pulse = 0.7 + Math.sin(performance.now() * 0.003) * 0.3;
+            ctx.globalAlpha = pulse;
+            ctx.font = '400 16px Exo 2';
+            ctx.fillStyle = colors.paddle;
+            ctx.fillText('Press R to Play Again', config.CANVAS_WIDTH / 2, config.CANVAS_HEIGHT / 2 + 120);
+            ctx.globalAlpha = 1;
+        }
+
+        // ============================================
+        // GAME LOOP
+        // ============================================
+        let lastTime = 0;
+
+        function gameLoop(currentTime) {
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            // Update speedrun timer
+            if (state.screen === 'playing') {
+                state.speedrunTime += deltaTime;
+            }
+
+            // Update game state
+            if (state.screen === 'playing') {
+                updatePaddle();
+                updateBall(deltaTime);
+                updateCells(deltaTime, currentTime);
+                updateParticles();
+            } else if (state.screen === 'title') {
+                if (state.titleCells.length === 0) {
+                    initTitleCells();
+                }
+            } else if (state.screen === 'gameover' || state.screen === 'victory') {
+                // Slow background animation
+                state.titleCells.forEach(cell => cell.update(deltaTime));
+            }
+
+            // Render
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize and start
+        initTitleCells();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
