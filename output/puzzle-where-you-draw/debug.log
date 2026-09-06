@@ -1,0 +1,572 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 29807 (char 29806)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n    <title>CHROMA CASCADE</title>\n    <link href=\"https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Space+Mono&display=swap\" rel=\"stylesheet\">\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>\">\n    <style>\n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        \n        body {\n            background: #0A0A12;\n            overflow: hidden;\n            font-family: 'Rajdhani', sans-serif;\n            user-select: none;\n            -webkit-user-select: none;\n            touch-action: none;\n        }\n        \n        #gameCanvas {\n            display: block;\n            position: absolute;\n            top: 50%;\n            left: 50%;\n            transform: translate(-50%, -50%);\n            touch-action: none;\n        }\n        \n        .overlay {\n            position: fixed;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            display: flex;\n            flex-direction: column;\n            justify-content: center;\n            align-items: center;\n            background: rgba(10, 10, 18, 0.95);\n            z-index: 100;\n            transition: opacity 0.5s ease;\n        }\n        \n        .overlay.hidden {\n            opacity: 0;\n            pointer-events: none;\n        }\n        \n        .title {\n            font-family: 'Rajdhani', sans-serif;\n            font-size: clamp(36px, 10vw, 72px);\n            font-weight: 700;\n            color: #00F0FF;\n            text-shadow: 0 0 30px rgba(0, 240, 255, 0.5), 0 0 60px rgba(0, 240, 255, 0.3);\n            letter-spacing: clamp(2px, 1vw, 8px);\n            margin-bottom: 20px;\n            text-align: center;\n        }\n        \n        .subtitle {\n            font-size: clamp(16px, 3vw, 24px);\n            color: rgba(255, 255, 255, 0.6);\n            margin-bottom: 40px;\n            letter-spacing: clamp(2px, 0.5vw, 4px);\n            text-align: center;\n        }\n        \n        .game-btn {\n            font-family: 'Rajdhani', sans-serif;\n            font-size: clamp(18px, 3vw, 28px);\n            font-weight: 700;\n            color: #00F0FF;\n            background: transparent;\n            border: 3px solid #00F0FF;\n            padding: clamp(10px, 2vw, 15px) clamp(30px, 6vw, 60px);\n            cursor: pointer;\n            letter-spacing: clamp(2px, 0.5vw, 4px);\n            transition: all 0.2s ease;\n            text-transform: uppercase;\n        }\n        \n        .game-btn:hover {\n            background: #00F0FF;\n            color: #0A0A12;\n            box-shadow: 0 0 30px rgba(0, 240, 255, 0.5);\n        }\n        \n        .stats {\n            margin-top: 30px;\n            text-align: center;\n        }\n        \n        .stats p {\n            font-size: clamp(16px, 3vw, 24px);\n            margin: 10px 0;\n            color: rgba(255, 255, 255, 0.8);\n        }\n        \n        .stats span {\n            color: #00F0FF;\n            font-family: 'Space Mono', monospace;\n        }\n        \n        .high-score {\n            margin-top: 20px;\n            color: #FFD700;\n            font-size: clamp(14px, 2vw, 18px);\n        }\n        \n        .controls-hint {\n            position: fixed;\n            bottom: 20px;\n            left: 50%;\n            transform: translateX(-50%);\n            color: rgba(255, 255, 255, 0.3);\n            font-size: clamp(10px, 2vw, 14px);\n            letter-spacing: 2px;\n            text-align: center;\n            padding: 0 10px;\n        }\n        \n        .speedrun-timer {\n            position: fixed;\n            top: 80px;\n            left: 50%;\n            transform: translateX(-50%);\n            font-family: 'Space Mono', monospace;\n            font-size: 14px;\n            color: rgba(255, 215, 0, 0.7);\n            z-index: 50;\n            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);\n        }\n    </style>\n</head>\n<body>\n    <canvas id=\"gameCanvas\"></canvas>\n    \n    <div class=\"speedrun-timer\" id=\"speedrunTimer\">SPEEDRUN: 00:00</div>\n    \n    <div id=\"startOverlay\" class=\"overlay\">\n        <h1 class=\"title\">CHROMA CASCADE</h1>\n        <p class=\"subtitle\">Draw paths. Sort the cascade.</p>\n        <button class=\"game-btn\" id=\"startBtn\">INITIATE</button>\n        <p class=\"high-score\" id=\"highScoreDisplay\"></p>\n        <p class=\"controls-hint\">LEFT DRAG: DRAW | RIGHT DRAG: ERASE | SHIFT: SNAP TO 45°</p>\n    </div>\n    \n    <div id=\"gameOverOverlay\" class=\"overlay hidden\">\n        <h1 class=\"title\" id=\"gameOverTitle\">SYSTEM FAILURE</h1>\n        <div class=\"stats\">\n            <p>Accuracy: <span id=\"finalAccuracy\">0%</span></p>\n            <p>Blocks Sorted: <span id=\"finalSorted\">0</span> / <span id=\"finalTotal\">0</span></p>\n            <p class=\"high-score\" id=\"finalHighScore\"></p>\n        </div>\n        <button class=\"game-btn\" id=\"retryBtn\" style=\"margin-top: 40px;\">RETRY</button>\n    </div>\n\n    <script>\n    // ============================================================\n    // AUDIO MANAGER - Web Audio API Sound Effects\n    // ============================================================\n    class AudioManager {\n        constructor() {\n            this.ctx = null;\n            this.initialized = false;\n            this.masterVolume = 0.3;\n        }\n\n        init() {\n            if (this.initialized) return;\n            try {\n                this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n                this.initialized = true;\n            } catch (e) {\n                console.warn('Web Audio not supported');\n            }\n        }\n\n        resume() {\n            if (this.ctx && this.ctx.state === 'suspended') {\n                this.ctx.resume();\n            }\n        }\n\n        playTone(frequency, duration, type = 'sine', volume = 0.3, decay = true) {\n            if (!this.ctx) return;\n            const osc = this.ctx.createOscillator();\n            const gain = this.ctx.createGain();\n            osc.type = type;\n            osc.frequency.value = frequency;\n            gain.gain.setValueAtTime(volume * this.masterVolume, this.ctx.currentTime);\n            if (decay) {\n                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);\n            }\n            osc.connect(gain);\n            gain.connect(this.ctx.destination);\n            osc.start();\n            osc.stop(this.ctx.currentTime + duration);\n        }\n\n        playNoise(duration, volume = 0.2) {\n            if (!this.ctx) return;\n            const bufferSize = this.ctx.sampleRate * duration;\n            const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);\n            const data = buffer.getChannelData(0);\n            for (let i = 0; i < bufferSize; i++) {\n                data[i] = Math.random() * 2 - 1;\n            }\n            const source = this.ctx.createBufferSource();\n            const gain = this.ctx.createGain();\n            const filter = this.ctx.createBiquadFilter();\n            filter.type = 'highpass';\n            filter.frequency.value = 1000;\n            source.buffer = buffer;\n            gain.gain.setValueAtTime(volume * this.masterVolume, this.ctx.currentTime);\n            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);\n            source.connect(filter);\n            filter.connect(gain);\n            gain.connect(this.ctx.destination);\n            source.start();\n        }\n\n        playDraw(speed) {\n            const freq = 60 + Math.min(speed * 0.3, 40);\n            this.playTone(freq, 0.03, 'sine', 0.08);\n        }\n\n        playFinalize() {\n            this.playNoise(0.04, 0.1);\n            this.playTone(600, 0.05, 'square', 0.08);\n            setTimeout(() => this.playTone(800, 0.03, 'sine', 0.05), 20);\n        }\n\n        playBounce(size) {\n            const freq = 350 - (48 - size) * 4;\n            this.playTone(freq, 0.08, 'triangle', 0.12);\n        }\n\n        playSuccess() {\n            this.playTone(523, 0.12, 'sine', 0.2);\n            setTimeout(() => this.playTone(784, 0.18, 'sine', 0.2), 80);\n            setTimeout(() => this.playTone(1047, 0.15, 'sine', 0.15), 160);\n        }\n\n        playError() {\n            this.playTone(120, 0.25, 'sawtooth', 0.15);\n            this.playTone(125, 0.25, 'sawtooth', 0.15);\n        }\n\n        playCombo() {\n            this.playTone(880, 0.1, 'sine', 0.15);\n            setTimeout(() => this.playTone(1100, 0.15, 'sine', 0.12), 50);\n        }\n\n        playGameOver() {\n            this.playTone(400, 0.3, 'sawtooth', 0.2);\n            setTimeout(() => this.playTone(300, 0.3, 'sawtooth', 0.2), 200);\n            setTimeout(() => this.playTone(200, 0.5, 'sawtooth', 0.15), 400);\n        }\n\n        playVictory() {\n            this.playTone(523, 0.15, 'sine', 0.2);\n            setTimeout(() => this.playTone(659, 0.15, 'sine', 0.2), 150);\n            setTimeout(() => this.playTone(784, 0.15, 'sine', 0.2), 300);\n            setTimeout(() => this.playTone(1047, 0.4, 'sine', 0.25), 450);\n        }\n    }\n\n    // ============================================================\n    // INPUT MANAGER - Mouse and Touch Support\n    // ============================================================\n    class InputManager {\n        constructor(canvas, game) {\n            this.canvas = canvas;\n            this.game = game;\n            this.isDrawing = false;\n            this.isErasing = false;\n            this.snapMode = false;\n            this.currentLine = [];\n            this.lastPos = null;\n            this.drawSpeed = 0;\n            this.activePointerId = null;\n            \n            this.setupListeners();\n        }\n\n        getPos(e) {\n            const rect = this.canvas.getBoundingClientRect();\n            const scaleX = this.canvas.width / rect.width;\n            const scaleY = this.canvas.height / rect.height;\n            return {\n                x: (e.clientX - rect.left) * scaleX,\n                y: (e.clientY - rect.top) * scaleY\n            };\n        }\n\n        setupListeners() {\n            this.canvas.addEventListener('pointerdown', (e) => this.onPointerDown(e));\n            this.canvas.addEventListener('pointermove', (e) => this.onPointerMove(e));\n            this.canvas.addEventListener('pointerup', (e) => this.onPointerUp(e));\n            this.canvas.addEventListener('pointercancel', (e) => this.onPointerUp(e));\n            this.canvas.addEventListener('pointerleave', (e) => this.onPointerUp(e));\n            this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());\n            \n            window.addEventListener('keydown', (e) => {\n                if (e.key === 'Shift') this.snapMode = true;\n            });\n            window.addEventListener('keyup', (e) => {\n                if (e.key === 'Shift') this.snapMode = false;\n            });\n        }\n\n        onPointerDown(e) {\n            e.preventDefault();\n            this.resumeAudio();\n            \n            if (this.activePointerId !== null) return;\n            this.activePointerId = e.pointerId;\n            \n            const pos = this.getPos(e);\n            this.lastPos = pos;\n            \n            const drawAreaHeight = this.canvas.height * 0.8;\n            \n            if (e.button === 2 || (e.pointerType === 'touch' && e.isPrimary === false)) {\n                this.isErasing = true;\n                this.isDrawing = false;\n                this.game.eraseNear(pos);\n            } else if (pos.y < drawAreaHeight) {\n                this.isDrawing = true;\n                this.isErasing = false;\n                this.currentLine = [pos];\n            }\n        }\n\n        onPointerMove(e) {\n            if (this.activePointerId !== e.pointerId) return;\n            e.preventDefault();\n            \n            const pos = this.getPos(e);\n            \n            if (this.lastPos) {\n                const dx = pos.x - this.lastPos.x;\n                const dy = pos.y - this.lastPos.y;\n                this.drawSpeed = Math.sqrt(dx * dx + dy * dy);\n            }\n            \n            const drawAreaHeight = this.canvas.height * 0.8;\n            \n            if (this.isDrawing && pos.y < drawAreaHeight) {\n                const dx = pos.x - this.lastPos.x;\n                const dy = pos.y - this.lastPos.y;\n                const segmentLength = Math.sqrt(dx * dx + dy * dy);\n                \n                if (segmentLength >= 8) {\n                    let endX = pos.x;\n                    let endY = pos.y;\n                    \n                    if (this.snapMode) {\n                        const angle = Math.atan2(dy, dx);\n                        const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);\n                        const len = segmentLength;\n                        endX = this.lastPos.x + Math.cos(snapAngle) * len;\n                        endY = this.lastPos.y + Math.sin(snapAngle) * len;\n                    }\n                    \n                    let totalLength = 0;\n                    for (let i = 1; i < this.currentLine.length; i++) {\n                        const p1 = this.currentLine[i - 1];\n                        const p2 = this.currentLine[i];\n                        totalLength += Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));\n                    }\n                    \n                    const segLength = Math.sqrt(\n                        Math.pow(endX - this.lastPos.x, 2) + \n                        Math.pow(endY - this.lastPos.y, 2)\n                    );\n                    \n                    if (totalLength + segLength <= 400) {\n                        const newPoint = { x: endX, y: endY };\n                        this.currentLine.push(newPoint);\n                        this.game.onDrawSegment(this.lastPos, newPoint, this.drawSpeed);\n                        this.lastPos = newPoint;\n                    } else {\n                        this.finalizeLine();\n                    }\n                }\n            } else if (this.isErasing) {\n                this.game.eraseNear(pos);\n            }\n        }\n\n        onPointerUp(e) {\n            if (this.activePointerId !== e.pointerId) return;\n            this.activePointerId = null;\n            \n            if (this.isDrawing && this.currentLine.length > 1) {\n                this.finalizeLine();\n            }\n            \n            this.isDrawing = false;\n            this.isErasing = false;\n            this.currentLine = [];\n            this.lastPos = null;\n        }\n\n        finalizeLine() {\n            if (this.currentLine.length > 1) {\n                this.game.addLine(this.currentLine);\n            }\n        }\n\n        resumeAudio() {\n            if (this.game.audio.ctx && this.game.audio.ctx.state === 'suspended') {\n                this.game.audio.ctx.resume();\n            }\n        }\n\n        getCurrentLine() {\n            return this.currentLine;\n        }\n    }\n\n    // ============================================================\n    // LINE SYSTEM - Player-drawn lines\n    // ============================================================\n    class LineSystem {\n        constructor() {\n            this.lines = [];\n            this.glowCanvas = document.createElement('canvas');\n            this.glowCtx = this.glowCanvas.getContext('2d');\n        }\n\n        resize(width, height) {\n            this.glowCanvas.width = width;\n            this.glowCanvas.height = height;\n        }\n\n        addLine(points) {\n            if (points.length < 2) return false;\n            \n            let totalLength = 0;\n            for (let i = 1; i < points.length; i++) {\n                const dx = points[i].x - points[i-1].x;\n                const dy = points[i].y - points[i-1].y;\n                totalLength += Math.sqrt(dx * dx + dy * dy);\n            }\n            \n            if (totalLength < 8) return false;\n            \n            this.lines.push({\n                points: [...points],\n                pulsePhase: Math.random() * Math.PI * 2,\n                createdAt: Date.now()\n            });\n            return true;\n        }\n\n        removeLineNear(pos, radius = 25) {\n            for (let i = this.lines.length - 1; i >= 0; i--) {\n                const line = this.lines[i];\n                for (const point of line.points) {\n                    const dx = point.x - pos.x;\n                    const dy = point.y - pos.y;\n                    if (Math.sqrt(dx * dx + dy * dy) < radius) {\n                        this.lines.splice(i, 1);\n                        return true;\n                    }\n                }\n            }\n            return false;\n        }\n\n        update(dt) {\n            for (const line of this.lines) {\n                line.pulsePhase += dt * Math.PI * 2;\n            }\n        }\n\n        render(ctx, currentDrawing = []) {\n            ctx.lineCap = 'round';\n            ctx.lineJoin = 'round';\n\n            for (const line of this.lines) {\n                const age = (Date.now() - line.createdAt) / 1000;\n                const pulse = Math.sin(line.pulsePhase) * 0.15 + 0.85;\n                \n                ctx.save();\n                \n                // Outer glow\n                ctx.strokeStyle = `rgba(0, 240, 255, ${0.2 * pulse})`;\n                ctx.lineWidth = 20;\n                ctx.shadowColor = '#00F0FF';\n                ctx.shadowBlur = 25;\n                ctx.globalAlpha = pulse;\n                this.renderPath(ctx, line.points);\n                ctx.stroke();\n                \n                // Middle glow\n                ctx.strokeStyle = `rgba(0, 240, 255, ${0.4 * pulse})`;\n                ctx.lineWidth = 10;\n                ctx.shadowBlur = 15;\n                this.renderPath(ctx, line.points);\n                ctx.stroke();\n                \n                // Main line\n                ctx.strokeStyle = `rgba(0, 240, 255, ${pulse})`;\n                ctx.lineWidth = 4;\n                ctx.shadowBlur = 8;\n                ctx.globalAlpha = 1;\n                this.renderPath(ctx, line.points);\n                ctx.stroke();\n                \n                ctx.restore();\n            }\n\n            if (currentDrawing.length > 1) {\n                ctx.save();\n                ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';\n                ctx.lineWidth = 4;\n                ctx.shadowBlur = 0;\n                this.renderPath(ctx, currentDrawing);\n                ctx.stroke();\n                ctx.restore();\n            }\n        }\n\n        renderPath(ctx, points) {\n            if (points.length < 2) return;\n            ctx.beginPath();\n            ctx.moveTo(points[0].x, points[0].y);\n            for (let i = 1; i < points.length; i++) {\n                ctx.lineTo(points[i].x, points[i].y);\n            }\n        }\n\n        getSegments() {\n            const segments = [];\n            for (const line of this.lines) {\n                for (let i = 1; i < line.points.length; i++) {\n                    segments.push({\n                        p1: line.points[i - 1],\n                        p2: line.points[i]\n                    });\n                }\n            }\n            return segments;\n        }\n\n        clear() {\n            this.lines = [];\n        }\n    }\n\n    // ============================================================\n    // BLOCK CLASS - Falling colored blocks\n    // ============================================================\n    class Block {\n        constructor(x, y, size, color, colorIndex) {\n            this.x = x;\n            this.y = y;\n            this.size = size;\n            this.color = color;\n            this.colorIndex = colorIndex;\n            this.vx = (Math.random() - 0.5) * 100;\n            this.vy = 0;\n            this.mass = size === 24 ? 1 : size === 32 ? 2.5 : 6;\n            this.trail = [];\n            this.maxTrail = 3;\n            this.scored = false;\n            this.bounced = false;\n            this.bounceCooldown = 0;\n        }\n\n        update(dt, gravity = 200) {\n            this.trail.unshift({ x: this.x, y: this.y });\n            if (this.trail.length > this.maxTrail) this.trail.pop();\n            \n            this.vy += gravity * dt;\n            this.x += this.vx * dt;\n            this.y += this.vy * dt;\n            \n            if (this.bounceCooldown > 0) {\n                this.bounceCooldown -= dt;\n            }\n            \n            this.vx *= 0.999;\n        }\n\n        render(ctx) {\n            const alpha = [0.15, 0.3, 0.5];\n            \n            for (let i = 0; i < this.trail.length; i++) {\n                const t = this.trail[i];\n                const trailSize = this.size * (1 - i * 0.1);\n                ctx.fillStyle = this.hexToRgba(this.color, alpha[i] || 0.15);\n                ctx.fillRect(\n                    t.x - trailSize / 2, \n                    t.y - trailSize / 2, \n                    trailSize, \n                    trailSize\n                );\n            }\n\n            ctx.fillStyle = this.color;\n            ctx.shadowColor = this.color;\n            ctx.shadowBlur = 8;\n            ctx.fillRect(\n                this.x - this.size / 2, \n                this.y - this.size / 2, \n                this.size, \n                this.size\n            );\n            ctx.shadowBlur = 0;\n            \n            ctx.strokeStyle = this.lightenColor(this.color, 50);\n            ctx.lineWidth = 2;\n            ctx.strokeRect(\n                this.x - this.size / 2, \n                this.y - this.size / 2, \n                this.size, \n                this.size\n            );\n        }\n\n        hexToRgba(hex, alpha) {\n            const r = parseInt(hex.slice(1, 3), 16);\n            const g = parseInt(hex.slice(3, 5), 16);\n            const b = parseInt(hex.slice(5, 7), 16);\n            return `rgba(${r}, ${g}, ${b}, ${alpha})`;\n        }\n\n        lightenColor(hex, amount) {\n            const r = Math.min(255, parseInt(hex.slice(1, 3), 16) + amount);\n            const g = Math.min(255, parseInt(hex.slice(3, 5), 16) + amount);\n            const b = Math.min(255, parseInt(hex.slice(5, 7), 16) + amount);\n            return `rgb(${r}, ${g}, ${b})`;\n        }\n\n        getBounds() {\n            return {\n                left: this.x - this.size / 2,\n                right: this.x + this.size / 2,\n                top: this.y - this.size / 2,\n                bottom: this.y + this.size / 2\n            };\n        }\n    }\n\n    // ============================================================\n    // BLOCK MANAGER - Spawns and manages blocks\n    // ============================================================\n    class BlockManager {\n        constructor(width, height) {\n            this.width = width;\n            this.height = height;\n            this.blocks = [];\n            this.colors = ['#FF3366', '#33FF66', '#3366FF'];\n            this.colorNames = ['RED', 'GREEN', 'BLUE'];\n            this.spawnTimer = 0;\n            this.spawnInterval = 1.8;\n            this.baseSpawnInterval = 1.8;\n            this.totalSpawned = 0;\n            this.totalScored = 0;\n            this.difficulty = 1;\n            this.blocksThisInterval = 0;\n        }\n\n        resize(width, height) {\n            this.width = width;\n            this.height = height;\n        }\n\n        spawn() {\n            if (this.blocks.length >= 60) {\n                let oldest = this.blocks[0];\n                let oldestIdx = 0;\n                for (let i = 1; i < this.blocks.length; i++) {\n                    if (this.blocks[i].y > oldest.y) {\n                        oldest = this.blocks[i];\n                        oldestIdx = i;\n                    }\n                }\n                this.blocks.splice(oldestIdx, 1);\n                return null;\n            }\n\n            const sizes = [24, 32, 48];\n            const sizeWeights = this.difficulty < 2 ? [0.7, 0.3, 0] : \n                               this.difficulty < 3 ? [0.5, 0.4, 0.1] : [0.4, 0.4, 0.2];\n            \n            let rand = Math.random();\n            let sizeIndex = 0;\n            let cumulative = 0;\n            for (let i = 0; i < sizeWeights.length; i++) {\n                cumulative += sizeWeights[i];\n                if (rand < cumulative) {\n                    sizeIndex = i;\n                    break;\n                }\n            }\n            \n            const size = sizes[sizeIndex];\n            const colorIndex = Math.floor(Math.random() * this.colors.length);\n            const color = this.colors[colorIndex];\n            const x = 80 + Math.random() * (this.width - 160);\n            const y = -size;\n            \n            const block = new Block(x, y, size, color, colorIndex);\n            this.totalSpawned++;\n            return block;\n        }\n\n        update(dt, elapsedTime) {\n            this.difficulty = 1 + Math.floor(elapsedTime / 15);\n            this.spawnInterval = Math.max(0.6, this.baseSpawnInterval - (this.difficulty - 1) * 0.2);\n            \n            this.spawnTimer += dt;\n            this.blocksThisInterval += dt;\n            \n            if (this.spawnTimer >= this.spawnInterval) {\n                this.spawnTimer = 0;\n                const block = this.spawn();\n                if (block) this.blocks.push(block);\n            }\n\n            for (const block of this.blocks) {\n                block.update(dt);\n            }\n\n            this.blocks = this.blocks.filter(b => b.y < this.height + 100 && !b.scored);\n        }\n\n        checkBinCollision(bins) {\n            const results = [];\n            const binTop = this.height - 100;\n            \n            for (const block of this.blocks) {\n                if (block.scored) continue;\n                const bounds = block.getBounds();\n                \n                if (bounds.bottom > binTop) {\n                    for (let i = 0; i < bins.length; i++) {\n                        const bin = bins[i];\n                        if (block.x >= bin.x && block.x <= bin.x + bin.width) {\n                            const correct = block.colorIndex === i;\n                            results.push({ block, correct, binIndex: i });\n                            block.scored = true;\n                            if (correct) this.totalScored++;\n                            break;\n                        }\n                    }\n                }\n            }\n            \n            this.blocks = this.blocks.filter(b => !b.scored);\n            return results;\n        }\n\n        checkFloorFall() {\n            const fallen = this.blocks.filter(b => b.y > this.height + 50);\n            this.blocks = this.blocks.filter(b => b.y <= this.height + 50);\n            return fallen.length;\n        }\n\n        render(ctx) {\n            for (const block of this.blocks) {\n                block.render(ctx);\n            }\n        }\n\n        reset() {\n            this.blocks = [];\n            this.spawnTimer = 0;\n            this.spawnInterval = this.baseSpawnInterval;\n            this.difficulty = 1;\n            this.totalSpawned = 0;\n            this.totalScored = 0;\n            this.blocksThisInterval = 0;\n        }\n    }\n\n    // ============================================================\n    // PHYSICS ENGINE - Collision detection and resolution\n    // ============================================================\n    class PhysicsEngine {\n        constructor() {\n            this.restitution = 0.45;\n            this.restitutionBlock = 0.25;\n            this.restitutionFloor = 0.15;\n            this.friction = 0.92;\n        }\n\n        lineBlockCollision(line, block, audio) {\n            const { p1, p2 } = line;\n            const cx = block.x;\n            const cy = block.y;\n            const r = block.size * 0.6;\n\n            const dx = p2.x - p1.x;\n            const dy = p2.y - p1.y;\n            const len = Math.sqrt(dx * dx + dy * dy);\n            if (len === 0) return false;\n\n            const t = Math.max(0, Math.min(1, \n                ((cx - p1.x) * dx + (cy - p1.y) * dy) / (len * len)\n            ));\n            \n            const closestX = p1.x + t * dx;\n            const closestY = p1.y + t * dy;\n            \n            const distX = cx - closestX;\n            const distY = cy - closestY;\n            const dist = Math.sqrt(distX * distX + distY * distY);\n\n            if (dist < r && dist > 0) {\n                const penetration = r - dist;\n                const normalX = distX / dist;\n                const normalY = distY / dist;\n\n                block.x += normalX * (penetration + 1);\n                block.y += normalY * (penetration + 1);\n\n                const dot = block.vx * normalX + block.vy * normalY;\n                if (dot < 0) {\n                    block.vx -= (1 + this.restitution) * dot * normalX;\n                    block.vy -= (1 + this.restitution) * dot * normalY;
+
+                    block.vx *= this.friction;
+                    block.vy *= this.friction;
+
+                    if (block.bounceCooldown <= 0) {
+                        block.bounced = true;
+                        block.bounceCooldown = 0.1;
+                        if (audio) audio.playBounce(block.size);
+                    }
+
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        blockBlockCollision(b1, b2) {
+            const dx = b2.x - b1.x;
+            const dy = b2.y - b1.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const minDist = (b1.size + b2.size) / 2;
+
+            if (dist < minDist && dist > 0) {
+                const overlap = minDist - dist;
+                const nx = dx / dist;
+                const ny = dy / dist;
+
+                const totalMass = b1.mass + b2.mass;
+                b1.x -= nx * overlap * (b2.mass / totalMass);
+                b1.y -= ny * overlap * (b2.mass / totalMass);
+                b2.x += nx * overlap * (b1.mass / totalMass);
+                b2.y += ny * overlap * (b1.mass / totalMass);
+
+                const dvx = b1.vx - b2.vx;
+                const dvy = b1.vy - b2.vy;
+                const dvDotN = dvx * nx + dvy * ny;
+
+                if (dvDotN > 0) {
+                    const impulse = dvDotN / totalMass;
+                    b1.vx -= impulse * b2.mass * nx;
+                    b1.vy -= impulse * b2.mass * ny;
+                    b2.vx += impulse * b1.mass * nx;
+                    b2.vy += impulse * b1.mass * ny;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        wallCollision(block, width) {
+            const r = block.size / 2;
+            if (block.x - r < 0) {
+                block.x = r;
+                block.vx = Math.abs(block.vx) * this.restitution;
+            }
+            if (block.x + r > width) {
+                block.x = width - r;
+                block.vx = -Math.abs(block.vx) * this.restitution;
+            }
+        }
+
+        floorCollision(block, floorY) {
+            const r = block.size / 2;
+            if (block.y + r > floorY) {
+                block.y = floorY - r;
+                block.vy = -Math.abs(block.vy) * this.restitutionFloor;
+                if (Math.abs(block.vy) < 20) block.vy = 0;
+            }
+        }
+    }
+
+    // ============================================================
+    // PARTICLE SYSTEM - Visual effects
+    // ============================================================
+    class ParticleSystem {
+        constructor() {
+            this.particles = [];
+            this.pool = [];
+        }
+
+        emit(x, y, color, count = 10, spread = 100, lifetime = 0.5) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * spread + 20;
+                const size = Math.random() * 4 + 2;
+                
+                this.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - 50,
+                    size,
+                    color,
+                    life: lifetime,
+                    maxLife: lifetime
+                });
+            }
+        }
+
+        emitLineHit(x, y, color) {
+            this.emit(x, y, color, 15, 150, 0.4);
+            this.emit(x, y, '#FFFFFF', 5, 80, 0.2);
+        }
+
+        emitSuccess(x, y, binColor) {
+            this.emit(x, y, binColor, 20, 120, 0.6);
+            this.emit(x, y, '#FFFFFF', 8, 60, 0.3);
+        }
+
+        emitError(x, y) {
+            this.emit(x, y, '#FF3333', 15, 100, 0.5);
+            this.emit(x, y, '#FFAA00', 10, 80, 0.3);
+        }
+
+        update(dt) {
+            for (let i = this.particles.length - 1; i >= 0; i--) {
+                const p = this.particles[i];
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.vy += 300 * dt;
+                p.life -= dt;
+                
+                if (p.life <= 0) {
+                    this.particles.splice(i, 1);
+                }
+            }
+        }
+
+        render(ctx) {
+            for (const p of this.particles) {
+                const alpha = p.life / p.maxLife;
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = alpha;
+                ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        clear() {
+            this.particles = [];
+        }
+    }
+
+    // ============================================================
+    // BIN CLASS - Collection bins at bottom
+    // ============================================================
+    class Bin {
+        constructor(x, width, height, color, colorIndex, label) {
+            this.x = x;
+            this.width = width;
+            this.height = height;
+            this.color = color;
+            this.colorIndex = colorIndex;
+            this.label = label;
+            this.flashTimer = 0;
+            this.successPulse = 0;
+        }
+
+        update(dt) {
+            if (this.flashTimer > 0) this.flashTimer -= dt;
+            if (this.successPulse > 0) this.successPulse -= dt * 3;
+        }
+
+        render(ctx, y) {
+            const gradient = ctx.createLinearGradient(this.x, y, this.x, y + this.height);
+            gradient.addColorStop(0, this.color + '33');
+            gradient.addColorStop(1, this.color + '11');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(this.x, y, this.width, this.height);
+
+            const flashIntensity = Math.max(0, this.flashTimer / 0.3);
+            if (flashIntensity > 0) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${flashIntensity * 0.3})`;
+                ctx.fillRect(this.x, y, this.width, this.height);
+            }
+
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 3;
+            ctx.setLineDash([10, 5]);
+            ctx.strokeRect(this.x, y, this.width, this.height);
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = this.color;
+            ctx.font = 'bold 16px Rajdhani';
+            ctx.textAlign = 'center';
+            ctx.fillText(this.label, this.x + this.width / 2, y + this.height / 2 + 6);
+
+            if (this.successPulse > 0) {
+                const scale = 1 + (1 - this.successPulse) * 0.2;
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, y);
+                ctx.scale(scale, scale);
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = this.successPulse;
+                ctx.strokeRect(-this.width / 2, 0, this.width, this.height);
+                ctx.restore();
+            }
+        }
+
+        flash() {
+            this.flashTimer = 0.3;
+        }
+
+        pulse() {
+            this.successPulse = 1;
+        }
+    }
+
+    // ============================================================
+    // GAME CLASS - Main game logic
+    // ============================================================
+    class Game {
+        constructor() {
+            this.canvas = document.getElementById('gameCanvas');
+            this.ctx = this.canvas.getContext('2d');
+            
+            this.width = 0;
+            this.height = 0;
+            this.scale = 1;
+            
+            this.audio = new AudioManager();
+            this.input = null;
+            this.lines = new LineSystem();
+            this.blocks = null;
+            this.physics = new PhysicsEngine();
+            this.particles = new ParticleSystem();
+            
+            this.bins = [];
+            this.gameState = 'menu';
+            this.score = 0;
+            this.combo = 0;
+            this.comboTimer = 0;
+            this.maxCombo = 0;
+            this.streak = 0;
+            
+            this.elapsedTime = 0;
+            this.lastTime = 0;
+            this.accuracy = 0;
+            
+            this.highScore = parseInt(localStorage.getItem('chromaCascadeHighScore')) || 0;
+            
+            this.resize();
+            this.setupUI();
+            this.updateHighScoreDisplay();
+            
+            window.addEventListener('resize', () => this.resize());
+        }
+
+        resize() {
+            const baseWidth = 500;
+            const baseHeight = 700;
+            const maxWidth = window.innerWidth * 0.95;
+            const maxHeight = window.innerHeight * 0.95;
+            
+            const scaleX = maxWidth / baseWidth;
+            const scaleY = maxHeight / baseHeight;
+            this.scale = Math.min(scaleX, scaleY, 2);
+            
+            this.width = Math.floor(baseWidth * this.scale);
+            this.height = Math.floor(baseHeight * this.scale);
+            
+            this.canvas.width = this.width;
+            this.canvas.height = this.height;
+            this.canvas.style.width = this.width + 'px';
+            this.canvas.style.height = this.height + 'px';
+            
+            if (this.blocks) this.blocks.resize(this.width, this.height);
+            this.lines.resize(this.width, this.height);
+            
+            this.setupBins();
+        }
+
+        setupBins() {
+            const binAreaWidth = this.width - 40;
+            const binWidth = binAreaWidth / 3;
+            const binHeight = 80 * this.scale;
+            const binY = this.height - binHeight - 10;
+            
+            const colors = ['#FF3366', '#33FF66', '#3366FF'];
+            const names = ['RED', 'GREEN', 'BLUE'];
+            
+            this.bins = [];
+            for (let i = 0; i < 3; i++) {
+                const x = 20 + i * binWidth;
+                this.bins.push(new Bin(x, binWidth, binHeight, colors[i], i, names[i]));
+            }
+        }
+
+        setupUI() {
+            document.getElementById('startBtn').addEventListener('click', () => this.startGame());
+            document.getElementById('retryBtn').addEventListener('click', () => this.startGame());
+            
+            this.input = new InputManager(this.canvas, this);
+        }
+
+        updateHighScoreDisplay() {
+            const display = document.getElementById('highScoreDisplay');
+            if (this.highScore > 0) {
+                display.textContent = `HIGH SCORE: ${this.highScore}`;
+            } else {
+                display.textContent = '';
+            }
+        }
+
+        startGame() {
+            this.audio.init();
+            this.audio.resume();
+            
+            this.gameState = 'playing';
+            this.score = 0;
+            this.combo = 0;
+            this.comboTimer = 0;
+            this.maxCombo = 0;
+            this.streak = 0;
+            this.elapsedTime = 0;
+            this.accuracy = 0;
+            
+            this.blocks = new BlockManager(this.width, this.height);
+            this.lines.clear();
+            this.particles.clear();
+            
+            this.setupBins();
+            
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            
+            this.lastTime = performance.now();
+            requestAnimationFrame((t) => this.gameLoop(t));
+        }
+
+        gameLoop(currentTime) {
+            if (this.gameState !== 'playing') return;
+            
+            const dt = Math.min((currentTime - this.lastTime) / 1000, 0.05);
+            this.lastTime = currentTime;
+            
+            this.update(dt);
+            this.render();
+            
+            requestAnimationFrame((t) => this.gameLoop(t));
+        }
+
+        update(dt) {
+            this.elapsedTime += dt;
+            
+            this.blocks.update(dt, this.elapsedTime);
+            this.lines.update(dt);
+            this.particles.update(dt);
+            
+            for (const bin of this.bins) {
+                bin.update(dt);
+            }
+            
+            if (this.comboTimer > 0) {
+                this.comboTimer -= dt;
+                if (this.comboTimer <= 0) {
+                    this.combo = 0;
+                }
+            }
+            
+            const segments = this.lines.getSegments();
+            for (const block of this.blocks.blocks) {
+                for (const seg of segments) {
+                    this.physics.lineBlockCollision(seg, block, this.audio);
+                }
+            }
+            
+            for (let i = 0; i < this.blocks.blocks.length; i++) {
+                for (let j = i + 1; j < this.blocks.blocks.length; j++) {
+                    this.physics.blockBlockCollision(
+                        this.blocks.blocks[i],
+                        this.blocks.blocks[j]
+                    );
+                }
+            }
+            
+            for (const block of this.blocks.blocks) {
+                this.physics.wallCollision(block, this.width);
+                this.physics.floorCollision(block, this.height - 100);
+            }
+            
+            const results = this.blocks.checkBinCollision(this.bins);
+            for (const result of results) {
+                const { block, correct, binIndex } = result;
+                this.bins[binIndex].flash();
+                
+                if (correct) {
+                    this.combo++;
+                    this.streak++;
+                    this.comboTimer = 2;
+                    if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+                    
+                    const baseScore = block.size * 10;
+                    const comboMultiplier = Math.min(this.combo, 10);
+                    this.score += baseScore * comboMultiplier;
+                    
+                    this.bins[binIndex].pulse();
+                    this.particles.emitSuccess(block.x, this.height - 50, block.color);
+                    this.audio.playSuccess();
+                    
+                    if (this.combo > 1) {
+                        this.audio.playCombo();
+                    }
+                } else {
+                    this.streak = 0;
+                    this.combo = 0;
+                    this.particles.emitError(block.x, this.height - 50);
+                    this.audio.playError();
+                }
+            }
+            
+            const fallen = this.blocks.checkFloorFall();
+            if (fallen > 0) {
+                this.streak = 0;
+                this.combo = 0;
+            }
+            
+            const totalSpawned = this.blocks.totalSpawned;
+            const totalScored = this.blocks.totalScored;
+            this.accuracy = totalSpawned > 0 ? (totalScored / totalSpawned) * 100 : 100;
+            
+            const minutes = Math.floor(this.elapsedTime / 60);
+            const seconds = Math.floor(this.elapsedTime % 60);
+            const timerStr = `SPEEDRUN: ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            document.getElementById('speedrunTimer').textContent = timerStr;
+            
+            if (this.accuracy < 50 && this.elapsedTime > 30) {
+                this.endGame(false);
+            }
+            
+            if (this.elapsedTime >= 90) {
+                this.endGame(true);
+            }
+        }
+
+        render() {
+            this.ctx.fillStyle = '#0A0A12';
+            this.ctx.fillRect(0, 0, this.width, this.height);
+            
+            this.renderGrid();
+            
+            const drawAreaHeight = this.height * 0.8;
+            this.ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+            this.ctx.fillRect(0, 0, this.width, drawAreaHeight);
+            
+            this.ctx.strokeStyle = 'rgba(0, 240, 255, 0.1)';
+            this.ctx.lineWidth = 1;
+            this.ctx.setLineDash([5, 10]);
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, drawAreaHeight);
+            this.ctx.lineTo(this.width, drawAreaHeight);
+            this.ctx.stroke();
+            this.ctx.setLineDash([]);
+            
+            for (const bin of this.bins) {
+                bin.render(this.ctx, this.height - 100);
+            }
+            
+            this.blocks.render(this.ctx);
+            this.lines.render(this.ctx, this.input ? this.input.getCurrentLine() : []);
+            this.particles.render(this.ctx);
+            
+            this.renderHUD();
+        }
+
+        renderGrid() {
+            const gridSize = 40 * this.scale;
+            this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            this.ctx.lineWidth = 1;
+            
+            for (let x = 0; x < this.width; x += gridSize) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, 0);
+                this.ctx.lineTo(x, this.height);
+                this.ctx.stroke();
+            }
+            
+            for (let y = 0; y < this.height; y += gridSize) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, y);
+                this.ctx.lineTo(this.width, y);
+                this.ctx.stroke();
+            }
+        }
+
+        renderHUD() {
+            this.ctx.fillStyle = '#FFFFFF';
+            this.ctx.font = `bold ${20 * this.scale}px Rajdhani`;
+            this.ctx.textAlign = 'left';
+            this.ctx.fillText(`SCORE: ${this.score}`, 20, 35);
+            
+            const accColor = this.accuracy >= 80 ? '#33FF66' : 
+                            this.accuracy >= 60 ? '#FFD700' : '#FF3366';
+            this.ctx.fillStyle = accColor;
+            this.ctx.fillText(`ACC: ${this.accuracy.toFixed(0)}%`, 20, 60);
+            
+            if (this.combo > 1) {
+                this.ctx.fillStyle = '#FFD700';
+                this.ctx.font = `bold ${24 * this.scale}px Rajdhani`;
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(`${this.combo}x COMBO!`, this.width / 2, 40);
+            }
+            
+            const timeLeft = Math.max(0, 90 - this.elapsedTime);
+            this.ctx.fillStyle = timeLeft < 20 ? '#FF3366' : '#FFFFFF';
+            this.ctx.font = `bold ${16 * this.scale}px Space Mono`;
+            this.ctx.textAlign = 'right';
+            this.ctx.fillText(`${timeLeft.toFixed(0)}s`, this.width - 20, 35);
+        }
+
+        addLine(points) {
+            if (this.lines.addLine(points)) {
+                this.audio.playFinalize();
+            }
+        }
+
+        eraseNear(pos) {
+            if (this.lines.removeLineNear(pos)) {
+                this.audio.playDraw(5);
+            }
+        }
+
+        endGame(victory) {
+            this.gameState = 'gameover';
+            this.audio.playGameOver();
+            
+            if (victory) {
+                this.audio.playVictory();
+            }
+            
+            document.getElementById('gameOverTitle').textContent = 
+                victory ? 'MISSION COMPLETE' : 'SYSTEM FAILURE';
+            
+            document.getElementById('finalAccuracy').textContent = 
+                `${this.accuracy.toFixed(1)}%`;
+            document.getElementById('finalSorted').textContent = 
+                this.blocks.totalScored;
+            document.getElementById('finalTotal').textContent = 
+                this.blocks.totalSpawned;
+            
+            const isHighScore = this.score > this.highScore;
+            if (isHighScore) {
+                this.highScore = this.score;
+                localStorage.setItem('chromaCascadeHighScore', this.highScore);
+                document.getElementById('finalHighScore').textContent = 
+                    'NEW HIGH SCORE!';
+                document.getElementById('finalHighScore').style.color = '#FFD700';
+            } else {
+                document.getElementById('finalHighScore').textContent = 
+                    `HIGH SCORE: ${this.highScore}`;
+                document.getElementById('finalHighScore').style.color = '#FFD700';
+            }
+            
+            this.updateHighScoreDisplay();
+            
+            setTimeout(() => {
+                document.getElementById('gameOverOverlay').classList.remove('hidden');
+            }, 500);
+        }
+    }
+
+    // ============================================================
+    // INITIALIZE GAME
+    // ============================================================
+    const game = new Game();
+    </script>
+</body>
+</html>"}
