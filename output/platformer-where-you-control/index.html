@@ -1,14 +1,1138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DUALITY</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
-    <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>🪨 Sisyphus Roll — Uphill Stone Platformer</title>
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='52'>🪨</text></svg>" />
+<style>
+  :root{
+    --sandstone:#e6a05a;
+    --terracotta:#c45a3d;
+    --sage:#7fa362;
+    --deepSky:#2a1f5b;
+    --horizon:#ffd382;
+    --gold:#f5c84b;
+    --uiText:#3b2a1a;
+    --panel:rgba(255,235,200,0.92);
+    --panelDark:rgba(40,25,15,0.55);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{
+    width:100%;height:100%;overflow:hidden;
+    background:#000;
+    font-family:Georgia,"Times New Roman",serif;
+    color:var(--uiText);
+    user-select:none;
+    touch-action:none;
+  }
+  #wrap{
+    position:fixed;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    background:#1a0f1f;
+  }
+  #game{
+    width:100%;height:100%;
+    image-rendering:auto;
+    background:#000;
+    display:block;
+  }
+  /* HUD overlay (DOM-based, sits above canvas) */
+  #hud{
+    position:absolute;inset:0;pointer-events:none;
+    font-family:Georgia,serif;
+  }
+  .hud-top{
+    position:absolute;top:14px;left:0;right:0;
+    display:flex;justify-content:space-between;align-items:flex-start;
+    padding:0 22px;
+  }
+  #shards{display:flex;gap:8px;align-items:center;}
+  .shard{
+    width:18px;height:22px;
+    clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
+    background:rgba(60,40,20,0.4);
+    border:1px solid rgba(40,25,10,0.6);
+    transition:background 0.4s;
+  }
+  .shard.on{background:linear-gradient(135deg,#ffe27a,#f5b53b);box-shadow:0 0 10px #ffd96a;}
+  .shard.pulse{animation:pulse 0.6s ease;}
+  @keyframes pulse{
+    0%{transform:scale(1);}
+    40%{transform:scale(1.5);}
+    100%{transform:scale(1);}
+  }
+  #timer{
+    font-size:22px;letter-spacing:2px;
+    background:rgba(40,25,15,0.45);
+    color:#ffe9b6;
+    padding:4px 12px;border-radius:6px;
+    text-shadow:0 0 6px rgba(255,200,100,0.7);
+    font-variant-numeric:tabular-nums;
+  }
+  #ghost{
+    position:absolute;top:14px;left:50%;transform:translateX(-50%);
+    font-size:13px;background:rgba(40,25,15,0.4);color:#ffd9a3;
+    padding:3px 9px;border-radius:4px;
+    display:none;
+  }
+  #ghost.show{display:block;}
+  /* Momentum bar above stone */
+  #momentumWrap{
+    position:absolute;left:0;top:0;
+    width:60px;height:6px;
+    background:rgba(0,0,0,0.35);
+    border-radius:3px;
+    transform:translate(-50%,-30px);
+    opacity:0;transition:opacity 0.2s;
+  }
+  #momentumWrap.show{opacity:1;}
+  #momentumBar{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,#7be07b,#e0e07b,#e07b7b);
+    border-radius:3px;
+  }
+  /* Touch controls */
+  #touch{
+    position:absolute;bottom:0;left:0;right:0;
+    display:flex;justify-content:space-between;align-items:flex-end;
+    padding:18px;
+    pointer-events:none;
+  }
+  .tbtn{
+    pointer-events:auto;
+    width:72px;height:72px;border-radius:50%;
+    background:rgba(255,255,255,0.18);
+    border:2px solid rgba(255,255,255,0.35);
+    color:#fff;font-size:28px;
+    display:flex;align-items:center;justify-content:center;
+    backdrop-filter:blur(2px);
+    -webkit-backdrop-filter:blur(2px);
+    touch-action:none;
+  }
+  .tbtn:active{background:rgba(255,255,255,0.35);}
+  #tLeft,#tRight{width:78px;height:78px;}
+  #tRight{margin-left:14px;}
+  .tCluster{display:flex;gap:10px;}
+  #tJump{
+    width:96px;height:96px;
+    background:rgba(245,200,75,0.35);
+    border-color:rgba(255,210,120,0.6);
+    font-size:18px;font-weight:bold;
+  }
+  /* Menus */
+  #menu,#pause,#complete,#levelSelect{
+    position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;flex-direction:column;
+    background:radial-gradient(ellipse at center,rgba(40,20,60,0.55),rgba(10,5,20,0.85));
+    color:#ffe9b6;text-align:center;
+    pointer-events:auto;
+  }
+  .hidden{display:none !important;}
+  #menu h1{
+    font-size:64px;
+    color:#ffd96a;
+    text-shadow:0 4px 18px rgba(255,150,40,0.6),0 0 30px rgba(255,200,80,0.4);
+    margin-bottom:8px;letter-spacing:2px;
+  }
+  #menu .sub{font-size:16px;opacity:0.8;margin-bottom:32px;}
+  .btn{
+    display:inline-block;margin:8px;
+    padding:12px 28px;font-size:20px;
+    background:rgba(255,235,200,0.92);color:#3b2a1a;
+    border:none;border-radius:10px;
+    cursor:pointer;font-family:inherit;
+    box-shadow:0 4px 12px rgba(0,0,0,0.4),inset 0 -3px 0 rgba(0,0,0,0.15);
+    transition:transform 0.15s,background 0.2s;
+  }
+  .btn:hover{background:#ffe9b6;transform:translateY(-2px);}
+  .btn.gold{background:linear-gradient(135deg,#ffe27a,#f5b53b);}
+  #levelSelect .carousel{
+    display:flex;gap:18px;overflow-x:auto;max-width:90vw;padding:16px;
+  }
+  .levelCard{
+    min-width:180px;padding:16px;
+    background:rgba(255,235,200,0.92);
+    border-radius:12px;color:#3b2a1a;cursor:pointer;
+    text-align:center;
+  }
+  .levelCard .num{font-size:24px;font-weight:bold;}
+  .levelCard .stats{font-size:13px;margin-top:6px;}
+  .levelCard.foggy{filter:grayscale(0.7) brightness(0.8);}
+  #pause h2,#complete h2{font-size:48px;color:#ffd96a;margin-bottom:18px;}
+  #complete .statsBig{font-size:28px;margin:8px 0;}
+  #complete .pb{color:#ffd96a;animation:pbPulse 1.4s ease infinite;}
+  @keyframes pbPulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.08);}
+  }
+  /* stone-wipe transition */
+  #wipe{
+    position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(circle at var(--wx,50%) var(--wy,50%),rgba(255,210,140,0.95),rgba(120,60,30,0.95) 30%,rgba(0,0,0,0) 70%);
+    transform:scale(0);
+    border-radius:50%;
+    transition:transform 0.6s ease-in,opacity 0.6s ease-out;
+    opacity:0;
+  }
+  #wipe.on{transform:scale(8);opacity:1;}
+  /* Settings */
+  #settings{padding:14px;background:rgba(255,235,200,0.92);color:#3b2a1a;border-radius:10px;margin-top:16px;display:none;}
+  #settings label{display:block;margin:6px 0;}
+</style>
 </head>
 <body>
-    <canvas id="game"></canvas>
-    <script type="module" src="game.js"></script>
+<div id="wrap">
+  <canvas id="game" width="1280" height="720"></canvas>
+  <div id="hud">
+    <div class="hud-top">
+      <div id="shards">
+        <div class="shard" data-i="0"></div>
+        <div class="shard" data-i="1"></div>
+        <div class="shard" data-i="2"></div>
+      </div>
+      <div id="ghost">Best: <span id="ghostT">--:--</span></div>
+      <div id="timer">00:00.00</div>
+    </div>
+    <div id="momentumWrap"><div id="momentumBar"></div></div>
+    <div id="touch" class="hidden">
+      <div class="tCluster">
+        <button class="tbtn" id="tLeft">◀</button>
+        <button class="tbtn" id="tRight">▶</button>
+      </div>
+      <button class="tbtn" id="tJump">JUMP</button>
+    </div>
+  </div>
+
+  <div id="menu">
+    <h1>SISYPHUS ROLL</h1>
+    <div class="sub">Uphill Stone Platformer</div>
+    <button class="btn gold" data-act="start">Begin Ascent</button>
+    <button class="btn" data-act="levels">Level Select</button>
+    <button class="btn" data-act="settings">Settings</button>
+    <div id="settings">
+      <label>Sound <input type="range" id="vol" min="0" max="100" value="60"></label>
+      <label>Music <input type="range" id="mus" min="0" max="100" value="50"></label>
+    </div>
+    <div style="margin-top:14px;font-size:13px;opacity:0.7;">
+      A/D or ← → to roll • SPACE jump • SHIFT brake • R restart
+    </div>
+  </div>
+
+  <div id="levelSelect" class="hidden">
+    <h2 style="color:#ffd96a;font-size:42px;margin-bottom:14px;">Level Select</h2>
+    <div class="carousel" id="carousel"></div>
+    <button class="btn" data-act="back" style="margin-top:14px;">Back</button>
+  </div>
+
+  <div id="pause" class="hidden">
+    <h2>Paused</h2>
+    <button class="btn" data-act="resume">Resume</button>
+    <button class="btn" data-act="restart">Restart</button>
+    <button class="btn" data-act="quit">Quit to Menu</button>
+  </div>
+
+  <div id="complete" class="hidden">
+    <h2>Summit Reached</h2>
+    <div class="statsBig">Time: <span id="finTime">00:00.00</span></div>
+    <div class="statsBig">Sun Shards: <span id="finShards">0/3</span></div>
+    <div class="statsBig" id="pbLine" style="display:none;">★ NEW PERSONAL BEST ★</div>
+    <button class="btn gold" data-act="next">Next Level</button>
+    <button class="btn" data-act="retry">Retry</button>
+    <button class="btn" data-act="quit">Quit</button>
+  </div>
+
+  <div id="wipe"></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// ============================================================
+// LEVELS — hand-authored spline profiles, hazards, shards, summit
+// Each level profile is a polyline of {x,y} sampled every 16px
+// ============================================================
+const LEVELS = [
+  {
+    name: "Sunrise Foothills",
+    profile: (() => {
+      // Generate a smooth ascending spline programmatically (hand-tuned)
+      const pts = [];
+      const len = 4800;
+      for (let x = 0; x <= len; x += 16) {
+        const t = x / len;
+        // Smooth ascent with plateaus
+        const base = 600 - t * 380;
+        const und = Math.sin(x * 0.012) * 28 + Math.sin(x * 0.045) * 10;
+        const lip = (Math.abs(((x % 700) - 350)) < 60) ? Math.cos((x%700)/60) * 35 : 0;
+        pts.push({x, y: base + und + lip});
+      }
+      return pts;
+    })(),
+    shards: [{x:800,y:480},{x:2200,y:380},{x:3800,y:300}],
+    spikes: [{x:1400,y:0},{x:2900,y:0},{x:4200,y:0}],
+    gravel: [{x:1800,r:140},{x:3400,r:120}],
+    summit: {x:4700,y:260,w:140,h:120}
+  },
+  {
+    name: "Winding Ridge",
+    profile: (() => {
+      const pts = [];
+      const len = 5200;
+      for (let x = 0; x <= len; x += 16) {
+        const t = x / len;
+        const base = 620 - t * 460;
+        const und = Math.sin(x * 0.009) * 55 + Math.sin(x * 0.03) * 18;
+        // overhanging lips
+        const lip = (x % 900 < 120) ? -Math.sin(((x%900)/120)*Math.PI) * 70 : 0;
+        pts.push({x, y: base + und + lip});
+      }
+      return pts;
+    })(),
+    shards: [{x:1000,y:500},{x:2600,y:300},{x:4400,y:240}],
+    spikes: [{x:1700,y:0},{x:3100,y:0},{x:4700,y:0}],
+    gravel: [{x:2100,r:160},{x:3800,r:140}],
+    summit: {x:5100,y:200,w:160,h:140}
+  },
+  {
+    name: "Stormwatch Peak",
+    profile: (() => {
+      const pts = [];
+      const len = 5600;
+      for (let x = 0; x <= len; x += 16) {
+        const t = x / len;
+        const base = 640 - t * 540;
+        const und = Math.sin(x * 0.011) * 40 + Math.sin(x * 0.05) * 14;
+        const cliff = (x > 2400 && x < 2600) ? -80 : 0;
+        pts.push({x, y: base + und + cliff});
+      }
+      return pts;
+    })(),
+    shards: [{x:1100,y:520},{x:3000,y:320},{x:4800,y:200}],
+    spikes: [{x:1900,y:0},{x:3500,y:0},{x:5000,y:0}],
+    gravel: [{x:2300,r:180},{x:4200,r:160}],
+    summit: {x:5500,y:160,w:180,h:160}
+  }
+];
+
+// ============================================================
+// STORAGE: persistent best times & shard collection
+// ============================================================
+const STORE_KEY = 'sisyphus_roll_save_v1';
+const Store = {
+  data: { bests:{}, shards:{} },
+  load(){
+    try{
+      const raw = localStorage.getItem(STORE_KEY);
+      if (raw) this.data = JSON.parse(raw);
+    }catch(e){}
+    if (!this.data.bests) this.data.bests = {};
+    if (!this.data.shards) this.data.shards = {};
+  },
+  save(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(this.data)); }catch(e){} },
+  getBest(i){ return this.data.bests[i] || null; },
+  setBest(i, t){
+    const cur = this.data.bests[i];
+    if (!cur || t < cur){ this.data.bests[i] = t; this.save(); return true; }
+    return false;
+  },
+  getShards(i){ return this.data.shards[i] || 0; },
+  addShard(i){ this.data.shards[i] = Math.min(3, (this.data.shards[i]||0)+1); this.save(); }
+};
+Store.load();
+
+// ============================================================
+// AUDIO — Web Audio API synth (no external assets)
+// ============================================================
+const Audio = (() => {
+  let ctx = null, masterGain = null, musicGain = null;
+  let vol = 0.6, mus = 0.5;
+  let rumbleNode = null, rumbleGain = null;
+  let musicTimer = null, musicStep = 0;
+  const notes = [220, 261.63, 293.66, 329.63, 392, 440, 523.25];
+  function init(){
+    if (ctx) return;
+    try{
+      ctx = new (window.AudioContext||window.webkitAudioContext)();
+      masterGain = ctx.createGain(); masterGain.gain.value = vol;
+      musicGain = ctx.createGain(); musicGain.gain.value = mus;
+      musicGain.connect(masterGain); masterGain.connect(ctx.destination);
+    }catch(e){}
+  }
+  function setVol(v){ vol = v; if (masterGain) masterGain.gain.value = v; }
+  function setMus(v){ mus = v; if (musicGain) musicGain.gain.value = v; }
+  function blip(freq, dur, type='sine', gain=0.2){
+    if (!ctx) return;
+    const o = ctx.createOscillator(); const g = ctx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(gain, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    o.connect(g); g.connect(masterGain);
+    o.start(); o.stop(ctx.currentTime + dur + 0.05);
+  }
+  function noise(dur, gain=0.15, freq=800){
+    if (!ctx) return;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i=0;i<d.length;i++) d[i] = (Math.random()*2-1);
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const f = ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value = freq;
+    const g = ctx.createGain(); g.gain.setValueAtTime(gain, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    src.connect(f); f.connect(g); g.connect(masterGain);
+    src.start(); src.stop(ctx.currentTime + dur + 0.05);
+  }
+  // Continuous rolling rumble
+  function startRumble(){
+    if (!ctx || rumbleNode) return;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i=0;i<d.length;i++) d[i] = (Math.random()*2-1);
+    const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+    const f = ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value = 400;
+    rumbleGain = ctx.createGain(); rumbleGain.gain.value = 0;
+    src.connect(f); f.connect(rumbleGain); rumbleGain.connect(masterGain);
+    src.start(); rumbleNode = src;
+  }
+  function updateRumble(speed, grounded){
+    if (!rumbleGain) return;
+    const target = grounded ? Math.min(0.25, speed * 0.0005) : 0;
+    rumbleGain.gain.linearRampToValueAtTime(target, ctx.currentTime + 0.1);
+    // Pitch (filter cutoff) scales with speed
+    rumbleGain && (rumbleGain.context ? null : null);
+  }
+  function stopRumble(){ if (rumbleNode){ try{rumbleNode.stop();}catch(e){} rumbleNode=null; rumbleGain=null; } }
+  // Music: gentle pentatonic loop, layered by altitude
+  function startMusic(){
+    if (!ctx || musicTimer) return;
+    musicStep = 0;
+    musicTimer = setInterval(()=>{
+      const n = notes[(musicStep * 2) % notes.length];
+      blip(n, 0.4, 'triangle', 0.08);
+      if (musicStep % 2 === 0) blip(notes[(musicStep+3)%notes.length]/2, 0.5, 'sine', 0.06);
+      musicStep++;
+    }, 600);
+  }
+  function stopMusic(){ if (musicTimer){ clearInterval(musicTimer); musicTimer=null; } }
+  // SFX wrappers
+  sfxJump(){ this.blip(420, 0.12, 'square', 0.18); },
+  sfxLand(){ this.noise(0.18, 0.2, 400); },
+  sfxShard(){ this.blip(880, 0.08, 'sine', 0.2); setTimeout(()=>this.blip(1320,0.12,'sine',0.18),60); },
+  sfxBrake(){ this.noise(0.1, 0.12, 1200); },
+  sfxClick(){ this.blip(660, 0.05, 'square', 0.15); },
+  sfxComplete(){ 
+    [523,659,784,1046].forEach((f,i)=>setTimeout(()=>this.blip(f,0.25,'triangle',0.2), i*140));
+  },
+  sfxDeath(){ this.noise(0.4, 0.3, 200); }
+  return { init, setVol, setMus, blip, noise, startRumble, updateRumble, stopRumble, startMusic, stopMusic,
+           sfxJump(){blip(420,0.12,'square',0.18);},
+           sfxLand(){noise(0.18,0.2,400);},
+           sfxShard(){blip(880,0.08,'sine',0.2); setTimeout(()=>blip(1320,0.12,'sine',0.18),60);},
+           sfxBrake(){noise(0.1,0.12,1200);},
+           sfxClick(){blip(660,0.05,'square',0.15);},
+           sfxComplete(){[523,659,784,1046].forEach((f,i)=>setTimeout(()=>blip(f,0.25,'triangle',0.2), i*140));},
+           sfxDeath(){noise(0.4,0.3,200);} };
+})();
+
+// ============================================================
+// INPUT — keyboard + touch
+// ============================================================
+const Input = {
+  left:false, right:false, jump:false, brake:false, restart:false,
+  jumpBufferTimer:0, jumpHeld:false,
+  init(){
+    const kd = (e)=>{
+      const k = e.key.toLowerCase();
+      if (k==='a'||k==='arrowleft'){ Input.left=true; e.preventDefault(); }
+      if (k==='d'||k==='arrowright'){ Input.right=true; e.preventDefault(); }
+      if (k===' '){ if(!Input.jumpHeld){ Input.jump=true; Input.jumpBufferTimer=0.12; } Input.jumpHeld=true; e.preventDefault(); }
+      if (k==='shift'){ Input.brake=true; e.preventDefault(); }
+      if (k==='r'){ Input.restart=true; }
+      if (k==='escape'||k==='p'){ Game.togglePause(); }
+    };
+    const ku = (e)=>{
+      const k = e.key.toLowerCase();
+      if (k==='a'||k==='arrowleft') Input.left=false;
+      if (k==='d'||k==='arrowright') Input.right=false;
+      if (k===' ') Input.jumpHeld=false;
+      if (k==='shift') Input.brake=false;
+    };
+    window.addEventListener('keydown', kd);
+    window.addEventListener('keyup', ku);
+    // Touch controls
+    const bind = (id, prop)=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+      const start = (e)=>{ e.preventDefault(); Input[prop]=true; if(prop==='jump') Input.jumpBufferTimer=0.12; };
+      const end = (e)=>{ e.preventDefault(); Input[prop]=false; };
+      el.addEventListener('touchstart', start, {passive:false});
+      el.addEventListener('touchend', end, {passive:false});
+      el.addEventListener('mousedown', start);
+      el.addEventListener('mouseup', end);
+      el.addEventListener('mouseleave', end);
+    };
+    bind('tLeft','left'); bind('tRight','right'); bind('tJump','jump');
+  },
+  consumeJump(){ if (this.jumpBufferTimer>0){ this.jumpBufferTimer -= 1/60; return true; } return false; }
+};
+
+// ============================================================
+// CAMERA — damped follow with lookahead
+// ============================================================
+const Camera = {
+  x:0, y:0, vx:0,
+  followOffset:0,
+  update(stone, dt){
+    const targetOffset = stone.vx * 0.4;
+    this.followOffset += (targetOffset - this.followOffset) * Math.min(1, dt * 4);
+    const targetX = stone.x + this.followOffset - 640; // canvas is 1280 wide
+    const targetY = stone.y - 360 - 50; // upward bias
+    // critical damping
+    const k = 1 - Math.exp(-dt * 6);
+    this.x += (targetX - this.x) * k;
+    this.y += (targetY - this.y) * (1 - Math.exp(-dt * 5));
+  }
+};
+
+// ============================================================
+// PARTICLES — pool-based dust, sparks, bursts
+// ============================================================
+const Particles = {
+  pool: [],
+  emit(x,y,vx,vy,life,color,size,type='dust'){
+    const p = {x,y,vx,vy,life,maxLife:life,color,size,type};
+    this.pool.push(p);
+  },
+  burst(x,y,count,color){
+    for (let i=0;i<count;i++){
+      const a = Math.random()*Math.PI*2;
+      const sp = 60 + Math.random()*180;
+      this.emit(x,y, Math.cos(a)*sp, Math.sin(a)*sp, 0.5+Math.random()*0.6, color, 2+Math.random()*3, 'spark');
+    }
+  },
+  update(dt){
+    for (let i=this.pool.length-1;i>=0;i--){
+      const p = this.pool[i];
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vy += 600 * dt;
+      p.vx *= 0.96;
+      p.life -= dt;
+      if (p.life <= 0) this.pool.splice(i,1);
+    }
+  },
+  draw(ctx, cam){
+    ctx.save();
+    for (const p of this.pool){
+      const a = Math.max(0, p.life / p.maxLife);
+      ctx.globalAlpha = a;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x - cam.x, p.y - cam.y, p.size, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+};
+
+// ============================================================
+// PHYSICS — circle vs polyline terrain with rolling constraint
+// ============================================================
+const Physics = {
+  // Sample terrain height & normal at any x
+  terrainAt(level, x){
+    const pts = level.profile;
+    if (x <= pts[0].x) return {y: pts[0].y, nx:0, ny:-1};
+    if (x >= pts[pts.length-1].x) return {y: pts[pts.length-1].y, nx:0, ny:-1};
+    // Find segment
+    const i = Math.min(pts.length-2, Math.floor((x - pts[0].x) / 16));
+    const a = pts[i], b = pts[i+1];
+    const t = (x - a.x) / (b.x - a.x);
+    const y = a.y + (b.y - a.y) * t;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx,dy);
+    const nx = -dy/len, ny = dx/len;
+    return {y, nx, ny};
+  },
+  step(state, dt, input){
+    // dt is fixed sub-step (1/120)
+    const s = state.stone;
+    const lvl = state.level;
+    s.grounded = false;
+    s.contactX = s.x; s.contactY = s.y;
+    // Apply gravity
+    s.vy += 1600 * dt;
+    // Air drag
+    s.vx *= 0.998;
+    s.vy *= 0.998;
+    // Steering torque (only meaningful when grounded, but we accumulate)
+    if (input.left || input.right){
+      const dir = (input.left ? -1 : 0) + (input.right ? 1 : 0);
+      // rolling constraint: angular accel -> linear accel along slope tangent
+      // effective linear accel = torque * radius
+      const accel = dir * 800 * 24 / 1.0 * 0.6; // px/s^2
+      // Try to apply along slope tangent if grounded
+      const ground = Physics.terrainAt(lvl, s.x);
+      // tangent (downhill positive x)
+      const tx = ground.ny, ty = -ground.nx;
+      // Project gravity & apply roll-into-slope effect
+      const gAlongSlope = 1600 * (-ground.ny * ground.ny + ground.nx * ground.nx); // approx
+      // Simpler: rolling acceleration along x for visual feedback, slope handled by friction
+      s.vx += accel * dt;
+      // angular visual
+      s.angularVel = s.vx / 24;
+    } else {
+      s.angularVel *= 0.96;
+    }
+    // Integrate position
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    // Update visual rotation
+    s.rotation += s.angularVel * dt;
+    // Collision against terrainconst r = s.r;
+    for (let it=0;it<3;it++){
+      const g = Physics.terrainAt(lvl, s.x);
+      const targetY = g.y - r;
+      if (s.y > targetY){
+        const prevY = s.y;
+        s.y = targetY;
+        // Contact
+        s.grounded = true;
+        s.contactX = s.x; s.contactY = g.y;
+        // Resolve velocity along normal
+        const vDotN = s.vx * g.nx + s.vy * g.ny;
+        if (vDotN > 0){
+          s.vx -= vDotN * g.nx;
+          s.vy -= vDotN * g.ny;
+        }
+        // Slope-aware friction: when grounded on uphill, decelerate; downhill, accelerate
+        const slopeFactor = -g.ny; // 1 flat, less on steep uphill
+        // Rolling friction (low)
+        const rollFric = 0.6;
+        // Brake (shift)
+        const brakeFric = input.brake ? 6 : 0;
+        // Gravity along slope: tangent direction
+        const tx = g.ny, ty = -g.nx; // tangent pointing uphill-ish (depends on nx sign)
+        const gravAlong = 1600 * (g.nx * tx + g.ny * ty); // along tangent
+        // Apply rolling: gravity component along slope adds to vx
+        const slopeDir = Math.sign(gravAlong);
+        // Apply acceleration along slope
+        s.vx += gravAlong * dt;
+        // Friction along tangent
+        const vT = s.vx * tx + s.vy * ty;
+        const fric = (rollFric + brakeFric) * dt;
+        const newVT = vT * (1 - fric);
+        // Reconstruct
+        const dvT = newVT - vT;
+        s.vx += dvT * tx;
+        s.vy += dvT * ty;
+        // Angular velocity from linear
+        s.angularVel = s.vx / r;
+        // Landing dust
+        if (Math.abs(prevY - s.y) > 4 && !s.didLandThisFrame){
+          s.didLandThisFrame = true;
+          Particles.burst(s.x, s.y + r, 6, '#c9a36a');
+          Audio.sfxLand();
+        }
+      } else {
+        break;
+      }
+    }
+    s.didLandThisFrame = false;
+    // Jump
+    if (input.consumeJump() && s.grounded){
+      s.vy = -520;
+      s.vx += input.left ? -40 : input.right ? 40 : 0;
+      s.grounded = false;
+      Audio.sfxJump();
+      Particles.burst(s.x, s.y + r, 8, '#e8d8b0');
+    }
+    // Cap fall speed
+    if (s.vy > 900) s.vy = 900;
+    // Cap horizontal speed
+    if (s.vx > 700) s.vx = 700;
+    if (s.vx < -300) s.vx = -300;
+    // Brake
+    if (input.brake && s.grounded){
+      s.vx *= 0.94;
+    }
+    // Death by falling off
+    if (s.y > 900){
+      state.deaths++;
+      s.x = state.spawnX; s.y = state.spawnY;
+      s.vx = 0; s.vy = 0;
+      Audio.sfxDeath();
+      Particles.burst(s.x, s.y, 20, '#8a5a30');
+    }
+    // Spikes collision
+    for (const sp of lvl.spikes){
+      const dx = s.x - sp.x;
+      const g = Physics.terrainAt(lvl, sp.x);
+      const spikeY = g.y - 14;
+      const dy = (s.y + r) - spikeY;
+      if (Math.abs(dx) < r + 12 && dy > -8 && dy < 20){
+        // Death
+        state.deaths++;
+        s.x = state.spawnX; s.y = state.spawnY;
+        s.vx = 0; s.vy = 0;
+        Audio.sfxDeath();
+        Particles.burst(sp.x, spikeY, 16, '#a04030');
+      }
+    }
+    // Gravel patches — slip zones (lower friction)
+    // implemented in friction block via state.inGravel flag
+  }
+};
+
+// ============================================================
+// GAME STATE
+// ============================================================
+const Game = {
+  canvas:null, ctx:null,
+  state:null,
+  menuEl:null, pauseEl:null, completeEl:null, levelSelectEl:null, hudEl:null, touchEl:null, wipeEl:null,
+  shardsEl:null, timerEl:null, momentumWrapEl:null, momentumBarEl:null, ghostEl:null, ghostTEl:null,
+  running:false, paused:false,
+  tNow:0, tStart:0, tFin:0,
+  lastTime:0, accum:0,
+  init(){
+    this.canvas = document.getElementById('game');
+    this.ctx = this.canvas.getContext('2d');
+    this.menuEl = document.getElementById('menu');
+    this.pauseEl = document.getElementById('pause');
+    this.completeEl = document.getElementById('complete');
+    this.levelSelectEl = document.getElementById('levelSelect');
+    this.hudEl = document.getElementById('hud');
+    this.touchEl = document.getElementById('touch');
+    this.wipeEl = document.getElementById('wipe');
+    this.shardsEl = document.getElementById('shards');
+    this.timerEl = document.getElementById('timer');
+    this.momentumWrapEl = document.getElementById('momentumWrap');
+    this.momentumBarEl = document.getElementById('momentumBar');
+    this.ghostEl = document.getElementById('ghost');
+    this.ghostTEl = document.getElementById('ghostT');
+    Input.init();
+    // Menu buttons
+    document.querySelectorAll('.btn[data-act]').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        Audio.init(); Audio.sfxClick();
+        const act = b.dataset.act;
+        if (act==='start') Game.startLevel(0);
+        else if (act==='levels') Game.showLevels();
+        else if (act==='settings'){
+          const s = document.getElementById('settings');
+          s.style.display = s.style.display==='block'?'none':'block';
+        }
+        else if (act==='back'){ Game.menuEl.classList.remove('hidden'); Game.levelSelectEl.classList.add('hidden'); }
+        else if (act==='resume'){ Game.togglePause(); }
+        else if (act==='restart'){ Game.startLevel(Game.state.levelIndex, true); }
+        else if (act==='quit'){ Game.toMenu(); }
+        else if (act==='retry'){ Game.startLevel(Game.state.levelIndex, true); }
+        else if (act==='next'){ Game.startLevel(Math.min(LEVELS.length-1, Game.state.levelIndex+1)); }
+      });
+    });
+    // Settings sliders
+    const volEl = document.getElementById('vol');
+    const musEl = document.getElementById('mus');
+    volEl.addEventListener('input', ()=>Audio.setVol(volEl.value/100));
+    musEl.addEventListener('input', ()=>Audio.setMus(musEl.value/100));
+    Audio.setVol(volEl.value/100);
+    Audio.setMus(musEl.value/100);
+    // Resize handling
+    function resize(){
+      const w = window.innerWidth, h = window.innerHeight;
+      const targetAspect = 1280/720;
+      let cw, ch;
+      if (w/h > targetAspect){ ch = h; cw = h*targetAspect; }
+      else { cw = w; ch = w/targetAspect; }
+      Game.canvas.style.width = cw+'px';
+      Game.canvas.style.height = ch+'px';
+      Game.canvas.width = 1280; Game.canvas.height = 720;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    // Start loop
+    requestAnimationFrame(Game.frame);
+  },
+  showLevels(){
+    const car = document.getElementById('carousel');
+    car.innerHTML = '';
+    LEVELS.forEach((lv,i)=>{
+      const d = document.createElement('div');
+      d.className = 'levelCard';
+      const best = Store.getBest(i);
+      const shards = Store.getShards(i);
+      d.innerHTML = `<div class="num">${i+1}</div><div>${lv.name}</div><div class="stats">Best: ${best?fmtTime(best):'--:--'}<br>Shards: ${shards}/3</div>`;
+      d.addEventListener('click', ()=>{ Audio.sfxClick(); Game.startLevel(i); });
+      car.appendChild(d);
+    });
+    Game.menuEl.classList.add('hidden');
+    Game.levelSelectEl.classList.remove('hidden');
+  },
+  startLevel(i, same=false){
+    Audio.init();
+    if (Audio.startMusic) Audio.startMusic();
+    Game.state = {
+      levelIndex: i,
+      level: LEVELS[i],
+      stone: { x:80, y: Physics.terrainAt(LEVELS[i], 80).y - 30, vx:0, vy:0, r:24, rotation:0, angularVel:0, grounded:false, didLandThisFrame:false, contactX:0, contactY:0 },
+      spawnX:80, spawnY:0,
+      shardGot: [false,false,false],
+      shardCount: 0,
+      startTime: performance.now()/1000,
+      finTime: 0,
+      deaths: 0,
+      completed: false,
+      t: 0
+    };
+    Game.state.spawnY = Physics.terrainAt(LEVELS[i], 80).y - 30;
+    Game.state.stone.y = Game.state.spawnY;
+    Game.running = true; Game.paused = false;
+    Game.menuEl.classList.add('hidden');
+    Game.pauseEl.classList.add('hidden');
+    Game.completeEl.classList.add('hidden');
+    Game.levelSelectEl.classList.add('hidden');
+    // Show touch on touch devices
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints>0;
+    Game.touchEl.classList.toggle('hidden', !isTouch);
+    // Update shards UI
+    for (let k=0;k<3;k++){
+      const e = Game.shardsEl.children[k];
+      e.classList.remove('on','pulse');
+    }
+    // Ghost best
+    const best = Store.getBest(i);
+    if (best){ Game.ghostEl.classList.add('show'); Game.ghostTEl.textContent = fmtTime(best); }
+    else { Game.ghostEl.classList.remove('show'); }
+    // Wipe
+    Game.wipeEl.classList.add('on');
+    setTimeout(()=>Game.wipeEl.classList.remove('on'), 600);
+    Camera.x = -200; Camera.y = 0;
+    Audio.startRumble();
+  },
+  toMenu(){
+    Game.running = false;
+    Game.menuEl.classList.remove('hidden');
+    Game.completeEl.classList.add('hidden');
+    Game.pauseEl.classList.add('hidden');
+    Game.levelSelectEl.classList.add('hidden');
+    Audio.stopRumble();
+    Audio.stopMusic();
+  },
+  togglePause(){
+    if (!Game.running) return;
+    Game.paused = !Game.paused;
+    Game.pauseEl.classList.toggle('hidden', !Game.paused);
+  },
+  complete(){
+    Game.state.completed = true;
+    Game.running = false;
+    const t = performance.now()/1000 - Game.state.startTime;
+    Game.state.finTime = t;
+    const i = Game.state.levelIndex;
+    const isPB = Store.setBest(i, t);
+    document.getElementById('finTime').textContent = fmtTime(t);
+    document.getElementById('finShards').textContent = Game.state.shardCount + '/3';
+    const pbLine = document.getElementById('pbLine');
+    pbLine.style.display = isPB ? 'block' : 'none';
+    Game.completeEl.classList.remove('hidden');
+    Audio.sfxComplete();
+    Audio.stopRumble();
+  },
+  frame(now){
+    requestAnimationFrame(Game.frame);
+    if (!Game.lastTime) Game.lastTime = now;
+    let dt = (now - Game.lastTime)/1000;
+    if (dt > 0.1) dt = 0.1;
+    Game.lastTime = now;
+    if (Game.running && !Game.paused){
+      Game.accum += dt;
+      const fixed = 1/120;
+      while (Game.accum >= fixed){
+        Physics.step(Game.state, fixed, Input);
+        // Shards
+        const s = Game.state.stone;
+        for (let k=0;k<Game.state.level.shards.length;k++){
+          if (Game.state.shardGot[k]) continue;
+          const sh = Game.state.level.shards[k];
+          const dx = s.x - sh.x, dy = (s.y + s.r*0.5) - sh.y;
+          if (dx*dx + dy*dy < 30*30){
+            Game.state.shardGot[k] = true;
+            Game.state.shardCount++;
+            const e = Game.shardsEl.children[k];
+            e.classList.add('on','pulse');
+            setTimeout(()=>e.classList.remove('pulse'), 600);
+            Audio.sfxShard();
+            Particles.burst(sh.x, sh.y, 18, '#ffd96a');
+            Store.addShard(Game.state.levelIndex);
+          }
+        }
+        // Summit
+        const sm = Game.state.level.summit;
+        if (s.x > sm.x && s.x < sm.x + sm.w && s.y < sm.y + sm.h){
+          Game.complete();
+        }
+        // Continuous dust
+        if (s.grounded && Math.abs(s.vx) > 50 && Math.random() < 0.4){
+          Particles.emit(s.x - Math.sign(s.vx)*s.r, s.y + s.r, -Math.sign(s.vx)*20 + (Math.random()-0.5)*40, -Math.random()*40, 0.5, '#c9a36a', 2, 'dust');
+        }
+        Audio.updateRumble(Math.abs(s.vx), s.grounded);
+        Particles.update(fixed);
+        Game.state.t += fixed;
+        Game.accum -= fixed;
+      }
+      // Restart input
+      if (Input.restart){ Input.restart=false; Game.startLevel(Game.state.levelIndex, true); }
+      // Camera
+      Camera.update(Game.state.stone, dt);
+      // Render
+      Game.render();
+      // Timer
+      const tElapsed = performance.now()/1000 - Game.state.startTime;
+      Game.timerEl.textContent = fmtTime(tElapsed);
+      // Momentum
+      const m = Math.min(1, Math.abs(Game.state.stone.vx)/600);
+      Game.momentumBarEl.style.width = (m*100) + '%';
+      Game.momentumWrapEl.style.left = (Game.state.stone.x - Camera.x) + 'px';
+      Game.momentumWrapEl.style.top = (Game.state.stone.y - Camera.y) + 'px';
+      Game.momentumWrapEl.classList.toggle('show', m > 0.15 && Game.state.stone.grounded);
+    }
+    // Menu rendering
+    if (!Game.running && !Game.state){
+      Game.renderMenuBackdrop();
+    }
+  },
+  render(){
+    const ctx = Game.ctx;
+    const W = 1280, H = 720;
+    ctx.clearRect(0,0,W,H);
+    const lvl = Game.state.level;
+    // Sky gradient
+    const alt = (Game.state.stone.x / lvl.profile[lvl.profile.length-1].x);
+    const grad = ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0, `hsl(${220 + alt*30}, 70%, ${30-alt*10}%)`);
+    grad.addColorStop(1, `hsl(${30 + alt*10}, 70%, ${55-alt*5}%)`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+    // Sun
+    const sunX = W*0.75, sunY = H*0.25 - alt*80, sunR = 50 - alt*10;
+    const sg = ctx.createRadialGradient(sunX, sunY, 5, sunX, sunY, sunR*2);
+    sg.addColorStop(0, '#fff5b0');
+    sg.addColorStop(0.4, '#ffd96a');
+    sg.addColorStop(1, 'rgba(255,180,80,0)');
+    ctx.fillStyle = sg;
+    ctx.beginPath(); ctx.arc(sunX, sunY, sunR*2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff8c0';
+    ctx.beginPath(); ctx.arc(sunX, sunY, sunR, 0, Math.PI*2); ctx.fill();
+    // Distant mountains (parallax)
+    drawMountains(ctx, Camera.x * 0.2, alt);
+    drawClouds(ctx, Camera.x * 0.3, alt);
+    // Terrain
+    ctx.save();
+    ctx.translate(-Camera.x, -Camera.y);
+    // ground body fill
+    ctx.beginPath();
+    const pts = lvl.profile;
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.lineTo(pts[pts.length-1].x, 1500);
+    ctx.lineTo(pts[0].x, 1500);
+    ctx.closePath();
+    const tg = ctx.createLinearGradient(0, 200, 0, 800);
+    tg.addColorStop(0, '#e6a05a');
+    tg.addColorStop(1, '#a85a30');
+    ctx.fillStyle = tg;
+    ctx.fill();
+    // ground top stroke / detail
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#5a3018';
+    ctx.stroke();
+    // grass tufts along top
+    ctx.fillStyle = '#7fa362';
+    for (let i=0;i<pts.length;i+=8){
+      const p = pts[i];
+      const g = Physics.terrainAt(lvl, p.x);
+      if (g.ny < -0.5) continue; // skip overhangs
+      ctx.fillRect(p.x-1, p.y-3, 2, 4);
+    }
+    // Spikes
+    for (const sp of lvl.spikes){
+      const g = Physics.terrainAt(lvl, sp.x);
+      const sy = g.y;
+      ctx.fillStyle = '#3a1a10';
+      ctx.beginPath();
+      ctx.moveTo(sp.x-14, sy);
+      ctx.lineTo(sp.x, sy-22);
+      ctx.lineTo(sp.x+14, sy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#a04030';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    // Gravel patches (slip zones)
+    for (const gv of lvl.gravel){
+      const g = Physics.terrainAt(lvl, gv.x);
+      ctx.fillStyle = 'rgba(180,160,120,0.5)';
+      ctx.beginPath();
+      ctx.ellipse(gv.x, g.y - 4, gv.r, 10, 0, 0, Math.PI*2);
+      ctx.fill();
+      // pebbles
+      for (let i=0;i<14;i++){
+        const a = Math.random()*Math.PI*2;
+        const r = Math.random()*gv.r;
+        ctx.fillStyle = '#8a7450';
+        ctx.beginPath();
+        ctx.arc(gv.x + Math.cos(a)*r, g.y - 4 + Math.sin(a)*6, 2+Math.random()*2, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+    // Shards
+    for (let k=0;k<lvl.shards.length;k++){
+      if (Game.state.shardGot[k]) continue;
+      const sh = lvl.shards[k];
+      const t = Game.state.t * 2 + k;
+      const yo = Math.sin(t)*6;
+      const rot = t*0.5;
+      ctx.save();
+      ctx.translate(sh.x, sh.y + yo);
+      ctx.rotate(rot);
+      ctx.fillStyle = '#fff0a0';
+      ctx.shadowColor = '#ffd96a'; ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.moveTo(0,-14); ctx.lineTo(10,0); ctx.lineTo(0,14); ctx.lineTo(-10,0); ctx.closePath();
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#fff8d0';
+      ctx.beginPath();
+      ctx.moveTo(0,-7); ctx.lineTo(5,0); ctx.lineTo(0,7); ctx.lineTo(-5,0); ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    // Summit flag
+    const sm = lvl.summit;
+    ctx.fillStyle = '#5a3a20';
+    ctx.fillRect(sm.x, sm.y, sm.w, sm.h);
+    // Pole
+    ctx.fillStyle = '#3a2a18';
+    ctx.fillRect(sm.x + sm.w*0.3, sm.y - 40, 4, 40);
+    // Flag
+    ctx.fillStyle = '#f5c84b';
+    ctx.beginPath();
+    ctx.moveTo(sm.x + sm.w*0.3 + 4, sm.y - 38);
+    ctx.lineTo(sm.x + sm.w*0.3 + 30, sm.y - 30);
+    ctx.lineTo(sm.x + sm.w*0.3 + 4, sm.y - 22);
+    ctx.closePath();
+    ctx.fill();
+    // glow
+    const sg2 = ctx.createRadialGradient(sm.x + sm.w*0.3 + 14, sm.y - 30, 2, sm.x + sm.w*0.3 + 14, sm.y - 30, 40);
+    sg2.addColorStop(0, 'rgba(255,220,120,0.5)');
+    sg2.addColorStop(1, 'rgba(255,220,120,0)');
+    ctx.fillStyle = sg2;
+    ctx.fillRect(sm.x, sm.y - 50, sm.w, 50);
+    // Stone
+    const s = Game.state.stone;
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.rotate(s.rotation);
+    // body
+    const bodyGrad = ctx.createRadialGradient(-6,-8,2, 0,0,s.r);
+    bodyGrad.addColorStop(0, '#c9b69a');
+    bodyGrad.addColorStop(0.6, '#8a7458');
+    bodyGrad.addColorStop(1, '#4a3a28');
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath(); ctx.arc(0,0,s.r,0,Math.PI*2); ctx.fill();
+    // texture lines
+    ctx.strokeStyle = 'rgba(40,25,15,0.5)';
+    ctx.lineWidth = 1.5;
+    for (let i=0;i<5;i++){
+      const a = i*Math.PI/2.5;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a)*4, Math.sin(a)*4);
+      ctx.lineTo(Math.cos(a)*(s.r-3), Math.sin(a)*(s.r-3));
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(40,25,15,0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0,0,s.r-1,0,Math.PI*2); ctx.stroke();
+    // highlight
+    ctx.fillStyle = 'rgba(255,240,200,0.5)';
+    ctx.beginPath(); ctx.arc(-7,-9,5,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    // Particles
+    Particles.draw(ctx, Camera);
+    ctx.restore();
+    // Vignette
+    const vg = ctx.createRadialGradient(W/2,H/2,H*0.3, W/2,H/2,H*0.8);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.45)');
+    ctx.fillStyle = vg; ctx.fillRect(0,0,W,H);
+  },
+  renderMenuBackdrop(){
+    const ctx = Game.ctx;
+    const W = 1280, H = 720;
+    const t = performance.now()/2000;
+    const grad = ctx.createLinearGradient(0,0,0,H);
+    grad.addColorStop(0, '#2a1f5b');
+    grad.addColorStop(1, '#c45a3d');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,W,H);
+    // sun
+    ctx.fillStyle = '#ffd96a';
+    ctx.beginPath(); ctx.arc(W*0.7, H*0.3, 60 + Math.sin(t)*4, 0, Math.PI*2); ctx.fill();
+    // mountains
+    ctx.fillStyle = '#5a3a25';
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (let x=0;x<=W;x+=80){
+      const y = H*0.55 + Math.sin(x*0.01 + t)*30 + Math.sin(x*0.05)*15;
+      ctx.lineTo(x, y);
+    }
+    ctx.lineTo(W,H); ctx.closePath(); ctx.fill();
+    // rolling stone
+    const sx = (Math.sin(t*0.5)*0.5+0.5)*W*0.5 + 200;
+    const sy = H*0.55 + Math.sin(sx*0.01 + t)*30;
+    ctx.fillStyle = '#8a7458';
+    ctx.beginPath(); ctx.arc(sx, sy, 24, 0, Math.PI*2); ctx.fill();
+  }
+};
+
+function drawMountains(ctx, px, alt){
+  ctx.fillStyle = `rgba(60,40,80,${0.4 + alt*0.2})`;
+  ctx.beginPath();
+  ctx.moveTo(0, 720);
+  for (let x=-200;x<=1480;x+=60){
+    const xx = x + px*0.3;
+    const y = 380 + Math.sin(xx*0.005)*80 + Math.sin(xx*0.02)*30;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(1280,720); ctx.closePath(); ctx.fill();
+}
+function drawClouds(ctx, px, alt){
+  ctx.fillStyle = `rgba(255,240,220,${0.5 - alt*0.3})`;
+  for (let i=0;i<5;i++){
+    const cx = ((i*300 - px*0.1) % 1600 + 1600) % 1600 - 200;
+    const cy = 80 + i*30 + Math.sin(performance.now()/4000 + i)*8;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 28, 0, Math.PI*2);
+    ctx.arc(cx+24, cy-6, 22, 0, Math.PI*2);
+    ctx.arc(cx+44, cy+4, 26, 0, Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function fmtTime(t){
+  if (t == null) return '--:--';
+  const m = Math.floor(t/60);
+  const s = t - m*60;
+  return String(m).padStart(2,'0')+':'+s.toFixed(2).padStart(5,'0');
+}
+
+window.addEventListener('load', ()=>Game.init());
+})();
+</script>
 </body>
 </html>
