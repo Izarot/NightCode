@@ -1,0 +1,46 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1f; font-family: 'Rajdhani', monospace; color: #e0e8ff; user-select: none; }
+#gameCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; background: #0a0a1f; image-rendering: crisp-edges; }
+#hud { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; pointer-events: none; z-index: 10; font-family: 'Orbitron', monospace; }
+#fluxTimer { position: absolute; top: 20px; left: 24px; }
+#fluxTimer span { display: block; font-size: 32px; color: #00f0ff; text-shadow: 0 0 12px #00f0ff, 0 0 4px #fff; letter-spacing: 0.1em; }
+#fluxTimer::before { content: 'FLUX'; font-size: 14px; letter-spacing: 0.2em; color: #8aa; }
+#bestScore { position: absolute; top: 20px; right: 24px; text-align: right; }
+#bestScore span { display: block; font-size: 24px; color: #ff00aa; text-shadow: 0 0 10px #ff00aa; letter-spacing: 0.1em; }
+#bestScore::before { content: 'BEST'; font-size: 14px; letter-spacing: 0.2em; color: #8aa; }
+#speedrunTimer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); text-align: center; }
+#speedrunTimer span { display: block; font-size: 20px; color: #ffcc00; text-shadow: 0 0 8px #ffcc00; letter-spacing: 0.1em; }
+#speedrunTimer::before { content: 'SPEEDRUN'; font-size: 12px; letter-spacing: 0.2em; color: #8aa; }
+#nearMissCounter { position: absolute; top: 70px; left: 24px; font-size: 14px; letter-spacing: 0.1em; }
+#nearMissCounter span { color: #00f0ff; font-weight: 700; margin-left: 8px; }
+#reticle { position: absolute; width: 12px; height: 12px; pointer-events: none; z-index: 5; display: none; transform: translate(-50%, -50%); }
+#reticle::before, #reticle::after { content: ''; position: absolute; background: #00f0ff; box-shadow: 0 0 6px #00f0ff; }
+#reticle::before { left: 50%; top: 0; width: 2px; height: 4px; transform: translateX(-50%); }
+#reticle::after { top: 50%; left: 0; height: 2px; width: 4px; transform: translateY(-50%); }
+.overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 15, 0.75); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 20; opacity: 0; pointer-events: none; transition: opacity 400ms ease-out; flex-direction: column; gap: 20px; }
+.overlay.visible { opacity: 1; pointer-events: auto; }
+.panel { background: rgba(20, 20, 50, 0.6); border: 1px solid #00f0ff44; padding: 40px 60px; text-align: center; box-shadow: 0 0 40px #00f0ff22, inset 0 0 20px #00f0ff11; max-width: 90vw; }
+.title { font-family: 'Orbitron', monospace; font-size: 60px; font-weight: 900; color: #00f0ff; text-shadow: 3px 3px 0 #ff00aa, 0 0 30px #00f0ff; letter-spacing: 0.15em; animation: pulseTitle 2s ease-in-out infinite; }
+@keyframes pulseTitle { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+.death-title { color: #ff2244; text-shadow: 3px 3px 0 #660022, 0 0 30px #ff2244; font-size: 48px; }
+.subtitle { font-style: italic; font-size: 16px; color: #ff00aa; letter-spacing: 0.2em; margin-top: 10px; }
+.instructions { font-size: 14px; margin-top: 30px; letter-spacing: 0.15em; color: #bcd; }
+.cta { display: block; margin: 30px auto 0; padding: 14px 28px; background: transparent; border: 2px solid #00f0ff; color: #00f0ff; font-family: 'Orbitron', monospace; font-size: 16px; letter-spacing: 0.2em; cursor: pointer; transition: all 200ms ease-out; box-shadow: 0 0 10px #00f0ff55; }
+.cta:hover { transform: scale(1.05); box-shadow: 0 0 20px #00f0ff; background: #00f0ff11; }
+.stats { margin: 30px 0; font-size: 18px; line-height: 1.8; letter-spacing: 0.1em; }
+.stats div span { color: #00f0ff; font-weight: 700; margin-left: 8px; }
+.leaderboard { background: rgba(20, 20, 50, 0.6); border: 1px solid #ff00aa44; padding: 20px 30px; min-width: 240px; }
+.leaderboard h3 { color: #ff00aa; letter-spacing: 0.2em; margin-bottom: 14px; font-size: 14px; }
+.leaderboard ol { list-style: none; padding: 0; }
+.leaderboard li { padding: 6px 0; border-bottom: 1px solid #ffffff11; font-size: 14px; letter-spacing: 0.1em; display: flex; justify-content: space-between; }
+.leaderboard li span:first-child { color: #ffcc00; }
+.leaderboard li span:last-child { color: #00f0ff; }
+.seed-input { margin-top: 20px; font-size: 12px; letter-spacing: 0.15em; color: #8aa; }
+.seed-input input { background: rgba(0,0,0,0.4); border: 1px solid #00f0ff55; color: #00f0ff; padding: 6px 10px; font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 0.1em; margin-left: 8px; outline: none; }
+.seed-input input:focus { border-color: #00f0ff; box-shadow: 0 0 8px #00f0ff55; }
+@media (max-width: 600px) {
+  .title { font-size: 36px; }
+  .panel { padding: 24px 20px; }
+  #fluxTimer span { font-size: 22px; }
+  #bestScore span { font-size: 18px; }
+}
