@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐜 Ant Colony: Underground Empire</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐜</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a0f08;font-family:'Courier Prime',monospace;overflow:hidden;color:#E8D5B7;height:100vh;width:100vw;touch-action:none}
+#wrap{position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center}
+canvas{display:block;background:#2a1810;cursor:crosshair;max-width:100vw;max-height:100vh}
+#start{position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(ellipse at center,#3D2914 0%,#1a0f08 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+#start h1{font-size:clamp(2em,8vw,5em);color:#C9A227;text-shadow:0 0 20px #C9A227;letter-spacing:8px;margin-bottom:30px;font-family:'Orbitron',sans-serif}
+.btn{background:transparent;color:#C9A227;border:2px solid #C9A227;padding:12px 30px;margin:8px;font-family:'Courier Prime',monospace;font-size:1.1em;cursor:pointer;transition:all 0.3s}
+.btn:hover{background:#C9A227;color:#1a0f08;box-shadow:0 0 20px #C9A227}
+#hud{position:absolute;top:10px;left:10px;background:rgba(20,15,10,0.9);border:2px solid #C9A227;padding:10px;border-radius:4px;font-size:clamp(10px,1.5vw,14px);pointer-events:none;max-width:90vw}
+#hud div{margin:3px 0}
+.bar{background:#3D2914;height:14px;border-radius:7px;overflow:hidden;margin-top:3px;border:1px solid #8B7355}
+.barF{height:100%;background:linear-gradient(90deg,#228B22,#4CAF50);transition:width 0.3s}
+#timer{position:absolute;top:10px;right:10px;background:rgba(20,15,10,0.9);border:2px solid #C9A227;padding:8px 14px;border-radius:4px;color:#C9A227;font-family:'Orbitron',sans-serif;font-size:clamp(12px,1.8vw,16px)}
+#notif{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:rgba(20,15,10,0.95);border:2px solid #C9A227;padding:10px 20px;border-radius:4px;opacity:0;transition:opacity 0.4s;pointer-events:none;max-width:80vw;text-align:center}
+#mini{position:absolute;bottom:10px;right:10px;background:rgba(20,15,10,0.9);border:2px solid #C9A927;width:140px;height:90px}
+#msg{position:absolute;bottom:110px;left:50%;transform:translateX(-50%);background:rgba(20,15,10,0.95);border:2px solid #C9A227;padding:10px 20px;border-radius:4px;max-width:80vw;text-align:center;display:none}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="c"></canvas>
+<div id="hud" style="display:none">
+<div>🐜 Pop: <span id="pop">0</span></div>
+<div>Workers: <span id="wk">0</span> Soldiers: <span id="sd">0</span> Scouts: <span id="sc">0</span></div>
+<div>Day: <span id="day">1</span> <span id="tod">Dawn</span></div>
+<div>Food: <span id="fd">0</span>/<span id="fdM">500</span><div class="bar"><div id="fdB" class="barF" style="width:0%"></div></div></div>
+<div>Water: <span id="wt">100</span><div class="bar"><div id="wtB" class="barF" style="width:100%;background:linear-gradient(90deg,#0088FF,#4FC3F7)"></div></div></div>
+</div>
+<div id="timer" style="display:none">⏱️ <span id="tm">00:00</span></div>
+<div id="notif"></div>
+<div id="mini"><canvas id="mc" width="140" height="90"></canvas></div>
+<div id="msg"></div>
+<div id="start">
+<h1>🐜 ANT COLONY</h1>
+<button class="btn" onclick="startGame()">New Colony</button>
+<button class="btn" onclick="alert('No saved colonies')">Load Colony</button>
+<div style="margin-top:20px;color:#8B7355;font-size:0.9em">High Score: <span id="hs">0</span> ants</div>
+</div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const cv=$('c'),ctx=cv.getContext('2d');
+const mv=$('mc'),mctx=mv.getContext('2d');
+let W,H;
+function resize(){const s=Math.min(window.innerWidth,window.innerHeight*16/9);W=cv.width=s;H=cv.height=s*9/16;cv.style.width=W+'px';cv.style.height=H+'px'}
+window.onresize=resize;resize();
+
+const COL={soil:'#3D2914',clay:'#A0522D',leaf:'#228B22',berry:'#DC143C',queen:'#1A1A2E',worker:'#2F1810',soldier:'#0D0D0D',scout:'#8B4513',brood:'#F5DEB3',gold:'#C9A227',text:'#E8D5B7',warn:'#FF6B35',ok:'#4CAF50',cyan:'#00E5FF'};
+
+let game=null,paused=false,speed=1,keys={},mouse={x:0,y:0,down:false};
+const audioCtx=window.AudioContext||window.webkitAudioContext;
+function snd(freq,dur,type='square',vol=0.05){try{if(!audioCtx)return;const ac=audioCtx||new audioCtx();const o=ac.createOscillator();const g=ac.createGain();o.type=type;o.frequency.value=freq;g.gain.value=vol;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+dur);g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur)}catch(e){}}
+
+class Game{
+constructor(){this.t=0;this.day=1;this.dayT=0;this.food=200;this.foodMax=500;this.water=100;this.mat=20;this.ants=[];this.enemies=[];this.parts=[];this.notifs=[];this.berries=[];this.queen=null;this.startT=Date.now();this.popPeak=0;this.tutStep=0;this.highScore=parseInt(localStorage.getItem('acHigh')||'0');$('hs').textContent=this.highScore;this.setup()}
+setup(){
+this.berries=[];for(let i=0;i<12;i++)this.berries.push({x:100+Math.random()*700,y:200+Math.random()*400,amt:10,cd:0,alive:true});
+this.queen={x:W/2,y:H*0.7,type:'queen',hp:200,state:'LAY',task:0};
+this.ants.push(this.queen);
+for(let i=0;i<5;i++)this.spawnAnt('worker',W/2+Math.random()*30,H*0.7);
+for(let i=0;i<2;i++)this.spawnAnt('scout',W/2,H*0.7);
+this.spawnAnt('soldier',W/2,H*0.7);
+this.tutMsg('Welcome! Click berry bushes to assign workers.');
+}
+spawnAnt(type,x,y){const a={type,x,y,vx:0,vy:0,hp:type==='soldier'?50:type==='queen'?200:20,state:'IDLE',task:null,target:null,carrying:0,atk:type==='soldier'?15:type==='queen'?5:2,anim:Math.random()*100,cd:0,age:0};this.ants.push(a);return a}
+spawnEnemy(){const e={x:Math.random()*W,y:50+Math.random()*100,type:'beetle',hp:100,atk:20,state:'WANDER',vx:(Math.random()-0.5)*20,vy:0,age:0};this.enemies.push(e)}
+
+update(dt){
+if(paused)return;
+dt*=speed;
+this.t+=dt;this.dayT+=dt;
+if(this.dayT>300){this.dayT=0;this.day++}
+const tod=this.dayT<60?'Dawn':this.dayT<180?'Day':this.dayT<240?'Dusk':'Night';
+$('tod').textContent=tod;
+$('day').textContent=this.day;
+$('fd').textContent=Math.floor(this.food);$('fdM').textContent=this.foodMax;
+$('fdB').style.width=Math.min(100,(this.food/this.foodMax)*100)+'%';
+$('wt').textContent=Math.floor(this.water);
+$('wtB').style.width=Math.min(100,this.water/200*100)+'%';
+
+if(this.food<50&&Math.random()<0.01)this.notify('⚠️ Food low!',true);
+if(this.ants.length>this.popPeak)this.popPeak=this.ants.length;
+if(this.popPeak>this.highScore){this.highScore=this.popPeak;localStorage.setItem('acHigh',this.popPeak)}
+
+// Queen lay eggs
+if(this.queen&&this.queen.hp>0){this.queen.task-=dt;if(this.queen.task<=0){this.queen.task=5;if(this.food>10){this.food-=10;this.spawnAnt('worker',this.queen.x,this.queen.y);snd(800,0.05,'sine')}}}
+
+// Ant AI
+this.ants.forEach(a=>{
+if(a===this.queen)return;
+a.age+=dt;a.anim+=dt;
+if(a.carrying>0)a.state='DEPOSIT';
+if(a.state==='IDLE'){
+// Find task
+const aliveBerries=this.berries.filter(b=>b.alive&&b.cd<=0);
+if(a.type==='worker'&&aliveBerries.length&&Math.random()<0.02*speed){a.task={type:'gather',target:aliveBerries[0]};a.state='GATHER'}
+if(a.type==='scout'&&Math.random()<0.01){a.task={type:'explore'};a.state='EXPLORE'}
+if(a.type==='soldier'){const nearE=this.enemies.find(e=>Math.hypot(e.x-a.x,e.y-a.y)<200);if(nearE){a.task={type:'attack',target:nearE};a.state='COMBAT'}}
+}
+if(a.state==='GATHER'&&a.task&&a.task.target){
+const t=a.task.target;if(!t.alive){a.state='IDLE';return}
+const dx=t.x-a.x,dy=t.y-a.y,d=Math.hypot(dx,dy);
+if(d>5){a.x+=dx/d*30*dt;a.y+=dy/d*30*dt}else{if(a.carrying<5){a.carrying++;t.amt--;if(t.amt<=0){t.alive=false;t.cd=60}snd(400,0.02,'triangle')}}
+}
+if(a.state==='DEPOSIT'){
+const dx=this.queen.x-a.x,dy=this.queen.y-a.y,d=Math.hypot(dx,dy);
+if(d>5){a.x+=dx/d*18*dt;a.y+=dy/d*18*dt}else{if(a.carrying>0&&this.food<this.foodMax){this.food=Math.min(this.foodMax,this.food+a.carrying*5);a.carrying=0;snd(600,0.03,'sine')}}
+}
+if(a.state==='EXPLORE'){a.x+=Math.sin(a.age*2)*45*dt;a.y+=Math.cos(a.age*2)*45*dt;if(a.x<10||a.x>W-10||a.y<10||a.y>H-10)a.state='IDLE'}
+if(a.state==='COMBAT'&&a.task&&a.task.target&&a.task.target.hp>0){
+const t=a.task.target;const d=Math.hypot(t.x-a.x,t.y-a.y);
+if(d>15){a.x+=(t.x-a.x)/d*25*dt;a.y+=(t.y-a.y)/d*25*dt}else{a.cd-=dt;if(a.cd<=0){a.cd=1;t.hp-=a.atk;snd(200,0.05,'sawtooth',0.1);if(t.hp<=0){t.dead=true;this.food+=15;this.mat+=5}}}
+}
+if(a.hp<=0&&a!==this.queen)a.dead=true;
+});
+this.ants=this.ants.filter(a=>!a.dead);
+
+// Enemies
+this.enemies.forEach(e=>{e.age+=dt;e.x+=e.vx*dt;if(e.x<10||e.x>W-10)e.vx*=-1;if(Math.random()<0.005*speed&&this.enemies.length<5)this.spawnEnemy()});
+this.enemies=this.enemies.filter(e=>!e.dead&&e.hp>0);
+
+// Berries
+this.berries.forEach(b=>{if(b.cd>0)b.cd-=dt;if(!b.alive&&b.cd<=0){b.alive=true;b.amt=10}});
+
+// Particles
+this.parts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt});
+this.parts=this.parts.filter(p=>p.life>0);
+
+// Pop count
+const w=this.ants.filter(a=>a.type==='worker').length;
+const s=this.ants.filter(a=>a.type==='soldier').length;
+const sc=this.ants.filter(a=>a.type==='scout').length;
+$('pop').textContent=this.ants.length;
+$('wk').textContent=w;$('sd').textContent=s;$('sc').textContent=sc;
+
+// Timer
+const sec=Math.floor((Date.now()-this.startT)/1000);
+const mm=String(Math.floor(sec/60)).padStart(2,'0');
+const ss=String(sec%60).padStart(2,'0');
+$('tm').textContent=mm+':'+ss;
+}
+
+render(){
+ctx.fillStyle=todColor(this);ctx.fillRect(0,0,W,H);
+// Surface
+this.berries.forEach(b=>{
+if(!b.alive)return;
+ctx.fillStyle=COL.berry;ctx.beginPath();ctx.arc(b.x,b.y,15,0,Math.PI*2);ctx.fill();
+ctx.fillStyle=COL.leaf;ctx.beginPath();ctx.arc(b.x-10,b.y-5,8,0,Math.PI*2);ctx.fill();
+});
+// Ants
+this.ants.forEach(a=>{
+const c=a.type==='queen'?COL.queen:a.type==='soldier'?COL.soldier:a.type==='scout'?COL.scout:COL.worker;
+ctx.fillStyle=c;ctx.beginPath();ctx.arc(a.x,a.y,a.type==='queen'?8:5,0,Math.PI*2);ctx.fill();
+if(a.carrying>0){ctx.fillStyle=COL.leaf;ctx.beginPath();ctx.arc(a.x,a.y-8,3,0,Math.PI*2);ctx.fill()}
+// HP bar if damaged
+if(a.hp<(a.type==='queen'?200:50)){ctx.fillStyle='#f00';ctx.fillRect(a.x-8,a.y-12,16,2);ctx.fillStyle='#0f0';ctx.fillRect(a.x-8,a.y-12,16*(a.hp/(a.type==='queen'?200:a.type==='soldier'?50:20)),2)}
+});
+// Enemies
+this.enemies.forEach(e=>{
+ctx.fillStyle='#660000';ctx.beginPath();ctx.arc(e.x,e.y,12,0,Math.PI*2);ctx.fill();
+ctx.fillStyle='#000';ctx.fillRect(e.x-10,e.y-15,e.hp/10,3);
+});
+// Particles
+this.parts.forEach(p=>{ctx.fillStyle=p.c;ctx.globalAlpha=p.life/p.ml;ctx.beginPath();ctx.arc(p.x,p.y,p.s,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1});
+
+// Minimap
+mctx.fillStyle='#1a0f08';mctx.fillRect(0,0,140,90);
+this.ants.forEach(a=>{mctx.fillStyle=a.type==='queen'?'#ff0':a.type==='soldier'?'#f00':a.type==='scout'?'#fa0':'#0f0';mctx.fillRect(a.x/8,a.y/8,2,2)});
+this.enemies.forEach(e=>{mctx.fillStyle='#a00';mctx.fillRect(e.x/8,e.y/8,3,3)});
+this.berries.forEach(b=>{if(b.alive){mctx.fillStyle=COL.berry;mctx.fillRect(b.x/8,b.y/8,3,3)}});
+}
+
+notify(msg,warn=false){this.notifs.push({msg,warn,t:0});if(this.notifs.length>3)this.notifs.shift();this.showNotif()}
+showNotif(){const n=$('notif');const top=this.notifs[0];if(top){n.textContent=top.msg;n.style.opacity=1;n.style.borderColor=top.warn?COL.warn:COL.gold;setTimeout(()=>{n.style.opacity=0},3500)}
+}
+tutMsg(m){const el=$('msg');el.textContent=m;el.style.display='block';setTimeout(()=>el.style.display='none',5000)}
+}
+
+function todColor(g){const d=g.dayT;if(d<60){const p=d/60;return`rgb(${Math.floor(60+150*p)},${Math.floor(40+120*p)},${Math.floor(30+80*p)})`}if(d<180)return'rgb(210,180,140)';if(d<240){const p=(d-180)/60;return`rgb(${Math.floor(210-150*p)},${Math.floor(180-100*p)},${Math.floor(140-80*p)})`}return'rgb(40,30,60)'}
+
+function startGame(){$('start').style.display='none';$('hud').style.display='block';$('timer').style.display='block';game=new Game();snd(440,0.2,'sine');snd(660,0.3,'sine')}
+
+cv.onclick=e=>{
+if(!game)return;
+const r=cv.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;
+const b=game.berries.find(b=>b.alive&&Math.hypot(b.x-mouse.x,b.y-mouse.y)<20);
+if(b){
+const idle=game.ants.filter(a=>a.type==='worker'&&a.state==='IDLE').slice(0,3);
+idle.forEach(a=>{a.task={type:'gather',target:b};a.state='GATHER'});
+if(idle.length){game.notify('🫐 Workers assigned!');snd(500,0.05)}
+}
+};
+cv.oncontextmenu=e=>e.preventDefault();
+document.onkeydown=e=>{
+if(e.code==='Space'){paused=!paused;e.preventDefault()}
+if(e.key==='1')speed=1;if(e.key==='2')speed=2;if(e.key==='3')speed=3;
+};
+
+function loop(){game&&game.update(1/60);game&&game.render();requestAnimationFrame(loop)}
+loop();
+</script>
+</body>
+</html>
