@@ -1,0 +1,9 @@
+const CELL=24;
+const COLS=31,ROWS=21;
+class Maze{
+constructor(seed){this.cols=COLS;this.rows=ROWS;this.cells=Array.from({length:COLS*ROWS},()=>({w:[true,true,true,true],v:false}));this.rng=Utils.rand(seed);this.traps=[];this.generate();this.findStartEnd();this.placeTraps()}
+idx(x,y){return y*this.cols+x}
+generate(){const stack=[[0,0]];this.cells[this.idx(0,0)].v=true;while(stack.length){const [cx,cy]=stack[stack.length-1];const dirs=[];if(cx>0&&!this.cells[this.idx(cx-1,cy)].v)dirs.push([0,2]);if(cx<this.cols-1&&!this.cells[this.idx(cx+1,cy)].v)dirs.push([2,0]);if(cy>0&&!this.cells[this.idx(cx,cy-1)].v)dirs.push([1,1]);if(cy<this.rows-1&&!this.cells[this.idx(cx,cy+1)].v)dirs.push([1,3]);if(!dirs.length){stack.pop();continue}const [wi,di]=dirs[Math.floor(this.rng()*dirs.length)];const nx=cx+wi[0]-1,ny=cy+wi[1]-1;this.cells[this.idx(cx,cy)].w[di]=false;this.cells[this.idx(nx,ny)].w[(di+2)%4]=false;this.cells[this.idx(nx,ny)].v=true;stack.push([nx,ny])}}
+findStartEnd(){this.start={x:0,y:0};this.end={x:this.cols-1,y:this.rows-1}}
+placeTraps(){this.traps=[];const corridors=[];for(let y=1;y<this.rows-1;y++)for(let x=1;x<this.cols-1;x++){const c=this.cells[this.idx(x,y)];const horiz=!c.w[0]&&!c.w[2];const vert=!c.w[1]&&!c.w[3];if(horiz||vert)corridors.push({x,y,type:horiz?'h':'v'})}if(!corridors.length)return;const count=Math.min(8,corridors.length/4|0);const used=new Set();for(let i=0;i<count;i++){let tries=0,item;do{item=corridors[Math.floor(this.rng()*corridors.length)];tries++}while(used.has(item.x+','+item.y)&&tries<20);if(tries>=20)break;used.add(item.x+','+item.y);const px=item.x*CELL+CELL/2,py=item.y*CELL+CELL/2;if(item.type==='h'){const len=2+Math.floor(this.rng()*3);const dir=this.rng()<0.5?1:-1;this.traps.push({type:'patrol',x:px,y:py,ax:px,ay:py,bx:px+len*CELL*dir,by:py,t:this.rng()})}else{this.traps.push({type:'orbit',x:px,y:py,r:20+this.rng()*15,ang:this.rng()*Math.PI*2,speed:1+this.rng()*1.5})}}}
+}
