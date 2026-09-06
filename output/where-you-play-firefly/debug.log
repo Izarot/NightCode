@@ -1,0 +1,450 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 27754 (char 27753)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n    <title>Lumina Conducts - Firefly Orchestra</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>\">\n    <style>\n        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Quicksand:wght@300;500&display=swap');\n        \n        * {\n            margin: 0;\n            padding: 0;\n            box-sizing: border-box;\n        }\n        \n        body {\n            background: #0a0a1a;\n            overflow: hidden;\n            font-family: 'Quicksand', sans-serif;\n            touch-action: none;\n            user-select: none;\n        }\n        \n        #gameCanvas {\n            display: block;\n            position: absolute;\n            top: 50%;\n            left: 50%;\n            transform: translate(-50%, -50%);\n        }\n        \n        #ui {\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            pointer-events: none;\n            z-index: 10;\n        }\n        \n        .timer {\n            position: absolute;\n            top: 15px;\n            right: 20px;\n            font-family: 'Quicksand', sans-serif;\n            font-size: 18px;\n            color: rgba(255, 204, 0, 0.8);\n            text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);\n            letter-spacing: 2px;\n        }\n        \n        .score-display {\n            position: absolute;\n            top: 20px;\n            left: 50%;\n            transform: translateX(-50%);\n            text-align: center;\n        }\n        \n        .score {\n            font-family: 'Cormorant Garamond', serif;\n            font-size: 48px;\n            font-weight: 600;\n            color: #ffcc00;\n            text-shadow: 0 0 20px rgba(255, 204, 0, 0.6), 0 0 40px rgba(255, 204, 0, 0.3);\n        }\n        \n        .combo {\n            font-size: 16px;\n            color: #ff9500;\n            margin-top: 5px;\n            opacity: 0.9;\n        }\n        \n        .combo-bar {\n            width: 150px;\n            height: 6px;\n            background: rgba(255, 149, 0, 0.2);\n            border-radius: 3px;\n            margin: 8px auto 0;\n            overflow: hidden;\n        }\n        \n        .combo-fill {\n            height: 100%;\n            background: linear-gradient(90deg, #ff9500, #ffcc00);\n            border-radius: 3px;\n            transition: width 0.2s ease;\n        }\n        \n        .energy-container {\n            position: absolute;\n            top: 20px;\n            left: 20px;\n        }\n        \n        .energy-label {\n            font-size: 12px;\n            color: rgba(74, 144, 217, 0.8);\n            margin-bottom: 5px;\n        }\n        \n        .energy-bar {\n            width: 120px;\n            height: 10px;\n            background: rgba(74, 144, 217, 0.2);\n            border-radius: 5px;\n            overflow: hidden;\n            border: 1px solid rgba(74, 144, 217, 0.3);\n        }\n        \n        .energy-fill {\n            height: 100%;\n            background: linear-gradient(90deg, #4a90d9, #7ec8e3);\n            border-radius: 5px;\n            transition: width 0.1s ease;\n        }\n        \n        .high-score {\n            position: absolute;\n            top: 50px;\n            left: 20px;\n            font-size: 11px;\n            color: rgba(255, 204, 0, 0.6);\n        }\n        \n        .section-indicators {\n            position: absolute;\n            bottom: 20px;\n            left: 50%;\n            transform: translateX(-50%);\n            display: flex;\n            gap: 20px;\n        }\n        \n        .section-icon {\n            width: 40px;\n            height: 40px;\n            border-radius: 50%;\n            display: flex;\n            align-items: center;\n            justify-content: center;\n            font-size: 20px;\n            opacity: 0.4;\n            transition: all 0.3s ease;\n            border: 2px solid currentColor;\n        }\n        \n        .section-icon.active {\n            opacity: 1;\n            box-shadow: 0 0 15px currentColor;\n        }\n        \n        .section-icon.strings { color: #ff9500; }\n        .section-icon.woodwinds { color: #20b2aa; }\n        .section-icon.brass { color: #ffd700; }\n        .section-icon.percussion { color: #e0e0e0; }\n        \n        .title-screen, .results-screen {\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            background: radial-gradient(ellipse at center, rgba(26, 26, 46, 0.95) 0%, rgba(10, 10, 26, 0.98) 100%);\n            pointer-events: auto;\n            z-index: 100;\n        }\n        \n        .title-screen h1 {\n            font-family: 'Cormorant Garamond', serif;\n            font-size: 64px;\n            font-weight: 600;\n            color: #ffcc00;\n            text-shadow: 0 0 30px rgba(255, 204, 0, 0.6), 0 0 60px rgba(255, 204, 0, 0.3);\n            margin-bottom: 10px;\n            letter-spacing: 4px;\n        }\n        \n        .title-screen .subtitle {\n            font-size: 18px;\n            color: rgba(255, 255, 255, 0.6);\n            margin-bottom: 50px;\n            letter-spacing: 6px;\n            text-transform: uppercase;\n        }\n        \n        .start-btn {\n            padding: 15px 50px;\n            font-family: 'Quicksand', sans-serif;\n            font-size: 18px;\n            color: #0a0a1a;\n            background: linear-gradient(135deg, #ffcc00, #ff9500);\n            border: none;\n            border-radius: 30px;\n            cursor: pointer;\n            transition: all 0.3s ease;\n            box-shadow: 0 0 30px rgba(255, 204, 0, 0.4);\n            pointer-events: auto;\n        }\n        \n        .start-btn:hover {\n            transform: scale(1.05);\n            box-shadow: 0 0 50px rgba(255, 204, 0, 0.6);\n        }\n        \n        .instructions {\n            margin-top: 40px;\n            text-align: center;\n            color: rgba(255, 255, 255, 0.5);\n            font-size: 14px;\n            line-height: 2;\n        }\n        \n        .results-screen h2 {\n            font-family: 'Cormorant Garamond', serif;\n            font-size: 42px;\n            color: #ffcc00;\n            margin-bottom: 30px;\n        }\n        \n        .results-score {\n            font-size: 72px;\n            font-weight: 600;\n            color: #fff;\n            text-shadow: 0 0 20px rgba(255, 204, 0, 0.5);\n        }\n        \n        .stars {\n            font-size: 40px;\n            margin: 20px 0;\n        }\n        \n        .star {\n            color: rgba(255, 204, 0, 0.3);\n            margin: 0 5px;\n            transition: all 0.3s ease;\n        }\n        \n        .star.earned {\n            color: #ffcc00;\n            text-shadow: 0 0 20px rgba(255, 204, 0, 0.8);\n        }\n        \n        .stats {\n            margin: 30px 0;\n            color: rgba(255, 255, 255, 0.7);\n            font-size: 14px;\n            line-height: 2;\n        }\n        \n        .hidden {\n            display: none !important;\n        }\n        \n        .feedback-text {\n            position: absolute;\n            font-family: 'Cormorant Garamond', serif;\n            font-size: 28px;\n            font-weight: 600;\n            pointer-events: none;\n            opacity: 0;\n            transform: translateY(0);\n            transition: all 0.5s ease;\n        }\n        \n        .feedback-text.show {\n            opacity: 1;\n            transform: translateY(-30px);\n        }\n        \n        .feedback-text.perfect { color: #ffcc00; text-shadow: 0 0 20px rgba(255, 204, 0, 0.8); }\n        .feedback-text.good { color: #7ec8e3; text-shadow: 0 0 20px rgba(126, 200, 227, 0.8); }\n        .feedback-text.okay { color: #aaa; }\n        \n        @media (max-width: 768px) {\n            .title-screen h1 { font-size: 36px; }\n            .score { font-size: 32px; }\n            .section-icon { width: 35px; height: 35px; font-size: 16px; }\n        }\n    </style>\n</head>\n<body>\n    <canvas id=\"gameCanvas\"></canvas>\n    \n    <div id=\"ui\">\n        <div class=\"timer\" id=\"timer\">00:00.00</div>\n        \n        <div class=\"score-display\">\n            <div class=\"score\" id=\"score\">0</div>\n            <div class=\"combo\" id=\"combo\">Combo x1</div>\n            <div class=\"combo-bar\"><div class=\"combo-fill\" id=\"comboFill\"></div></div>\n        </div>\n        \n        <div class=\"energy-container\">\n            <div class=\"energy-label\">LUMINA</div>\n            <div class=\"energy-bar\"><div class=\"energy-fill\" id=\"energyFill\"></div></div>\n        </div>\n        \n        <div class=\"high-score\" id=\"highScore\">BEST: 0</div>\n        \n        <div class=\"section-indicators\">\n            <div class=\"section-icon strings\" id=\"iconStrings\">🎻</div>\n            <div class=\"section-icon woodwinds\" id=\"iconWoodwinds\">🎵</div>\n            <div class=\"section-icon brass\" id=\"iconBrass\">🎺</div>\n            <div class=\"section-icon percussion\" id=\"iconPercussion\">🥁</div>\n        </div>\n        \n        <div class=\"feedback-text\" id=\"feedback\"></div>\n    </div>\n    \n    <div class=\"title-screen\" id=\"titleScreen\">\n        <h1>LUMINA CONDUCTS</h1>\n        <div class=\"subtitle\">Firefly Orchestra</div>\n        <button class=\"start-btn\" id=\"startBtn\">Begin Performance</button>\n        <div class=\"instructions\">\n            Move your firefly with mouse or touch<br>\n            Click or tap to pulse and conduct the orchestra<br>\n            Time your pulses to the beat for maximum harmony\n        </div>\n    </div>\n    \n    <div class=\"results-screen hidden\" id=\"resultsScreen\">\n        <h2>Performance Complete</h2>\n        <div class=\"results-score\" id=\"finalScore\">0</div>\n        <div class=\"stars\" id=\"stars\"></div>\n        <div class=\"stats\" id=\"stats\"></div>\n        <button class=\"start-btn\" id=\"replayBtn\">Encore</button>\n    </div>\n\n    <script>\n    // ==================== AUDIO ENGINE ====================\n    class AudioEngine {\n        constructor() {\n            this.ctx = null;\n            this.masterGain = null;\n            this.initialized = false;\n        }\n        \n        init() {\n            if (this.initialized) return;\n            this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n            this.masterGain = this.ctx.createGain();\n            this.masterGain.gain.value = 0.3;\n            this.masterGain.connect(this.ctx.destination);\n            this.initialized = true;\n        }\n        \n        playTone(freq, duration, type = 'sine', volume = 0.3) {\n            if (!this.initialized) return;\n            const osc = this.ctx.createOscillator();\n            const gain = this.ctx.createGain();\n            osc.type = type;\n            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);\n            gain.gain.setValueAtTime(volume, this.ctx.currentTime);\n            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);\n            osc.connect(gain);\n            gain.connect(this.masterGain);\n            osc.start();\n            osc.stop(this.ctx.currentTime + duration);\n        }\n        \n        playFireflyPulse() {\n            if (!this.initialized) return;\n            [523, 659, 784].forEach((freq, i) => {\n                setTimeout(() => this.playTone(freq, 0.15, 'sine', 0.15), i * 30);\n            });\n        }\n        \n        playStrings() {\n            if (!this.initialized) return;\n            [261, 329, 392, 523].forEach((freq, i) => {\n                setTimeout(() => this.playTone(freq, 0.8, 'triangle', 0.2), i * 50);\n            });\n        }\n        \n        playWoodwinds() {\n            if (!this.initialized) return;\n            [392, 493, 587].forEach((freq, i) => {\n                setTimeout(() => this.playTone(freq, 0.6, 'sine', 0.15), i * 40);\n            });\n        }\n        \n        playBrass() {\n            if (!this.initialized) return;\n            this.playTone(196, 0.5, 'sawtooth', 0.1);\n            this.playTone(247, 0.5, 'sawtooth', 0.1);\n        }\n        \n        playPercussion() {\n            if (!this.initialized) return;\n            this.playTone(80, 0.3, 'sine', 0.25);\n            this.playTone(120, 0.2, 'square', 0.08);\n        }\n        \n        playSuccess() {\n            if (!this.initialized) return;\n            [523, 659, 784, 1047].forEach((freq, i) => {\n                setTimeout(() => this.playTone(freq, 0.3, 'sine', 0.2), i * 60);\n            });\n        }\n        \n        playComboBreak() {\n            if (!this.initialized) return;\n            [400, 350, 300].forEach((freq, i) => {\n                setTimeout(() => this.playTone(freq, 0.2, 'sine', 0.15), i * 50);\n            });\n        }\n        \n        playBeat() {\n            if (!this.initialized) return;\n            this.playTone(220, 0.1, 'sine', 0.1);\n        }\n        \n        playAmbient() {\n            if (!this.initialized) return;\n            // Soft cricket-like chirps\n            setInterval(() => {\n                if (Math.random() > 0.7) {\n                    this.playTone(2000 + Math.random() * 1000, 0.05, 'sine', 0.02);\n                }\n            }, 500);\n        }\n    }\n\n    // ==================== PARTICLE SYSTEM ====================\n    class Particle {\n        constructor() {\n            this.reset();\n        }\n        \n        reset() {\n            this.active = false;\n            this.x = 0;\n            this.y = 0;\n            this.vx = 0;\n            this.vy = 0;\n            this.life = 0;\n            this.maxLife = 1;\n            this.size = 5;\n            this.color = '#ffcc00';\n            this.type = 'default';\n        }\n        \n        update(dt) {\n            if (!this.active) return;\n            this.life -= dt;\n            if (this.life <= 0) {\n                this.active = false;\n                return;\n            }\n            this.x += this.vx * dt;\n            this.y += this.vy * dt;\n        }\n        \n        draw(ctx) {\n            if (!this.active) return;\n            const alpha = Math.max(0, this.life / this.maxLife);\n            ctx.save();\n            ctx.globalAlpha = alpha;\n            ctx.fillStyle = this.color;\n            ctx.shadowBlur = 15;\n            ctx.shadowColor = this.color;\n            ctx.beginPath();\n            ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);\n            ctx.fill();\n            ctx.restore();\n        }\n    }\n\n    class ParticleSystem {\n        constructor(maxParticles = 200) {\n            this.particles = [];\n            for (let i = 0; i < maxParticles; i++) {\n                this.particles.push(new Particle());\n            }\n        }\n        \n        emit(x, y, config) {\n            const particle = this.particles.find(p => !p.active);\n            if (!particle) return;\n            \n            particle.active = true;\n            particle.x = x + (Math.random() - 0.5) * (config.spread || 0);\n            particle.y = y + (Math.random() - 0.5) * (config.spread || 0);\n            particle.vx = config.vx || 0;\n            particle.vy = config.vy || 0;\n            particle.life = config.life || 0.5;\n            particle.maxLife = particle.life;\n            particle.size = config.size || 5;\n            particle.color = config.color || '#ffcc00';\n            particle.type = config.type || 'default';\n        }\n        \n        emitBurst(x, y, count, config) {\n            for (let i = 0; i < count; i++) {\n                const angle = (i / count) * Math.PI * 2;\n                const speed = config.speed || 100;\n                this.emit(x, y, {\n                    ...config,\n                    vx: Math.cos(angle) * speed * (0.5 + Math.random() * 0.5),\n                    vy: Math.sin(angle) * speed * (0.5 + Math.random() * 0.5)\n                });\n            }\n        }\n        \n        update(dt) {\n            this.particles.forEach(p => p.update(dt));\n        }\n        \n        draw(ctx) {\n            this.particles.forEach(p => p.draw(ctx));\n        }\n    }\n\n    // ==================== FIREFLY ====================\n    class Firefly {\n        constructor(x, y) {\n            this.x = x;\n            this.y = y;\n            this.targetX = x;\n            this.targetY = y;\n            this.radius = 20;\n            this.baseRadius = 20;\n            this.glowIntensity = 1;\n            this.bobOffset = 0;\n            this.isPulsing = false;\n            this.pulseRadius = 0;\n            this.pulseMaxRadius = 150;\n            this.pulsePhase = 0;\n            this.chargeTime = 0;\n            this.maxCharge = 1.5;\n        }\n        \n        setTarget(x, y) {\n            this.targetX = x;\n            this.targetY = y;\n        }\n        \n        startPulse() {\n            if (this.isPulsing) return false;\n            this.isPulsing = true;\n            this.pulsePhase = 1;\n            this.chargeTime = 0;\n            return true;\n        }\n        \n        update(dt, bounds) {\n            // Smooth movement\n            const lerp = 0.08;\n            this.x += (this.targetX - this.x) * lerp;\n            this.y += (this.targetY - this.y) * lerp;\n            \n            // Clamp to bounds\n            this.x = Math.max(bounds.left, Math.min(bounds.right, this.x));\n            this.y = Math.max(bounds.top, Math.min(bounds.bottom, this.y));\n            \n            // Bobbing animation\n            this.bobOffset = Math.sin(Date.now() * 0.003) * 3;\n            \n            // Pulse animation\n            if (this.isPulsing) {\n                if (this.pulsePhase > 0) {\n                    this.pulseRadius += dt * 600;\n                    this.pulsePhase -= dt * 3;\n                    this.glowIntensity = 1.5;\n                } else {\n                    this.pulseRadius = Math.max(0, this.pulseRadius - dt * 800);\n                    this.glowIntensity = Math.max(1, this.glowIntensity - dt * 2);\n                    if (this.pulseRadius <= 0) {\n                        this.isPulsing = false;\n                    }\n                }\n            }\n            \n            // Breathing effect\n            this.radius = this.baseRadius + Math.sin(Date.now() * 0.005) * 3;\n        }\n        \n        draw(ctx) {\n            const drawY = this.y + this.bobOffset;\n            \n            // Pulse ring\n            if (this.pulseRadius > 0) {\n                ctx.save();\n                const alpha = this.pulsePhase;\n                ctx.strokeStyle = `rgba(255, 204, 0, ${alpha * 0.5})`;\n                ctx.lineWidth = 3;\n                ctx.shadowBlur = 20;\n                ctx.shadowColor = '#ffcc00';\n                ctx.beginPath();\n                ctx.arc(this.x, drawY, this.pulseRadius, 0, Math.PI * 2);\n                ctx.stroke();\n                ctx.restore();\n            }\n            \n            // Outer glow\n            const gradient = ctx.createRadialGradient(\n                this.x, drawY, 0,\n                this.x, drawY, this.radius * 3 * this.glowIntensity\n            );\n            gradient.addColorStop(0, 'rgba(255, 204, 0, 0.8)');\n            gradient.addColorStop(0.3, 'rgba(255, 149, 0, 0.4)');\n            gradient.addColorStop(0.6, 'rgba(255, 149, 0, 0.1)');\n            gradient.addColorStop(1, 'rgba(255, 149, 0, 0)');\n            \n            ctx.save();\n            ctx.fillStyle = gradient;\n            ctx.beginPath();\n            ctx.arc(this.x, drawY, this.radius * 3 * this.glowIntensity, 0, Math.PI * 2);\n            ctx.fill();\n            ctx.restore();\n            \n            // Core\n            ctx.save();\n            ctx.fillStyle = '#fff';\n            ctx.shadowBlur = 25 * this.glowIntensity;\n            ctx.shadowColor = '#ffcc00';\n            ctx.beginPath();\n            ctx.arc(this.x, drawY, this.radius * 0.6, 0, Math.PI * 2);\n            ctx.fill();\n            ctx.restore();\n            \n            // Wing silhouettes\n            ctx.save();\n            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';\n            const wingFlap = Math.sin(Date.now() * 0.05) * 5;\n            \n            // Left wing\n            ctx.beginPath();\n            ctx.ellipse(this.x - 12, drawY - 5 + wingFlap, 8, 4, -0.3, 0, Math.PI * 2);\n            ctx.fill();\n            \n            // Right wing\n            ctx.beginPath();\n            ctx.ellipse(this.x + 12, drawY - 5 - wingFlap, 8, 4, 0.3, 0, Math.PI * 2);\n            ctx.fill();\n            ctx.restore();\n        }\n        \n        getPulseRadius() {\n            return Math.min(this.pulseMaxRadius, 50 + this.chargeTime * 67);\n        }\n    }\n\n    // ==================== MUSICIAN ====================\n    class Musician {\n        constructor(x, y, section, index) {\n            this.x = x;\n            this.y = y;\n            this.section = section;\n            this.index = index;\n            this.readiness = 0;\n            this.isPlaying = false;\n            this.glowIntensity = 0;\n            this.silhouetteHeight = 60;\n            \n            this.colors = {\n                strings: '#ff9500',\n                woodwinds: '#20b2aa',\n                brass: '#ffd700',\n                percussion: '#e0e0e0'\n            };\n        }\n        \n        update(dt, beatPhase) {\n            // Readiness fills between beats\n            if (!this.isPlaying) {\n                this.readiness = Math.min(1, this.readiness + dt * 0.8);\n            }\n            \n            // Glow decay\n            this.glowIntensity = Math.max(0, this.glowIntensity - dt * 2);\n        }\n        \n        cue() {\n            if (this.readiness >= 0.6) {\n                this.isPlaying = true;\n                this.glowIntensity = 1;\n                this.readiness = 0;\n                return true;\n            }\n            return false;\n        }\n        \n        draw(ctx) {\n            const color = this.colors[this.section];\n            \n            // Silhouette body\n            ctx.save();\n            ctx.fillStyle = '#1a1a2e';\n            \n            // Head\n            ctx.beginPath();\n            ctx.arc(this.x, this.y - 35, 12, 0, Math.PI * 2);\n            ctx.fill();\n            \n            // Body\n            ctx.beginPath();\n            ctx.moveTo(this.x - 15, this.y);\n            ctx.lineTo(this.x + 15, this.y);\n            ctx.lineTo(this.x + 10, this.y - 45);\n            ctx.lineTo(this.x - 10, this.y - 45);\n            ctx.closePath();\n            ctx.fill();\n            \n            // Instrument hint\n            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';\n            if (this.section === 'strings') {\n                ctx.fillRect(this.x - 3, this.y - 55, 6, 25);\n            } else if (this.section === 'brass') {\n                ctx.beginPath();\n                ctx.ellipse(this.x, this.y - 45, 10, 6, 0, 0, Math.PI * 2);\n                ctx.fill();\n            } else if (this.section === 'percussion') {\n                ctx.beginPath();\n                ctx.arc(this.x, this.y - 40, 15, 0, Math.PI * 2);\n                ctx.fill();\n            }\n            ctx.restore();\n            \n            // Glow effect when playing\n            if (this.glowIntensity > 0) {\n                ctx.save();\n                const gradient = ctx.createRadialGradient(\n                    this.x, this.y - 25, 0,\n                    this.x, this.y - 25, 40\n                );\n                gradient.addColorStop(0, color);\n                gradient.addColorStop(0.5, `${color}66`);\n                gradient.addColorStop(1, 'transparent');\n                \n                ctx.globalAlpha = this.glowIntensity * 0.6;\n                ctx.fillStyle = gradient;\n                ctx.beginPath();\n                ctx.arc(this.x, this.y - 25, 40, 0, Math.PI * 2);\n                ctx.fill();\n                ctx.restore();\n            }\n            \n            // Readiness indicator\n            if (this.readiness > 0 && !this.isPlaying) {\n                ctx.save();\n                ctx.strokeStyle = color;\n                ctx.lineWidth = 2;\n                ctx.globalAlpha = 0.5;\n                ctx.beginPath();\n                ctx.arc(this.x, this.y + 15, 8, -Math.PI / 2, -Math.PI / 2 + this.readiness * Math.PI * 2);\n                ctx.stroke();\n                ctx.restore();\n            }\n        }\n    }\n\n    // ==================== GAME ====================\n    class Game {\n        constructor() {\n            this.canvas = document.getElementById('gameCanvas');\n            this.ctx = this.canvas.getContext('2d');\n            this.audio = new AudioEngine();\n            this.particles = new ParticleSystem(200);\n            \n            this.state = 'title';\n            this.score = 0;\n            this.combo = 1;\n            this.comboProgress = 0;\n            this.maxCombo = 0;\n            this.energy = 100;\n            this.beatsHit = 0;\n            this.beatsMissed = 0;\n            this.sectionsCued = 0;\n            \n            this.bpm = 90;\n            this.beatInterval = 60 / this.bpm;\n            this.lastBeat = 0;\n            this.beatPhase = 0;\n            this.gameTime = 0;\n            this.startTime = 0;\n            \n            this.firefly = null;\n            this.musicians = [];\n            this.ambientFireflies = [];\n            this.stars = [];\n            \n            this.bounds = { left: 0, right: 0, top: 0, bottom: 0 };\n            \n            this.highScore = parseInt(localStorage.getItem('fireflyHighScore')) || 0;\n            \n            this.init();\n        }\n        \n        init() {\n            this.resize();\n            window.addEventListener('resize', () => this.resize());\n            \n            // Input handlers\n            this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));\n            this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));\n            this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));\n            this.canvas.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });\n            this.canvas.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });\n            this.canvas.addEventListener('touchend', (e) => this.onTouchEnd(e));\n            \n            // UI handlers\n            document.getElementById('startBtn').addEventListener('click', () => this.startGame());\n            document.getElementById('replayBtn').addEventListener('click', () => this.startGame());\n            \n            // Generate stars\n            for (let i = 0; i < 100; i++) {\n                this.stars.push({\n                    x: Math.random() * this.width,\n                    y: Math.random() * this.height * 0.5,\n                    size: Math.random() * 2 +0.5,
+                    twinkle: Math.random()
+                });
+            }
+            
+            // Ambient fireflies
+            for (let i = 0; i < 30; i++) {
+                this.ambientFireflies.push({
+                    x: Math.random() * this.width,
+                    y: Math.random() * this.height,
+                    vx: (Math.random() - 0.5) * 20,
+                    vy: (Math.random() - 0.5) * 20,
+                    size: Math.random() * 3 + 1,
+                    phase: Math.random() * Math.PI * 2,
+                    speed: Math.random() * 0.002 + 0.001
+                });
+            }
+        }
+        
+        resize() {
+            this.width = window.innerWidth;
+            this.height = window.innerHeight;
+            this.canvas.width = this.width;
+            this.canvas.height = this.height;
+            
+            this.bounds = {
+                left: this.width * 0.1,
+                right: this.width * 0.9,
+                top: this.height * 0.15,
+                bottom: this.height * 0.85
+            };
+            
+            if (this.firefly) {
+                this.firefly.x = Math.min(Math.max(this.firefly.x, this.bounds.left), this.bounds.right);
+                this.firefly.y = Math.min(Math.max(this.firefly.y, this.bounds.top), this.bounds.bottom);
+            }
+            
+            this.setupMusicians();
+        }
+        
+        setupMusicians() {
+            this.musicians = [];
+            const sectionCounts = { strings: 4, woodwinds: 3, brass: 2, percussion: 2 };
+            const rows = [
+                { section: 'strings', y: this.height * 0.75 },
+                { section: 'woodwinds', y: this.height * 0.8 },
+                { section: 'brass', y: this.height * 0.85 },
+                { section: 'percussion', y: this.height * 0.9 }
+            ];
+            
+            rows.forEach(row => {
+                const count = sectionCounts[row.section];
+                const totalWidth = count * 80;
+                const startX = (this.width - totalWidth) / 2 + 40;
+                
+                for (let i = 0; i < count; i++) {
+                    this.musicians.push(new Musician(
+                        startX + i * 80,
+                        row.y,
+                        row.section,
+                        i
+                    ));
+                }
+            });
+        }
+        
+        startGame() {
+            this.audio.init();
+            this.audio.playAmbient();
+            
+            this.state = 'playing';
+            this.score = 0;
+            this.combo = 1;
+            this.comboProgress = 0;
+            this.maxCombo = 0;
+            this.energy = 100;
+            this.beatsHit = 0;
+            this.beatsMissed = 0;
+            this.sectionsCued = 0;
+            this.gameTime = 0;
+            this.startTime = performance.now();
+            
+            if (this.firefly) {
+                this.firefly.x = this.width / 2;
+                this.firefly.y = this.height / 2;
+            } else {
+                this.firefly = new Firefly(this.width / 2, this.height / 2);
+            }
+            
+            document.getElementById('titleScreen').classList.add('hidden');
+            document.getElementById('resultsScreen').classList.add('hidden');
+            
+            this.lastBeat = this.startTime;
+            this.gameLoop();
+        }
+        
+        onMouseMove(e) {
+            if (this.state !== 'playing') return;
+            const rect = this.canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            this.firefly.setTarget(x, y);
+        }
+        
+        onTouchStart(e) {
+            e.preventDefault();
+            if (this.state !== 'playing') return;
+            const touch = e.touches[0];
+            const rect = this.canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            this.firefly.setTarget(x, y);
+            this.onMouseDown(e);
+        }
+        
+        onTouchMove(e) {
+            e.preventDefault();
+            if (this.state !== 'playing') return;
+            const touch = e.touches[0];
+            const rect = this.canvas.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+            this.firefly.setTarget(x, y);
+        }
+        
+        onTouchEnd(e) {
+            this.onMouseUp(e);
+        }
+        
+        onMouseDown(e) {
+            if (this.state !== 'playing' || !this.firefly) return;
+            if (this.firefly.startPulse()) {
+                this.audio.playFireflyPulse();
+            }
+        }
+        
+        onMouseUp(e) {
+            // Pulse completion handled in update
+        }
+        
+        update(dt) {
+            if (this.state !== 'playing') return;
+            
+            this.gameTime += dt;
+            
+            // Update firefly
+            this.firefly.update(dt, this.bounds);
+            
+            // Beat timing
+            const currentTime = performance.now();
+            const beatProgress = (currentTime - this.lastBeat) / (this.beatInterval * 1000);
+            
+            if (beatProgress >= 1) {
+                this.lastBeat = currentTime;
+                this.onBeat();
+            }
+            
+            this.beatPhase = beatProgress;
+            
+            // Update musicians
+            this.musicians.forEach(m => m.update(dt, this.beatPhase));
+            
+            // Update particles
+            this.particles.update(dt);
+            
+            // Update ambient fireflies
+            this.ambientFireflies.forEach(f => {
+                f.x += f.vx * dt;
+                f.y += f.vy * dt;
+                f.phase += f.speed * dt * 1000;
+                
+                if (f.x < 0) f.x = this.width;
+                if (f.x > this.width) f.x = 0;
+                if (f.y < 0) f.y = this.height;
+                if (f.y > this.height) f.y = 0;
+            });
+            
+            // Combo decay
+            this.comboProgress -= dt * 0.3;
+            if (this.comboProgress <= 0 && this.combo > 1) {
+                this.combo = Math.max(1, this.combo - 1);
+                this.comboProgress = 1;
+            }
+            
+            // Energy regeneration
+            this.energy = Math.min(100, this.energy + dt * 5);
+            
+            if (this.gameTime >= 90) {
+                this.endGame();
+            }
+        }
+        
+        onBeat() {
+            this.audio.playBeat();
+            
+            const pulseQuality = this.checkPulseTiming();
+            
+            if (pulseQuality > 0) {
+                this.beatsHit++;
+                this.handleSuccessfulCue();
+            } else {
+                this.beatsMissed++;
+                this.handleMissedCue();
+            }
+            
+            this.updateUI();
+        }
+        
+        checkPulseTiming() {
+            if (!this.firefly || !this.firefly.isPulsing) return 0;
+            
+            const pulseRadius = this.firefly.pulseRadius;
+            let hitCount = 0;
+            let totalMusicians = this.musicians.length;
+            
+            this.musicians.forEach(m => {
+                const dx = m.x - this.firefly.x;
+                const dy = m.y - this.firefly.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist <= pulseRadius) {
+                    if (m.cue()) {
+                        hitCount++;
+                        this.sectionsCued++;
+                        this.particles.emitBurst(m.x, m.y - 25, 8, {
+                            color: m.colors[m.section],
+                            speed: 80,
+                            life: 0.4,
+                            size: 4
+                        });
+                    }
+                }
+            });
+            
+            return hitCount / totalMusicians;
+        }
+        
+        handleSuccessfulCue() {
+            const baseScore = 100;
+            const comboMultiplier = this.combo;
+            const points = Math.floor(baseScore * comboMultiplier);
+            
+            this.score += points;
+            this.combo = Math.min(10, this.combo + 1);
+            this.comboProgress = 1;
+            this.energy = Math.min(100, this.energy + 5);
+            this.maxCombo = Math.max(this.maxCombo, this.combo);
+            
+            this.showFeedback('PERFECT', 'perfect');
+            
+            const cuedSections = new Set(this.musicians.filter(m => m.glowIntensity > 0).map(m => m.section));
+            if (cuedSections.has('strings')) this.audio.playStrings();
+            if (cuedSections.has('woodwinds')) this.audio.playWoodwinds();
+            if (cuedSections.has('brass')) this.audio.playBrass();
+            if (cuedSections.has('percussion')) this.audio.playPercussion();
+        }
+        
+        handleMissedCue() {
+            if (this.combo > 1) {
+                this.audio.playComboBreak();
+                this.combo = 1;
+                this.showFeedback('Combo Lost', 'okay');
+            }
+            
+            this.energy = Math.max(0, this.energy - 3);
+        }
+        
+        showFeedback(text, className) {
+            const el = document.getElementById('feedback');
+            el.textContent = text;
+            el.className = 'feedback-text ' + className + ' show';
+            
+            el.style.left = (this.firefly.x - 40) + 'px';
+            el.style.top = (this.firefly.y - 60) + 'px';
+            
+            setTimeout(() => {
+                el.classList.remove('show');
+            }, 500);
+        }
+        
+        updateUI() {
+            document.getElementById('score').textContent = this.score.toLocaleString();
+            document.getElementById('combo').textContent = 'Combo x' + this.combo;
+            document.getElementById('comboFill').style.width = (this.comboProgress * 100) + '%';
+            document.getElementById('energyFill').style.width = this.energy + '%';
+            
+            const minutes = Math.floor(this.gameTime / 60);
+            const seconds = Math.floor(this.gameTime % 60);
+            const ms = Math.floor((this.gameTime % 1) * 100);
+            document.getElementById('timer').textContent = 
+                String(minutes).padStart(2, '0') + ':' + 
+                String(seconds).padStart(2, '0') + '.' + 
+                String(ms).padStart(2, '0');
+            
+            if (this.score > this.highScore) {
+                this.highScore = this.score;
+                localStorage.setItem('fireflyHighScore', this.highScore);
+            }
+            document.getElementById('highScore').textContent = 'BEST: ' + this.highScore.toLocaleString();
+            
+            const sections = ['Strings', 'Woodwinds', 'Brass', 'Percussion'];
+            sections.forEach(s => {
+                const el = document.getElementById('icon' + s);
+                const sectionLower = s.toLowerCase();
+                const active = this.musicians.some(m => m.section === sectionLower && m.glowIntensity > 0);
+                el.classList.toggle('active', active);
+            });
+        }
+        
+        draw() {
+            const ctx = this.ctx;
+            
+            // Gradient background
+            const bgGradient = ctx.createLinearGradient(0, 0, 0, this.height);
+            bgGradient.addColorStop(0, '#0a0a1a');
+            bgGradient.addColorStop(0.5, '#0f0f2a');
+            bgGradient.addColorStop(1, '#1a1a3a');
+            ctx.fillStyle = bgGradient;
+            ctx.fillRect(0, 0, this.width, this.height);
+            
+            // Stars
+            this.drawStars();
+            
+            // Ambient fireflies
+            this.drawAmbientFireflies();
+            
+            // Ground gradient
+            const groundGradient = ctx.createLinearGradient(0, this.height * 0.65, 0, this.height);
+            groundGradient.addColorStop(0, 'rgba(20, 20, 40, 0)');
+            groundGradient.addColorStop(1, 'rgba(15, 15, 35, 0.8)');
+            ctx.fillStyle = groundGradient;
+            ctx.fillRect(0, this.height * 0.65, this.width, this.height * 0.35);
+            
+            // Musicians
+            this.musicians.forEach(m => m.draw(ctx));
+            
+            // Particles
+            this.particles.draw(ctx);
+            
+            // Player firefly
+            if (this.firefly) {
+                this.firefly.draw(ctx);
+            }
+            
+            // Beat indicator
+            if (this.beatPhase < 0.2) {
+                this.drawBeatIndicator();
+            }
+        }
+        
+        drawStars() {
+            const ctx = this.ctx;
+            this.stars.forEach(star => {
+                const twinkle = 0.3 + Math.sin(this.gameTime * 2 + star.twinkle * 10) * 0.7;
+                ctx.save();
+                ctx.fillStyle = `rgba(255, 255, 255, ${twinkle})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+        
+        drawAmbientFireflies() {
+            const ctx = this.ctx;
+            this.ambientFireflies.forEach(f => {
+                const glow = 0.3 + Math.sin(f.phase) * 0.7;
+                ctx.save();
+                ctx.fillStyle = `rgba(200, 255, 150, ${glow * 0.5})`;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#c8ff96';
+                ctx.beginPath();
+                ctx.arc(f.x, f.y, f.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+        
+        drawBeatIndicator() {
+            const ctx = this.ctx;
+            const centerX = this.width / 2;
+            const centerY = this.height * 0.3;
+            const radius = 30;
+            
+            ctx.save();
+            ctx.strokeStyle = `rgba(255, 204, 0, ${1 - this.beatPhase * 5})`;
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ffcc00';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+        
+        endGame() {
+            this.state = 'results';
+            
+            if (this.score > this.highScore) {
+                this.highScore = this.score;
+                localStorage.setItem('fireflyHighScore', this.highScore);
+            }
+            
+            document.getElementById('finalScore').textContent = this.score.toLocaleString();
+            
+            const starCount = this.score >= 5000 ? 3 : this.score >= 2500 ? 2 : this.score >= 1000 ? 1 : 0;
+            const starsEl = document.getElementById('stars');
+            starsEl.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const star = document.createElement('span');
+                star.className = 'star' + (i < starCount ? ' earned' : '');
+                star.textContent = '★';
+                starsEl.appendChild(star);
+            }
+            
+            const accuracy = this.beatsHit + this.beatsMissed > 0 
+                ? Math.round((this.beatsHit / (this.beatsHit + this.beatsMissed)) * 100) 
+                : 0;
+            document.getElementById('stats').innerHTML = 
+                'Perfect Hits: ' + this.beatsHit + '<br>' +
+                'Max Combo: ' + this.maxCombo + '<br>' +
+                'Accuracy: ' + accuracy + '%';
+            
+            document.getElementById('resultsScreen').classList.remove('hidden');
+            
+            this.audio.playSuccess();
+        }
+        
+        gameLoop() {
+            if (this.state === 'title' || this.state === 'results') return;
+            
+            const now = performance.now();
+            const dt = Math.min(0.1, (now - (this.lastFrameTime || now)) / 1000);
+            this.lastFrameTime = now;
+            
+            this.update(dt);
+            this.draw();
+            
+            requestAnimationFrame(() => this.gameLoop());
+        }
+    }
+    
+    window.addEventListener('load', () => {
+        const game = new Game();
+    });
+    </script>
+</body>
+</html>"}

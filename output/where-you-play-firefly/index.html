@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>Lumina Conducts - Firefly Orchestra</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;overflow:hidden;font-family:'Georgia',serif;color:#fff;min-height:100vh;display:flex;justify-content:center;align-items:center}
+#gameContainer{position:relative;width:100%;height:100vh;max-width:177.78vh;max-height:56.25vw}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+#ui{position:absolute;top:0;left:0;right:0;padding:15px;text-align:center;pointer-events:none;z-index:10}
+#score{font-size:clamp(18px,3vw,28px);text-shadow:0 0 20px #ffcc00,0 0 40px #ff9500;letter-spacing:3px}
+#timer{position:absolute;top:15px;left:15px;font-size:clamp(12px,2vw,16px);color:#4a90d9;text-shadow:0 0 10px #4a90d9;font-family:monospace}
+#energy{position:absolute;top:15px;right:15px;width:clamp(80px,12vw,120px);height:10px;background:rgba(0,0,0,0.5);border-radius:5px;overflow:hidden;border:1px solid #4a90d9}
+#energyBar{height:100%;background:linear-gradient(90deg,#ffcc00,#ff9500);transition:width .1s}
+#combo{font-size:clamp(12px,2vw,16px);color:#ffcc00;opacity:.8;margin-top:5px}
+#highScore{position:absolute;top:40px;left:15px;font-size:clamp(10px,1.5vw,14px);color:#ff9500;font-family:monospace}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:rgba(10,10,26,.9);z-index:20;transition:opacity .5s}
+#overlay.hidden{opacity:0;pointer-events:none}
+#overlay h1{font-size:clamp(28px,6vw,56px);text-shadow:0 0 30px #ffcc00,0 0 60px #ff9500;margin-bottom:10px;letter-spacing:4px}
+#overlay p{font-size:clamp(14px,2.5vw,20px);color:#4a90d9;margin-bottom:20px}
+#startBtn{background:linear-gradient(135deg,#ffcc00,#ff9500);border:none;padding:15px 40px;font-size:clamp(14px,2vw,18px);color:#0a0a1a;font-family:inherit;font-weight:bold;cursor:pointer;border-radius:30px;pointer-events:auto;transition:transform .2s,box-shadow .2s}
+#startBtn:hover{transform:scale(1.05);box-shadow:0 0 30px #ffcc00}
+#resultStats{margin:20px 0;text-align:left;font-size:clamp(12px,2vw,16px);line-height:1.8}
+.stars{font-size:clamp(24px,4vw,40px);margin:15px 0}
+</style>
+</head>
+<body>
+<div id="gameContainer">
+<canvas id="canvas"></canvas>
+<div id="ui">
+<div id="timer">00:00.00</div>
+<div id="highScore">BEST: 0</div>
+<div id="score">0</div>
+<div id="combo"></div>
+<div id="energy"><div id="energyBar" style="width:100%"></div></div>
+</div>
+<div id="overlay">
+<h1>✨ LUMINA CONDUCTS</h1>
+<p>Control the firefly. Conduct the orchestra.</p>
+<div id="resultStats"></div>
+<div class="stars" id="stars"></div>
+<button id="startBtn">Begin Performance</button>
+</div>
+</div>
+<script>
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+const scoreEl=document.getElementById('score');
+const timerEl=document.getElementById('timer');
+const energyBar=document.getElementById('energyBar');
+const comboEl=document.getElementById('combo');
+const highScoreEl=document.getElementById('highScore');
+const overlay=document.getElementById('overlay');
+const startBtn=document.getElementById('startBtn');
+const resultStats=document.getElementById('resultStats');
+const starsEl=document.getElementById('stars');
+
+let W,H;
+function resize(){W=canvas.width=canvas.offsetWidth;H=canvas.height=canvas.offsetHeight}
+resize();
+window.addEventListener('resize',resize);
+
+const audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+let masterGain=audioCtx.createGain();
+masterGain.gain.value=.3;
+masterGain.connect(audioCtx.destination);
+
+function playTone(freq,dur=1,type='sine',vol=.3){
+const osc=audioCtx.createOscillator();
+const g=audioCtx.createGain();
+osc.type=type;
+osc.frequency.value=freq;
+g.gain.setValueAtTime(vol, audioCtx.currentTime);
+g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+dur);
+osc.connect(g);g.connect(masterGain);
+osc.start();osc.stop(audioCtx.currentTime+dur);
+}
+
+function playChime(){playTone(880+Math.random()*200,.3,'sine',.2);setTimeout(()=>playTone(1320,.2,'sine',.15),50)}
+function playSuccess(){[523,659,784].forEach((f,i)=>setTimeout(()=>playTone(f,.4,'sine',.2),i*80))}
+function playFail(){playTone(300,.5,'triangle',.15)}
+
+const COLORS={firefly:'#ffcc00',fireflyGlow:'#ff9500',moonlight:'#4a90d9',strings:'#ff9500',woodwinds:'#20b2aa',brass:'#ffd700',percussion:'#e0e0ff',bg1:'#0a0a1a',bg2:'#1a1a2e'};
+
+class Particle{
+constructor(x,y,color,r,life,vx=0,vy=0){
+this.x=x;this.y=y;this.color=color;this.r=r;this.life=life;this.maxLife=life;this.vx=vx;this.vy=vy;this.active=true}
+update(dt){this.x+=this.vx*dt;this.y+=this.vy*dt;this.life-=dt*1000;if(this.life<=0)this.active=false}
+draw(){ctx.globalAlpha=Math.max(0,this.life/this.maxLife);ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fillStyle=this.color;ctx.fill();ctx.globalAlpha=1}
+}
+
+class Firefly{
+constructor(){this.x=W/2;this.y=H*.7;this.targetX=this.x;this.targetY=this.y;this.r=20;this.pulseR=0;this.pulsing=false;this.chargeTime=0;this.trail=[];this.bobOffset=0}
+update(dt){
+this.x+=(this.targetX-this.x)*.08;
+this.y+=(this.targetY-this.y)*.08;
+this.bobOffset+=dt*3;
+if(this.pulsing){this.pulseR=Math.min(150,this.pulseR+dt*600)}
+else if(this.pulseR>0)this.pulseR=Math.max(0,this.pulseR-dt*400);
+if(Math.abs(this.x-this.targetX)>2||Math.abs(this.y-this.targetY)>2){
+this.trail.unshift(new Particle(this.x,this.y,COLORS.firefly,4+Math.random()*3,400));
+if(this.trail.length>12)this.trail.pop()}
+this.trail.forEach(p=>p.update(dt));
+this.trail=this.trail.filter(p=>p.active)
+}
+draw(){
+const bobY=Math.sin(this.bobOffset)*3;
+this.trail.forEach(p=>p.draw());
+const grad=ctx.createRadialGradient(this.x,this.y+bobY,0,this.x,this.y+bobY,this.r*2.5);
+grad.addColorStop(0,'rgba(255,204,0,.8)');grad.addColorStop(.5,'rgba(255,149,0,.3)');grad.addColorStop(1,'rgba(255,149,0,0)');
+ctx.beginPath();ctx.arc(this.x,this.y+bobY,this.r*2.5,0,Math.PI*2);ctx.fillStyle=grad;ctx.fill();
+ctx.beginPath();ctx.arc(this.x,this.y+bobY,this.r*.6,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
+if(this.pulseR>0){ctx.beginPath();ctx.arc(this.x,this.y+bobY,this.pulseR,0,Math.PI*2);ctx.strokeStyle=`rgba(255,204,0,${.5-this.pulseR/300})`;ctx.lineWidth=3;ctx.stroke()}
+}
+moveTo(x,y){this.targetX=Math.max(50,W-50);this.targetX=Math.min(W-50,Math.max(50,x));this.targetY=Math.min(H*.85,Math.max(H*.4,y))}
+pulse(charged){playChime();this.pulsing=true;this.chargeTime=0;game.lastPulseTime=performance.now()}
+}
+
+class Musician{
+constructor(x,y,section,index){
+this.x=x;this.y=y;this.section=section;this.index=index;this.readiness=Math.random()*.3;this.isPlaying=false;this.playTimer=0;this.glow=0}
+update(dt){
+this.readiness=Math.min(1,this.readiness+dt*.15);
+if(this.isPlaying){this.playTimer-=dt;this.glow=Math.sin(this.playTimer*20)*.5+.5;if(this.playTimer<=0){this.isPlaying=false;this.glow=0}}
+}
+draw(){
+const c=COLORS[this.section]||'#888';
+const g=this.glow;
+ctx.save();ctx.translate(this.x,this.y);
+ctx.fillStyle=`rgba(${this.section==='strings'?'255,149,0':this.section==='woodwinds'?'32,178,170':this.section==='brass'?'255,215,0':'224,224,255'},${.3+g*.5})`;
+ctx.beginPath();ctx.ellipse(0,0,12,8,0,0,Math.PI*2);ctx.fill();
+ctx.fillStyle='#1a1a2e';
+ctx.fillRect(-3,8,6,20);
+ctx.beginPath();ctx.arc(0,25,4,0,Math.PI*2);ctx.fill();
+if(g>.1){const pg=ctx.createRadialGradient(0,0,0,0,0,40);pg.addColorStop(0,`rgba(${this.section==='strings'?'255,200,100':this.section==='woodwinds'?'100,220,220':this.section==='brass'?'255,235,150':'255,255,255'},${g*.4})`);pg.addColorStop(1,'rgba(0,0,0,0)');ctx.beginPath();ctx.arc(0,0,40,0,Math.PI*2);ctx.fillStyle=pg;ctx.fill()}
+ctx.restore()
+}
+cue(){if(this.readiness>.6){this.isPlaying=true;this.playTimer=.5;this.readiness=0;return true}return false}
+}
+
+class Game{
+constructor(){
+this.state='title';
+this.score=0;
+this.combo=0;
+this.maxCombo=0;
+this.energy=100;
+this.BPM=90;
+this.beatInterval=60000/this.BPM;
+this.lastBeat=0;
+this.beatCount=0;
+this.firefly=new Firefly();
+this.musicians=[];
+this.particles=[];
+this.ambientParticles=[];
+this.stars=[];
+this.totalNotes=0;
+this.cuedNotes=0;
+this.gameTime=0;
+this.startTime=0;
+this.lastPulseTime=0;
+this.highScore=parseInt(localStorage.getItem('fireflyHighScore'))||0;
+highScoreEl.textContent=`BEST: ${this.highScore}`;
+this.initScene()
+}
+initScene(){
+this.musicians=[];
+const sections=['strings','woodwinds','brass','percussion'];
+const positions=[
+[{x:.5,y:.5},{x:.4,y:.52},{x:.6,y:.52},{x:.35,y:.54},{x:.65,y:.54},{x:.5,y:.56}],
+[{x:.25,y:.45},{x:.2,y:.48},{x:.3,y:.48},{x:.15,y:.5}],
+[{x:.75,y:.45},{x:.8,y:.48},{x:.7,y:.48},{x:.85,y:.5}],
+[{x:.5,y:.35},{x:.45,y:.37},{x:.55,y:.37}]
+];
+sections.forEach((s,i)=>positions[i].forEach((p,idx)=>this.musicians.push(new Musician(p.x*W,p.y*H,s,idx))));
+this.stars=Array.from({length:100},()=>({x:Math.random()*W,y:Math.random()*H*0.5,r:Math.random()*1.5+0.5,twinkle:Math.random()*Math.PI*2}));
+this.ambientParticles=Array.from({length:30},()=>({x:Math.random()*W,y:Math.random()*H,x:.5,y:.5,vx:(Math.random()-.5)*10,vy:(Math.random()-.5)*10,twinkle:Math.random()*Math.PI*2}))
+}
+start(){
+this.state='playing';
+this.score=0;
+this.combo=0;
+this.energy=100;
+this.beatCount=0;
+this.gameTime=0;
+this.startTime=performance.now();
+this.totalNotes=0;
+this.cuedNotes=0;
+this.initScene();
+overlay.classList.add('hidden')
+}
+update(dt){
+if(this.state!=='playing')return;
+this.gameTime+=dt;
+this.firefly.update(dt);
+this.musicians.forEach(m=>m.update(dt));
+this.particles=this.particles.filter(p=>{p.update(dt);return p.active});
+this.ambientParticles.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.twinkle+=dt*2;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1});
+this.stars.forEach(s=>s.twinkle+=dt);
+this.energy=Math.min(100,this.energy+dt*2);
+energyBar.style.width=this.energy+'%';
+const now=performance.now();
+if(now-this.lastBeat>=this.beatInterval){this.lastBeat=now;this.onBeat()}
+this.updateUI()
+}
+onBeat(){
+this.beatCount++;
+this.totalNotes+=this.musicians.length;
+if(this.beatCount%16===0&&this.BPM<140)this.BPM+=2,this.beatInterval=60000/this.BPM;
+const fireflyX=this.firefly.x,fireflyY=this.firefly.y;
+let cuedCount=0;
+this.musicians.forEach(m=>{
+const dist=Math.hypot(m.x-fireflyX,m.y-fireflyY);
+if(dist<this.firefly.pulseR+50&&m.readiness>.6){if(m.cue()){cuedCount++;for(let i=0;i<10;i++)this.particles.push(new Particle(m.x,m.y,COLORS[m.section],3+Math.random()*3,500,m.vx+(Math.random()-.5)*100,m.vy+(Math.random()-.5)*100))}}
+});
+if(cuedCount>0){const mult=Math.min(8,1+Math.floor(this.combo/10));const bonus=cuedCount>2?2:1;this.score+=cuedCount*25*mult*bonus;this.combo++;this.energy=Math.min(100,this.energy+3*cuedCount);this.cuedNotes+=cuedCount;playSuccess()}else{this.combo=0}
+this.maxCombo=Math.max(this.maxCombo,this.combo)
+}
+updateUI(){
+scoreEl.textContent=this.score;
+comboEl.textContent=this.combo>1?`${this.combo}x COMBO`:'';
+const elapsed=(performance.now()-this.startTime)/1000;
+const mins=Math.floor(elapsed/60).toString().padStart(2,'0');
+const secs=Math.floor(elapsed%60).toString().padStart(2,'0');
+const ms=Math.floor((elapsed%1)*100).toString().padStart(2,'0');
+timerEl.textContent=`${mins}:${secs}.${ms}`
+}
+draw(){
+const grad=ctx.createLinearGradient(0,0,0,H);
+grad.addColorStop(0,COLORS.bg1);grad.addColorStop(1,COLORS.bg2);
+ctx.fillStyle=grad;ctx.fillRect(0,0,W,H);
+this.stars.forEach(s=>{ctx.globalAlpha=.3+Math.sin(s.twinkle)*.3;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill()});
+ctx.globalAlpha=1;
+const moonGrad=ctx.createRadialGradient(W*.8,H*.15,0,W*.8,H*.15,80);
+moonGrad.addColorStop(0,'rgba(200,220,255,.9)');moonGrad.addColorStop(.5,'rgba(150,180,220,.3)');moonGrad.addColorStop(1,'rgba(74,144,217,0)');
+ctx.beginPath();ctx.arc(W*.8,H*.15,80,0,Math.PI*2);ctx.fillStyle=moonGrad;ctx.fill();
+this.ambientParticles.forEach(p=>{ctx.globalAlpha=.3+Math.sin(p.twinkle)*.2;ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);ctx.fillStyle=COLORS.firefly;ctx.fill()});
+ctx.globalAlpha=1;
+const beatProgress=((performance.now()-this.lastBeat)/this.beatInterval);
+const beatLineY=H*.6-Math.sin(beatProgress*Math.PI)*10;
+ctx.strokeStyle=`rgba(74,144,217,${.2+beatProgress*.3})`;ctx.lineWidth=2;ctx.setLineDash([10,10]);ctx.beginPath();ctx.moveTo(0,beatLineY);ctx.lineTo(W,beatLineY);ctx.stroke();ctx.setLineDash([]);
+this.musicians.forEach(m=>m.draw());
+this.particles.forEach(p=>p.draw());
+this.firefly.draw();
+ctx.fillStyle='rgba(0,0,0,.3)';ctx.fillRect(0,H*.9,W,H*.1)
+}
+end(){
+this.state='results';
+if(this.score>this.highScore){this.highScore=this.score;localStorage.setItem('fireflyHighScore',this.score);highScoreEl.textContent=`BEST: ${this.score}`}
+const acc=this.totalNotes>0?Math.round((this.cuedNotes/this.totalNotes)*100):0;
+const stars=acc>=90?5:acc>=75?4:acc>=60?3:acc>=40?2:1;
+resultStats.innerHTML=`Score: ${this.score}<br>Accuracy: ${acc}%<br>Max Combo: ${this.maxCombo}`;
+starsEl.textContent='⭐'.repeat(stars)+'☆'.repeat(5-stars);
+overlay.classList.remove('hidden');startBtn.textContent='Play Again'
+}
+}
+
+const game=new Game();
+let mouseX=W/2,mouseY=H*.7;
+
+canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();mouseX=(e.clientX-r.left)*(W/r.width);mouseY=(e.clientY-r.top)*(H/r.height);game.firefly.moveTo(mouseX,mouseY)});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();const t=e.touches[0];const r=canvas.getBoundingClientRect();mouseX=(t.clientX-r.left)*(W/r.width);mouseY=(t.clientY-r.top)*(H/r.height);game.firefly.moveTo(mouseX,mouseY)},{passive:false});
+canvas.addEventListener('click',()=>{if(game.state==='playing'&&game.energy>=5){game.firefly.pulse();game.energy=Math.max(0,game.energy-5)}});
+canvas.addEventListener('touchstart',e=>{e.preventDefault();if(game.state==='playing'&&game.energy>=5){game.firefly.pulse();game.energy=Math.max(0,game.energy-5)}},{passive:false});
+startBtn.addEventListener('click',()=>{audioCtx.resume();game.start()});
+
+let lastTime=performance.now();
+function loop(time){const dt=Math.min((time-lastTime)/1000,.05);lastTime=time;game.update(dt);game.draw();requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
