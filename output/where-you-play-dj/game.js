@@ -59,6 +59,7 @@ function resizeCanvas() {
   canvas.height = h * window.devicePixelRatio;
   canvas.style.width = w + 'px';
   canvas.style.height = h + 'px';
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
   layoutLanes(w, h);
 }
@@ -66,6 +67,10 @@ function layoutLanes(w, h) {
   lanesContainer.innerHTML = '';
   lanesContainer.style.width = w + 'px';
   lanesContainer.style.height = h + 'px';
+  lanesContainer.style.position = 'absolute';
+  lanesContainer.style.top = '50%';
+  lanesContainer.style.left = '50%';
+  lanesContainer.style.transform = 'translate(-50%, -50%)';
   for (let i = 0; i < LANE_COUNT; i++) {
     const lane = document.createElement('div');
     lane.className = 'lane';
@@ -85,8 +90,10 @@ function initAudio() {
   masterGain.gain.value = 0.3;
   masterGain.connect(audioCtx.destination);
 }
-function playTone(freq, type, duration, gainVal = 0.1, delay = 0) {
+function playTone(freq, type, duration, gainVal, delay) {
   if (!audioCtx) return;
+  if (typeof gainVal === 'undefined') gainVal = 0.1;
+  if (typeof delay === 'undefined') delay = 0;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = type;
@@ -126,7 +133,8 @@ function gameLoop(ts) {
     requestAnimationFrame(gameLoop);
     return;
   }
-  const dt = (ts - lastFrame) / 1000;
+  if (!lastFrame) lastFrame = ts;
+  const dt = Math.min((ts - lastFrame) / 1000, 0.1);
   lastFrame = ts;
   elapsedTime = (ts - startTime) / 1000;
   updateTimer();
@@ -147,8 +155,7 @@ function checkSpawns() {
   if (elapsedTime - lastSpawnTime >= spawnInterval) {
     spawnNote();
     lastSpawnTime = elapsedTime;
-    // vary interval slightly
-    spawnInterval = (60 / currentBPM) * (0.5 + Math.random() * 0.5); // 8th to quarter notes
+    spawnInterval = (60 / currentBPM) * (0.5 + Math.random() * 0.5);
   }
 }
 
@@ -157,10 +164,9 @@ function spawnNote() {
   const type = Math.random() < 0.8 ? 'single' : 'hold';
   const note = {
     id: noteIdCounter++,
-    lane,
-    type,
-    y: -50, // start above screen
-    targetY: canvas.height / window.devicePixelRatio * 0.85,
+    lane: lane,
+    type: type,
+    y: -50,
     hit: false,
     held: false,
     holdEnd: type === 'hold' ? (elapsedTime + 0.5 + Math.random() * 1.0) : null,
@@ -172,7 +178,7 @@ function spawnNote() {
 
 function createNoteElement(lane, type) {
   const el = document.createElement('div');
-  el.className = `note ${type}`;
+  el.className = 'note ' + type;
   el.style.background = LANE_COLORS[lane];
   el.style.color = LANE_COLORS[lane];
   el.style.left = ((lane + 1) / (LANE_COUNT + 1) * 100) + '%';
@@ -187,14 +193,12 @@ function updateNotes(dt) {
     const note = notes[i];
     note.y += NOTE_SPEED * dt;
     note.element.style.top = note.y + 'px';
-    
-    // Check if note passed target without hit
+
     if (!note.hit && note.y > targetY + 50) {
       registerJudgment(note, 'miss');
       removeNote(i);
       continue;
     }
-    // Hold note handling
     if (note.type === 'hold' && note.held) {
       if (elapsedTime >= note.holdEnd) {
         registerJudgment(note, 'perfect');
@@ -213,10 +217,10 @@ function removeNote(index) {
 function registerJudgment(note, judgment) {
   if (note.hit) return;
   note.hit = true;
-  
+
   let chargeDelta = 0;
   let crowdDelta = 0;
-  
+
   if (judgment === 'perfect') {
     chargeDelta = GATE_GAIN.perfect;
     crowdDelta = CROWD_CHANGE.perfect;
@@ -229,21 +233,20 @@ function registerJudgment(note, judgment) {
     crowdDelta = CROWD_CHANGE.miss;
     combo = 0;
   }
-  
-  // Combo multiplier
+
   let mult = 1;
   if (combo >= COMBO_THRESHOLDS[1]) mult = COMBO_MULTIPLIERS[1];
   else if (combo >= COMBO_THRESHOLDS[0]) mult = COMBO_MULTIPLIERS[0];
   chargeDelta *= mult;
-  
+
   gateCharge = Math.max(0, Math.min(100, gateCharge + chargeDelta));
   crowdEnergy = Math.max(0, Math.min(110, crowdEnergy + crowdDelta));
   maxCombo = Math.max(maxCombo, combo);
-  
+
   updateHUD();
   showHitFeedback(note.lane, judgment);
   playNoteSound(note.lane, judgment);
-  
+
   if (gateCharge >= 100) {
     winLevel();
   }
@@ -254,7 +257,7 @@ function registerJudgment(note, judgment) {
 
 function showHitFeedback(lane, judgment) {
   const el = document.createElement('div');
-  el.className = `hitFeedback ${judgment}`;
+  el.className = 'hitFeedback ' + judgment;
   el.textContent = judgment.toUpperCase();
   el.style.left = ((lane + 1) / (LANE_COUNT + 1) * 100) + '%';
   el.style.top = '80%';
@@ -267,17 +270,15 @@ function updateHUD() {
   crowdEnergyEl.textContent = Math.round(crowdEnergy) + '%';
   crowdEnergyEl.style.borderColor = crowdEnergy < 20 ? '#ff3366' : '#ff6b6b';
   crowdEnergyEl.style.color = crowdEnergy < 20 ? '#ff3366' : '#ff6b6b';
-  comboDisplay.textContent = combo > 1 ? `COMBO x${combo}` : '';
-  bpmDisplay.textContent = `${Math.round(currentBPM)} BPM`;
+  comboDisplay.textContent = combo > 1 ? ('COMBO x' + combo) : '';
+  bpmDisplay.textContent = (Math.round(currentBPM) + ' BPM');
 }
 
 function renderBackground() {
   const w = canvas.width / window.devicePixelRatio;
   const h = canvas.height / window.devicePixelRatio;
-  // Clear
   ctx.fillStyle = '#0a0a20';
   ctx.fillRect(0, 0, w, h);
-  // Grid lines
   ctx.strokeStyle = 'rgba(0,255,255,0.05)';
   ctx.lineWidth = 1;
   for (let x = 0; x < w; x += 40) {
@@ -286,30 +287,25 @@ function renderBackground() {
   for (let y = 0; y < h; y += 40) {
     ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
   }
-  // Target line
   const targetY = h * 0.85;
   ctx.strokeStyle = 'rgba(255,255,255,0.3)';
   ctx.lineWidth = 2;
   ctx.setLineDash([10, 10]);
   ctx.beginPath(); ctx.moveTo(0, targetY); ctx.lineTo(w, targetY); ctx.stroke();
   ctx.setLineDash([]);
-  // Pulse on beat
   const beatPhase = (elapsedTime * currentBPM / 60) % 1;
   if (beatPhase < 0.02) {
-    ctx.fillStyle = `rgba(0,255,255,${0.1 * (1 - beatPhase * 50)})`;
+    ctx.fillStyle = 'rgba(0,255,255,' + (0.1 * (1 - beatPhase * 50)) + ')';
     ctx.fillRect(0, 0, w, h);
   }
 }
 
 // --- Input ---
-const keyStates = {};
 window.addEventListener('keydown', e => {
   if (gameState === 'PLAYING') {
-    keyStates[e.key] = true;
     handleKeyPress(e.key);
   }
 });
-window.addEventListener('keyup', e => keyStates[e.key] = false);
 
 function handleKeyPress(key) {
   const lane = LANE_KEYS.indexOf(key);
@@ -317,7 +313,6 @@ function handleKeyPress(key) {
   checkNoteHit(lane);
 }
 
-// Touch support
 lanesContainer.addEventListener('touchstart', e => {
   if (gameState !== 'PLAYING') return;
   e.preventDefault();
@@ -342,8 +337,8 @@ function checkNoteHit(lane) {
     }
   }
   if (!bestNote) return;
-  
-  const timeDiff = bestDist / NOTE_SPEED; // approximate time difference
+
+  const timeDiff = bestDist / NOTE_SPEED;
   if (timeDiff <= TIMING_WINDOWS.perfect) {
     registerJudgment(bestNote, 'perfect');
     if (bestNote.type === 'hold') bestNote.held = true;
@@ -358,12 +353,13 @@ function checkNoteHit(lane) {
 // --- Game Flow ---
 function startGame() {
   initAudio();
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   gameState = 'PLAYING';
   startScreen.classList.add('hidden');
   gameOverScreen.classList.add('hidden');
   resetGame();
   startTime = performance.now();
-  lastFrame = startTime;
+  lastFrame = 0;
   lastSpawnTime = 0;
   spawnInterval = 60 / currentBPM;
   requestAnimationFrame(gameLoop);
@@ -382,6 +378,7 @@ function resetGame() {
 }
 
 function winLevel() {
+  if (gameState !== 'PLAYING') return;
   gameState = 'GAME_OVER';
   playDoorOpen();
   const time = elapsedTime;
@@ -393,6 +390,7 @@ function winLevel() {
 }
 
 function gameOver() {
+  if (gameState !== 'PLAYING') return;
   gameState = 'GAME_OVER';
   playGameOver();
   showGameOver(false, elapsedTime);
