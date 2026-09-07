@@ -4,19 +4,19 @@
 
 ---
 
-## 🎮 How to Play
+## 🌮 How to Play
 
 | Control | Action |
 |---------|--------|
-| 🖱️ Mouse | Move paddle left/right |
-| ⌨️ Left/Right Arrow | Alternative paddle control |
+| 👆 Mouse | Move paddle left/right |
+| ←→ Arrows | Alternative paddle control |
 | 🖱️ Click / Space | Launch ball |
-| ⏸️ P or ESC | Pause game |
+| P or ESC | Pause game |
 
 **Your Mission:** Smash every brick before they destroy you!
 
 - 💚 **Green bricks** — 1 hit, never shoot back
-- 🧡 **Orange bricks** — 2 hits, fire lasers every 4 seconds
+- 🟡 **Orange bricks** — 2 hits, fire lasers every 4 seconds
 - ❤️ **Red bricks** — 3 hits, fire lasers every 2.5 seconds
 - 💜 **Magenta boss bricks** — 5 hits, relentless firepower
 
