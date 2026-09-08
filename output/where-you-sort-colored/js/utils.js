@@ -1,0 +1,2 @@
+export function saveState(key, val) { try { localStorage.setItem('watersort_' + key, JSON.stringify(val)); } catch(e) {} }
+export function loadState(key, def) { try { const v = localStorage.getItem('watersort_' + key); return v ? JSON.parse(v) : def; } catch(e) { return def; } }
