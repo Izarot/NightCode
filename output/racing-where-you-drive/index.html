@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Velocity Rush</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='70' font-size='70'>🏎️</text></svg>" />
+  <style>
+    html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#000}
+    #gameCanvas{display:block;width:100%;height:100%;object-fit:contain}
+    #ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+    .hud{position:absolute;top:10px;left:10px;color:#fff;font-family:sans-serif;font-size:16px;text-shadow:1px 1px 2px #000}
+    #timer{position:absolute;top:10px;right:10px;color:#fff;font-family:sans-serif;font-size:16px;text-shadow:1px 1px 2px #000}
+    button{font-size:18px;padding:10px 20px;margin:5px;border:none;border-radius:5px;cursor:pointer}
+    #menu{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="ui">
+    <div id="hud" class="hud">Speed: <span id="speed">0</span> mph | Lap: <span id="lap">1</span>/3 | Boost: <span id="boost">0</span>%</div>
+    <div id="timer">Time: <span id="time">0.00</span></div>
+    <div id="menu">
+      <button onclick="startGame()">Start Race</button>
+      <button onclick="toggleSettings()">Settings</button>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <script>
+    const canvas=document.getElementById('gameCanvas');
+    const ctx=canvas.getContext('2d');
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=canvas.offsetWidth*dpr;
+    canvas.height=canvas.offsetHeight*dpr;
+    ctx.scale(dpr,dpr);
+    let engine= Matter.Engine.create();
+    let world=engine.world;
+    let keys={};
+    let car;
+    let gameState='menu';
+    let lap=1;
+    let boost=0;
+    let startTime=0;
+    let highScore=localStorage.getItem('highScore')||0;
+    let audioCtx;
+    function initAudio(){if(!audioCtx){audioCtx=new (window.AudioContext||window.webkitAudioContext)();}}
+    function playSound(freq,duration,type='sine'){initAudio();const osc=audioCtx.createOscillator();const gain=audioCtx.createGain();osc.type=type;osc.frequency.value=freq;osc.connect(gain);gain.connect(audioCtx.destination);osc.start();gain.gain.setValueAtTime(0.3, audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime+duration);osc.stop(audioCtx.currentTime+duration);}
+    function createCar(){const body=Matter.Bodies.rectangle(400,300,40,25,{render:{fillStyle:'#00ffff'}});Matter.Body.setMass(body,15);car={body:body,speed:0,maxSpeed:8,acceleration:0.1,friction:0.98,angle:0};Matter.World.add(world,body);}
+    function updateCar(){if(gameState!=='playing')return;
+      if(keys['ArrowUp']){car.speed+=car.acceleration;playSound(220,0.1,'square');}
+      if(keys['ArrowDown']){car.speed-=car.acceleration*2;playSound(110,0.1,'square');}
+      if(keys['ArrowLeft']){car.angle-=0.05;playSound(330,0.05,'triangle');}
+      if(keys['ArrowRight']){car.angle+=0.05;playSound(330,0.05,'triangle');}
+      car.speed*=car.friction;
+      if(Math.abs(car.speed)>car.maxSpeed)car.speed=car.maxSpeed*Math.sign(car.speed);
+      if(Math.abs(car.speed)<0.01)car.speed=0;
+      Matter.Body.setVelocity(car.body,{x:Math.sin(car.angle)*car.speed,y:-Math.cos(car.angle)*car.speed});
+      if(boost>0){boost--;playSound(440,0.05,'sawtooth');}
+      document.getElementById('speed').textContent=Math.round(Math.abs(car.speed)*30);
+      document.getElementById('boost').textContent=Math.floor(boost/10);
+      document.getElementById('time').textContent=((performance.now()-startTime)/1000).toFixed(2);
+      if(lap<3&&Matter.Query.point(car.body,[Matter.Vector.create(750,300)]).length>0){lap++;playSound(523,0.3,'sine');localStorage.setItem('highScore',Math.max(highScore,parseFloat(document.getElementById('time').textContent)).toString());}}
+    function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle='#0f0f2a';ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.save();ctx.translate(car.body.position.x,car.body.position.y);ctx.rotate(car.angle);ctx.fillStyle='#00ffff';ctx.fillRect(-20,-12.5,40,25);ctx.restore();
+      if(gameState==='menu'){ctx.fillStyle='#fff';ctx.font='24px sans-serif';ctx.fillText('Velocity Rush',350,280);ctx.fillText('Press ENTER to Start',320,320);}
+      requestAnimationFrame(draw);}
+    function gameLoop(){Matter.Engine.update(engine);updateCar();}
+    setInterval(gameLoop,1000/60);
+    window.addEventListener('keydown',e=>{keys[e.key]=true;if(e.key==='Enter'&&gameState==='menu'){startGame();}});window.addEventListener('keyup',e=>{keys[e.key]=false;});
+    function startGame(){gameState='playing';createCar();startTime=performance.now();document.getElementById('menu').style.display='none';playSound(262,0.5,'sine');}
+    draw();
+  </script>
+</body>
+</html>
