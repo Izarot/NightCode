@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KITE CHASER: TURBULENT WINDS</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MDAgNTAwIj48Y2lyY2xlIGN4PSIyNTAiIGN5PSIyNTAiIHI9IjEwMCIgZmlsbD0iIzY2ZjVkZCIvPjxwYXRoIGQ9Ik0yMDAgMjAwbDEwMCAxMDBsMTAwIC0xMDBsLTEwMCAxMDBsLTEwMCAtMTAwWiIgZmlsbD0iI0ZGRiIvPjxjaXJjbGUgY3g9IjM1MCIgY3k9IjE1MCIgcj0iMzAiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSIxNTAiIGN5PSIzNTAiIHI9IjMwIiBmaWxsPSIjZmZmIi8+PC9zdmc+">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #66f5dc 0%, #1a1a2e 100%); 
+            overflow: hidden; 
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+            touch-action: none;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            background: linear-gradient(to bottom, #87ceeb 0%, #b0e2ff 70%, #ffe4c4 100%);
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+        .timer {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffcc00;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        .score {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 20px;
+            color: #00ffcc;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        .controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            font-size: 14px;
+        }
+        .btn:hover { background: rgba(255,255,255,0.3); }
+        .attitude-indicator {
+            width: 80px;
+            height: 80px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            position: relative;
+            margin: 5px 0;
+        }
+        .attitude-indicator::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 30px;
+            background: #ff3366;
+            transform-origin: bottom center;
+            transform: translate(-50%, -100%);
+        }
+        .altitude-bar {
+            width: 200px;
+            height: 10px;
+            background: linear-gradient(to right, #00ff00, #ffff00, #ff0000);
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+        .wind-compass {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            position: relative;
+            margin: 5px 0;
+        }
+        .wind-compass::before {
+            content: '↑';
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+        }
+        .tension-meter {
+            width: 150px;
+            height: 15px;
+            background: #333;
+            border-radius: 7px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        .tension-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #00ff00, #ff0000);
+            transition: width 0.1s;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="hud">
+            <div class="attitude-indicator" id="attitudeIndicator"></div>
+            <div class="altitude-bar" id="altitudeBar"></div>
+            <div class="wind-compass" id="windCompass"></div>
+            <div class="tension-meter">
+                <div class="tension-fill" id="tensionFill"></div>
+            </div>
+        </div>
+        <div class="timer" id="timer">00:00.00</div>
+        <div class="score" id="score">Score: 0</div>
+        <div class="controls">
+            <button class="btn" id="pauseBtn">Pause</button>
+            <button class="btn" id="restartBtn">Restart</button>
+        </div>
+    </div>
+
+    <script>
+        // Game State
+        const gameState = {
+            running: false,
+            paused: false,
+            score: 0,
+            highScore: localStorage.getItem('kiteChaserHighScore') || 0,
+            time: 0,
+            startTime: 0,
+            kite: {
+                x: 0,
+                y: 0,
+                vx: 0,
+                vy: 0,
+                mass: 1,
+                pitch: 0,
+                roll: 0,
+                energy: 100,
+                tension: 0,
+                altitude: 0,
+                maxAltitude: 0
+            },
+            wind: {
+                x: 0,
+                y: 0,
+                intensity: 1,
+                turbulence: 0
+            },
+            objectives: [],
+            hazards: [],
+            particles: [],
+            keys: {},
+            mouse: { x: 0, y: 0, isDown: false }
+        };
+
+        // Canvas Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let canvasWidth = 0, canvasHeight = 0;
+
+        function resizeCanvas() {
+            canvasWidth = window.innerWidth;
+            canvasHeight = window.innerHeight;
+            canvas.width = canvasWidth;
+            canvas.height = canvasHeight;
+            if (gameState.kite.x === 0) {
+                gameState.kite.x = canvasWidth / 2;
+                gameState.kite.y = canvasHeight / 2;
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Utility Functions
+        const utils = {
+            rand: (min, max) => Math.random() * (max - min) + min,
+            clamp: (val, min, max) => Math.max(min, Math.min(max, val)),
+            distance: (x1, y1, x2, y2) => Math.sqrt((x2-x1)**2 + (y2-y1)**2),
+            lerp: (a, b, t) => a + (b - a) * t,
+            vectorAngle: (x, y) => Math.atan2(y, x) * 180 / Math.PI
+        };
+
+        // Audio System
+        const audio = {
+            context: null,
+            windOscillator: null,
+            windGain: null,
+            init() {
+                this.context = new (window.AudioContext || window.webkitAudioContext)();
+                this.windOscillator = this.context.createOscillator();
+                this.windGain = this.context.createGain();
+                this.windOscillator.connect(this.windGain);
+                this.windGain.connect(this.context.destination);
+                this.windOscillator.type = 'sawtooth';
+                this.windOscillator.frequency.value = 100;
+                this.windGain.gain.value = 0;
+                this.windOscillator.start();
+            },
+            updateWind(intensity) {
+                if (!this.context) return;
+                const freq = 100 + intensity * 50;
+                const gain = Math.min(0.3, intensity * 0.1);
+                this.windOscillator.frequency.setTargetAtTime(freq, this.context.currentTime, 0.1);
+                this.windGain.gain.setTargetAtTime(gain, this.context.currentTime, 0.1);
+            },
+            playFlap() {
+                if (!this.context) return;
+                const osc = this.context.createOscillator();
+                const gain = this.context.createGain();
+                osc.connect(gain);
+                gain.connect(this.context.destination);
+                osc.frequency.value = 200 + Math.random() * 100;
+                gain.gain.setValueAtTime(0.1, this.context.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.context.currentTime + 0.2);
+                osc.start();
+                osc.stop(this.context.currentTime + 0.2);
+            }
+        };
+
+        // Particle System
+        class Particle {
+            constructor(x, y, vx, vy, life, color, size) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.life = life;
+                this.maxLife = life;
+                this.color = color;
+                this.size = size;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+                this.life--;
+            }
+            draw(ctx) {
+                const alpha = this.life / this.maxLife;
+                ctx.fillStyle = this.color.replace(')', `,${alpha})`).replace('rgb', 'rgba');
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        // Wind System
+        function updateWind() {
+            // Base wind pattern
+            const time = Date.now() * 0.001;
+            gameState.wind.x = Math.sin(time * 0.5) * gameState.wind.intensity;
+            gameState.wind.y = Math.cos(time * 0.3) * gameState.wind.intensity * 0.5;
+            
+            // Turbulence
+            gameState.wind.turbulence = Math.sin(time * 2) * 0.5 + 0.5;
+            
+            // Update audio
+            audio.updateWind(gameState.wind.intensity);
+        }
+
+        // Kite Physics
+        function updateKite() {
+            const kite = gameState.kite;
+            
+            // Apply wind force
+            const windForceX = gameState.wind.x * kite.mass * gameState.wind.intensity;
+            const windForceY = gameState.wind.y * kite.mass * gameState.wind.intensity * 0.5;
+            
+            // Apply player input
+            let thrustX = 0, thrustY = 0;
+            if (gameState.keys['ArrowUp'] || gameState.keys['w']) thrustY -= 0.5;
+            if (gameState.keys['ArrowDown'] || gameState.keys['s']) thrustY += 0.5;
+            if (gameState.keys['ArrowLeft'] || gameState.keys['a']) thrustX -= 0.5;
+            if (gameState.keys['ArrowRight'] || gameState.keys['d']) thrustX += 0.5;
+            
+            // Spacebar for dive recovery
+            if (gameState.keys[' ']) {
+                thrustY += 1.5;
+                kite.energy = Math.min(100, kite.energy + 0.5);
+            }
+            
+            // Mouse drag for tension control
+            if (gameState.mouse.isDown) {
+                const dx = gameState.mouse.x - kite.x;
+                const dy = gameState.mouse.y - kite.y;
+                const distance = utils.distance(kite.x, kite.y, gameState.mouse.x, gameState.mouse.y);
+                kite.tension = utils.clamp(distance / 100, 0, 100);
+                
+                // Tension affects responsiveness
+                const tensionFactor = 1 - (kite.tension / 200);
+                thrustX *= tensionFactor;
+                thrustY *= tensionFactor;
+            } else {
+                kite.tension = Math.max(0, kite.tension - 2);
+            }
+            
+            // Apply forces
+            kite.vx += (windForceX + thrustX) * 0.1;
+            kite.vy += (windForceY + thrustY) * 0.1;
+            
+            // Apply drag
+            kite.vx *= 0.99;
+            kite.vy *= 0.99;
+            
+            // Update position
+            kite.x += kite.vx;
+            kite.y += kite.vy;
+            
+            // Boundary checking
+            kite.x = utils.clamp(kite.x, 50, canvasWidth - 50);
+            kite.y = utils.clamp(kite.y, 50, canvasHeight - 50);
+            
+            // Calculate pitch and roll based on velocity
+            kite.pitch = utils.vectorAngle(kite.vx, kite.vy) * 0.1;
+            kite.roll = kite.vx * 0.01;
+            
+            // Energy management
+            const speed = Math.sqrt(kite.vx**2 + kite.vy**2);
+            if (speed > 5) {
+                kite.energy -= 0.1;
+            } else {
+                kite.energy += 0.05;
+            }
+            kite.energy = utils.clamp(kite.energy, 0, 100);
+            
+            // Altitude calculation (distance from bottom)
+            kite.altitude = canvasHeight - kite.y;
+            if (kite.altitude > kite.maxAltitude) kite.maxAltitude = kite.altitude;
+            
+            // Create wind trail particles
+            if (Math.random() < 0.3) {
+                gameState.particles.push(new Particle(
+                    kite.x - 10, kite.y - 10,
+                    -kite.vx * 0.1 + utils.rand(-1, 1),
+                    -kite.vy * 0.1 + utils.rand(-1, 1),
+                    30, 'rgba(255,255,255,', 3
+                ));
+            }
+            
+            // Play flapping sound
+            if (Math.random() < 0.1) audio.playFlap();
+        }
+
+        // Objective System
+        function spawnObjective() {
+            if (Math.random() < 0.02) {
+                gameState.objectives.push({
+                    x: utils.rand(100, canvasWidth - 100),
+                    y: utils.rand(100, canvasHeight - 100),
+                    type: Math.random() < 0.5 ? 'ring' : 'cloud',
+                    collected: false,
+                    pulse: 0
+                });
+            }
+        }
+
+        function updateObjectives() {
+            for (let i = gameState.objectives.length - 1; i >= 0; i--) {
+                const obj = gameState.objectives[i];
+                obj.pulse += 0.1;
+                
+                // Check collection
+                const dist = utils.distance(gameState.kite.x, gameState.kite.y, obj.x, obj.y);
+                if (dist < 30 && !obj.collected) {
+                    obj.collected = true;
+                    gameState.score += 100;
+                    // Create collection particles
+                    for (let j = 0; j < 10; j++) {
+                        gameState.particles.push(new Particle(
+                            obj.x, obj.y,
+                            utils.rand(-3, 3), utils.rand(-3, 3),
+                            20, 'rgba(255,215,0,', 4
+                        ));
+                    }
+                }
+                
+                // Remove collected objectives
+                if (obj.collected && obj.pulse > 20) {
+                    gameState.objectives.splice(i, 1);
+                }
+            }
+        }
+
+        // Rendering
+        function drawBackground() {
+            // Sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvasHeight);
+            gradient.addColorStop(0, '#87ceeb');
+            gradient.addColorStop(0.7, '#b0e2ff');
+            gradient.addColorStop(1, '#ffe4c4');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Clouds
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            for (let i = 0; i < 5; i++) {
+                const x = (i * 200 + Date.now() * 0.02) % (canvasWidth + 100);
+                const y = 100 + i * 50;
+                drawCloud(x, y, 30 + i * 10);
+            }
+        }
+
+        function drawCloud(x, y, size) {
+            ctx.beginPath();
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.arc(x - size, y + 10, size * 0.8, 0, Math.PI * 2);
+            ctx.arc(x + size, y + 10, size * 0.8, 0, Math.PI * 2);
+            ctx.arc(x, y - size * 0.5, size * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawKite() {
+            const kite = gameState.kite;
+            
+            ctx.save();
+            ctx.translate(kite.x, kite.y);
+            ctx.rotate(kite.pitch);
+            
+            // Kite body
+            ctx.fillStyle = '#FF3366';
+            ctx.beginPath();
+            ctx.moveTo(0, -20);
+            ctx.lineTo(15, 20);
+            ctx.lineTo(0, 10);
+            ctx.lineTo(-15, 20);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Kite tail
+            ctx.strokeStyle = '#FFCC00';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, 20);
+            ctx.quadraticCurveTo(5, 40, -5, 60);
+            ctx.stroke();
+            
+            ctx.restore();
+            
+            // Tether line
+            if (gameState.mouse.isDown) {
+                ctx.strokeStyle = `rgba(255,255,255,${0.5 + kite.tension/200})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(kite.x, kite.y);
+                ctx.lineTo(gameState.mouse.x, gameState.mouse.y);
+                ctx.stroke();
+            }
+        }
+
+        function drawObjectives() {
+            for (const obj of gameState.objectives) {
+                if (obj.collected) {
+                    ctx.globalAlpha = Math.max(0, 1 - obj.pulse / 20);
+                }
+                
+                if (obj.type === 'ring') {
+                    ctx.strokeStyle = '#FFD700';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.arc(obj.x, obj.y, 20 + Math.sin(obj.pulse) * 3, 0, Math.PI * 2);
+                    ctx.stroke();
+                } else {
+                    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                    drawCloud(obj.x, obj.y, 15 + Math.sin(obj.pulse) * 2);
+                }
+                
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function drawParticles() {
+            for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                const p = gameState.particles[i];
+                p.update();
+                p.draw(ctx);
+                
+                if (p.life <= 0) {
+                    gameState.particles.splice(i, 1);
+                }
+            }
+        }
+
+        function drawHUD() {
+            // Attitude indicator
+            const attitudeIndicator = document.getElementById('attitudeIndicator');
+            attitudeIndicator.style.transform = `rotate(${kite.roll * 5}deg)`;
+            
+            // Altitude bar
+            const altitudeBar = document.getElementById('altitudeBar');
+            const altitudePercent = utils.clamp(kite.altitude / 100 * 100, 0, 100);
+            altitudeBar.style.width = `${altitudePercent}%`;
+            
+            // Wind compass
+            const windCompass = document.getElementById('windCompass');
+            const windAngle = Math.atan2(gameState.wind.x, gameState.wind.y) * 180 / Math.PI;
+            windCompass.style.transform = `rotate(${windAngle}deg)`;
+            
+            // Tension meter
+            const tensionFill = document.getElementById('tensionFill');
+            tensionFill.style.width = `${kite.tension}%`;
+            
+            // Score and timer
+            document.getElementById('score').textContent = `Score: ${gameState.score}`;
+            document.getElementById('timer').textContent = 
+                `${String(Math.floor(gameState.time / 60)).padStart(2, '0')}:${
+                String(Math.floor(gameState.time % 60)).padStart(2, '0')}.00`;
+        }
+
+        // Game Loop
+        function gameLoop() {
+            if (!gameState.running || gameState.paused) return;
+            
+            // Update game state
+            updateWind();
+            updateKite();
+            updateObjectives();
+            spawnObjective();
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Render
+            drawBackground();
+            drawObjectives();
+            drawKite();
+            drawParticles();
+            drawHUD();
+            
+            // Update time
+            gameState.time = (Date.now() - gameState.startTime) / 1000;
+            
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Input Handling
+        document.addEventListener('keydown', (e) => {
+            gameState.keys[e.key] = true;
+            if (e.key === ' ') e.preventDefault();
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            gameState.keys[e.key] = false;
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            gameState.mouse.x = e.clientX - rect.left;
+            gameState.mouse.y = e.clientY - rect.top;
+        });
+        
+        canvas.addEventListener('mousedown', () => {
+            gameState.mouse.isDown = true;
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            gameState.mouse.isDown = false;
+        });
+        
+        // Touch handling
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            gameState.mouse.x = touch.clientX - rect.left;
+            gameState.mouse.y = touch.clientY - rect.top;
+            gameState.mouse.isDown = true;
+        }, { passive: false });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            gameState.mouse.x = touch.clientX - rect.left;
+            gameState.mouse.y = touch.clientY - rect.top;
+        }, { passive: false });
+        
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            gameState.mouse.isDown = false;
+        }, { passive: false });
+
+        // UI Controls
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            gameState.paused = !gameState.paused;
+            document.getElementById('pauseBtn').textContent = gameState.paused ? 'Resume' : 'Pause';
+            if (!gameState.paused) gameLoop();
+        });
+        
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            location.reload();
+        });
+
+        // Game Initialization
+        function initGame() {
+            audio.init();
+            gameState.running = true;
+            gameState.startTime = Date.now();
+            gameLoop();
+        }
+
+        // Start button or immediate start
+        window.addEventListener('load', () => {
+            // Auto-start after a brief delay
+            setTimeout(initGame, 500);
+        });
+
+        // Save high score periodically
+        setInterval(() => {
+            if (gameState.score > gameState.highScore) {
+                gameState.highScore = gameState.score;
+                localStorage.setItem('kiteChaserHighScore', gameState.highScore);
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
