@@ -1,0 +1,72 @@
+/* Additional styles if needed */
+:root {
+    --primary: #00ffff;
+    --danger: #ff3366;
+    --success: #00ff88;
+    --warning: #ffcc00;
+    --bg: #1a1a2e;
+}
+
+* {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    cursor: crosshair;
+}
+
+#gameCanvas:focus {
+    outline: none;
+}
+
+.slot:active {
+    transform: scale(0.95);
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 10px #0ff; }
+    50% { box-shadow: 0 0 20px #0ff, 0 0 30px #0ff; }
+}
+
+.slot.active {
+    animation: pulse 1.5s infinite;
+}
+
+.killMsg {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#zoneCanvas {
+    filter: drop-shadow(0 0 5px #0ff);
+}
+
+#menu button, #gameOver button {
+    position: relative;
+    overflow: hidden;
+}
+
+#menu button::before, #gameOver button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s;
+}
+
+#menu button:hover::before, #gameOver button:hover::before {
+    left: 100%;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}

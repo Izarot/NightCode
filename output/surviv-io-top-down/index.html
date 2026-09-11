@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Battle Royale 2D</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #1a1a2e; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        #gameCanvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 100vw; max-height: 100vh; }
+        #uiOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        .hud { position: absolute; color: #fff; text-shadow: 0 0 4px #000; pointer-events: auto; }
+        #healthBar { top: 20px; left: 20px; width: 200px; height: 20px; background: rgba(0,0,0,0.6); border-radius: 10px; overflow: hidden; border: 2px solid #0ff; }
+        #healthFill { height: 100%; background: linear-gradient(90deg, #0f0, #ff0, #f00); transition: width 0.3s; }
+        #armorBar { top: 45px; left: 20px; width: 200px; height: 10px; background: rgba(0,0,0,0.6); border-radius: 5px; overflow: hidden; border: 1px solid #0ff; }
+        #armorFill { height: 100%; background: #0ff; transition: width 0.3s; }
+        #timer { top: 20px; right: 20px; font-size: 24px; font-weight: bold; color: #0ff; text-shadow: 0 0 8px #0ff; }
+        #killFeed { bottom: 20px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 80%; }
+        .killMsg { opacity: 1; transition: opacity 0.5s; margin: 2px 0; color: #ff6; font-size: 14px; }
+        #miniMap { top: 20px; right: 20px; width: 150px; height: 150px; background: rgba(0,0,0,0.7); border: 2px solid #0ff; border-radius: 50%; overflow: hidden; }
+        #miniMapCanvas { width: 100%; height: 100%; }
+        #zoneTimer { top: 80px; right: 20px; width: 60px; height: 60px; }
+        #zoneCanvas { width: 100%; height: 100%; }
+        #inventory { bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; pointer-events: auto; }
+        .slot { width: 50px; height: 50px; background: rgba(0,0,0,0.7); border: 2px solid #444; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: #fff; position: relative; }
+        .slot.active { border-color: #0ff; box-shadow: 0 0 10px #0ff; }
+        .slot .count { position: absolute; bottom: 2px; right: 4px; font-size: 10px; color: #ff0; }
+        #menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: #fff; }
+        #menu h1 { font-size: 48px; margin-bottom: 20px; background: linear-gradient(45deg, #0ff, #f0f, #ff0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #menu button { padding: 15px 40px; font-size: 24px; background: linear-gradient(45deg, #006666, #00cccc); border: none; border-radius: 10px; color: #fff; cursor: pointer; margin: 10px; transition: transform 0.2s; }
+        #menu button:hover { transform: scale(1.05); box-shadow: 0 0 20px #0ff; }
+        #highScore { font-size: 20px; margin: 20px; color: #ff0; }
+        #gameOver { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: #fff; }
+        #gameOver h1 { font-size: 48px; margin-bottom: 20px; }
+        #gameOver .victory { color: #0f0; }
+        #gameOver .defeat { color: #f00; }
+        #gameOver p { font-size: 24px; margin: 10px; }
+        #gameOver button { padding: 15px 40px; font-size: 24px; background: linear-gradient(45deg, #660, #c00); border: none; border-radius: 10px; color: #fff; cursor: pointer; margin: 10px; }
+        @media (max-width: 768px) { #gameCanvas { touch-action: none; } .slot { width: 40px; height: 40px; } #healthBar { width: 150px; } #miniMap { width: 100px; height: 100px; } }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="uiOverlay">
+        <div id="healthBar" class="hud"><div id="healthFill"></div></div>
+        <div id="armorBar" class="hud"><div id="armorFill"></div></div>
+        <div id="timer" class="hud">00:00</div>
+        <canvas id="miniMapCanvas" class="hud" id="miniMap"></canvas>
+        <canvas id="zoneCanvas" class="hud" id="zoneTimer"></canvas>
+        <div id="killFeed" class="hud"></div>
+        <div id="inventory" class="hud">
+            <div class="slot active" data-slot="0"><span>🔫</span><span class="count">30</span></div>
+            <div class="slot" data-slot="1"><span>🛡️</span><span class="count">0</span></div>
+            <div class="slot" data-slot="2"><span>💊</span><span class="count">0</span></div>
+            <div class="slot" data-slot="3"><span>💥</span><span class="count">0</span></div>
+            <div class="slot" data-slot="4"><span>📦</span><span class="count">0</span></div>
+            <div class="slot" data-slot="5"><span>🔑</span><span class="count">0</span></div>
+            <div class="slot" data-slot="6"><span>⚡</span><span class="count">0</span></div>
+            <div class="slot" data-slot="7"><span>💎</span><span class="count">0</span></div>
+        </div>
+    </div>
+    <div id="menu">
+        <h1>BATTLE ROYALE 2D</h1>
+        <button id="startBtn">START MATCH</button>
+        <div id="highScore">High Score: <span id="highScoreVal">0</span></div>
+    </div>
+    <div id="gameOver">
+        <h1 class="defeat">ELIMINATED</h1>
+        <p>Survival Time: <span id="survivalTime">00:00</span></p>
+        <p>Kills: <span id="finalKills">0</span></p>
+        <p>Damage Dealt: <span id="finalDamage">0</span></p>
+        <button id="restartBtn">PLAY AGAIN</button>
+    </div>
+    <script src="main.js"></script>
+</body>
+</html>
