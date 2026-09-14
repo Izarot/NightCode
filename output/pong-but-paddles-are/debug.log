@@ -1,0 +1,567 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 18929 (char 18928)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n  <title>Cosmic Collector</title>\n  <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌟</text></svg>\">\n  <link rel=\"stylesheet\" href=\"styles.css\">\n</head>\n<body>\n  <div id=\"game-container\">\n    <canvas id=\"gameCanvas\"></canvas>\n    <div id=\"hud\">\n      <div id=\"score-display\">\n        <span id=\"score-label\">SCORE</span>\n        <span id=\"score-value\">0</span>\n      </div>\n      <div id=\"timer-display\">\n        <span id=\"timer-label\">TIME</span>\n        <span id=\"timer-value\">00:00.0</span>\n      </div>\n      <div id=\"highscore-display\">\n        <span id=\"hs-label\">BEST</span>\n        <span id=\"hs-value\">0</span>\n      </div>\n      <div id=\"lives-display\">\n        <span id=\"lives-value\">❤❤❤</span>\n      </div>\n    </div>\n    <div id=\"menu-screen\" class=\"screen active\">\n      <h1>Cosmic Collector</h1>\n      <p>Collect stars, dodge bombs!</p>\n      <button id=\"start-btn\">▶ Start Game</button>\n      <p class=\"hint\">Mouse / Touch to move</p>\n    </div>\n    <div id=\"gameover-screen\" class=\"screen\">\n      <h1>Game Over</h1>\n      <p id=\"final-score\">Score: 0</p>\n      <p id=\"final-time\">Time: 00:00.0</p>\n      <p id=\"new-best\" class=\"hidden\">🏆 New Best Score!</p>\n      <button id=\"restart-btn\">↻ Play Again</button>\n      <button id=\"menu-btn\">⌂ Menu</button>\n    </div>\n  </div>\n  <script src=\"game.js\"></script>\n</body>\n</html>", "styles.css": "* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\n\nbody {\n  background: #0a0a1a;\n  overflow: hidden;\n  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n  touch-action: none;\n  -webkit-user-select: none;\n  user-select: none;\n}\n\n#game-container {\n  position: relative;\n  width: 100vw;\n  height: 100vh;\n}\n\n#gameCanvas {\n  display: block;\n  width: 100%;\n  height: 100%;\n  cursor: none;\n}\n\n#hud {\n  position: absolute;\n  top: 0;\n  left: 0;\n  right: 0;\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n  padding: 12px 16px;\n  pointer-events: none;\n  z-index: 10;\n}\n\n#score-display, #timer-display, #highscore-display, #lives-display {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  background: rgba(10, 10, 26, 0.7);\n  border: 1px solid rgba(0, 245, 255, 0.3);\n  border-radius: 8px;\n  padding: 6px 12px;\n  backdrop-filter: blur(4px);\n}\n\n#score-label, #timer-label, #hs-label {\n  font-size: 9px;\n  text-transform: uppercase;\n  letter-spacing: 2px;\n  color: rgba(0, 245, 255, 0.7);\n}\n\n#score-value {\n  font-size: 22px;\n  font-weight: 700;\n  color: #ff006e;\n  text-shadow: 0 0 10px rgba(255, 0, 110, 0.6);\n}\n\n#timer-value {\n  font-size: 22px;\n  font-weight: 700;\n  color: #39ff14;\n  text-shadow: 0 0 10px rgba(57, 255, 20, 0.6);\n  font-variant-numeric: tabular-nums;\n}\n\n#hs-value {\n  font-size: 22px;\n  font-weight: 700;\n  color: #ffbe0b;\n  text-shadow: 0 0 10px rgba(255, 190, 11, 0.6);\n}\n\n#lives-value {\n  font-size: 18px;\n  color: #ff006e;\n  text-shadow: 0 0 8px rgba(255, 0, 110, 0.5);\n}\n\n.screen {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  align-items: center;\n  background: rgba(10, 10, 26, 0.85);\n  backdrop-filter: blur(8px);\n  z-index: 20;\n  opacity: 0;\n  transition: opacity 0.4s ease;\n  pointer-events: none;\n}\n\n.screen.active {\n  opacity: 1;\n  pointer-events: all;\n}\n\n.screen h1 {\n  font-size: clamp(28px, 6vw, 56px);\n  font-weight: 800;\n  background: linear-gradient(135deg, #00f5ff, #ff006e, #ffbe0b, #39ff14);\n  background-size: 300% 300%;\n  -webkit-background-clip: text;\n  -webkit-text-fill-color: transparent;\n  background-clip: text;\n  animation: gradientShift 3s ease infinite;\n  margin-bottom: 12px;\n}\n\n@keyframes gradientShift {\n  0%, 100% { background-position: 0% 50%; }\n  50% { background-position: 100% 50%; }\n}\n\n.screen p {\n  color: rgba(255, 255, 255, 0.7);\n  font-size: clamp(14px, 2.5vw, 18px);\n  margin-bottom: 8px;\n}\n\n.screen .hint {\n  font-size: 12px;\n  color: rgba(255, 255, 255, 0.4);\n  margin-top: 12px;\n}\n\n.screen button {\n  margin-top: 16px;\n  padding: 12px 36px;\n  font-size: 18px;\n  font-weight: 700;\n  border: 2px solid #00f5ff;\n  border-radius: 50px;\n  background: transparent;\n  color: #00f5ff;\n  cursor: pointer;\n  transition: all 0.3s ease;\n  text-transform: uppercase;\n  letter-spacing: 2px;\n}\n\n.screen button:hover {\n  background: #00f5ff;\n  color: #0a0a1a;\n  box-shadow: 0 0 30px rgba(0, 245, 255, 0.5);\n}\n\n#new-best {\n  color: #ffbe0b !important;\n  font-weight: 700;\n  font-size: 16px !important;\n  text-shadow: 0 0 12px rgba(255, 190, 11, 0.6);\n  margin-top: 8px;\n}\n\n.hidden {\n  display: none !important;\n}\n\n@media (max-width: 480px) {\n  #hud {\n    padding: 8px 10px;\n  }\n  #score-display, #timer-display, #highscore-display, #lives-display {\n    padding: 4px 8px;\n  }\n  #score-value, #timer-value, #hs-value {\n    font-size: 16px;\n  }\n  #lives-value {\n    font-size: 14px;\n  }\n  #score-label, #timer-label, #hs-label {\n    font-size: 7px;\n  }\n}", "game.js": "/* ===== Cosmic Collector ===== */\n/* A vibrant neon collection game */\n\n// ─── Audio Manager ───────────────────────────────────────\nclass AudioManager {\n  constructor() {\n    this.ctx = null;\n    this.enabled = true;\n  }\n\n  init() {\n    try {\n      this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n    } catch (e) {\n      this.enabled = false;\n    }\n  }\n\n  resume() {\n    if (this.ctx && this.ctx.state === 'suspended') {\n      this.ctx.resume();\n    }\n  }\n\n  play(type) {\n    if (!this.enabled || !this.ctx) return;\n    this.resume();\n    const now = this.ctx.currentTime;\n    switch (type) {\n      case 'collect': this._collect(now); break;\n      case 'hit': this._hit(now); break;\n      case 'gameover': this._gameover(now); break;\n      case 'click': this._click(now); break;\n      case 'levelup': this._levelup(now); break;\n    }\n  }\n\n  _collect(t) {\n    const osc = this.ctx.createOscillator();\n    const gain = this.ctx.createGain();\n    osc.connect(gain);\n    gain.connect(this.ctx.destination);\n    osc.type = 'sine';\n    osc.frequency.setValueAtTime(600, t);\n    osc.frequency.exponentialRampToValueAtTime(1200, t + 0.08);\n    gain.gain.setValueAtTime(0.15, t);\n    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);\n    osc.start(t);\n    osc.stop(t + 0.15);\n  }\n\n  _hit(t) {\n    const osc = this.ctx.createOscillator();\n    const gain = this.ctx.createGain();\n    osc.connect(gain);\n    gain.connect(this.ctx.destination);\n    osc.type = 'sawtooth';\n    osc.frequency.setValueAtTime(200, t);\n    osc.frequency.exponentialRampToValueAtTime(50, t + 0.3);\n    gain.gain.setValueAtTime(0.2, t);\n    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);\n    osc.start(t);\n    osc.stop(t + 0.3);\n  }\n\n  _gameover(t) {\n    [400, 350, 280, 200].forEach((freq, i) => {\n      const osc = this.ctx.createOscillator();\n      const gain = this.ctx.createGain();\n      osc.connect(gain);\n      gain.connect(this.ctx.destination);\n      osc.type = 'sine';\n      osc.frequency.setValueAtTime(freq, t + i * 0.15);\n      gain.gain.setValueAtTime(0.12, t + i * 0.15);\n      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.15 + 0.2);\n      osc.start(t + i * 0.15);\n      osc.stop(t + i * 0.15 + 0.2);\n    });\n  }\n\n  _click(t) {\n    const osc = this.ctx.createOscillator();\n    const gain = this.ctx.createGain();\n    osc.connect(gain);\n    gain.connect(this.ctx.destination);\n    osc.type = 'sine';\n    osc.frequency.setValueAtTime(800, t);\n    gain.gain.setValueAtTime(0.08, t);\n    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);\n    osc.start(t);\n    osc.stop(t + 0.05);\n  }\n\n  _levelup(t) {\n    [523, 659, 784, 1047].forEach((freq, i) => {\n      const osc = this.ctx.createOscillator();\n      const gain = this.ctx.createGain();\n      osc.connect(gain);\n      gain.connect(this.ctx.destination);\n      osc.type = 'triangle';\n      osc.frequency.setValueAtTime(freq, t + i * 0.08);\n      gain.gain.setValueAtTime(0.1, t + i * 0.08);\n      gain.gain.exponentialRampToValueAtTime(0.001, t + i * 0.08 + 0.15);\n      osc.start(t + i * 0.08);\n      osc.stop(t + i * 0.08 + 0.15);\n    });\n  }\n}\n\n// ─── Particle ────────────────────────────────────────────\nclass Particle {\n  constructor(x, y, color, vx, vy, size, life) {\n    this.x = x;\n    this.y = y;\n    this.color = color;\n    this.vx = vx;\n    this.vy = vy;\n    this.size = Math.max(0.5, size);\n    this.life = life;\n    this.maxLife = life;\n    this.alive = true;\n  }\n\n  update(dt) {\n    this.x += this.vx * dt;\n    this.y += this.vy * dt;\n    this.vy += 120 * dt; // gravity\n    this.life -= dt;\n    if (this.life <= 0) this.alive = false;\n  }\n\n  draw(ctx) {\n    const alpha = Math.max(0, this.life / this.maxLife);\n    ctx.save();\n    ctx.globalAlpha = alpha;\n    ctx.fillStyle = this.color;\n    ctx.shadowColor = this.color;\n    ctx.shadowBlur = 8;\n    ctx.beginPath();\n    ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);\n    ctx.fill();\n    ctx.restore();\n  }\n}\n\n// ─── Floating Text ───────────────────────────────────────\nclass FloatingText {\n  constructor(x, y, text, color) {\n    this.x = x;\n    this.y = y;\n    this.text = text;\n    this.color = color;\n    this.life = 0.8;\n    this.maxLife = 0.8;\n    this.alive = true;\n  }\n\n  update(dt) {\n    this.y -= 60 * dt;\n    this.life -= dt;\n    if (this.life <= 0) this.alive = false;\n  }\n\n  draw(ctx) {\n    const alpha = Math.max(0, this.life / this.maxLife);\n    ctx.save();\n    ctx.globalAlpha = alpha;\n    ctx.fillStyle = this.color;\n    ctx.font = 'bold 18px \"Segoe UI\", sans-serif';\n    ctx.textAlign = 'center';\n    ctx.shadowColor = this.color;\n    ctx.shadowBlur = 10;\n    ctx.fillText(this.text, this.x, this.y);\n    ctx.restore();\n  }\n}\n\n// ─── Star (collectible) ──────────────────────────────────\nclass Star {\n  constructor(x, y, size) {\n    this.x = x;\n    this.y = y;\n    this.size = Math.max(4, size);\n    this.alive = true;\n    this.angle = Math.random() * Math.PI * 2;\n    this.pulse = Math.random() * Math.PI * 2;\n  }\n\n  update(dt) {\n    this.y += 120 * dt;\n    this.angle += 2 * dt;\n    this.pulse += 4 * dt;\n  }\n\n  draw(ctx) {\n    const s = this.size * (1 + 0.15 * Math.sin(this.pulse));\n    ctx.save();\n    ctx.translate(this.x, this.y);\n    ctx.rotate(this.angle);\n    ctx.fillStyle = '#ff006e';\n    ctx.shadowColor = '#ff006e';\n    ctx.shadowBlur = 15;\n    ctx.beginPath();\n    for (let i = 0; i < 5; i++) {\n      const a = (i * 4 * Math.PI) / 5 - Math.PI / 2;\n      const r = i === 0 ? s : s;\n      if (i === 0) ctx.moveTo(Math.cos(a) * s, Math.sin(a) * s);\n      else ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s);\n    }\n    ctx.closePath();\n    ctx.fill();\n    // Inner glow\n    ctx.fillStyle = '#ff85c0';\n    ctx.shadowBlur = 0;\n    ctx.beginPath();\n    ctx.arc(0, 0, s * 0.4, 0, Math.PI * 2);\n    ctx.fill();\n    ctx.restore();\n  }\n}\n\n// ─── Bomb (obstacle) ─────────────────────────────────────\nclass Bomb {\n  constructor(x, y, size) {\n    this.x = x;\n    this.y = y;\n    this.size = Math.max(6, size);\n    this.alive = true;\n    this.angle = 0;\n    this.sparkTimer = 0;\n  }\n\n  update(dt) {\n    this.y += 100 * dt;\n    this.angle += 1.5 * dt;\n    this.sparkTimer += dt;\n  }\n\n  draw(ctx) {\n    ctx.save();\n    ctx.translate(this.x, this.y);\n    ctx.rotate(this.angle);\n    // Outer glow\n    ctx.fillStyle = '#ff8500';\n    ctx.shadowColor = '#ff8500';\n    ctx.shadowBlur = 20;\n    ctx.beginPath();\n    ctx.arc(0, 0, this.size, 0, Math.PI * 2);\n    ctx.fill();\n    // Inner dark\n    ctx.fillStyle = '#cc4400';\n    ctx.shadowBlur = 0;\n    ctx.beginPath();\n    ctx.arc(0, 0, this.size * 0.65, 0, Math.PI * 2);\n    ctx.fill();\n    // Fuse spark\n    const sparkSize = 3 + 2 * Math.sin(this.sparkTimer * 10);\n    ctx.fillStyle = '#ffe066';\n    ctx.shadowColor = '#ffe066';\n    ctx.shadowBlur = 10;\n    ctx.beginPath();\n    ctx.arc(0, -this.size * 0.8, Math.max(0.5, sparkSize), 0, Math.PI * 2);\n    ctx.fill();\n    // X mark\n    ctx.strokeStyle = '#ff8500';\n    ctx.lineWidth = 2;\n    ctx.shadowBlur = 0;\n    ctx.beginPath();\n    ctx.moveTo(-this.size * 0.3, -this.size * 0.3);\n    ctx.lineTo(this.size * 0.3, this.size * 0.3);\n    ctx.moveTo(this.size * 0.3, -this.size * 0.3);\n    ctx.lineTo(-this.size * 0.3, this.size * 0.3);\n    ctx.stroke();\n    ctx.restore();\n  }\n}\n\n// ─── Player ──────────────────────────────────────────────\nclass Player {\n  constructor(x, y) {\n    this.x = x;\n    this.y = y;\n    this.targetX = x;\n    this.targetY = y;\n    this.size = 18;\n    this.trail = [];\n    this.invincible = 0;\n  }\n\n  update(dt) {\n    const dx = this.targetX - this.x;\n    const dy = this.targetY - this.y;\n    const dist = Math.sqrt(dx * dx + dy * dy);\n    const speed = Math.min(dist, 600 * dt);\n    if (dist > 1) {\n      this.x += (dx / dist) * speed;\n      this.y += (dy / dist) * speed;\n    }\n    this.trail.unshift({ x: this.x, y: this.y, alpha: 1 });\n    if (this.trail.length > 12) this.trail.pop();\n    this.trail.forEach(t => t.alpha -= 0.08 * dt * 60);\n    this.trail = this.trail.filter(t => t.alpha > 0);\n    if (this.invincible > 0) this.invincible -= dt;\n  }\n\n  draw(ctx) {\n    // Trail\n    this.trail.forEach((t, i) => {\n      ctx.save();\n      ctx.globalAlpha = t.alpha * 0.3;\n      ctx.fillStyle = '#00f5ff';\n      ctx.shadowColor = '#00f5ff';\n      ctx.shadowBlur = 10;\n      ctx.beginPath();\n      ctx.arc(t.x, t.y, this.size * t.alpha * 0.6, 0, Math.PI * 2);\n      ctx.fill();\n      ctx.restore();\n    });\n    // Player body\n    ctx.save();\n    if (this.invincible > 0 && Math.sin(this.invincible * 20) > 0) {\n      ctx.globalAlpha = 0.4;\n    }\n    ctx.fillStyle = '#00f5ff';\n    ctx.shadowColor = '#00f5ff';\n    ctx.shadowBlur = 25;\n    ctx.beginPath();\n    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);\n    ctx.fill();\n    // Inner\n    ctx.fillStyle = '#80fbff';\n    ctx.shadowBlur = 0;\n    ctx.beginPath();\n    ctx.arc(this.x, this.y, this.size * 0.5, 0, Math.PI * 2);\n    ctx.fill();\n    // Eye\n    ctx.fillStyle = '#0a0a1a';\n    ctx.beginPath();\n    ctx.arc(this.x + 4, this.y - 2, 3, 0, Math.PI * 2);\n    ctx.fill();\n    ctx.restore();\n  }\n}\n\n// ─── Main Game ───────────────────────────────────────────\nclass Game {\n  constructor() {\n    this.canvas = document.getElementById('gameCanvas');\n    this.ctx = this.canvas.getContext('2d');\n    this.audio = new AudioManager();\n\n    // State\n    this.state = 'menu'; // menu, playing, gameover\n    this.score = 0;\n    this.lives = 3;\n    this.level = 1;\n    this.startTime = 0;\n    this.elapsed = 0;\n    this.highScore = parseInt(localStorage.getItem('cosmicCollectorHighScore') || '0');\n\n    // Objects\n    this.player = null;\n    this.stars = [];\n    this.bombs = [];\n    this.particles = [];\n    this.floatingTexts = [];\n    this.bgStars = [];\n\n    // Spawn timers\n    this.starSpawnTimer = 0;\n    this.bombSpawnTimer = 0;\n    this.spawnIntervalStar = 1.0;\n    this.spawnIntervalBomb = 2.5;\n\n    // Input\n    this.mouseX = 0;\n    this.mouseY = 0;\n    this.isTouch = false;\n\n    // Screen shake\n    this.shakeAmount = 0;\n    this.shakeDuration = 0;\n\n    // Combo\n    this.combo = 0;\n    this.comboTimer = 0;\n\n    // Difficulty timer\n    this.difficultyTimer = 0;\n\n    // Init\n    this.resize();\n    this.initBgStars();\n    this.bindEvents();\n    this.updateHighScoreDisplay();\n    this.loop(0);\n  }\n\n  resize() {\n    const dpr = window.devicePixelRatio || 1;\n    this.canvas.width = window.innerWidth * dpr;\n    this.canvas.height = window.innerHeight * dpr;\n    this.canvas.style.width = window.innerWidth + 'px';\n    this.canvas.style.height = window.innerHeight + 'px';\n    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);\n    this.W = window.innerWidth;\n    this.H = window.innerHeight;\n    if (this.player) {\n      this.player.x = Math.min(this.player.x, this.W - 20);\n      this.player.y = Math.min(this.player.y, this.H - 20);\n    }\n  }\n\n  initBgStars() {\n    this.bgStars = [];\n    for (let i = 0; i < 80; i++) {\n      this.bgStars.push({\n        x: Math.random() * this.W,\n        y: Math.random() * this.H,\n        size: Math.random() * 2 + 0.5,\n        alpha: Math.random() * 0.5 + 0.2,\n        twinkle: Math.random() * Math.PI * 2,\n        speed: Math.random() * 0.3 + 0.1\n      });\n    }\n  }\n\n  bindEvents() {\n    window.addEventListener('resize', () => this.resize());\n\n    // Mouse\n    this.canvas.addEventListener('mousemove', (e) => {\n      this.mouseX = e.clientX;\n      this.mouseY = e.clientY;\n      if (this.state === 'playing') {\n        this.player.targetX = this.mouseX;\n        this.player.targetY = this.mouseY;\n      }\n    });\n\n    // Touch\n    this.canvas.addEventListener('touchstart', (e) => {\n      e.preventDefault();\n      this.isTouch = true;\n      const t = e.touches[0];\n      this.mouseX = t.clientX;\n      this.mouseY = t.clientY;\n      if (this.state === 'playing') {\n        this.player.targetX = this.mouseX;\n        this.player.targetY = this.mouseY;\n      }\n    }, { passive: false });\n\n    this.canvas.addEventListener('touchmove', (e) => {\n      e.preventDefault();\n      const t = e.touches[0];\n      this.mouseX = t.clientX;\n      this.mouseY = t.clientY;\n      if (this.state === 'playing') {\n        this.player.targetX = this.mouseX;\n        this.player.targetY = this.mouseY;\n      }\n    }, { passive: false });\n\n    // Buttons\n    document.getElementById('start-btn').addEventListener('click', () => {\n      this.audio.init();\n      this.audio.play('click');\n      this.startGame();\n    });\n\n    document.getElementById('restart-btn').addEventListener('click', () => {\n      this.audio.play('click');\n      this.startGame();\n    });\n\n    document.getElementById('menu-btn').addEventListener('click', () => {\n      this.audio.play('click');\n      this.showScreen('menu');\n    });\n\n    // Keyboard\n    window.addEventListener('keydown', (e) => {\n      if (e.code === 'Space' || e.code === 'Enter') {\n        if (this.state === 'menu') {\n          this.audio.init();\n          this.audio.play('click');\this.startGame();
+        } else if (this.state === 'gameover') {
+          this.audio.play('click');
+          this.startGame();
+        }
+      }
+    });
+  }
+
+  showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(name + '-screen').classList.add('active');
+  }
+
+  startGame() {
+    this.state = 'playing';
+    this.score = 0;
+    this.lives = 3;
+    this.level = 1;
+    this.startTime = performance.now();
+    this.elapsed = 0;
+    this.stars = [];
+    this.bombs = [];
+    this.particles = [];
+    this.floatingTexts = [];
+    this.starSpawnTimer = 0;
+    this.bombSpawnTimer = 0;
+    this.spawnIntervalStar = 1.0;
+    this.spawnIntervalBomb = 2.5;
+    this.combo = 0;
+    this.comboTimer = 0;
+    this.difficultyTimer = 0;
+    this.shakeAmount = 0;
+    this.shakeDuration = 0;
+    this.player = new Player(this.W / 2, this.H / 2);
+    this.mouseX = this.W / 2;
+    this.mouseY = this.H / 2;
+    this.player.targetX = this.W / 2;
+    this.player.targetY = this.H / 2;
+    this.showScreen('none');
+    this.updateHUD();
+  }
+
+  updateHighScoreDisplay() {
+    document.getElementById('hs-value').textContent = this.highScore;
+  }
+
+  updateHUD() {
+    document.getElementById('score-value').textContent = this.score;
+    const mins = Math.floor(this.elapsed / 60);
+    const secs = Math.floor(this.elapsed % 60);
+    const tenths = Math.floor((this.elapsed * 10) % 10);
+    document.getElementById('timer-value').textContent =
+      String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0') + '.' + tenths;
+    let hearts = '';
+    for (let i = 0; i < 3; i++) hearts += i < this.lives ? '❤' : '♡';
+    document.getElementById('lives-value').textContent = hearts;
+  }
+
+  spawnStar() {
+    const x = Math.random() * (this.W - 40) + 20;
+    const y = -20;
+    const size = Math.random() * 6 + 8;
+    this.stars.push(new Star(x, y, size));
+  }
+
+  spawnBomb() {
+    const x = Math.random() * (this.W - 40) + 20;
+    const y = -20;
+    const size = Math.random() * 6 + 10;
+    this.bombs.push(new Bomb(x, y, size));
+  }
+
+  triggerShake(amount, duration) {
+    this.shakeAmount = Math.max(this.shakeAmount, amount);
+    this.shakeDuration = Math.max(this.shakeDuration, duration);
+  }
+
+  gameOver() {
+    this.state = 'gameover';
+    this.audio.play('gameover');
+    this.triggerShake(8, 0.5);
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      localStorage.setItem('cosmicCollectorHighScore', String(this.highScore));
+      this.updateHighScoreDisplay();
+      document.getElementById('new-best').classList.remove('hidden');
+    } else {
+      document.getElementById('new-best').classList.add('hidden');
+    }
+    document.getElementById('final-score').textContent = 'Score: ' + this.score;
+    const mins = Math.floor(this.elapsed / 60);
+    const secs = Math.floor(this.elapsed % 60);
+    const tenths = Math.floor((this.elapsed * 10) % 10);
+    document.getElementById('final-time').textContent =
+      'Time: ' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0') + '.' + tenths;
+    setTimeout(() => this.showScreen('gameover'), 600);
+  }
+
+  // ─── Update ──────────────────────────────────
+  update(dt) {
+    if (this.state !== 'playing') return;
+
+    this.elapsed += dt;
+    this.player.update(dt);
+
+    // Difficulty scaling
+    this.difficultyTimer += dt;
+    if (this.difficultyTimer > 10) {
+      this.difficultyTimer = 0;
+      this.level++;
+      this.spawnIntervalStar = Math.max(0.3, this.spawnIntervalStar - 0.1);
+      this.spawnIntervalBomb = Math.max(0.8, this.spawnIntervalBomb - 0.2);
+      this.audio.play('levelup');
+    }
+
+    // Combo timer
+    if (this.comboTimer > 0) {
+      this.comboTimer -= dt;
+      if (this.comboTimer <= 0) this.combo = 0;
+    }
+
+    // Shake decay
+    if (this.shakeDuration > 0) {
+      this.shakeDuration -= dt;
+      if (this.shakeDuration <= 0) this.shakeAmount = 0;
+    }
+
+    // Spawn stars
+    this.starSpawnTimer += dt;
+    if (this.starSpawnTimer >= this.spawnIntervalStar) {
+      this.starSpawnTimer = 0;
+      this.spawnStar();
+    }
+
+    // Spawn bombs
+    this.bombSpawnTimer += dt;
+    if (this.bombSpawnTimer >= this.spawnIntervalBomb) {
+      this.bombSpawnTimer = 0;
+      this.spawnBomb();
+    }
+
+    // Update objects
+    this.stars.forEach(s => s.update(dt));
+    this.bombs.forEach(b => b.update(dt));
+    this.particles.forEach(p => p.update(dt));
+    this.floatingTexts.forEach(ft => ft.update(dt));
+
+    // Remove dead objects off-screen
+    this.stars = this.stars.filter(s => s.alive && s.y < this.H + 50);
+    this.bombs = this.bombs.filter(b => b.alive && b.y < this.H + 50);
+    this.particles = this.particles.filter(p => p.alive);
+    this.floatingTexts = this.floatingTexts.filter(ft => ft.alive);
+
+    // Collisions - stars
+    for (let i = this.stars.length - 1; i >= 0; i--) {
+      const s = this.stars[i];
+      if (!s.alive) continue;
+      const dx = s.x - this.player.x;
+      const dy = s.y - this.player.y;
+      if (dx * dx + dy * dy < (s.size + this.player.size) * (s.size + this.player.size)) {
+        s.alive = false;
+        this.combo++;
+        this.comboTimer = 2.0;
+        const points = 10 * Math.min(this.combo, 10);
+        this.score += points;
+        this.audio.play('collect');
+        // Particles
+        for (let j = 0; j < 8; j++) {
+          const angle = (j / 8) * Math.PI * 2;
+          this.particles.push(new Particle(s.x, s.y, '#ff006e', Math.cos(angle) * 120, Math.sin(angle) * 120, 3, 0.5));
+        }
+        this.floatingTexts.push(new FloatingText(s.x, s.y - 10, '+' + points, '#ff006e'));
+        if (this.combo >= 5) {
+          this.floatingTexts.push(new FloatingText(s.x, s.y - 30, this.combo + 'x COMBO!', '#ffbe0b'));
+        }
+      }
+    }
+
+    // Collisions - bombs
+    if (this.player.invincible <= 0) {
+      for (let i = this.bombs.length - 1; i >= 0; i--) {
+        const b = this.bombs[i];
+        if (!b.alive) continue;
+        const dx = b.x - this.player.x;
+        const dy = b.y - this.player.y;
+        if (dx * dx + dy * dy < (b.size + this.player.size) * (b.size + this.player.size)) {
+          b.alive = false;
+          this.lives--;
+          this.audio.play('hit');
+          this.triggerShake(5, 0.3);
+          this.player.invincible = 1.5;
+          for (let j = 0; j < 12; j++) {
+            const angle = (j / 12) * Math.PI * 2;
+            this.particles.push(new Particle(this.player.x, this.player.y, '#ff8500', Math.cos(angle) * 150, Math.sin(angle) * 150, 3, 0.6));
+          }
+          if (this.lives <= 0) {
+            this.gameOver();
+          }
+        }
+      }
+    }
+
+    this.updateHUD();
+  }
+
+  // ─── Draw ────────────────────────────────────
+  draw() {
+    const ctx = this.ctx;
+    ctx.save();
+
+    // Screen shake
+    if (this.shakeDuration > 0) {
+      const sx = (Math.random() - 0.5) * this.shakeAmount * 2;
+      const sy = (Math.random() - 0.5) * this.shakeAmount * 2;
+      ctx.translate(sx, sy);
+    }
+
+    // Background
+    ctx.fillStyle = '#0a0a1a';
+    ctx.fillRect(-10, -10, this.W + 20, this.H + 20);
+
+    // Background stars
+    this.bgStars.forEach(star => {
+      star.twinkle += 0.02;
+      const alpha = star.alpha * (0.5 + 0.5 * Math.sin(star.twinkle));
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // Objects
+    if (this.state === 'playing' || this.state === 'gameover') {
+      this.stars.forEach(s => s.draw(ctx));
+      this.bombs.forEach(b => b.draw(ctx));
+      this.particles.forEach(p => p.draw(ctx));
+      this.floatingTexts.forEach(ft => ft.draw(ctx));
+      if (this.player) this.player.draw(ctx);
+
+      // Combo display
+      if (this.combo >= 3 && this.comboTimer > 0) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, this.comboTimer);
+        ctx.fillStyle = '#ffbe0b';
+        ctx.font = 'bold 32px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#ffbe0b';
+        ctx.shadowBlur = 15;
+        ctx.fillText(this.combo + 'x COMBO', this.W / 2, 80);
+        ctx.restore();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // ─── Game Loop ───────────────────────────────
+  loop(timestamp) {
+    const dt = Math.min((timestamp - this._lastTime) / 1000, 0.05);
+    this._lastTime = timestamp;
+
+    if (this.state === 'menu') {
+      // Animate background stars
+      this.bgStars.forEach(star => {
+        star.twinkle += 0.02;
+      });
+    }
+
+    this.update(dt);
+    this.draw();
+
+    requestAnimationFrame((t) => this.loop(t));
+  }
+}
+
+// ─── Start ───────────────────────────────────────
+const game = new Game();
+
+
+Now I need to close the JSON properly. The JSON was cut off at `"game.js": "/* ===== Cosmic Collector ===== */` and I need to provide the complete continuation. Let me format this as a proper JSON continuation starting from where it was cut off.
+
+Actually, looking at the original JSON more carefully, the `"game.js": "` was already opened and the content started with `/* ===== Cosmic Collector ===== */`. The cut happened mid-file. I need to continue from exactly where it was cut:
+
+
+          this.audio.init();
+          this.audio.play('click');
+
+
+Wait, let me re-read. The JSON was cut at:
+
+          this.audio.init();
+          this.audio.play('click');
+
+
+So I need to continue from `this.startGame();` and complete the rest.
+
+But I also need to close the JSON string and object properly. The game.js value is a string, so I need to escape any special characters properly or just continue the string content.
+
+Let me provide the complete continuation:</think>this.startGame();
+        } else if (this.state === 'gameover') {
+          this.audio.play('click');
+          this.startGame();
+        }
+      }
+    });
+  }
+
+  showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const screen = document.getElementById(name + '-screen');
+    if (screen) screen.classList.add('active');
+  }
+
+  startGame() {
+    this.state = 'playing';
+    this.score = 0;
+    this.lives = 3;
+    this.level = 1;
+    this.startTime = performance.now();
+    this.elapsed = 0;
+    this.stars = [];
+    this.bombs = [];
+    this.particles = [];
+    this.floatingTexts = [];
+    this.starSpawnTimer = 0;
+    this.bombSpawnTimer = 0;
+    this.spawnIntervalStar = 1.0;
+    this.spawnIntervalBomb = 2.5;
+    this.combo = 0;
+    this.comboTimer = 0;
+    this.difficultyTimer = 0;
+    this.shakeAmount = 0;
+    this.shakeDuration = 0;
+    this.player = new Player(this.W / 2, this.H / 2);
+    this.mouseX = this.W / 2;
+    this.mouseY = this.H / 2;
+    this.player.targetX = this.W / 2;
+    this.player.targetY = this.H / 2;
+    this.showScreen('');
+    this.updateHUD();
+  }
+
+  updateHighScoreDisplay() {
+    document.getElementById('hs-value').textContent = this.highScore;
+  }
+
+  updateHUD() {
+    document.getElementById('score-value').textContent = this.score;
+    const mins = Math.floor(this.elapsed / 60);
+    const secs = Math.floor(this.elapsed % 60);
+    const tenths = Math.floor((this.elapsed * 10) % 10);
+    document.getElementById('timer-value').textContent =
+      String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0') + '.' + tenths;
+    let hearts = '';
+    for (let i = 0; i < 3; i++) hearts += i < this.lives ? '❤' : '♡';
+    document.getElementById('lives-value').textContent = hearts;
+  }
+
+  spawnStar() {
+    const x = Math.random() * (this.W - 40) + 20;
+    const y = -20;
+    const size = Math.random() * 6 + 8;
+    this.stars.push(new Star(x, y, size));
+  }
+
+  spawnBomb() {
+    const x = Math.random() * (this.W - 40) + 20;
+    const y = -20;
+    const size = Math.random() * 6 + 10;
+    this.bombs.push(new Bomb(x, y, size));
+  }
+
+  triggerShake(amount, duration) {
+    this.shakeAmount = Math.max(this.shakeAmount, amount);
+    this.shakeDuration = Math.max(this.shakeDuration, duration);
+  }
+
+  gameOver() {
+    this.state = 'gameover';
+    this.audio.play('gameover');
+    this.triggerShake(8, 0.5);
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      localStorage.setItem('cosmicCollectorHighScore', String(this.highScore));
+      this.updateHighScoreDisplay();
+      document.getElementById('new-best').classList.remove('hidden');
+    } else {
+      document.getElementById('new-best').classList.add('hidden');
+    }
+    document.getElementById('final-score').textContent = 'Score: ' + this.score;
+    const mins = Math.floor(this.elapsed / 60);
+    const secs = Math.floor(this.elapsed % 60);
+    const tenths = Math.floor((this.elapsed * 10) % 10);
+    document.getElementById('final-time').textContent =
+      'Time: ' + String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0') + '.' + tenths;
+    setTimeout(() => this.showScreen('gameover'), 600);
+  }
+
+  update(dt) {
+    if (this.state !== 'playing') return;
+
+    this.elapsed += dt;
+    this.player.update(dt);
+
+    this.difficultyTimer += dt;
+    if (this.difficultyTimer > 10) {
+      this.difficultyTimer = 0;
+      this.level++;
+      this.spawnIntervalStar = Math.max(0.3, this.spawnIntervalStar - 0.1);
+      this.spawnIntervalBomb = Math.max(0.8, this.spawnIntervalBomb - 0.2);
+      this.audio.play('levelup');
+    }
+
+    if (this.comboTimer > 0) {
+      this.comboTimer -= dt;
+      if (this.comboTimer <= 0) this.combo = 0;
+    }
+
+    if (this.shakeDuration > 0) {
+      this.shakeDuration -= dt;
+      if (this.shakeDuration <= 0) this.shakeAmount = 0;
+    }
+
+    this.starSpawnTimer += dt;
+    if (this.starSpawnTimer >= this.spawnIntervalStar) {
+      this.starSpawnTimer = 0;
+      this.spawnStar();
+    }
+
+    this.bombSpawnTimer += dt;
+    if (this.bombSpawnTimer >= this.spawnIntervalBomb) {
+      this.bombSpawnTimer = 0;
+      this.spawnBomb();
+    }
+
+    this.stars.forEach(s => s.update(dt));
+    this.bombs.forEach(b => b.update(dt));
+    this.particles.forEach(p => p.update(dt));
+    this.floatingTexts.forEach(ft => ft.update(dt));
+
+    this.stars = this.stars.filter(s => s.alive && s.y < this.H + 50);
+    this.bombs = this.bombs.filter(b => b.alive && b.y < this.H + 50);
+    this.particles = this.particles.filter(p => p.alive);
+    this.floatingTexts = this.floatingTexts.filter(ft => ft.alive);
+
+    for (let i = this.stars.length - 1; i >= 0; i--) {
+      const s = this.stars[i];
+      if (!s.alive) continue;
+      const dx = s.x - this.player.x;
+      const dy = s.y - this.player.y;
+      if (dx * dx + dy * dy < (s.size + this.player.size) * (s.size + this.player.size)) {
+        s.alive = false;
+        this.combo++;
+        this.comboTimer = 2.0;
+        const points = 10 * Math.min(this.combo, 10);
+        this.score += points;
+        this.audio.play('collect');
+        for (let j = 0; j < 8; j++) {
+          const angle = (j / 8) * Math.PI * 2;
+          this.particles.push(new Particle(s.x, s.y, '#ff006e', Math.cos(angle) * 120, Math.sin(angle) * 120, 3, 0.5));
+        }
+        this.floatingTexts.push(new FloatingText(s.x, s.y - 10, '+' + points, '#ff006e'));
+        if (this.combo >= 5) {
+          this.floatingTexts.push(new FloatingText(s.x, s.y - 30, this.combo + 'x COMBO!', '#ffbe0b'));
+        }
+      }
+    }
+
+    if (this.player.invincible <= 0) {
+      for (let i = this.bombs.length - 1; i >= 0; i--) {
+        const b = this.bombs[i];
+        if (!b.alive) continue;
+        const dx = b.x - this.player.x;
+        const dy = b.y - this.player.y;
+        if (dx * dx + dy * dy < (b.size + this.player.size) * (b.size + this.player.size)) {
+          b.alive = false;
+          this.lives--;
+          this.audio.play('hit');
+          this.triggerShake(5, 0.3);
+          this.player.invincible = 1.5;
+          for (let j = 0; j < 12; j++) {
+            const angle = (j / 12) * Math.PI * 2;
+            this.particles.push(new Particle(this.player.x, this.player.y, '#ff8500', Math.cos(angle) * 150, Math.sin(angle) * 150, 3, 0.6));
+          }
+          if (this.lives <= 0) {
+            this.gameOver();
+          }
+        }
+      }
+    }
+
+    this.updateHUD();
+  }
+
+  draw() {
+    const ctx = this.ctx;
+    ctx.save();
+
+    if (this.shakeDuration > 0) {
+      const sx = (Math.random() - 0.5) * this.shakeAmount * 2;
+      const sy = (Math.random() - 0.5) * this.shakeAmount * 2;
+      ctx.translate(sx, sy);
+    }
+
+    ctx.fillStyle = '#0a0a1a';
+    ctx.fillRect(-10, -10, this.W + 20, this.H + 20);
+
+    this.bgStars.forEach(star => {
+      star.twinkle += 0.02;
+      const alpha = star.alpha * (0.5 + 0.5 * Math.sin(star.twinkle));
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    if (this.state === 'playing' || this.state === 'gameover') {
+      this.stars.forEach(s => s.draw(ctx));
+      this.bombs.forEach(b => b.draw(ctx));
+      this.particles.forEach(p => p.draw(ctx));
+      this.floatingTexts.forEach(ft => ft.draw(ctx));
+      if (this.player) this.player.draw(ctx);
+
+      if (this.combo >= 3 && this.comboTimer > 0) {
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, this.comboTimer);
+        ctx.fillStyle = '#ffbe0b';
+        ctx.font = 'bold 32px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#ffbe0b';
+        ctx.shadowBlur = 15;
+        ctx.fillText(this.combo + 'x COMBO', this.W / 2, 80);
+        ctx.restore();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  loop(timestamp) {
+    const dt = Math.min((timestamp - this._lastTime) / 1000, 0.05);
+    this._lastTime = timestamp;
+
+    if (this.state === 'menu') {
+      this.bgStars.forEach(star => {
+        star.twinkle += 0.02;
+      });
+    }
+
+    this.update(dt);
+    this.draw();
+
+    requestAnimationFrame((t) => this.loop(t));
+  }
+}
+
+const game = new Game();
+", "README.md": "# Cosmic Collector\n\nA vibrant neon collection game — collect stars, dodge bombs!\n\n## How to Play\n\n1. Open `index.html` in a browser\n2. Move your mouse or touch to control the player\n3. Collect pink stars for points\n4. Dodge orange bombs — you have 3 lives!\n5. Build combos for bonus points\n6. Difficulty increases every 10 seconds\n\n## Files\n\n- `index.html` — Game structure and UI\n- `styles.css` — Neon-themed styling\n- `game.js` — Complete game logic (no external dependencies)\n- `README.md` — This file\n\n## Features\n\n- Smooth player movement with trail effect\n- Particle effects on collect and hit\n- Combo system with multiplier bonus\n- Progressive difficulty scaling\n- Screen shake feedback\n- Web Audio synthesized sound effects\n- High score persistence via localStorage\n- Responsive design for desktop and mobile\n- Animated UI with gradient text and glassmorphism\n"}
