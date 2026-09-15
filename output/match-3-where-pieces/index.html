@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Sandfall: Grains of Match</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏖️</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; color: #fff; }
+    #game-container { position: relative; width: 100%; max-width: 420px; aspect-ratio: 2/3; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px; }
+    #ui-top { display: flex; justify-content: space-between; width: 100%; padding: 0 10px; pointer-events: none; }
+    .glass { background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 8px 16px; pointer-events: auto; }
+    #score-board { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+    #score-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
+    #score-value { font-size: 28px; font-weight: 700; background: linear-gradient(90deg, #ffd700, #ff8c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    #timer-board { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+    #timer-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
+    #timer-value { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; color: #00ffff; text-shadow: 0 0 10px #00ffff; }
+    #multiplier { font-size: 14px; font-weight: 600; color: #ff6b6b; opacity: 0; transform: scale(0.5); transition: all 0.2s; }
+    #multiplier.show { opacity: 1; transform: scale(1); }
+    #canvas-wrapper { position: relative; flex: 1; width: 100%; border-radius: 16px; overflow: hidden; background: rgba(0,0,0,0.3); box-shadow: inset 0 0 60px rgba(0,0,0,0.5), 0 20px 40px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.1); }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    #ui-bottom { display: flex; justify-content: space-between; width: 100%; padding: 0 10px; pointer-events: none; }
+    #goals { display: flex; gap: 8px; pointer-events: auto; }
+    .goal { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.08); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 6px 10px; }
+    .goal-color { width: 20px; height: 20px; border-radius: 6px; box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 2px 4px rgba(255,255,255,0.1); }
+    .goal-count { font-size: 14px; font-weight: 600; min-width: 24px; text-align: right; }
+    .goal.met .goal-count { color: #00ff88; }
+    #controls { display: flex; gap: 8px; pointer-events: auto; }
+    .btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 14px; backdrop-filter: blur(10px); transition: all 0.15s; }
+    .btn:active { transform: scale(0.95); background: rgba(255,255,255,0.2); }
+    #overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    #overlay.show { opacity: 1; pointer-events: auto; }
+    .overlay-box { background: rgba(20,20,40,0.95); border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; padding: 40px; text-align: center; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+    .overlay-title { font-size: 32px; font-weight: 700; margin-bottom: 8px; background: linear-gradient(90deg, #ffd700, #ff8c00, #00ffff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .overlay-stats { display: flex; justify-content: center; gap: 30px; margin: 20px 0; color: rgba(255,255,255,0.8); }
+    .stat { display: flex; flex-direction: column; }
+    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5; }
+    .stat-value { font-size: 24px; font-weight: 700; color: #00ffff; }
+    .overlay-btn { background: linear-gradient(135deg, #ff6b6b, #ff8c00); border: none; color: #fff; padding: 14px 40px; border-radius: 50px; font-size: 16px; font-weight: 700; letter-spacing: 1px; cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; box-shadow: 0 4px 20px rgba(255,107,107,0.4); }
+    .overlay-btn:active { transform: scale(0.96); box-shadow: 0 2px 10px rgba(255,107,107,0.4); }
+    @media (max-height: 600px) { #game-container { max-width: 320px; } .overlay-box { padding: 24px; } }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <div id="ui-top">
+      <div id="score-board" class="glass"><div id="score-label">SCORE</div><div id="score-value">0</div><div id="multiplier">×1 COMBO</div></div>
+      <div id="timer-board" class="glass"><div id="timer-label">TIME</div><div id="timer-value">00:00.00</div></div>
+    </div>
+    <div id="canvas-wrapper"><canvas id="canvas"></canvas></div>
+    <div id="ui-bottom">
+      <div id="goals"></div>
+      <div id="controls"><button id="btn-pause" class="btn">⏸️</button><button id="btn-restart" class="btn">🔄</button></div>
+    </div>
+  </div>
+  <div id="overlay"><div class="overlay-box"><div id="overlay-title" class="overlay-title">PAUSED</div><div class="overlay-stats"><div class="stat"><span class="stat-label">Score</span><span id="o-score" class="stat-value">0</span></div><div class="stat"><span class="stat-label">Best</span><span id="o-best" class="stat-value">0</span></div><div class="stat"><span class="stat-label">Time</span><span id="o-time" class="stat-value">00:00</span></div></div><button id="btn-resume" class="overlay-btn">RESUME</button><button id="btn-menu-restart" class="overlay-btn" style="margin-top:10px;background:linear-gradient(135deg,#00ffff,#0088ff)">RESTART</button></div></div>
+  <script src="game.js"></script>
+</body>
+</html>
