@@ -1,6 +1,6 @@
 # Path-Painter Tower Defense 🎨🏰
 
-Enemies don’t follow the map—they **paint it as they march**. Build your defenses before their chaotic trails become tomorrow’s invasion route!
+Enemies don't follow the map—they **paint it as they march**. Build your defenses before their chaotic trails become tomorrow's invasion route!
 
 ## How to Play
 
