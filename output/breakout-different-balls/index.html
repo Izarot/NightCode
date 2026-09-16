@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Breakout: Multiverse</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌌</text></svg>">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{background:#0a0e27;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;touch-action:none}
+    #gameCanvas{display:block;background:#05081a}
+    #ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+    .screen{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:auto;display:none}
+    .screen.active{display:block;animation:fadeIn .3s ease-out}
+    @keyframes fadeIn{from{opacity:0;transform:translate(-50%,-40%)}to{opacity:1;transform:translate(-50%,-50%)}}
+    h1{font-size:clamp(2rem,8vw,4rem);background:linear-gradient(90deg,#ff6b35,#f7b733,#4ecdc4,#45b7d1,#a855f7);-webkit-background-clip:text;background-clip:text;color:transparent;animation:gradientShift 3s ease infinite;background-size:300%}
+    @keyframes gradientShift{0%,100%{background-position:0%}50%{background-position:100%}}
+    .btn{display:inline-block;margin:.5rem;padding:1rem 2rem;font-size:1.2rem;border:none;border-radius:8px;background:#1a1a2e;color:#fff;border:2px solid #4ecdc4;cursor:pointer;transition:all .2s}
+    .btn:hover{transform:scale(1.05);box-shadow:0 0 20px #4ecdc480}
+    .btn:active{transform:scale(.95)}
+    .btn.secondary{border-color:#a855f7}
+    .btn.danger{border-color:#ff6b35}
+    .hud{display:flex;justify-content:space-between;align-items:center;padding:0 1rem;height:70px;background:rgba(10,14,39,.8);backdrop-filter:blur(10px);border-bottom:1px solid #4ecdc440}
+    .hud-section{display:flex;align-items:center;gap:1rem}
+    .score{font-size:1.5rem;font-weight:bold;text-shadow:0 0 10px #4ecdc4}
+    .ball-info{display:flex;flex-direction:column;align-items:center}
+    .ball-icon{width:32px;height:32px;border-radius:50%;box-shadow:0 0 15px currentColor}
+    .lives{display:flex;gap:4px}
+    .heart{font-size:1.5rem;color:#ff4757}
+    .heart.lost{color:#333;text-shadow:none}
+    .powerup-bar{height:30px;display:flex;gap:.5rem;padding:0 1rem;background:rgba(10,14,39,.6);overflow-x:auto}
+    .powerup-badge{display:flex;align-items:center;gap:.3rem;padding:0 .5rem;background:#1a1a2e;border-radius:15px;font-size:.8rem;border:1px solid}
+    .combo-popup{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-size:3rem;font-weight:bold;color:#f7b733;text-shadow:0 0 20px #f7b733;pointer-events:none;opacity:0;animation:comboAnim .8s ease-out forwards}
+    @keyframes comboAnim{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}100%{opacity:0;transform:translate(-50%,-50%) scale(1)}}
+    .level-info{font-size:1.2rem;color:#4ecdc4}
+    .stat{margin:.5rem 0;font-size:1.1rem}
+    .stat span{color:#f7b733}
+    .stars{font-size:2rem;margin:1rem 0}
+    .star.filled{color:#f7b733;text-shadow:0 0 10px #f7b733}
+    .ball-select{display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;margin:2rem 0}
+    .ball-option{width:80px;height:80px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:all .2s;position:relative;display:flex;align-items:center;justify-content:center;font-size:2rem}
+    .ball-option:hover,.ball-option.selected{transform:scale(1.1);border-color:#fff;box-shadow:0 0 20px currentColor}
+    .ball-option.locked{opacity:.4;cursor:not-allowed;filter:grayscale(1)}
+    .lock-icon{position:absolute;top:-5px;right:-5px;background:#333;border-radius:50%;width:20px;height:20px;font-size:.7rem;display:flex;align-items:center;justify-content:center}
+    .ball-desc{position:absolute;bottom:-60px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:.7rem;background:#0a0e27;padding:.3rem .5rem;border-radius:4px;border:1px solid #4ecdc440;opacity:0;transition:opacity .2s}
+    .ball-option:hover .ball-desc{opacity:1}
+    input[type=range]{width:200px;accent-color:#4ecdc4}
+    .setting-row{display:flex;justify-content:space-between;align-items:center;margin:1rem 0;padding:0 2rem}
+    @media(max-width:600px){.hud{flex-wrap:wrap;height:auto;padding:.5rem}.score{font-size:1.2rem}.ball-icon{width:24px;height:24px}.btn{padding:.8rem 1.5rem;font-size:1rem}}
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="ui">
+    <div class="hud" id="hud">
+      <div class="hud-section"><div class="score" id="score">SCORE: 0</div></div>
+      <div class="hud-section ball-info"><div class="ball-icon" id="ballIcon"></div><div id="ballName" style="font-size:.8rem"></div></div>
+      <div class="hud-section"><div class="level-info" id="levelInfo">LEVEL 1/30</div><div class="lives" id="lives"></div></div>
+    </div>
+    <div class="powerup-bar" id="powerupBar"></div>
+    <div id="comboPopup" class="combo-popup"></div>
+
+    <div class="screen active" id="menuScreen">
+      <h1>BREAKOUT: MULTIVERSE</h1>
+      <button class="btn" onclick="startGame()">PLAY</button><br>
+      <button class="btn secondary" onclick="showScreen('ballSelectScreen')">BALL SELECT</button><br>
+      <button class="btn secondary" onclick="showScreen('settingsScreen')">SETTINGS</button><br>
+      <button class="btn secondary" onclick="showScreen('highScoreScreen')">HIGH SCORES</button>
+    </div>
+
+    <div class="screen" id="ballSelectScreen">
+      <h2 style="margin-bottom:1rem">SELECT BALL</h2>
+      <div class="ball-select" id="ballSelect"></div>
+      <button class="btn" onclick="confirmBallSelect()">CONFIRM</button>
+    </div>
+
+    <div class="screen" id="settingsScreen">
+      <h2>SETTINGS</h2>
+      <div class="setting-row"><span>Master Volume</span><input type="range" id="masterVol" min="0" max="1" step="0.1" value="0.7"></div>
+      <div class="setting-row"><span>Music Volume</span><input type="range" id="musicVol" min="0" max="1" step="0.1" value="0.4"></div>
+      <div class="setting-row"><span>SFX Volume</span><input type="range" id="sfxVol" min="0" max="1" step="0.1" value="0.7"></div>
+      <div class="setting-row"><span>Fullscreen</span><button class="btn secondary" onclick="toggleFullscreen()">TOGGLE</button></div>
+      <button class="btn" onclick="showScreen('menuScreen')">BACK</button>
+    </div>
+
+    <div class="screen" id="highScoreScreen">
+      <h2>HIGH SCORES</h2>
+      <div id="highScoreList" style="text-align:left;max-height:300px;overflow:auto"></div>
+      <button class="btn" onclick="showScreen('menuScreen')">BACK</button>
+    </div>
+
+    <div class="screen" id="pauseScreen">
+      <h2>PAUSED</h2>
+      <button class="btn" onclick="resumeGame()">RESUME</button><br>
+      <button class="btn secondary" onclick="restartLevel()">RESTART</button><br>
+      <button class="btn danger" onclick="quitToMenu()">QUIT TO MENU</button>
+    </div>
+
+    <div class="screen" id="gameOverScreen">
+      <h2 style="color:#ff4757">GAME OVER</h2>
+      <div class="stat">Final Score: <span id="finalScore">0</span></div>
+      <div id="newHighScore" style="color:#f7b733;font-weight:bold;display:none">NEW HIGH SCORE!</div>
+      <button class="btn" onclick="retryGame()">RETRY</button><br>
+      <button class="btn secondary" onclick="quitToMenu()">MAIN MENU</button>
+    </div>
+
+    <div class="screen" id="levelCompleteScreen">
+      <h2 style="color:#4ecdc4">LEVEL COMPLETE!</h2>
+      <div class="stars" id="stars"></div>
+      <div class="stat">Bricks: <span id="bricksPct">100%</span></div>
+      <div class="stat">Time: <span id="timeTaken">0s</span></div>
+      <div class="stat">Balls Lost: <span id="ballsLost">0</span></div>
+      <div class="stat">Score: <span id="levelScore">0</span></div>
+      <button class="btn" onclick="nextLevel()">NEXT LEVEL</button>
+      <button class="btn secondary" onclick="replayLevel()">REPLAY</button>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
