@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DriftGate Velocity</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏎️</text></svg>">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#05060A;overflow:hidden;font-family:'Courier New',monospace;color:#00F0FF}
+    #gameContainer{position:relative;width:100vw;height:100vh}
+    canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+    .hud{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+    .speed{display:absolute;bottom:20px;left:20px;font-size:24px;color:#00F0FF;text-shadow:0 0 8px #00F0FF}
+    .timer{display:absolute;top:20px;left:50%;transform:translateX(-50%);font-size:20px;color:#FF4500;text-shadow:0 0 8px #FF4500}
+    .lap{display:absolute;top:20px;left:20px;font-size:18px;color:#00F0FF}
+    .pos{display:absolute;top:20px;right:20px;font-size:18px;color:#00F0FF}
+    .gauge{display:absolute;bottom:20px;right:20px;width:100px;height:100px}
+    .minimap{display:absolute;top:80px;right:20px;width:120px;height:120px;border:1px solid #00F0FF;border-radius:50%}
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <canvas id="gameCanvas"></canvas>
+    <div class="hud">
+      <div class="speed" id="speed">0 KM/H</div>
+      <div class="timer" id="timer">00:00.00</div>
+      <div class="lap" id="lap">LAP 1/3</div>
+      <div class="pos" id="pos">POS: 1/8</div>
+      <canvas class="gauge" id="gauge"></canvas>
+      <canvas class="minimap" id="minimap"></canvas>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
