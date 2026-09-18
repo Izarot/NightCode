@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Tower Tetris</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%B2%3C/text%3E%3C/svg%3E">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d0d1a;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Orbitron',sans-serif;overflow:hidden;touch-action:none}
+#gameCanvas{display:block;image-rendering:pixelated}
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;justify-content:center;align-items:center;z-index:10;pointer-events:none;opacity:0;transition:opacity .3s}
+.overlay.active{pointer-events:all;opacity:1}
+.overlay-bg{background:rgba(10,10,30,.85);backdrop-filter:blur(8px);border-radius:16px;padding:40px;text-align:center;border:1px solid rgba(255,255,255,.1)}
+.overlay-bg h1{font-size:2.5em;color:#e94560;margin-bottom:10px}
+.overlay-bg h2{font-size:1.5em;color:#c4c4c4;margin-bottom:20px;font-weight:400}
+.overlay-bg p{color:#a0a0b0;margin:8px 0;font-size:.9em}
+.btn{display:inline-block;padding:12px 32px;margin:8px;border:2px solid #e94560;background:transparent;color:#e94560;font-family:'Orbitron',sans-serif;font-size:1em;border-radius:8px;cursor:pointer;transition:all .2s}
+.btn:hover{background:#e94560;color:#fff}
+.btn-secondary{border-color:#0fbcf9;color:#0fbcf9}
+.btn-secondary:hover{background:#0fbcf9;color:#fff}
+#touchControls{position:fixed;bottom:10px;left:0;width:100%;display:none;justify-content:space-between;padding:0 15px;z-index:5}
+.touch-btn{width:56px;height:56px;border-radius:50%;background:rgba(233,69,96,.2);border:2px solid rgba(233,69,96,.5);color:#e94560;font-size:1.5em;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none}
+.touch-group{display:flex;gap:8px;align-items:center}
+@media(hover:none)and(pointer:coarse){#touchControls{display:flex!important}}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="touchControls">
+<div class="touch-group">
+<div class="touch-btn" data-action="left">◀</div>
+<div class="touch-btn" data-action="right">▶</div>
+</div>
+<div class="touch-group">
+<div class="touch-btn" data-action="rotate">↻</div>
+<div class="touch-btn" data-action="drop">⬇</div>
+<div class="touch-btn" data-action="hold">⇆</div>
+</div>
+</div>
+<div id="menuScreen" class="overlay active"><div class="overlay-bg"><h1>🎮 Tower Tetris</h1><h2>Clear lines. Build the tower. Survive!</h2><p>High Score: <span id="menuHighScore">0</span></p><button class="btn" onclick="game.start()">Start Game</button><br><small style="color:#666">Press Enter or Space to start</small></div></div>
+<div id="pauseScreen" class="overlay"><div class="overlay-bg"><h1>Paused</h1><button class="btn" onclick="game.resume()">Resume</button><button class="btn btn-secondary" onclick="game.restart()">Restart</button><button class="btn btn-secondary" onclick="game.quit()">Quit</button></div></div>
+<div id="gameOverScreen" class="overlay"><div class="overlay-bg"><h1>Game Over</h1><p>Score: <span id="finalScore">0</span></p><p>Level: <span id="finalLevel">1</span></p><p>Lines: <span id="finalLines">0</span></p><p>Time: <span id="finalTime">0:00</span></p><p>Best: <span id="bestScore">0</span></p><button class="btn" onclick="game.restart()">Play Again</button><button class="btn btn-secondary" onclick="game.quit()">Menu</button></div></div>
+<script src="src/audio.js"></script>
+<script src="src/piece.js"></script>
+<script src="src/grid.js"></script>
+<script src="src/riser.js"></script>
+<script src="src/input.js"></script>
+<script src="src/renderer.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/game.js"></script>
+</body>
+</html>
