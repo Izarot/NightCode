@@ -4,7 +4,7 @@ const ctx = canvas.getContext('2d');
 
 // Canvas setup with responsive scaling
 function resizeCanvas() {
-  const container = document.getElementById('game-container');
+  const container = document.getElementById('gameContainer');
   const ratio = 1280 / 720;
   let width = Math.min(window.innerWidth, container.clientWidth);
   let height = Math.min(window.innerHeight, container.clientHeight);

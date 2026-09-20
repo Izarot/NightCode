@@ -62,8 +62,9 @@ function update(dt){ // player input
  // collision projectiles
  for(let j=projectiles.length-1;j>=0;j--){ const p=projectiles[j]; if(Math.hypot(e.x-p.x, e.y-p.y)<(e.size+p.size)/2){ e.health-=10; projectiles.splice(j,1); if(e.health<=0){ score+=100; playSound(600,0.2,'triangle'); // explosion particles
  for(let k=0;k<8;k++){ const ang=Math.PI*2*k/8; particles.push({x:e.x, y:e.y, vx:Math.cos(ang)*2, vy:Math.sin(ang)*2, life:0.5, size:3}); }
- enemies.splice(i,1); break; } } }
- if(e.health<=0){ enemies.splice(i,1); } }
+ enemies.splice(i,1); break; } }
+ if(e.health<=0){ enemies.splice(i,1); }
+ }
  // update particles
  for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; p.x+=p.vx*dt; p.y+=p.vy*dt; p.life-=dt; if(p.life<=0) particles.splice(i,1); }
  // wave spawning
