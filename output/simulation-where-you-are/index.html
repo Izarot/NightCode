@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌊 LUMINA KEEPER</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23b87333' d='M50 5l15 30h30l-24 18 9 30-26-18-26 18 9-30-24-18h30z'/%3E%3C/svg%3E">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0e1a; overflow: hidden; font-family: Arial, sans-serif; }
+    #gameCanvas { display: block; background: linear-gradient(to bottom, #0a0e1a 0%, #1a1030 100%); width: 100vw; height: 100vh; max-width: 1920px; max-height: 1080px; }
+    .hud { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; pointer-events: none; }
+    .top-bar, .bottom-bar { background: rgba(10,14,26,0.85); padding: 10px; border-radius: 8px; display: flex; align-items: center; gap: 15px; }
+    .top-bar { justify-content: space-between; }
+    .bottom-bar { justify-content: center; flex-wrap: wrap; }
+    .btn { background: #3a2a1a; border: 2px solid #b87333; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: all 0.2s; pointer-events: auto; }
+    .btn.active { background: #b87333; box-shadow: 0 0 15px #b87333; }
+    .energy-bar { width: 150px; height: 15px; background: #333; border: 1px solid #b87333; border-radius: 3px; overflow: hidden; }
+    .energy-fill { height: 100%; background: linear-gradient(90deg, #4caf50, #ffd700, #ff3333); width: 67%; }
+    .score, .wave, .ships, .storm { color: #f0e6d3; font-size: 14px; }
+    .timer { color: #ffd700; font-size: 18px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div class="hud">
+    <div class="top-bar">
+      <div class="score">⭐ SCORE: <span id="score">0</span></div>
+      <div class="ships">🚢 <span id="guided">0</span>/12</div>
+      <div class="storm">⛈ <span id="storm">0</span></div>
+      <div class="wave">🌊 WAVE <span id="wave">1</span></div>
+    </div>
+    <div class="bottom-bar">
+      <div class="timer">⏱ <span id="timer">00:00</span></div>
+      <div class="energy-bar"><div class="energy-fill" id="energyFill"></div></div>
+      <div class="btn" id="colorW" title="White (1)">⚪</div>
+      <div class="btn" id="colorR" title="Red (2)">🔴</div>
+      <div class="btn" id="colorG" title="Green (3)">🟢</div>
+      <div class="btn" id="patternC" title="Continuous (C)">—</div>
+      <div class="btn" id="patternD" title="Double Flash (D)">··</div>
+      <div class="btn" id="patternM" title="Morse SOS (M)">SOS</div>
+      <div class="btn" id="superFlash" title="Super Flash (Space)">⚡</div>
+    </div>
+  </div>
+  <script type="module" src="game.js"></script>
+</body>
+</html>
