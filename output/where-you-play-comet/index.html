@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<title>STELLAR DRIFT</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌠</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#060b18}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+#ui-overlay{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;font-family:'Courier New',monospace}
+#menu-screen{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(6,11,24,0.92);z-index:10;transition:opacity 0.5s}
+#menu-screen.hidden{opacity:0;pointer-events:none}
+#menu-screen h1{font-size:clamp(2rem,6vw,4rem);color:#00ffd5;text-shadow:0 0 20px #00ffd5,0 0 40px #0088aa;margin-bottom:0.5em;letter-spacing:0.15em}
+#menu-screen p{color:#8899aa;font-size:clamp(0.8rem,2vw,1.1rem);margin:0.3em 0}
+#menu-screen .blink{animation:blink 1s infinite;color:#00ffd5;font-size:clamp(1rem,3vw,1.5rem);margin-top:1.5em}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+#high-score-display{color:#ffaa00;font-size:clamp(0.9rem,2.5vw,1.2rem);margin-top:1em}
+#game-over-screen{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(6,11,24,0.92);z-index:10;opacity:0;pointer-events:none;transition:opacity 0.5s}
+#game-over-screen.visible{opacity:1;pointer-events:all}
+#game-over-screen h1{font-size:clamp(1.8rem,5vw,3rem);color:#ff2d6f;text-shadow:0 0 20px #ff2d6f;margin-bottom:0.3em}
+#game-over-screen .score{color:#00ffd5;font-size:clamp(1rem,3vw,1.5rem);margin:0.3em 0}
+#game-over-screen .final{color:#ffaa00;font-size:clamp(0.9rem,2.5vw,1.2rem);margin:0.5em 0}
+#game-over-screen .blink{animation:blink 1s infinite;color:#00ffd5;font-size:clamp(1rem,3vw,1.5rem);margin-top:1em}
+#touch-joystick{position:fixed;bottom:20px;left:20px;width:100px;height:100px;border:2px solid rgba(0,255,213,0.3);border-radius:50%;display:none;z-index:5}
+#touch-joystick .knob{position:absolute;width:40px;height:40px;background:rgba(0,255,213,0.4);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);transition:none}
+#thrust-btn{position:fixed;bottom:30px;right:20px;width:60px;height:60px;border:2px solid rgba(255,45,111,0.5);border-radius:50%;background:rgba(255,45,111,0.15);color:#ff2d6f;font-size:0.7rem;display:none;z-index:5;pointer-events:all;cursor:pointer}
+@media(hover:none)and(pointer:coarse){#touch-joystick,#thrust-btn{display:flex;align-items:center;justify-content:center}}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="ui-overlay"></div>
+<div id="menu-screen">
+<h1>STELLAR DRIFT</h1>
+<p>Navigate the comet. Collect mass. Survive the star.</p>
+<p>WASD / Arrows to move</p>
+<p>SPACE to thrust</p>
+<p class="blink">PRESS ANY KEY TO START</p>
+<div id="high-score-display">BEST: 0</div>
+</div>
+<div id="game-over-screen">
+<h1>CONSUMED</h1>
+<div class="score">SCORE: <span id="final-score">0</span></div>
+<div class="final">BEST: <span id="best-score">0</span></div>
+<p class="blink">PRESS ANY KEY TO RETRY</p>
+</div>
+<div id="touch-joystick"><div class="knob"></div></div>
+<button id="thrust-btn">THRUST</button>
+<script>
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+const ui=document.getElementById('ui-overlay');
+const menuScreen=document.getElementById('menu-screen');
+const gameOverScreen=document.getElementById('game-over-screen');
+const finalScoreEl=document.getElementById('final-score');
+const bestScoreEl=document.getElementById('best-score');
+const highScoreDisplay=document.getElementById('high-score-display');
+const joystickEl=document.getElementById('touch-joystick');
+const knobEl=joystickEl.querySelector('.knob');
+const thrustBtn=document.getElementById('thrust-btn');
+let W,H,DPR;
+function resize(){DPR=Math.min(window.devicePixelRatio||1,2);W=window.innerWidth;H=window.innerHeight;canvas.width=W*DPR;canvas.height=H*DPR;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0)}
+window.addEventListener('resize',resize);resize();
+const state={mode:'menu',score:0,highScore:parseInt(localStorage.getItem('stellarDriftBest')||'0'),time:0,shake:0};
+highScoreDisplay.textContent='BEST: '+state.highScore;
+const keys={};
+const player={x:0,y:0,vx:0,vy:0,angle:0,radius:12,mass:12,trail:[],thrusting:false};
+const star={x:0,y:0,radius:60,pulse:0};
+let asteroids=[];
+let particles=[];
+let stars=[];
+let collectibles=[];
+let shockwaves=[];
+const joyVec={x:0,y:0,active:false};
+function initStars(){stars=[];for(let i=0;i<200;i++){stars.push({x:Math.random()*W,y:Math.random()*H,z:Math.random()*0.8+0.2,size:Math.random()*1.5+0.3,twinkle:Math.random()*Math.PI*2})}}
+function initLevel(){player.x=W*0.2;player.y=H*0.5;player.vx=0;player.vy=0;player.angle=0;player.radius=12;player.mass=12;player.trail=[];star.x=W*0.75;star.y=H*0.5;star.radius=60;star.pulse=0;asteroids=[];particles=[];collectibles=[];shockwaves=[];state.score=0;state.time=0;state.shake=0;for(let i=0;i<8;i++){spawnAsteroid()}for(let i=0;i<5;i++){spawnCollectible()}}
+function spawnAsteroid(){const side=Math.floor(Math.random()*4);let x,y;if(side===0){x=-30;y=Math.random()*H}else if(side===1){x=W+30;y=Math.random()*H}else if(side===2){x=Math.random()*W;y=-30}else{x=Math.random()*W;y=H+30}const dx=star.x-x,dy=star.y-y;const d=Math.sqrt(dx*dx+dy*dy);const speed=0.3+Math.random()*0.5;const driftAngle=Math.atan2(dy,dx)+(Math.random()-0.5)*1.5;const r=8+Math.random()*20;asteroids.push({x,y,vx:Math.cos(driftAngle)*speed,vy:Math.sin(driftAngle)*speed,radius:r,angle:Math.random()*Math.PI*2,rotSpeed:(Math.random()-0.5)*0.05,vertices:genVertices(r),hue:Math.random()*60+20,health:r*0.8})}
+function genVertices(r){const verts=[];const n=6+Math.floor(Math.random()*4);for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2;const rr=r*(0.7+Math.random()*0.4);verts.push({x:Math.cos(a)*rr,y:Math.sin(a)*rr})}return verts}
+function spawnCollectible(){const margin=80;collectibles.push({x:margin+Math.random()*(W-margin*2),y:margin+Math.random()*(H-margin*2),radius:5,pulse:Math.random()*Math.PI*2,type:Math.random()<0.2?'rare':'normal'})}
+function spawnParticle(x,y,vx,vy,color,life,size){particles.push({x,y,vx,vy,color,life,maxLife:life,size})}
+function spawnShockwave(x,y,color,maxR){shockwaves.push({x,y,r:0,maxR,color,life:1})}
+function dist(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.sqrt(dx*dx+dy*dy)}
+function startGame(){state.mode='playing';menuScreen.classList.add('hidden');gameOverScreen.classList.remove('visible');initLevel()}
+function gameOver(){state.mode='gameover';state.highScore=Math.max(state.highScore,state.score);localStorage.setItem('stellarDriftBest',state.highScore.toString());finalScoreEl.textContent=state.score;bestScoreEl.textContent=state.highScore;highScoreDisplay.textContent='BEST: '+state.highScore;gameOverScreen.classList.add('visible')}
+window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(state.mode!=='playing')startGame()});
+window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+function handleJoystick(e){e.preventDefault();const t=e.touches?e.touches[0]:e;const rect=joystickEl.getBoundingClientRect();const cx=rect.left+rect.width/2;const cy=rect.top+rect.height/2;let dx=t.clientX-cx;let dy=t.clientY-cy;const d=Math.sqrt(dx*dx+dy*dy);const maxR=rect.width/2;if(d>maxR){dx=dx/d*maxR;dy=dy/d*maxR}knobEl.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;joyVec.x=dx/maxR;joyVec.y=dy/maxR;joyVec.active=true}
+function endJoystick(){joyVec.x=0;joyVec.y=0;joyVec.active=false;knobEl.style.transform='translate(-50%,-50%)'}
+joystickEl.addEventListener('touchstart',handleJoystick,{passive:false});
+joystickEl.addEventListener('touchmove',handleJoystick,{passive:false});
+joystickEl.addEventListener('touchend',endJoystick);
+let thrustHeld=false;
+thrustBtn.addEventListener('touchstart',e=>{e.preventDefault();thrustHeld=true},{passive:false});
+thrustBtn.addEventListener('touchend',e=>{e.preventDefault();thrustHeld=false});
+function update(dt){state.time+=dt;if(state.shake>0)state.shake-=dt*3;star.pulse+=dt*2;star.radius=60+Math.sin(star.pulse)*5+Math.min(state.time*0.3,30);const moveX=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0)+(joyVec.active?joyVec.x:0);const moveY=(keys['s']||keys['arrowdown']?1:0)-(keys['w']||keys['arrowup']?1:0)+(joyVec.active?joyVec.y:0);const thrust=keys[' ']||thrustHeld;player.thrusting=thrust;const accel=thrust?0.6:0.25;player.vx+=moveX*accel;player.vy+=moveY*accel;player.vx*=0.96;player.vy*=0.96;const speed=Math.sqrt(player.vx*player.vx+player.vy*player.vy);const maxSpeed=thrust?8:5;if(speed>maxSpeed){player.vx=player.vx/speed*maxSpeed;player.vy=player.vy/speed*maxSpeed}if(speed>0.1)player.angle=Math.atan2(player.vy,player.vx);player.x+=player.vx;player.y+=player.vy;if(player.x<player.radius){player.x=player.radius;player.vx*=-0.5}if(player.x>W-player.radius){player.x=W-player.radius;player.vx*=-0.5}if(player.y<player.radius){player.y=player.radius;player.vy*=-0.5}if(player.y>H-player.radius){player.y=H-player.radius;player.vy*=-0.5}player.trail.push({x:player.x,y:player.y,life:1});if(player.trail.length>30)player.trail.shift();for(let i=player.trail.length-1;i>=0;i--){player.trail[i].life-=dt*3;if(player.trail[i].life<=0)player.trail.splice(i,1)}if(thrust&&Math.random()<0.8){const ba=player.angle+Math.PI;const spread=(Math.random()-0.5)*0.5;spawnParticle(player.x+Math.cos(ba)*player.radius,player.y+Math.sin(ba)*player.radius,Math.cos(ba+spread)*3+player.vx*0.3,Math.sin(ba+spread)*3+player.vy*0.3,'#ff8844',0.5,3+Math.random()*2)}const sdx=star.x-player.x,sdy=star.y-player.y;const sd=Math.sqrt(sdx*sdx+sdy*sdy);if(sd>0){const pull=800/(sd*sd+100);player.vx+=sdx/sd*pull;player.vy+=sdy/sd*pull}if(sd<star.radius+player.radius){gameOver();return}for(let i=asteroids.length-1;i>=0;i--){const a=asteroids[i];a.x+=a.vx;a.y+=a.vy;a.angle+=a.rotSpeed;const adx=star.x-a.x,ady=star.y-a.y;const ad=Math.sqrt(adx*adx+ady*ady);if(ad>0){const ap=400/(ad*ad+100);a.vx+=adx/ad*ap;a.vy+=ady/ad*ap}if(ad<star.radius+a.radius){for(let j=0;j<8;j++){spawnParticle(a.x,a.y,(Math.random()-0.5)*4,(Math.random()-0.5)*4,'#ffaa44',0.6,3)}asteroids.splice(i,1);state.shake=0.3;continue}const pd=dist(player,a);if(pd<player.radius+a.radius){if(player.mass>a.health*0.7){player.mass+=a.health*0.3;player.radius=Math.sqrt(player.mass)*2.5;state.score+=Math.floor(a.health*10);for(let j=0;j<12;j++){spawnParticle(a.x,a.y,(Math.random()-0.5)*5,(Math.random()-0.5)*5,'#00ffd5',0.5,3)}spawnShockwave(a.x,a.y,'#00ffd5',60);asteroids.splice(i,1)}else{gameOver();return}continue}if(a.x<-100||a.x>W+100||a.y<-100||a.y>H+100){asteroids.splice(i,1)}}while(asteroids.length<8+Math.floor(state.time/10)){spawnAsteroid()}for(let i=collectibles.length-1;i>=0;i--){const c=collectibles[i];c.pulse+=dt*3;const cd=dist(player,c);if(cd<star.radius+c.radius){collectibles.splice(i,1);continue}if(cd<player.radius+c.radius){const gain=c.type==='rare'?50:10;state.score+=gain;player.mass+=c.type==='rare'?5:1;player.radius=Math.sqrt(player.mass)*2.5;for(let j=0;j<10;j++){spawnParticle(c.x,c.y,(Math.random()-0.5)*3,(Math.random()-0.5)*3,c.type==='rare'?'#ff44ff':'#ffdd00',0.6,2)}collectibles.splice(i,1);continue}const cdx=star.x-c.x,cdy=star.y-c.y;const cd2=Math.sqrt(cdx*cdx+cdy*cdy);if(cd2<star.radius+20){collectibles.splice(i,1)}}while(collectibles.length<5){spawnCollectible()}for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vx*=0.95;p.vy*=0.95;p.life-=dt;if(p.life<=0)particles.splice(i,1)}for(let i=shockwaves.length-1;i>=0;i--){const s=shockwaves[i];s.r+=dt*200;s.life-=dt*1.5;if(s.life<=0)shockwaves.splice(i,1)}state.score+=Math.floor(dt*5)}
+function draw(){ctx.save();if(state.shake>0){ctx.translate((Math.random()-0.5)*state.shake*10,(Math.random()-0.5)*state.shake*10)}ctx.fillStyle='#060b18';ctx.fillRect(0,0,W,H);for(const s of stars){s.twinkle+=0.02;const tw=0.5+Math.sin(s.twinkle)*0.5;ctx.fillStyle=`rgba(255,255,255,${s.z*tw*0.8})`;ctx.fillRect(s.x,s.y,s.size,s.size)}const grd=ctx.createRadialGradient(star.x,star.y,0,star.x,star.y,star.radius*4);grd.addColorStop(0,'rgba(255,100,50,0.3)');grd.addColorStop(0.5,'rgba(255,50,100,0.1)');grd.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=grd;ctx.fillRect(0,0,W,H);for(const s of shockwaves){ctx.strokeStyle=s.color;ctx.globalAlpha=s.life;ctx.lineWidth=3;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1}const starGrd=ctx.createRadialGradient(star.x,star.y,0,star.x,star.y,star.radius);starGrd.addColorStop(0,'#ffffff');starGrd.addColorStop(0.3,'#ffdd44');starGrd.addColorStop(0.6,'#ff6622');starGrd.addColorStop(1,'#ff2d6f');ctx.fillStyle=starGrd;ctx.beginPath();ctx.arc(star.x,star.y,star.radius,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(star.x,star.y,star.radius+10+Math.sin(star.pulse*2)*5,0,Math.PI*2);ctx.stroke();for(const a of asteroids){ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.angle);ctx.fillStyle=`hsl(${a.hue},60%,45%)`;ctx.strokeStyle=`hsl(${a.hue},70%,65%)`;ctx.lineWidth=1.5;ctx.beginPath();for(let i=0;i<a.vertices.length;i++){const v=a.vertices[i];if(i===0)ctx.moveTo(v.x,v.y);else ctx.lineTo(v.x,v.y)}ctx.closePath();ctx.fill();ctx.stroke();ctx.restore()}for(const c of collectibles){const pulse=1+Math.sin(c.pulse)*0.3;const color=c.type==='rare'?'#ff44ff':'#ffdd00';ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=15;ctx.beginPath();ctx.arc(c.x,c.y,c.radius*pulse,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0}for(let i=0;i<player.trail.length;i++){const t=player.trail[i];ctx.fillStyle=`rgba(0,255,213,${t.life*0.4})`;ctx.beginPath();ctx.arc(t.x,t.y,player.radius*t.life*0.5,0,Math.PI*2);ctx.fill()}for(const p of particles){ctx.fillStyle=p.color;ctx.globalAlpha=p.life/p.maxLife;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1}ctx.save();ctx.translate(player.x,player.y);ctx.rotate(player.angle);ctx.shadowColor='#00ffd5';ctx.shadowBlur=20;ctx.fillStyle='#00ffd5';ctx.beginPath();ctx.moveTo(player.radius,0);ctx.lineTo(-player.radius*0.7,-player.radius*0.7);ctx.lineTo(-player.radius*0.3,0);ctx.lineTo(-player.radius*0.7,player.radius*0.7);ctx.closePath();ctx.fill();ctx.shadowBlur=0;if(player.thrusting){ctx.fillStyle='#ff8844';ctx.beginPath();ctx.moveTo(-player.radius*0.3,0);ctx.lineTo(-player.radius*1.5-Math.random()*5,-player.radius*0.4);ctx.lineTo(-player.radius*1.8,0);ctx.lineTo(-player.radius*1.5-Math.random()*5,player.radius*0.4);ctx.closePath();ctx.fill()}ctx.restore();ctx.fillStyle='#00ffd5';ctx.font='bold 16px Courier New';ctx.textAlign='left';ctx.fillText('SCORE: '+state.score,20,30);ctx.fillStyle='#8899aa';ctx.fillText('MASS: '+Math.floor(player.mass),20,52);ctx.restore()}
+initStars();
+let lastTime=performance.now();
+function loop(now){const dt=Math.min((now-lastTime)/1000,0.05);lastTime=now;if(state.mode==='playing')update(dt);draw();requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
