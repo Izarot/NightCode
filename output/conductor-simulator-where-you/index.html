@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Symphonic Conductor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0e27;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+            user-select: none;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+        }
+        #ui-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .hud-element {
+            pointer-events: auto;
+            color: white;
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        #speedrun-timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid #ffd700;
+        }
+        #high-score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 18px;
+            color: #00f0ff;
+        }
+        #harmony-meter {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 300px;
+            background: rgba(0,0,0,0.5);
+            border-radius: 15px;
+            border: 2px solid rgba(255,255,255,0.3);
+            overflow: hidden;
+        }
+        #harmony-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(to top, #888, #ffd700);
+            transition: height 0.1s;
+        }
+        #section-status {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .section-ring {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 3px solid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .strings { border-color: #00f0ff; color: #00f0ff; }
+        .brass { border-color: #ff6b35; color: #ff6b35; }
+        .woodwinds { border-color: #39ff14; color: #39ff14; }
+        .percussion { border-color: #ffd700; color: #ffd700; }
+        #score-tracker {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 60px;
+            background: rgba(0,0,0,0.7);
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            overflow: hidden;
+        }
+        #playhead {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: white;
+            box-shadow: 0 0 10px white;
+        }
+        #menu-screen {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(10,14,39,0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            pointer-events: auto;
+        }
+        h1 {
+            color: #ffd700;
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #ffd700;
+        }
+        button {
+            background: linear-gradient(45deg, #ff6b35, #ffd700);
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 25px;
+            cursor: pointer;
+            color: #0a0e27;
+            font-weight: bold;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: scale(1.1); }
+        #tempo-display {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            color: #00f0ff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui-overlay">
+        <div id="speedrun-timer" class="hud-element">00:00.00</div>
+        <div id="high-score" class="hud-element">High Score: 0</div>
+        <div id="harmony-meter" class="hud-element">
+            <div id="harmony-fill" style="height: 0%"></div>
+        </div>
+        <div id="section-status">
+            <div class="section-ring strings">S</div>
+            <div class="section-ring brass">B</div>
+            <div class="section-ring woodwinds">W</div>
+            <div class="section-ring percussion">P</div>
+        </div>
+        <div id="score-tracker">
+            <div id="playhead"></div>
+        </div>
+        <div id="tempo-display" class="hud-element">BPM: 120</div>
+    </div>
+    <div id="menu-screen">
+        <h1>🎵 Symphonic Conductor 🎵</h1>
+        <p style="color: #ccc; margin-bottom: 30px;">Conduct the Orchestra with Precision!</p>
+        <button onclick="startGame()">Start Performance</button>
+        <p style="color: #888; font-size: 0.9em; margin-top: 20px;">Mouse/Touch to move baton | Space to pause</p>
+    </div>
+
+    <script>
+        // Game Configuration
+        const CONFIG = {
+            colors: {
+                strings: '#00f0ff',
+                brass: '#ff6b35',
+                woodwinds: '#39ff14',
+                percussion: '#ffd700',
+                background: '#0a0e27',
+                podium: '#2a1a0e'
+            },
+            sections: [
+                { name: 'strings', angle: Math.PI * 0.75, color: '#00f0ff', waveType: 'sawtooth' },
+                { name: 'brass', angle: Math.PI * 0.25, color: '#ff6b35', waveType: 'square' },
+                { name: 'woodwinds', angle: Math.PI * 1.25, color: '#39ff14', waveType: 'triangle' },
+                { name: 'percussion', angle: Math.PI * 1.75, color: '#ffd700', waveType: 'sine' }
+            ],
+            physics: {
+                damping: 0.85,
+                stiffness: 0.15,
+                velocityThreshold: 5
+            },
+            audio: {
+                baseFrequency: 440,
+                sensitivity: 0.5
+            }
+        };
+
+        // Game State
+        let canvas, ctx;
+        let gameState = 'MENU';
+        let score = 0;
+        let highScore = localStorage.getItem('symphonicHighScore') || 0;
+        let harmony = 50;
+        let tempo = 120;
+        let startTime = 0;
+        let elapsedTime = 0;
+        let activeSections = { strings: false, brass: false, woodwinds: false, percussion: false };
+        let sectionVolumes = { strings: 0, brass: 0, woodwinds: 0, percussion: 0 };
+
+        // Baton Physics
+        let baton = {
+            x: 0, y: 0,
+            vx: 0, vy: 0,
+            targetX: 0, targetY: 0,
+            trail: [],
+            velocity: 0,
+            gestureStart: null,
+            gesturePoints: [],
+            gestureType: null
+        };
+
+        // Audio Context
+        let audioCtx;
+        let masterGain;
+        let oscillators = {};
+        let gainNodes = {};
+
+        // Particles
+        let particles = [];
+
+        // Input
+        let isDragging = false;
+        let lastTime = 0;
+
+        // Initialize
+        function init() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Input handlers
+            canvas.addEventListener('mousemove', handleInput);
+            canvas.addEventListener('mousedown', startGesture);
+            canvas.addEventListener('mouseup', endGesture);
+            canvas.addEventListener('touchmove', handleInput, { passive: false });
+            canvas.addEventListener('touchstart', startGesture);
+            canvas.addEventListener('touchend', endGesture);
+            
+            document.addEventListener('keydown', handleKeyboard);
+            
+            updateHighScoreDisplay();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            // Center baton start position
+            baton.x = canvas.width / 2;
+            baton.y = canvas.height * 0.7;
+            baton.targetX = baton.x;
+            baton.targetY = baton.y;
+        }
+
+        function handleInput(e) {
+            e.preventDefault();
+            if (gameState !== 'PLAYING') return;
+            
+            let clientX, clientY;
+            if (e.touches) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            baton.targetX = clientX;
+            baton.targetY = clientY;
+            
+            if (isDragging) {
+                baton.gesturePoints.push({ x: clientX, y: clientY, time: Date.now() });
+            }
+        }
+
+        function startGesture(e) {
+            if (gameState !== 'PLAYING') return;
+            isDragging = true;
+            baton.gestureStart = { x: baton.targetX, y: baton.targetY, time: Date.now() };
+            baton.gesturePoints = [];
+        }
+
+        function endGesture(e) {
+            if (gameState !== 'PLAYING' || !isDragging) return;
+            isDragging = false;
+            analyzeGesture();
+        }
+
+        function analyzeGesture() {
+            const points = baton.gesturePoints;
+            if (points.length < 5) return;
+            
+            const start = baton.gestureStart;
+            const end = points[points.length - 1];
+            const dx = end.x - start.x;
+            const dy = end.y - start.y;
+            const distance = Math.sqrt(dx*dx + dy*dy);
+            const duration = end.time - start.time;
+            const speed = distance / duration;
+            
+            // Determine gesture type based on movement pattern
+            let isCircular = false;
+            let isZigzag = false;
+            let isThrust = false;
+            
+            // Check for circular motion (Strings)
+            if (points.length > 10) {
+                let angleSum = 0;
+                for (let i = 1; i < points.length - 1; i++) {
+                    const a = points[i-1];
+                    const b = points[i];
+                    const c = points[i+1];
+                    const angle = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(b.y - a.y, b.x - a.x);
+                    angleSum += angle;
+                }
+                if (Math.abs(angleSum) > Math.PI * 1.5) isCircular = true;
+            }
+            
+            // Check for zigzag (Woodwinds)
+            let directionChanges = 0;
+            for (let i = 2; i < points.length; i++) {
+                const prev = points[i-2];
+                const curr = points[i-1];
+                const next = points[i];
+                const cross = (curr.x - prev.x) * (next.y - curr.y) - (curr.y - prev.y) * (next.x - curr.x);
+                if (Math.abs(cross) > 50) directionChanges++;
+            }
+            if (directionChanges > 5) isZigzag = true;
+            
+            // Check for thrust (Brass)
+            if (dy > 50 && speed > 5) isThrust = true;
+            
+            // Check for tap (Percussion)
+            if (distance < 20 && speed < 2 && duration < 200) {
+                triggerSection('percussion');
+                return;
+            }
+            
+            // Determine which section to trigger based on baton position
+            const section = getSectionAtPosition(baton.x, baton.y);
+            
+            if (isCircular) triggerSection('strings');
+            else if (isThrust) triggerSection('brass');
+            else if (isZigzag) triggerSection('woodwinds');
+            else if (section) triggerSection(section);
+        }
+
+        function getSectionAtPosition(x, y) {
+            const cx = canvas.width / 2;
+            const cy = canvas.height * 0.6;
+            const dx = x - cx;
+            const dy = y - cy;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const maxR = Math.min(canvas.width, canvas.height) * 0.35;
+            
+            if (dist > maxR * 0.6 && dist < maxR * 1.2) {
+                let angle = Math.atan2(dy, dx);
+                if (angle < 0) angle += Math.PI * 2;
+                
+                // Check which section zone
+                for (let section of CONFIG.sections) {
+                    let sectionAngle = section.angle;
+                    let diff = Math.abs(angle - sectionAngle);
+                    if (diff > Math.PI) diff = Math.PI * 2 - diff;
+                    if (diff < Math.PI / 4) return section.name;
+                }
+            }
+            return null;
+        }
+
+        function triggerSection(sectionName) {
+            activeSections[sectionName] = true;
+            setTimeout(() => { activeSections[sectionName] = false; }, 500);
+            playSectionSound(sectionName, baton.velocity);
+            createParticles(baton.x, baton.y, CONFIG.colors[sectionName]);
+            
+            // Score based on timing and velocity
+            score += Math.floor(baton.velocity * 10);
+            harmony = Math.min(100, harmony + 5);
+        }
+
+        function handleKeyboard(e) {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (gameState === 'PLAYING') gameState = 'PAUSED';
+                else if (gameState === 'PAUSED') gameState = 'PLAYING';
+            }
+            if (e.code === 'KeyS') toggleSection('strings');
+            if (e.code === 'KeyB') toggleSection('brass');
+            if (e.code === 'KeyW') toggleSection('woodwinds');
+            if (e.code === 'KeyP') toggleSection('percussion');
+        }
+
+        function toggleSection(section) {
+            activeSections[section] = !activeSections[section];
+            if (activeSections[section]) playSectionSound(section, 0.5);
+        }
+
+        // Audio Engine
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.3;
+            masterGain.connect(audioCtx.destination);
+            
+            // Create oscillators for each section
+            CONFIG.sections.forEach(section => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                const filter = audioCtx.createBiquadFilter();
+                
+                osc.type = section.waveType;
+                osc.frequency.value = CONFIG.audio.baseFrequency;
+                
+                filter.type = 'lowpass';
+                filter.frequency.value = 2000;
+                
+                gain.gain.value = 0;
+                
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(masterGain);
+                
+                osc.start();
+                oscillators[section.name] = osc;
+                gainNodes[section.name] = gain;
+            });
+        }
+
+        function playSectionSound(section, velocity) {
+            if (!audioCtx) initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            const osc = oscillators[section];
+            const gain = gainNodes[section];
+            
+            // Map velocity to gain
+            const targetGain = Math.min(1, velocity * CONFIG.audio.sensitivity);
+            
+            // ADSR envelope
+            const now = audioCtx.currentTime;
+            gain.gain.cancelScheduledValues(now);
+            gain.gain.setValueAtTime(gain.gain.value, now);
+            gain.gain.linearRampToValueAtTime(targetGain * 0.8, now + 0.05); // Attack
+            gain.gain.linearRampToValueAtTime(targetGain * 0.5, now + 0.1);  // Decay
+            gain.gain.setValueAtTime(targetGain * 0.5, now + 0.5);           // Sustain
+            gain.gain.linearRampToValueAtTime(0, now + 1.0);                 // Release
+        }
+
+        // Physics Update
+        function updatePhysics(dt) {
+            // Spring-damper system
+            const targetVX = (baton.targetX - baton.x) * CONFIG.physics.stiffness;
+            const targetVY = (baton.targetY - baton.y) * CONFIG.physics.stiffness;
+            
+            baton.vx = (baton.vx * CONFIG.physics.damping) + (targetVX * (1 - CONFIG.physics.damping));
+            baton.vy = (baton.vy * CONFIG.physics.damping) + (targetVY * (1 - CONFIG.physics.damping));
+            
+            baton.x += baton.vx;
+            baton.y += baton.vy;
+            
+            baton.velocity = Math.sqrt(baton.vx*baton.vx + baton.vy*baton.vy);
+            
+            // Trail
+            if (baton.velocity > 2) {
+                baton.trail.push({ x: baton.x, y: baton.y, alpha: 1, color: getCurrentTrailColor() });
+                if (baton.trail.length > 50) baton.trail.shift();
+            }
+            
+            // Update trail alpha
+            baton.trail.forEach((p, i) => {
+                p.alpha -= 0.02;
+                if (p.alpha <= 0) baton.trail.splice(i, 1);
+            });
+        }
+
+        function getCurrentTrailColor() {
+            for (let section of CONFIG.sections) {
+                if (activeSections[section.name]) return section.color;
+            }
+            return '#ffffff';
+        }
+
+        // Particles
+        function createParticles(x, y, color) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1,
+                    color: color,
+                    size: Math.random() * 5 + 2
+                });
+            }
+        }
+
+        function updateParticles() {
+            particles.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.02;
+                p.vx *= 0.98;
+                p.vy *= 0.98;
+                if (p.life <= 0) particles.splice(i, 1);
+            });
+        }
+
+        // Rendering
+        function render() {
+            // Clear
+            ctx.fillStyle = CONFIG.colors.background;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Vignette
+            const gradient = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.width*0.3, canvas.width/2, canvas.height/2, canvas.width*0.8);
+            gradient.addColorStop(0, 'rgba(0,0,0,0)');
+            gradient.addColorStop(1, 'rgba(0,0,0,0.8)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            drawStage();
+            drawSectionPads();
+            drawBatonTrail();
+            drawBaton();
+            drawParticles();
+            drawVisualizers();
+            updateHUD();
+        }
+
+        function drawStage() {
+            // Stage floor
+            ctx.fillStyle = CONFIG.colors.podium;
+            ctx.beginPath();
+            ctx.ellipse(canvas.width/2, canvas.height*0.65, canvas.width*0.4, canvas.height*0.15, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Podium
+            ctx.fillStyle = '#1a0f05';
+            ctx.fillRect(canvas.width/2 - 30, canvas.height*0.55, 60, 40);
+        }
+
+        function drawSectionPads() {
+            const cx = canvas.width/2;
+            const cy = canvas.height*0.6;
+            const radius = Math.min(canvas.width, canvas.height) * 0.3;
+            
+            CONFIG.sections.forEach(section => {
+                const x = cx + Math.cos(section.angle) * radius * 0.8;
+                const y = cy + Math.sin(section.angle) * radius * 0.8;
+                
+                // Pad
+                ctx.fillStyle = section.color + '33';
+                ctx.strokeStyle = section.color;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(x, y, 60, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+                
+                // Glow if active
+                if (activeSections[section.name]) {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = section.color;
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+                
+                // Label
+                ctx.fillStyle = section.color;
+                ctx.font = '14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(section.name.charAt(0).toUpperCase() + section.name.slice(1), x, y + 5);
+            });
+        }
+
+        function drawBatonTrail() {
+            ctx.globalCompositeOperation = 'lighter';
+            baton.trail.forEach((point, i) => {
+                ctx.fillStyle = point.color + Math.floor(point.alpha * 255).toString(16).padStart(2, '0');
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 3 + (1 - point.alpha) * 5, 0, Math.PI*2);
+                ctx.fill();
+            });
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        function drawBaton() {
+            // Handle
+            ctx.strokeStyle = '#c0c0c0';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(baton.x, baton.y);
+            ctx.lineTo(baton.x - baton.vx * 2, baton.y - baton.vy * 2);
+            ctx.stroke();
+            
+            // Tip glow
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ffffff';
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(baton.x, baton.y, 5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function drawParticles() {
+            particles.forEach(p => {
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = p.color + Math.floor(p.life * 255).toString(16).padStart(2, '0');
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI*2);
+                ctx.fill();
+            });
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        function drawVisualizers() {
+            const cx = canvas.width/2;
+            const cy = canvas.height*0.6;
+            const radius = Math.min(canvas.width, canvas.height) * 0.3;
+            
+            CONFIG.sections.forEach(section => {
+                if (!activeSections[section.name]) return;
+                
+                const x = cx + Math.cos(section.angle) * radius * 0.8;
+                const y = cy + Math.sin(section.angle) * radius * 0.8;
+                const vol = sectionVolumes[section.name] || 0;
+                
+                // Concentric ripples
+                for (let i = 0; i < 3; i++) {
+                    const r = 60 + (Date.now() % 1000) / 10 + i * 20;
+                    ctx.strokeStyle = section.color + '44';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(x, y, r, 0, Math.PI*2);
+                    ctx.stroke();
+                }
+                
+                // Waveform bars
+                for (let i = 0; i < 8; i++) {
+                    const barHeight = Math.sin(Date.now()/100 + i) * 20 * vol + 20;
+                    ctx.fillStyle = section.color + '88';
+                    ctx.fillRect(x - 30 + i*8, y - barHeight/2, 5, barHeight);
+                }
+            });
+        }
+
+        function updateHUD() {
+            // Harmony meter
+            document.getElementById('harmony-fill').style.height = harmony + '%';
+            
+            // Section status rings
+            CONFIG.sections.forEach(section => {
+                const ring = document.querySelector(`.${section.name}`);
+                if (activeSections[section.name]) {
+                    ring.style.boxShadow = `0 0 15px ${section.color}`;
+                    ring.style.transform = 'scale(1.2)';
+                } else {
+                    ring.style.boxShadow = 'none';
+                    ring.style.transform = 'scale(1)';
+                }
+            });
+            
+            // Speedrun timer
+            if (gameState === 'PLAYING') {
+                elapsedTime = (Date.now() - startTime) / 1000;
+                const mins = Math.floor(elapsedTime / 60);
+                const secs = Math.floor(elapsedTime % 60);
+                const ms = Math.floor((elapsedTime % 1) * 100);
+                document.getElementById('speedrun-timer').textContent = 
+                    `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}.${ms.toString().padStart(2,'0')}`;
+            }
+            
+            // Score tracker playhead
+            const playhead = document.getElementById('playhead');
+            const trackerWidth = document.getElementById('score-tracker').offsetWidth;
+            const progress = (elapsedTime % 10) / 10; // Cycle every 10 seconds
+            playhead.style.left = (progress * trackerWidth) + 'px';
+        }
+
+        function updateSectionVolumes() {
+            CONFIG.sections.forEach(section => {
+                const target = activeSections[section.name] ? Math.min(1, 0.4 + baton.velocity / 20) : 0;
+                sectionVolumes[section.name] += (target - sectionVolumes[section.name]) * 0.1;
+            });
+        }
+
+        function gameLoop(timestamp) {
+            const dt = Math.min(32, timestamp - lastTime || 16);
+            lastTime = timestamp;
+
+            if (gameState === 'PLAYING') {
+                updatePhysics(dt);
+                updateSectionVolumes();
+                updateParticles();
+
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem('symphonicHighScore', highScore);
+                    updateHighScoreDisplay();
+                }
+            } else if (gameState === 'MENU') {
+                updateParticles();
+            }
+
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function startGame() {
+            initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+
+            gameState = 'PLAYING';
+            score = 0;
+            harmony = 50;
+            tempo = 120;
+            elapsedTime = 0;
+            startTime = Date.now();
+            lastTime = 0;
+            baton.trail = [];
+            baton.gesturePoints = [];
+            baton.gestureStart = null;
+            baton.gestureType = null;
+            particles = [];
+
+            Object.keys(activeSections).forEach(section => activeSections[section] = false);
+            Object.keys(sectionVolumes).forEach(section => sectionVolumes[section] = 0);
+
+            document.getElementById('menu-screen').style.display = 'none';
+            updateHighScoreDisplay();
+        }
+
+        function updateHighScoreDisplay() {
+            document.getElementById('high-score').textContent = `High Score: ${Math.floor(highScore)}`;
+        }
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

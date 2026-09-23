@@ -1,0 +1,711 @@
+JSON Decode Error: Extra data: line 4 column 1 (char 62)
+
+Raw LLM Output that failed to parse:
+The user wants me to create a complete game implementation based on a detailed specification document for "Symphonic Conductor: Baton of the Maestro". They want me to output ONLY a valid raw JSON object mapping filenames to their complete code contents. They also mention several "sneaky features" that need to be implemented:
+
+1. Make the canvas responsive so it scales to fit mobile phone screens
+2. Add a cool emoji favicon in the HTML head
+3. Pick a unique, vibrant color palette for the game visuals
+4. Save the player's High Score using the browser's LocalStorage so it persists when they refresh
+5. Implement simple sound effects using the Web Audio API
+6. Add a Speedrun Timer in the top corner
+
+The specification is very detailed, covering game overview, core mechanics, physics, visuals, UI, audio architecture, and rendering pipeline. I need to create a complete working game that incorporates all these elements.
+
+Given the complexity, I should create a simplified but functional version that includes the key features mentioned. The output should be a JSON object with filenames as keys and their complete code contents as values.
+
+Let me plan the file structure:
+
+1. `index.html` - Main HTML file with canvas, UI elements, favicon
+2. `style.css` - Styling (though the spec says 2D vector aesthetic, I might incorporate CSS for UI)
+3. `game.js` - Main game logic incorporating all the systems
+
+Actually, looking at the specification more carefully, it mentions an architecture with `/src` subfolders, but for a simpler implementation that still includes all the "sneaky features", I'll create a more compact structure.
+
+Key features to implement:
+- Responsive canvas that scales to mobile
+- Emoji favicon (probably 🎻 or 🎵 or 🎺)
+- Vibrant color palette (I'll choose something like deep indigo/blue strings, warm red/orange brass, vibrant green woodwinds, golden yellow percussion - as specified)
+- LocalStorage high score persistence
+- Simple sound effects using Web Audio API
+- Speedrun timer in top corner
+
+Let me think about the game loop and mechanics:
+
+The game should:
+- Have a baton controlled by mouse/touch
+- Have four sections (Strings, Brass, Woodwinds, Percussion) in spatial zones
+- Cue sections when baton targets them at the right time
+- Dynamics based on baton velocity
+- Articulation styles based on gesture patterns
+- High score tracking via LocalStorage
+- Speedrun timer
+- Sound effects
+
+Given the complexity of a full orchestra simulation, I'll create a simplified rhythm game where:
+- The baton moves based on mouse/touch
+- Clicking/tapping on section zones cues them
+- Baton velocity controls volume
+- Different gesture patterns trigger different articulations
+- A metronome/tempo system
+- High score based on timing accuracy
+
+Let me design the code structure:
+
+**index.html:**
+- Canvas element that's responsive
+- HUD elements (score, high score, speedrun timer)
+- Favicon with emoji
+- Audio context setup
+- Game loop
+
+**game.js:**
+- Input handling (mouse/touch)
+- Baton physics with inertia
+- Section zones
+- Sound synthesis using Web Audio API
+- Game state management
+- Rendering loop
+- High score LocalStorage
+
+Actually, I should probably put everything in fewer files to keep it manageable. Let me think...
+
+I'll create:
+1. `index.html` - HTML structure with canvas, includes CSS and JS
+2. `game.js` - All the game logic
+
+Actually, looking at the requirement again: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". So I need to output JSON like:
+```json
+{"index.html": "...", "game.js": "...", "style.css": "..."}
+```
+
+Let me create a cohesive implementation. I'll use a single game.js file for simplicity, and include CSS in the HTML or in a separate file.
+
+Let me plan the implementation in detail:
+
+### HTML Structure
+- Canvas element taking up most of the screen
+- HUD div with score, high score, timer
+- Meta tags, emoji favicon
+
+### CSS
+- Responsive design
+- Color palette based on the spec: Strings (Cool Blue/Indigo), Brass (Warm Red/Orange), Woodwinds (Vibrant Green), Percussion (Golden Yellow)
+- Dark stage background
+- UI styling
+
+### JavaScript Game Logic
+
+1. **Canvas Setup**: Responsive canvas that scales to window size
+2. **Audio Context**: Web Audio API for sound synthesis
+   - Oscillators for each section
+   - Gain nodes controlled by baton velocity
+   - Simple ADSR envelopes
+3. **Input Handling**: 
+   - Mouse move/touch move for baton position
+   - Mouse down/touch start for cues
+4. **Baton Physics**:
+   - Spring-damper system for smoothing
+   - Velocity extraction for dynamics
+   - Particle trail
+5. **Section Zones**: 
+   - Four circular zones around center
+   - Target detection
+   - Cue timing with metronome
+6. **Metronome/Tempo**:
+   - BPM display
+   - Visual pendulum
+   - Tempo adjustment
+7. **High Score**: 
+   - LocalStorage persistence
+   - Speedrun timer
+8. **Visuals**:
+   - Section pads
+   - Baton with trail
+   - Visualizers when sections play
+   - HUD elements
+
+Let me start coding. I'll create a simplified but functional version.
+
+For the color palette, I'll use:
+- Strings: #4A90E2 (cool blue) / #2C3E50 (indigo)
+- Brass: #E74C3C (warm red) / #D35400 (orange)  
+- Woodwinds: #2ECC71 (vibrant green) / #27AE60
+- Percussion: #F1C40F (golden yellow) / #D4AC0D
+- Background: #1A1A2E (deep dark) / #16213E
+- Accent: #E94560 (vibrant magenta/pink accent)
+
+For the emoji favicon: 🎻 (violin) or 🎵 (musical note) or 🎺 (trumpet). I'll use 🎻.
+
+For the speedrun timer: I'll track time since start and display in top corner.
+
+For high score: Store in localStorage, update when player achieves better score.
+
+Let me think about the gameplay loop more concretely:
+
+The game has a metronome swinging at current BPM. The score track has colored blocks appearing. When the metronome beat aligns with a colored block, if the baton is in the corresponding zone, that section gets cued.
+
+Actually, let me simplify further for a complete but manageable implementation:
+
+- The baton follows the mouse/touch
+- Four quadrants/zones around the center
+- When you click in a zone, that section plays
+- Baton velocity controls volume
+- Different click patterns (maybe direction of drag) control articulation
+- Metronome keeps time
+- Score based on timing accuracy
+- High score persistence
+
+Actually, re-reading the spec, the core mechanic is about cueing sections at the precise beat. Let me implement a rhythm game where:
+
+1. A circular metronome swings back and forth
+2. Colored indicators appear on the swing path
+3. Player moves baton to target zone and clicks on the beat
+4. Timing accuracy determines score
+
+Let me code this up. I'll create a clean, compact implementation.
+
+Here's my plan for the code:
+
+**index.html:**
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symphonic Conductor: Baton of the Maestro</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎻</text></svg>">
+    <style>
+        /* CSS styles */
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="hud">
+        <!-- HUD elements -->
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
+```
+
+**game.js:** All the game logic
+
+Let me now actually write the complete code. I need to be careful about:
+- Responsive canvas (scaling to mobile)
+- Web Audio API sound synthesis
+- LocalStorage high score
+- Speedrun timer
+- Emoji favicon
+- Vibrant color palette
+
+Let me write a complete, self-contained implementation.
+
+For the sound synthesis, I'll create a simple synth function that can produce different tones for different sections. I'll use the Web Audio API with oscillator nodes, gain nodes, and connect them to the destination.
+
+For the baton physics, I'll implement a simple spring system that smooths the mouse/touch movement.
+
+For the game mechanics, I'll have:
+- A metronome that ticks at a base BPM
+- Four zones around the center corresponding to sections
+- Cue timing based on when the metronome crosses certain positions
+- Score based on timing accuracy
+
+Let me think about the responsive design. The canvas should:
+- Fill the screen or a portion of it
+- Maintain aspect ratio
+- Scale down on mobile
+- I'll use `canvas.width = window.innerWidth` and `canvas.height = window.innerHeight`, but also handle DPI scaling.
+
+Actually, for a game canvas, I typically want to set the canvas size via CSS and keep the drawing buffer at a reasonable resolution. Or I can set the canvas to match the window and handle scaling via the CSS transform.
+
+For simplicity and performance, I'll set the canvas element size via CSS and the drawing buffer to a fixed size or scaled size.
+
+Let me just make the canvas fill the screen and draw everything in a coordinate system that adapts.
+
+OK, let me start writing the actual code. I'll create a comprehensive but compact implementation.
+
+Here's my approach for the game loop:
+
+```
+1. Initialize AudioContext
+2. Set up sections with synth parameters
+3. Set up baton physics
+4. Set up input handlers
+5. Start game loop:
+   - Update baton physics
+   - Update metronome
+   - Check for cues
+   - Render everything
+   - Update HUD
+```
+
+For the cueing mechanic:
+- The metronome has a hand that swings back and forth
+- As it swings, colored markers appear indicating when to cue
+- Player must have baton in target zone AND click on the marker
+- Timing error = difference between actual click time and ideal time
+
+Actually, let me re-think this to make it more playable and aligned with the spec...
+
+The spec says: "The player must gesture within the spatial boundary of a section when the visual cue indicator reaches its peak."
+
+So the mechanic is:
+1. There's a visual cue indicator that moves around (like a sweeping hand)
+2. When it reaches "peak" for a section, if the baton is in that section's zone, it cues
+3. The dynamics depend on baton velocity
+
+Let me implement a simpler version:
+- A rotating indicator that sweeps around
+- Each section has a "sweet spot" angle
+- When indicator passes the sweet spot, player can click to cue
+- Timing is judged relative to the ideal moment
+
+Actually, for a canvas game that works on mobile, let me simplify further. I'll have:
+
+1. Four fixed zone areas (left, right, top, bottom or the quadrants as per spec)
+2. A metronome that ticks
+3. When the metronome ticks, if baton is in zone and user clicks, section cues
+4. Timing accuracy based on how close to the tick the click was
+
+Let me just code it up. I'll make it intuitive and fun.
+
+Here's my final plan for the implementation:
+
+**Color Palette:**
+- Stage background: #0d0d24 (deep space blue)
+- Strings zone: #3a5a7c (cool indigo)
+- Brass zone: #6b3518 (warm burnt orange)  
+- Woodwinds zone: #2c5a2e (vibrant forest green)
+- Percussion zone: #7b5a19 (golden amber)
+- Baton: #f0f0f0 (silver) with white tip
+- HUD: #e8d5a7 (parchment) text with accent colors
+
+**Emoji Favicon:** 🎻
+
+**Features:**
+- Responsive canvas
+- Web Audio API synths for each section
+- Baton with physics-based smoothing
+- Four sections with distinct sounds
+- Metronome BPM display
+- Speedrun timer
+- High score LocalStorage
+- Visual feedback (glows, particles)
+
+Let me write the code now.
+
+I need to be very careful to produce valid JSON. No backticks, no markdown, just the raw JSON.
+
+Let me structure the JSON:
+
+```json
+{"index.html": "<complete html>", "game.js": "<complete js>"}
+```
+
+I might also include CSS in the HTML file or in a separate file. Let me include CSS in the HTML for simplicity.
+
+Actually, let me think about whether I need style.css separately. I'll include all CSS in the HTML file's style tag to keep it as one JS file.
+
+Wait, the user said "mapping filenames to their complete code contents". I can have as many files as needed. Let me do:
+- index.html
+- game.js
+
+And include CSS in the HTML.
+
+Let me now actually write the complete code.
+
+For the audio, I'll create a simple synth system:
+
+```javascript
+function createSynth(type, frequency) {
+    const context = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+    
+    // ADSR envelope
+    gain.gain.value = 0;
+    gain.gain.setTargetAtTime(0.5, context.currentTime, 0.01);
+    
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    
+    oscillator.start();
+    
+    return { oscillator, gain, context };
+}
+```
+
+Actually, I need to be more careful with the audio context. I should create it once and reuse it.
+
+Let me think about the structure more carefully...
+
+I'll create a Game class that initializes everything.
+
+For the visualizers, when a section is playing, I'll draw concentric circles or bars that react to the "volume" (which is controlled by baton velocity).
+
+For the particle trail, I'll just draw some fading lines behind the baton tip.
+
+For the metronome, I'll have a rotating line that swings back and forth at the current BPM.
+
+For the speedrun timer, I'll track `performance.now()` since start and display minutes:seconds:milliseconds.
+
+For high score, I'll store the best (lowest) time in localStorage, and also a score based on timing accuracy.
+
+Actually, re-reading the spec: "Save the player's High Score using the browser's LocalStorage so it persists when they refresh." And "Speedrun Timer in the top corner."
+
+So the high score is probably related to the speedrun timer - best time to complete something, or highest score based on performance.
+
+Let me make the high score be the best (fastest) completion time, or the highest harmony score. I'll go with highest score based on perfect cues.
+
+Actually, let me make it: the high score is the highest "Harmony Meter" value achieved, persisted in LocalStorage. And the speedrun timer tracks how long the performance has been running.
+
+Let me finalize my design and start coding.
+
+Here's my implementation plan:
+
+**Game Flow:**
+1. Page loads, audio context initialized (user interaction required)
+2. Game starts with default BPM (120)
+3. Metronome starts swinging
+4. Player moves baton, clicks to cue sections
+5. Sections play with volume based on baton velocity
+6. Harmony meter fills based on timing accuracy
+7. Speedrun timer runs
+8. High score persists in LocalStorage
+
+**Controls:**
+- Mouse: move baton, click to cue
+- Touch: same on mobile
+- Keyboard: S/B/W/P to mute/solo sections, arrows to adjust tempo, Space to start/pause
+
+Let me write the code now. I'll aim for about 200-300 lines of JavaScript and a similar amount of HTML/CSS.
+
+Let me be very careful about the JSON output format. I need to output just the JSON object, no explanations, no markdown.
+
+Let me draft the code mentally first:
+
+**index.html:**
+- DOCTYPE, html, head with meta, title, favicon (emoji), style tag
+- body with canvas and HUD div
+- script tag referencing game.js
+
+**game.js:**
+- Constants for colors, sizes, BPM
+- Game class with init, update, render methods
+- Audio setup
+- Input handling
+- Baton physics
+- Section management
+- Metronome
+- High score LocalStorage
+- Game loop
+
+Let me write this out carefully.
+
+Actually, I realize I should think about how to make the "cueing" work in a touch-friendly way on mobile. The spec mentions mouse, touch, or keyboard gestures. 
+
+For the cueing mechanic on mobile, I'll have:
+- The baton follows the finger
+- When the finger taps/clicks, it cues the section under the baton
+- Timing is relative to the metronome beat
+
+For the "gesture patterns" (legato, staccato, stop cue), I'll simplify:
+- Regular click = normal cue
+- Drag pattern might determine articulation, but for simplicity, I'll use click count or modifier keys
+
+Actually, let me implement a system where:
+- Click = cue section (starts playing)
+- Click while holding = adjust dynamics (but this is hard on mobile)
+- Double click = stop cue
+
+For simplicity, I'll do:
+- Click in a section zone = cue that section (if on beat)
+- Baton velocity (speed of movement) controls volume
+- Different sections have different sounds
+
+Let me just code it. I'll make it work and fun.
+
+One more thing - the spec mentions "Speedrun Timer in the top corner". I'll put a timer there showing how long the performance has been running, and the high score will be the best time or highest score achieved.
+
+OK, let me actually start writing the code. I'll be comprehensive but concise.
+
+Let me structure the JSON output. I'll have two files:
+1. index.html
+2. game.js
+
+The HTML will contain the CSS in style tags. The JS will contain all the game logic.
+
+Let me write the actual code content now.
+
+For the HTML:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symphonic Conductor: Baton of the Maestro</title>
+    <link rel="icon" type="image/png" data-emoji="🎻">
+    <meta name="theme-color" content="#16213E">
+    <style>
+        /* CSS goes here */
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="hud">
+        <div id="timer">00:00.00</div>
+        <div id="score">Score: 0</div>
+        <div id="highscore">High: 0</div>
+        <div id="bpm">120 BPM</div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
+```
+
+Wait, for the favicon with emoji, I can use a data URI. Let me use:
+`<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎻%3C/text%3E%3C/svg%3E">`
+
+That's a common pattern for emoji favicons.
+
+Now for the CSS, I'll make it responsive and colorful:
+
+```css
+:root {
+    --bg-color: #0d0d24;
+    --stage-color: #16213e;
+    --strings-color: #3a5a7c;
+    --brass-color: #6b3518;
+    --woodwinds-color: #2c5a2e;
+    --percussion-color: #7b5a19;
+    --baton-color: #f0f0f0;
+    --text-color: #e8d5a7;
+    --hud-bg: rgba(13, 13, 36, 0.8);
+}
+```
+
+For the game.js, I need to write a complete implementation. Let me think through the key functions:
+
+1. `init()` - Set up canvas, audio, game state
+2. `setupAudio()` - Create Web Audio context, synths for each section
+3. `setupInput()` - Add event listeners for mouse/touch
+4. `updateBatonPhysics()` - Spring-damper smoothing
+5. `updateMetronome()` - BPM timing
+6. `checkCues()` - Check if click/tap is on beat and in zone
+7. `playSection(section, velocity)` - Play sound for section
+8. `render()` - Draw everything
+9. `gameLoop()` - Main loop
+
+Let me write this properly.
+
+Actually, I realize I should think about the "visual cue indicator" from the spec. The spec says: "The player must gesture within the spatial boundary of a section when the visual cue indicator reaches its peak."
+
+I'll implement a circular indicator that rotates, and each section has a specific angle range where cueing is possible. When the indicator passes the "peak" for a section, and the player clicks, it cues.
+
+For simplicity, I'll have four zones at fixed positions (N, E, S, W or the quadrants as specified), and a sweeping indicator. When the indicator is at the cue position for a zone, clicking cues that section.
+
+Actually, let me simplify the visual cue. I'll have a metronome pendulum that swings, and cue indicators that light up on the beat. When the player clicks during the "sweet spot", it cues.
+
+Let me just implement a practical version:
+
+- Metronome ticks at BPM
+- Four zones around the center
+- When metronome ticks, if baton is in zone and user clicks, section cues
+- Timing window is ± half a beat
+
+This is simple, playable, and incorporates all the required features.
+
+Let me code it now.
+
+Here's my complete game.js design:
+
+```javascript
+const GAME = {
+    init() {
+        // Setup canvas
+        // Setup audio
+        // Setup input
+        // Setup game state
+        // Start game loop
+    },
+    
+    // ... methods
+};
+```
+
+Actually, let me make it more structured with classes.
+
+Let me just write the code. I'll create a clean, working implementation.
+
+I need to be mindful of the audio context policy - user interaction is required to start the audio context. So I'll have a "Start" prompt that the user must click first, then the game begins.
+
+Let me finalize my approach and start writing the actual code content.
+
+Given the complexity, let me write a focused implementation that includes all the "sneaky features" but keeps the gameplay fun and playable.
+
+Here's my final implementation plan:
+
+**Game Concept: "Beat the Orchestra"**
+- A metronome swings at adjustable BPM
+- Four sections are arranged around the conductor's podium
+- Colored indicators show when to cue each section
+- Player moves baton to target section and clicks on the beat
+- Baton speed controls volume
+- Perfect timing fills the harmony meter
+- Goal: keep all sections playing in harmony as long as possible
+- High score = longest duration or highest harmony percentage
+
+**Features to implement:**
+1. ✅ Responsive canvas - canvas resizes with window, maintains aspect ratio, works on mobile
+2. ✅ Emoji favicon - 🎻 in the head
+3. ✅ Vibrant color palette - indigo strings, orange brass, green woodwinds, gold percussion
+4. ✅ LocalStorage high score - persists across refreshes
+5. ✅ Web Audio API sound effects - synth tones for each section
+6. ✅ Speedrun timer - in top corner, tracks performance time
+
+Let me now write the code.
+
+I'll create the HTML with inline CSS and a script tag referencing game.js. The game.js will contain everything.
+
+Let me think about the JSON structure. I need to output:
+```json
+{"index.html": "...code...", "game.js": "...code..."}
+```
+
+The values need to be strings with the complete file contents. I need to make sure the JSON is valid - so any special characters need to be properly escaped, and the entire thing is a single JSON object.
+
+Let me write the code carefully, making sure strings are properly formatted for JSON.
+
+Actually, since I'm outputting raw JSON, I need to be very careful with the string contents. Newlines need to be represented as \n, quotes as \", etc. Or I can use literal newlines if the JSON parser handles them, but typically JSON strings use \n for newlines.
+
+Let me use a approach where I'll construct the JSON with proper escaping.
+
+Actually, the user said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". So I need to output something like:
+
+```json
+{"index.html": "doctype html...", "game.js": "const game = {...}"}
+```
+
+Where the string values contain the complete file contents. I'll need to escape newlines and quotes properly.
+
+This is going to be quite complex given the amount of code. Let me think about the best way to handle this...
+
+I could use a heredoc or multi-line string approach, but in JSON, newlines within strings need to be \n. Actually, valid JSON can contain literal newlines in strings if we're talking about some implementations, but the strict JSON spec requires \n.
+
+Let me use \n for newlines and \" for quotes within the JSON string values.
+
+Actually, this is going to be extremely tedious and error-prone for large files. Let me think of a better approach...
+
+I could compress the code into a single line per file, minimizing whitespace, and then use \n for line breaks in the JSON. Or I could use base64 encoding, but the requirement says "mapping filenames to their complete code contents", which implies the actual code text.
+
+Let me just write the code with minimal obfuscation, using \n for newlines in the JSON strings. I'll need to be very careful with escaping.
+
+Actually, re-reading the instruction: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). Do NOT include markdown block formatting like ```json or any conversational commentary."
+
+The example shows the values as "..." which suggests string values. For the JSON to be valid, I need proper escaping.
+
+Let me write this carefully. I'll minimize the code size and use proper JSON string escaping.
+
+Here's my plan:
+1. Write the HTML file content as a single-line string with \n for newlines
+2. Write the JS file content similarly
+3. Escape all " characters as \"
+4. Use \n for newlines
+
+Actually, I realize this will be extremely long and difficult to get right. Let me think if there's another way...
+
+Maybe I can use template literals or some format that avoids excessive escaping. But in the final JSON output, I'll need proper escaping.
+
+Let me just go ahead and write it. I'll use a compact but readable style, and escape appropriately.
+
+For the JSON output, I'll need to:
+- Replace all actual newlines with \n
+- Replace all " with \"
+- Replace all \ with \\ (within the JSON string values)
+
+This is going to be tricky but let me proceed.
+
+Actually, let me reconsider. Maybe I should output the JSON with the code in a format that's valid JSON. I can use \n for line breaks and be careful with quotes.
+
+Let me start writing the code and then convert it to JSON format.
+
+I'll write two files:
+
+1. index.html - contains the canvas and HUD, with inline CSS
+2. game.js - contains all the game logic
+
+Let me draft the HTML first:
+
+```
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Symphonic Conductor: Baton of the Maestro</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎻%3C/text%3E%3C/svg%3E"><meta name="theme-color" content="#16213E"><style>body{margin:0;background:#0d0d24;color:#e8d5a7;font-family:sans-serif;overflow:hidden}h1{position:fixed;top:20px;left:20px;font-size:1.2rem;color:#e94560}canvas{display:block;background:#16213e}hud{position:fixed;bottom:20px;left:20px;right:20px;background:rgba(13,13,36,0.8);padding:15px;border-radius:8px;backdrop-filter:blur(10px)}#timer{font-size:1.4rem;color:#f1c40f;margin-bottom:5px}#score{font-size:1.2rem}#highscore{font-size:1.2rem;color:#3a5a7c}bpm{position:fixed;top:20px;right:20px;font-size:1.2rem;color:#e94560}</style></head><body><h1>Symphonic Conductor</h1><canvas id="gameCanvas"></canvas><div id="hud"><div id="timer">00:00.00</div><div id="score">Score: 0</div><div id="highscore">High: 0</div></div><div id="bpm">120 BPM</div><script src="game.js"></script></body></html>
+```
+
+Wait, I made errors - "hud" should be "HUD" div, and I had a typo. Let me redo this more carefully.
+
+Actually, let me just write the code in a more structured way and then convert to JSON.
+
+Given the complexity of properly escaping JSON, let me write the code files, then use a systematic approach to convert them to JSON string values.
+
+Let me write the HTML and JS, then I'll carefully escape them for the JSON output.
+
+I'll write the files with the intention of then putting them in JSON format. Let me be very methodical.
+
+Let me start with the HTML. I'll keep it compact:
+
+```html
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Symphonic Conductor: Baton of the Maestro</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🎻%3C/text%3E%3C/svg%3E"><meta name="theme-color" content="#16213E"><style>body{margin:0;background:#0d0d24;color:#e8d5a7;font-family:sans-serif;overflow:hidden}#gameCanvas{display:block}#hud{position:fixed;bottom:20px;left:20px;right:20px;background:rgba(13,13,36,0.8);padding:15px;border-radius:8px;backdrop-filter:blur(10px);backdrop-filter:blur(10px)}#timer{font-size:1.4rem;color:#f1c40f;margin-bottom:5px}#score{font-size:1.2rem}#highscore{font-size:1.2rem;color:#3a5a7c}bpm{position:fixed;top:20px;right:20px;font-size:1.2rem;color:#e94560}</style></head><body><h1 style="position:fixed;top:20px;left:20px;font-size:1.2rem;color:#e94560">Symphonic Conductor</h1><canvas id="gameCanvas"></canvas><div id="hud"><div id="timer">00:00.00</div><div id="score">Score: 0</div><div id="highscore">High: 0</div></div><div id="bpm">120 BPM</div><script src="game.js"></script></body></html>
+```
+
+Now for the game.js, this is the big one. Let me write a complete implementation.
+
+```javascript
+const Colors = { Strings: '#3a5a7c', Brass: '#6b3518', Woodwinds: '#2c5a2e', Percussion: '#7b5a19', Background: '#0d0d24', Stage: '#16213e', Baton: '#f0f0f0', Text: '#e8d5a7', HUD: 'rgba(13,13,36,0.8)' };
+const Sections = { Strings: 0, Brass: 1, Woodwinds: 2, Percussion: 3 };
+const ZONE_ANGLES = { Strings: -135, Brass: 45, Woodwinds: 45, Percussion: -45 }; // approximate
+
+class SymphonicConductor {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.audioContext = null;
+        this.synths = {};
+        this.baton = { x: 0, y: 0, vx: 0, vy: 0, targetX: 0, targetY: 0, damping: 0.1, stiffness: 0.5 };
+        this.metronome = { angle: 0, angularVelocity: 0, bpm: 120, targetAngle: 0 };
+        this.sections = {};
+        this.score = 0;
+        this.highScore = parseInt(localStorage.getItem('symphonicConductorHighScore') || '0');
+        this.speedrunStart = 0;
+        this.isRunning = false;
+        this.harmony = 0;
+        this.init();
+    }
+    
+    init() {
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+        this.setupAudio();
+        this.setupSections();
+        this.setupInput();
+        this.speedrunStart = performance.now();
+        this.isRunning = true;
+        this.gameLoop();
+    }
+    
+    resizeCanvas() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+    
+    setupAudio() {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // Create synths for each section
+        const types = { Strings: 'sawtooth', Brass: 'square', Woodwinds: 'triangle', Percussion: 'sine' };
+        for (const [section, type] of Object.entries(types)) {
+            this
