@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Neon Dash</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;overflow:hidden;font-family:'Segoe UI',sans-serif;display:flex;justify-content:center;align-items:center;height:100vh;width:100vw}
+canvas{display:block;border:2px solid #00fff5;border-radius:8px;box-shadow:0 0 30px rgba(0,255,245,.3),0 0 60px rgba(255,0,102,.15);touch-action:none}
+#ui{position:fixed;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:20px;color:#00fff5;font-size:18px;font-weight:bold;text-shadow:0 0 10px #00fff5;z-index:10;pointer-events:none}
+#startScreen{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,10,26,.95);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:100;color:#00fff5}
+#startScreen h1{font-size:48px;margin-bottom:10px;text-shadow:0 0 20px #00fff5,0 0 40px #ff0066}
+#startScreen p{color:#ffe600;font-size:16px;margin:5px 0}
+#startScreen button{margin-top:25px;padding:15px 40px;font-size:20px;background:transparent;border:2px solid #ff0066;color:#ff0066;border-radius:8px;cursor:pointer;text-transform:uppercase;letter-spacing:2px;transition:all .3s}
+#startScreen button:hover{background:#ff0066;color:#0a0a1a;box-shadow:0 0 20px rgba(255,0,102,.5)}
+#gameOver{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,10,26,.9);display:none;flex-direction:column;justify-content:center;align-items:center;z-index:100;color:#ff0066}
+#gameOver h1{font-size:36px;margin-bottom:15px;text-shadow:0 0 20px #ff0066}
+#gameOver p{color:#ffe600;font-size:18px;margin:5px 0}
+#gameOver button{margin-top:20px;padding:12px 35px;font-size:18px;background:transparent;border:2px solid #00fff5;color:#00fff5;border-radius:8px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="ui"><span id="timer">0.0s</span><span id="score">Score: 0</span><span id="hi">Best: 0</span></div>
+<canvas id="c"></canvas>
+<div id="startScreen">
+<h1>⚡ NEON DASH ⚡</h1>
+<p>Arrow Keys / Tap to dodge</p>
+<p>Survive as long as you can!</p>
+<button id="startBtn">START GAME</button>
+</div>
+<div id="gameOver">
+<h1>GAME OVER</h1>
+<p id="finalScore">Score: 0</p>
+<p id="finalTime">Time: 0.0s</p>
+<p id="newHi"></p>
+<button id="restartBtn">PLAY AGAIN</button>
+</div>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+const timerEl=document.getElementById('timer'),scoreEl=document.getElementById('score'),hiEl=document.getElementById('hi');
+const startScreen=document.getElementById('startScreen'),gameOverEl=document.getElementById('gameOver');
+const finalScore=document.getElementById('finalScore'),finalTime=document.getElementById('finalTime'),newHi=document.getElementById('newHi');
+
+// Responsive canvas
+function resize(){const s=Math.min(window.innerWidth,window.innerHeight*.9);c.width=s;c.height=s*.8}
+resize();window.addEventListener('resize',resize);
+
+// Audio
+const AC=window.AudioContext||window.webkitAudioContext;let ac;
+function initAudio(){if(!ac)ac=new AC()};
+function playSound(freq,dur,type='square',vol=0.1){if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=freq;g.gain.value=vol;o.connect(g);g.connect(ac.destination);o.start();g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+dur);o.stop(ac.currentTime+dur)}
+function sfxHit(){playSound(150,.3,'sawtooth',0.15)}
+function sfxCollect(){playSound(800,.15,'sine',0.1)}
+function sfxStart(){playSound(440,.1,'sine',0.1);setTimeout(()=>playSound(660,.1,'sine',0.1),100)}
+
+// Game state
+let player,obstacles,particles,score,gameTime,gameRunning,highScore;
+highScore=parseInt(localStorage.getItem('neonDashHi'))||0;
+hiEl.textContent='Best: '+highScore;
+
+const keys={};
+let touchX=null;
+
+// Input
+window.addEventListener('keydown',e=>{keys[e.key]=true;if(e.key==='ArrowLeft'||e.key==='ArrowRight')e.preventDefault()});
+window.addEventListener('keyup',e=>keys[e.key]=false);
+c.addEventListener('touchstart',e=>{e.preventDefault();const r=c.getBoundingClientRect();touchX=e.touches[0].clientX-r.left});
+c.addEventListener('touchmove',e=>{e.preventDefault();const r=c.getBoundingClientRect();touchX=e.touches[0].clientX-r.left});
+c.addEventListener('touchend',()=>{touchX=null});
+
+// Player
+function initPlayer(){player={x:c.width/2,y:c.height-60,w:30,h:30,speed:6,color:'#00fff5',glow:'rgba(0,255,245,0.4)'}}
+
+// Obstacles
+function spawnObstacle(){const w=20+Math.random()*30;return={x:Math.random()*(c.width-w),y:-40,w,h:w,speed:3+Math.random()*3,color:['#ff0066','#ffe600','#ff6600'][Math.floor(Math.random()*3)],glow:null}}
+
+function spawnCollectible(){return{x:Math.random()*(c.width-20),y:-20,w:15,h:15,speed:2+Math.random()*2,color:'#00ff88',type:'coin',life:200}}
+
+// Particles
+function spawnParticles(x,y,color,count=5){for(let i=0;i<count;i++)particles.push({x,y,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4,life:30+Math.random()*20,maxLife:50,color,size:2+Math.random()*3})}
+
+// Init
+function initGame(){player=initPlayer();obstacles=[];particles=[];score=0;gameTime=0;gameRunning=true;startScreen.style.display='none';gameOverEl.style.display='none';sfxStart();timer=0;collectTimer=0;difficulty=1}
+
+let timer=0,collectTimer=0,difficulty=1;
+
+// Update
+function update(dt){if(!gameRunning)return;timer+=dt;gameTime=timer/60;gameTime=Math.round(gameTime*10)/10;
+// Player
+let dx=0;
+if(keys['ArrowLeft']||keys['a'])dx=-player.speed;
+if(keys['ArrowRight']||keys['a']===false&&keys['ArrowRight'])dx=player.speed;
+if(touchX!==null){const mid=c.width/2;if(touchX<mid-15)dx=-player.speed;if(touchX>mid+15)dx=player.speed}
+player.x+=dx;
+player.x=Math.max(0,Math.min(c.width-player.w,player.x));
+
+// Spawn obstacles
+const spawnRate=Math.max(30,80-difficulty*5);
+if(timer%spawnRate<dt){obstacles.push(spawnObstacle());if(Math.random()<.2)obstacles.push(spawnCollectible())}
+
+// Update obstacles
+for(let i=obstacles.length-1;i>=0;i--){const o=obstacles[i];o.y+=o.speed*(1+difficulty*.1);
+// Collectible
+if(o.type==='coin'){o.life--;if(o.life<=0){obstacles.splice(i,1);continue}}
+// Collision with player
+if(o.type!=='coin'&&player.x<o.x+o.w&&player.x+player.w>o.x&&player.y<o.y+o.h&&player.y+player.h>o.y){gameOver();return}
+// Collect
+if(o.type==='coin'&&player.x<o.x+o.w&&player.x+player.w>o.x&&player.y<o.y+o.h&&player.y+player.h>o.y){score+=50;sfxCollect();spawnParticles(o.x+o.w/2,o.y+o.h/2,'#00ff88',8);obstacles.splice(i,1);continue}
+if(o.y>c.height+20)obstacles.splice(i,1)}
+
+// Difficulty
+if(Math.floor(timer)%180===0&&timer>0)difficulty++;
+
+// Particles
+for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)particles.splice(i,1)}
+
+// Score
+score+=Math.floor(dt*.5);
+scoreEl.textContent='Score: '+score;
+timerEl.textContent=gameTime+'s';
+
+// Trail particles
+if(Math.random()<.5)particles.push({x:player.x+player.w/2,y:player.y+player.h,vx:(Math.random()-.5)*1,vy:1+Math.random(),life:15,maxLife:15,color:'#00fff5',size:2})
+
+// Player trail
+if(timer%3<dt)spawnParticles(player.x+player.w/2,player.y+player.h,'#00fff5',1)}
+
+function gameOver(){gameRunning=false;sfxHit();spawnParticles(player.x+player.w/2,player.y+player.h/2,'#ff0066',20);
+const isNew=score>highScore;
+if(isNew){highScore=score;localStorage.setItem('neonDashHi',highScore)}
+finalScore.textContent='Score: '+score;
+finalTime.textContent='Time: '+gameTime+'s';
+newHi.textContent=isNew?'🏆 NEW HIGH SCORE!':'';
+setTimeout(()=>{gameOverEl.style.display='flex'},500)}
+
+// Draw
+function draw(){ctx.clearRect(0,0,c.width,c.height);
+// Background grid
+ctx.strokeStyle='rgba(0,255,245,0.05)';ctx.lineWidth=1;
+const gs=40;
+for(let x=0;x<c.width;x+=gs){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,c.height);ctx.stroke()}
+for(let y=0;y<c.height;y+=gs){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(c.width,y);ctx.stroke()}
+
+// Particles
+particles.forEach(p=>{const a=p.life/p.maxLife;ctx.globalAlpha=a;ctx.fillStyle=p.color;ctx.shadowColor=p.color;ctx.shadowBlur=10;ctx.fillRect(p.x,p.y,p.size,p.size)});
+ctx.globalAlpha=1;ctx.shadowBlur=0;
+
+// Obstacles
+obstacles.forEach(o=>{ctx.shadowColor=o.color;ctx.shadowBlur=15;ctx.fillStyle=o.color;ctx.fillRect(o.x,o.y,o.w,o.h);
+if(o.type==='coin'){ctx.shadowColor='#00ff88';ctx.fillStyle='#00ff88';ctx.beginPath();ctx.arc(o.x+o.w/2,o.y+o.h/2,6,0,Math.PI*2);ctx.fill()}});
+ctx.shadowBlur=0;
+
+// Player
+if(gameRunning||!gameRunning){
+ctx.shadowColor='#00fff5';ctx.shadowBlur=20;
+const g=ctx.createLinearGradient(player.x,player.y,player.x+player.w,player.y+player.h);
+g.addColorStop(0,'#00fff5');g.addColorStop(1,'#ff0066');
+ctx.fillStyle=g;
+const r=6;
+ctx.beginPath();ctx.moveTo(player.x+r,player.y);ctx.lineTo(player.x+player.w-r,player.y);ctx.quadraticCurveTo(player.x+player.w,player.y,player.x+player.w,player.y+r);ctx.lineTo(player.x+player.w,player.y+player.h-r);ctx.quadraticCurveTo(player.x+player.w,player.y+player.h,player.x+player.w-r,player.y+player.h);ctx.lineTo(player.x+r,player.y+player.h);ctx.quadraticCurveTo(player.x,player.y+player.h,player.x,player.y+player.h-r);ctx.lineTo(player.x,player.y+r);ctx.quadraticCurveTo(player.x,player.y,player.x+r,player.y);ctx.fill();
+ctx.shadowBlur=0;
+// Eyes
+ctx.fillStyle='#fff';ctx.fillRect(player.x+8,player.y+8,5,5);ctx.fillRect(player.x+player.w-13,player.y+8,5,5);
+ctx.fillStyle='#0a0a1a';ctx.fillRect(player.x+9,player.y+9,3,3);ctx.fillRect(player.x+player.w-12,player.y+9,3,3)}
+
+// Speed lines
+if(gameRunning){ctx.globalAlpha=.3;ctx.strokeStyle='#00fff5';ctx.lineWidth=2;
+for(let i=0;i<3;i++){const ly=Math.random()*c.height;ctx.beginPath();ctx.moveTo(Math.random()*c.width,ly);ctx.lineTo(Math.random()*c.width,ly+30+Math.random()*40);ctx.stroke()}
+ctx.globalAlpha=1}
+}
+
+// Game loop
+let lastTime=0;
+function loop(ts){const dt=Math.min(ts-lastTime,50);lastTime=ts;
+if(gameRunning)update(dt);
+draw();
+requestAnimationFrame(loop)}
+
+// Buttons
+document.getElementById('startBtn').onclick=()=>{initAudio();initGame();requestAnimationFrame(loop)};
+document.getElementById('restartBtn').onclick=()=>{initGame();requestAnimationFrame(loop)};
+
+// Initial draw
+initPlayer();draw();
+</script>
+</body>
+</html>
