@@ -1,95 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ignis Ascent</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><text y=\"0.7em\" font-size=\"90\">🔥</text></svg>">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      background: #1a1a2e; 
-      overflow: hidden; 
-      font-family: 'JetBrains Mono', monospace; 
-      color: #e0e0e0; 
-    }
-    canvas { 
-      display: block; 
-      width: 100vw; 
-      height: 100vh; 
-      image-rendering: pixelated; 
-      background: linear-gradient(to bottom, #1a1a2e 0%, #2d2d4a 100%);
-    }
-    .ui-overlay { 
-      position: absolute; 
-      top: 0; left: 0; 
-      width: 100%; height: 100%; 
-      pointer-events: none; 
-    }
-    .hud { 
-      position: absolute; 
-      color: #e0e0e0; 
-      font-size: 14px; 
-      text-shadow: 0 0 3px #00000080;
-    }
-    .timer { top: 10px; left: 10px; 
-      color: #44ff88; 
-      text-shadow: 0 0 5px #44ff88;
-    }
-    .stamina { bottom: 20px; left: 50%; transform: translateX(-50%); 
-      width: 200px; height: 16px; 
-      background: #2d2d4a; 
-      border-radius: 8px; 
-      overflow: hidden; 
-      border: 2px solid #4a4a6a;
-    }
-    .stamina-fill { 
-      height: 100%; 
-      width: 100%; 
-      background: linear-gradient(90deg, #44ff88, #ff4444); 
-      transition: width 0.1s;
-    }
-    .death-overlay { 
-      position: absolute; 
-      top: 0; left: 0; 
-      width: 100%; height: 100%; 
-      background: rgba(0,0,0,0.85);
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      justify-content: center; 
-      color: #ff4444;
-      font-size: 24px;
-      display: none;
-    }
-    button { 
-      margin-top: 20px; 
-      padding: 10px 30px; 
-      font-size: 16px; 
-      background: #ff3300; 
-      color: white; 
-      border: none; 
-      border-radius: 5px; 
-      cursor: pointer; 
-      transition: all 0.2s;
-    }
-    button:hover { 
-      transform: scale(1.05); 
-      box-shadow: 0 0 10px #ff3300;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PROJECT IGNIS ASCENT</title>
+    <!-- SNEAKY FEATURE 2: Cool Emoji Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjgwIiBmaWxsPSIjZmYzNDAwIi8+PHBhdGggZD0iTTYwLDEyMCAxMDAsNjAgMTQwLDEyMCAxMDAsMTgwWiIgZmlsbD0iI2ZmODgwIi8+PHBhdGggZD0iTTYwLDEyMCAxMDAsNjAgMTQwLDEyMCAxMDAsMTgwWiIgZmlsbD0iI2ZmNDQ0NCIvPjxjaXJjbGUgY3g9IjEwMCIgY3k9IjEwMCIgcj0iMzAiIGZpbGw9IiNmZmZmZmZmIvPjwvc3ZnPg==">
+    <!-- Chromatic Aberration SVG Filter -->
+    <svg width="0" height="0" style="position:absolute">
+        <defs>
+            <filter id="chromatic">
+                <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
+                <feOffset in="SourceGraphic" dx="-2" dy="0" result="r"/>
+                <feOffset in="SourceGraphic" dx="2" dy="0" result="g"/>
+                <feOffset in="SourceGraphic" dx="0" dy="0" result="b"/>
+                <feBlend in="r" in2="g" mode="screen" result="rg"/>
+                <feBlend in="rg" in2="b" mode="screen" result="rgb"/>
+            </filter>
+        </defs>
+    </svg>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'JetBrains Mono', monospace; color: #e0e0e0; }
+        #game-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        canvas { image-rendering: pixelated; image-rendering: crisp-edges; background: #1a1a2e; display: block; }
+        /* Mobile Controls */
+        #mobile-controls { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
+        .ctrl-btn { position: absolute; width: 80px; height: 80px; border-radius: 50%; background: rgba(0, 255, 170, 0.2); border: 2px solid #00ffaa; pointer-events: auto; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #00ffaa; box-shadow: 0 0 15px rgba(0, 255, 170, 0.5); }
+        #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 160px; height: 160px; border: 2px solid rgba(0, 255, 170, 0.3); border-radius: 50%; }
+        #joystick-knob { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: #00ffaa; border-radius: 50%; transform: translate(-50%, -50%); }
+        #jump-btn { bottom: 20px; right: 20px; }
+        #dash-btn { bottom: 120px; right: 20px; background: rgba(255, 80, 0, 0.2); border-color: #ff5500; color: #ff5500; box-shadow: 0 0 15px rgba(255, 80, 0, 0.5); }
+        /* UI Overlay */
+        #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; }
+        .hud-element { position: absolute; color: #e0e0e0; text-shadow: 0 0 5px #000; font-size: 14px; line-height: 1.2; }
+        #timer { top: 10px; left: 10px; }
+        #height-meter { top: 10px; right: 10px; text-align: right; }
+        #stamina-bar-container { bottom: 40px; left: 50%; transform: translateX(-50%); width: 160px; height: 14px; background: #1a1a2e; border: 1px solid #4a4a6a; border-radius: 7px; overflow: hidden; }
+        #stamina-bar { width: 100%; height: 100%; background: linear-gradient(to right, #44ff88, #ff4444); transition: width 0.1s linear; }
+        #dash-indicator { bottom: 40px; left: 10px; display: flex; gap: 4px; }
+        .dash-icon { width: 16px; height: 16px; background: #00ffaa; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+        /* Death Overlay */
+        #death-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 10; text-align: center; }
+        #death-overlay h1 { font-size: 48px; color: #ff4444; margin-bottom: 20px; letter-spacing: 4px; }
+        #death-overlay p { font-size: 18px; margin: 5px 0; color: #e0e0e0; }
+        .menu-btn { margin-top: 20px; padding: 10px 20px; background: #1a1a2e; border: 2px solid #00ffaa; color: #00ffaa; font-family: inherit; font-size: 16px; cursor: pointer; border-radius: 5px; transition: all 0.2s; }
+        .menu-btn:hover { background: #00ffaa; color: #1a1a2e; box-shadow: 0 0 15px #00ffaa; }
+        #shop-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 20; }
+        .shop-item { margin: 10px; padding: 15px; background: #2d2d4a; border: 1px solid #4a4a6a; border-radius: 8px; width: 300px; display: flex; justify-content: space-between; align-items: center; }
+        .shop-item span { color: #e0e0e0; font-size: 14px; }
+        .shop-item button { padding: 8px 12px; background: #00ffaa; border: none; color: #1a1a2e; cursor: pointer; border-radius: 4px; font-weight: bold; }
+    </style>
 </head>
 <body>
-  <canvas id="game"></canvas>
-  <div class="ui-overlay">
-    <div class="hud timer" id="timer">00:00.00</div>
-    <div class="hud stamina"><div class="stamina-fill" id="staminaFill" style="width: 100%"></div></div>
-    <div class="death-overlay" id="deathOverlay">
-      <div style="font-size: 36px; margin-bottom: 20px;">ASCENT HALTED</div>
-      <div id="deathStats" style="margin-bottom: 20px;"></div>
-      <button onclick="restartGame()">CLIMB AGAIN</button>
-    </div>
-  </div>
-  <script src="game.js"></script>
+    <div id="game-container">
+        <canvas id="game-canvas" width="480" height="270"></canvas>
+        
+        <!-- Mobile Controls -->
+        <div id="mobile-controls">
+            <div id="joystick-zone">
+                <div id="joystick-knob"></div>
+            </div>
+            <div class="ctrl-btn" id="jump-btn">JUMP</div>
+            <div class="ctrl-btn" id="dash-btn">DASH</div>
+        </div>
+
+        <!-- HUD -->
+        <div id="ui-overlay">
+            <div class="hud-element" id="timer">00:00.00</div>
+            <div class="hud-element" id="height-meter">H: 0m</div>
+            <div id="stamina-bar-container"><div id="stamina-bar"></div></div>
+            <div id="dash-indicator">
+                <div class="dash-icon" id="dash-1"></div>
+                <div class="dash-icon" id="dash-2"></div>
+                <div class="dash-icon" id="dash-3"></div>
+            </div>
+        </div>
+
+        <!-- Death Overlay -->
+        <div id="death-overlay">
+            <h1>ASCENT HALTED</h1>
+            <p id="death-time">Survival Time: 00:00.00</p>
+            <p id="death-height">Height Reached: 0m</p>
+            <p id="death-cores">Magma Cores: 0</p>
+            <button class="menu-btn" id="climb-again-btn">[ CLIMB AGAIN ]</button>
+            <button class="menu-btn" id="upgrades-btn">[ UPGRADES ]</button>
+        </div>
+
+        <!-- Shop Overlay -->
+        <div id="shop-overlay">
+            <h1 style="color:#00ffaa; margin-bottom:20px;">THERMAL UPGRADES</h1>
+            <div class="shop-item">
+                <span>Thermal Plating (1 Lava Hit): +1 HP</span>
+                <button id="buy-thermal">Buy (5 Cores)</button>
+            </div>
+            <div class="shop-item">
+                <span>Jet Boots (Double Jump): Air Jump Reset</span>
+                <button id="buy-jet">Buy (10 Cores)</button>
+            </div>
+            <div class="shop-item">
+                <span>Dash Mastery (Air Dash): Dash in Air</span>
+                <button id="buy-dash">Buy (15 Cores)</button>
+            </div>
+            <div class="shop-item">
+                <span>Stamina Lung: Max Stamina +25</span>
+                <button id="buy-stamina">Buy (12 Cores)</button>
+            </div>
+            <div class="shop-item">
+                <span>Time Dilation: Slow-mo on Aim Dash</span>
+                <button id="buy-time">Buy (20 Cores)</button>
+            </div>
+            <button class="menu-btn" id="close-shop">CLOSE</button></div>
 </body>
 </html>
