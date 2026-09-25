@@ -1,4 +1,4 @@
-```markdown
+markdown
 # VOIDBREAKER: INVASION PROTOCOL
 
 ## Overview
@@ -43,7 +43,5 @@ A retro-inspired space shooter where you pilot the Voidbreaker starship against 
 2. Guide the Voidbreaker through each stage
 3. Defeat the final boss to claim victory!
 
-```
 VOIDBREAKER: INVASION PROTOCOL
-```
-```
+
