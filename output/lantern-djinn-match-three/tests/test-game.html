@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Tests</title>
+    <script src="../app.js"></script>
+</head>
+<body>
+    <h1>Game Tests</h1>
+    <div id="test-results"></div>
+    <script>
+        // Basic test framework
+        const results = document.getElementById('test-results');
+        let passed = 0;
+        let failed = 0;
+
+        function assert(condition, message) {
+            if (condition) {
+                passed++;
+                results.innerHTML += `<p style="color:green">✓ ${message}</p>`;
+            } else {
+                failed++;
+                results.innerHTML += `<p style="color:red">✗ ${message}</p>`;
+            }
+        }
+
+        // Test localStorage high score functionality
+        function testHighScoreStorage() {
+            localStorage.setItem('highScore', '100');
+            const stored = localStorage.getItem('highScore');
+            assert(stored === '100', 'High score stored correctly');
+            localStorage.removeItem('highScore');
+        }
+
+        // Test canvas element exists
+        function testCanvasExists() {
+            const canvas = document.getElementById('gameCanvas');
+            assert(canvas !== null, 'Canvas element exists');
+        }
+
+        // Run tests
+        testHighScoreStorage();
+        testCanvasExists();
+
+        results.innerHTML += `<p><strong>Total: ${passed} passed, ${failed} failed</strong></p>`;
+    </script>
+</body>
+</html>
