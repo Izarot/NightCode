@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Bounce Arena</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#0a0a12;overflow:hidden;font-family:'Courier New',monospace;touch-action:none}
+    canvas{display:block;max-width:100vw;max-height:100vh}
+    #ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+    .hud{position:absolute;color:#fff;text-shadow:0 0 4px #000;font-weight:bold}
+    #timer{top:12px;left:50%;transform:translateX(-50%);font-size:clamp(18px,4vw,28px);letter-spacing:2px}
+    #score{top:12px;right:16px;font-size:clamp(14px,3vw,20px)}
+    #arenaBar{bottom:16px;left:50%;transform:translateX(-50%);width:80%;max-width:300px;height:8px;background:rgba(0,0,0,0.5);border-radius:4px;overflow:hidden}
+    #arenaFill{height:100%;width:100%;background:linear-gradient(90deg,#00ff88,#ffdd00,#ff3344);transition:width 0.3s}
+    #overlay{position:fixed;inset:0;background:rgba(10,10,18,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:20;opacity:0;pointer-events:none;transition:opacity 0.3s}
+    #overlay.active{opacity:1;pointer-events:auto}
+    .btn{padding:14px 36px;font-size:18px;background:linear-gradient(135deg,#00d4ff,#0066ff);border:none;border-radius:8px;color:#000;font-weight:bold;cursor:pointer;transition:transform 0.1s,box-shadow 0.1s}
+    .btn:active{transform:scale(0.95)}
+    #finalTime{font-size:clamp(28px,6vw,48px);color:#00d4ff;text-shadow:0 0 20px #00d4ff}
+    #finalScore{font-size:clamp(20px,4vw,32px);color:#ffdd00}
+    #highScore{font-size:clamp(16px,3vw,24px);color:#00ff88}
+    .hidden{display:none!important}
+    @media (prefers-reduced-motion){*{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="ui">
+    <div id="timer" class="hud">00:00.00</div>
+    <div id="score" class="hud">SCORE: 0</div>
+    <div id="arenaBar" class="hud"><div id="arenaFill"></div></div>
+    <div id="overlay">
+      <div id="finalTime">00:00.00</div>
+      <div id="finalScore">SCORE: 0</div>
+      <div id="highScore">BEST: 00:00.00</div>
+      <button class="btn" id="restartBtn">RESTART</button>
+      <button class="btn" id="quitBtn">MENU</button>
+    </div>
+  </div>
+  <script>
+  const C=document.getElementById('c'),X=C.getContext('2d'),UI={timer:document.getElementById('timer'),score:document.getElementById('score'),fill:document.getElementById('arenaFill'),overlay:document.getElementById('overlay'),finalTime:document.getElementById('finalTime'),finalScore:document.getElementById('finalScore'),highScore:document.getElementById('highScore')};let W,H,DPR=Math.min(window.devicePixelRatio||1,2),running=false,startTime=0,elapsed=0,score=0,best=+localStorage.getItem('ba_best')||0,phase=0;
+  const A={x:0,y:0,r:0,tr:0,shrinkAt:0,warning:false},B={x:0,y:0,vx:0,vy:0,r:16,trail:[],color:0},P={x:0,y:0,down:false};
+  const COLORS=['#ff6b6b','#ff9f43','#ffdd00','#4ecdc4','#00d4ff','#a55eea'];
+  const AC=new (window.AudioContext||window.webkitAudioContext)();
+  function beep(f,d,t='sine',v=0.1){if(!AC||AC.state==='suspended')return;const o=AC.createOscillator(),g=AC.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;g.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+d);o.connect(g).connect(AC.destination);o.start();o.stop(AC.currentTime+d)}
+  function resize(){W=innerWidth;H=innerHeight;C.width=W*DPR;C.height=H*DPR;C.style.width=W+'px';C.style.height=H+'px';X.scale(DPR,DPR);A.x=W/2;A.y=H/2;A.r=Math.min(W,H)*0.42;A.tr=A.r;B.x=A.x;B.y=A.y;B.vx=B.vy=0;B.trail=[]}
+  function spawn(){running=true;startTime=performance.now()-elapsed;phase=0;A.r=Math.min(W,H)*0.42;A.tr=A.r;A.shrinkAt=startTime+10000;A.warning=false;B.x=A.x;B.y=A.y;B.vx=B.vy=0;B.trail=[];score=0;UI.overlay.classList.remove('active')}
+  function shrink(){const now=performance.now();if(now>=A.shrinkAt){const p=Math.min(1,(now-startTime)/180000);const rate=0.005*(1+p*1.5);A.tr*=1-rate;A.tr=Math.max(A.tr,A.r*0.3);A.shrinkAt=now+10000/(1+p);A.warning=true;setTimeout(()=>A.warning=false,2000);beep(220,0.15,'square',0.08);beep(110,0.2,'square',0.06)}A.r+=(A.tr-A.r)*0.05}
+  function update(){if(!running)return;const now=performance.now();elapsed=now-startTime;
+    shrink();
+    if(P.down){const dx=P.x-B.x,dy=P.y-B.y,d=Math.hypot(dx,dy)||1;B.vx+=dx/d*0.3;B.vy+=dy/d*0.3}
+    B.vx*=0.995;B.vy*=0.995;
+    const sp=Math.hypot(B.vx,B.vy);if(sp>12){B.vx=B.vx/sp*12;B.vy=B.vy/sp*12}
+    B.x+=B.vx;B.y+=B.vy;
+    const dx=B.x-A.x,dy=B.y-A.y,dist=Math.hypot(dx,dy);
+    if(dist+B.r>A.r){
+      if(dist>0){const nx=dx/dist,ny=dy/dist;B.x=A.x+nx*(A.r-B.r);B.y=A.y+ny*(A.r-B.r);const dp=B.vx*nx+B.vy*ny;if(dp<0){B.vx-=2*dp*nx*0.98;B.vy-=2*dp*ny*0.98;beep(440+Math.random()*200,0.05,'triangle',0.06);for(let i=0;i<8;i++)B.trail.push({x:B.x,y:B.y,vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4,life:1,color:'#00d4ff'})}}else{B.x=A.x;B.y=A.y}}
+    B.trail.push({x:B.x,y:B.y,life:1,color:COLORS[Math.min(5,Math.floor(elapsed/30000))]});if(B.trail.length>30)B.trail.shift();
+    B.trail.forEach(p=>p.life-=0.04);B.trail=B.trail.filter(p=>p.life>0);
+    score=Math.floor(elapsed/1000*10+Math.max(0,(A.r-dist)/A.r*500));
+    if(dist>B.r+A.r){gameOver()}
+    render()
+    requestAnimationFrame(update)}
+  function gameOver(){running=false;const t=elapsed;if(t>best){best=t;localStorage.setItem('ba_best',best)}UI.finalTime.textContent=fmt(t);UI.finalScore.textContent='SCORE: '+score.toLocaleString();UI.highScore.textContent='BEST: '+fmt(best);UI.overlay.classList.add('active');beep(150,0.3,'sawtooth',0.1);beep(100,0.4,'sawtooth',0.08)}
+  function fmt(ms){const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60);return (h?h+':':'')+(m%60).toString().padStart(2,'0')+':'+(s%60).toString().padStart(2,'0')+'.'+Math.floor(ms%1000/10).toString().padStart(2,'0')}
+  function render(){X.clearRect(0,0,W,H);
+    const g=X.createRadialGradient(A.x,A.y,0,A.x,A.y,A.r*1.5);g.addColorStop(0,'#1a1a2a');g.addColorStop(1,'#05050a');X.fillStyle=g;X.fillRect(0,0,W,H);
+    for(let i=0;i<60;i++){const a=i*0.1+elapsed*0.0001,r=A.r*0.8+Math.sin(i+elapsed*0.001)*20;X.fillStyle=`rgba(255,255,255,${0.1+0.3*Math.sin(i+elapsed*0.002)})`;X.beginPath();X.arc(A.x+Math.cos(a)*r,A.y+Math.sin(a)*r,1,0,7);X.fill()}
+    X.strokeStyle=A.warning?'#ff3344':'#00d4ff';X.lineWidth=3;X.globalAlpha=A.warning?0.5+0.5*Math.sin(elapsed*0.02):1;X.beginPath();X.arc(A.x,A.y,A.r,0,7);X.stroke();X.globalAlpha=1;
+    B.trail.forEach(p=>{X.globalAlpha=p.life*0.5;X.fillStyle=p.color;X.beginPath();X.arc(p.x,p.y,B.r*p.life,0,7);X.fill()});X.globalAlpha=1;
+    const ang=Math.atan2(B.vy,B.vx);const g2=X.createRadialGradient(B.x-Math.cos(ang)*4,B.y-Math.sin(ang)*4,0,B.x,B.y,B.r);g2.addColorStop(0,'#fff');g2.addColorStop(0.3,COLORS[Math.min(5,Math.floor(elapsed/30000))]);g2.addColorStop(1,COLORS[Math.min(5,Math.floor(elapsed/30000))].replace(')','a)').replace('rgb','rgba').replace('#',''));
+    X.fillStyle=g2;X.beginPath();X.arc(B.x,B.y,B.r,0,7);X.fill();
+    X.fillStyle='rgba(255,255,255,0.3)';X.beginPath();X.arc(B.x-Math.cos(ang)*5,B.y-Math.sin(ang)*5,B.r*0.3,0,7);X.fill();
+    UI.timer.textContent=fmt(elapsed);UI.score.textContent='SCORE: '+score.toLocaleString();UI.fill.style.width=(A.tr/A.r*100).toFixed(1)+'%'}
+  function onMove(e){const r=C.getBoundingClientRect();P.x=(e.touches?e.touches[0].clientX:e.clientX)-r.left;P.y=(e.touches?e.touches[0].clientY:e.clientY)-r.top}
+  C.addEventListener('mousedown',e=>{onMove(e);P.down=true;if(AC.state==='suspended')AC.resume()});
+  C.addEventListener('mousemove',onMove);
+  C.addEventListener('mouseup',()=>P.down=false);
+  C.addEventListener('mouseleave',()=>P.down=false);
+  C.addEventListener('touchstart',e=>{e.preventDefault();onMove(e);P.down=true;if(AC.state==='suspended')AC.resume()},{passive:false});
+  C.addEventListener('touchmove',e=>{e.preventDefault();onMove(e)},{passive:false});
+  C.addEventListener('touchend',()=>P.down=false);
+  document.getElementById('restartBtn').onclick=spawn;
+  document.getElementById('quitBtn').onclick=()=>{running=false;UI.overlay.classList.remove('active');spawn()}; // quit just restarts for simplicity
+  window.addEventListener('resize',resize);
+  window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(running){running=false;UI.overlay.classList.add('active')}else{spawn()}}});
+  resize();spawn();update();
+  </script>
+</body>
+</html>
