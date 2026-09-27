@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Packet Router: Network Traffic Management Game</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='50%' font-size='60' text-anchor='middle' fill='%232E86AB'%3E📡%3C/text%3E%3C/svg%3E">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); color: #fff; overflow: hidden; }
+    #gameCanvas { display: block; width: 100vw; height: 100vh; background: #0a0a1a; }
+    #hud { position: absolute; top: 10px; left: 10px; right: 10px; pointer-events: none; }
+    #topBar, #sidebar, #bottomBar { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; margin: 5px; }
+    #topBar { display: flex; justify-content: space-between; align-items: center; pointer-events: auto; }
+    #stats { display: flex; gap: 20px; font-size: 14px; }
+    #speedrunTimer { font-size: 24px; font-weight: bold; color: #5AC858; }
+    #nodeInventory, #nodeInspector { position: absolute; top: 60px; width: 200px; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 10px; overflow-y: auto; }
+    #nodeInventory { left: 10px; }
+    #nodeInspector { right: 10px; display: none; }
+    #bottomBar { position: absolute; bottom: 10px; left: 10px; right: 10px; }
+    button { background: linear-gradient(135deg, #2E86AB, #A23B72); border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; color: white; font-size: 14px; }
+    button:hover { transform: scale(1.05); }
+    .node { cursor: move; }
+    .router { width: 40px; height: 40px; background: linear-gradient(135deg, #2E86AB, #A23B72); border-radius: 50% 0 50% 50%; clip-path: polygon(30% 0%, 100% 20%, 100% 80%, 30% 100%, 0% 80%, 0% 20%); }
+    .switch { width: 40px; height: 40px; background: linear-gradient(135deg, #1F6F4A, #5AC858); border-radius: 8px; }
+    .server { width: 50px; height: 30px; background: linear-gradient(135deg, #FF6B35, #F2CC6D); border-radius: 6px; }
+    .device { width: 25px; height: 25px; background: linear-gradient(135deg, #6B7C9C, #4A5568); border-radius: 50%; }
+    .connection { stroke: #888; stroke-width: 2; }
+    .traffic-high { stroke: #FF6B6B; stroke-width: 4; }
+    .traffic-med { stroke: #FFD93D; stroke-width: 3; }
+    .traffic-low { stroke: #6BCB77; stroke-width: 2; }
+    .packet { fill: #fff; font-size: 10px; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="hud">
+    <div id="topBar">
+      <div id="stats">
+        <div>Packets/s: <span id="pkts">0</span></div>
+        <div>Latency: <span id="latency">0</span>ms</div>
+        <div>Packet Loss: <span id="loss">0</span>%</div>
+      </div>
+      <div id="speedrunTimer">⏱️ 00:00</div>
+    </div>
+    <div id="nodeInventory">
+      <h3>Inventory</h3>
+      <button data-type="router">📡 Router</button>
+      <button data-type="switch">🔀 Switch</button>
+      <button data-type="server">🖥️ Server</button>
+      <button data-type="device">📱 Device</button>
+    </div>
+    <div id="nodeInspector">
+      <h3>Node Details</h3>
+      <div id="nodeDetails">Select a node to inspect</div>
+    </div>
+    <div id="bottomBar">
+      <button id="pauseBtn">⏸️ Pause</button>
+      <button id="speedBtn">⚡ Speed: 1x</button>
+      <button id="clearBtn">🗑️ Clear</button>
+    </div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
