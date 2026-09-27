@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Neural Sketch</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0E17;--fg:#E8EAF0;--accent:#00FFAA;--warn:#FF6B35;--ink:#FFFFFF;--panel:rgba(15,20,30,0.85);--border:rgba(0,255,170,0.2)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:'Space Grotesk',sans-serif;overflow:hidden;touch-action:none}
+#game{position:relative;width:100vw;height:100vh;display:flex;flex-direction:column}
+#topBar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--panel);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:14px;z-index:10;flex-wrap:wrap;gap:4px}
+#timer{color:var(--accent);font-size:20px;font-weight:700}
+#timer.warn{color:var(--warn);animation:pulse 0.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+#prompt{font-size:18px;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#canvasWrap{flex:1;position:relative;overflow:hidden;background:#000}
+canvas{position:absolute;top:0;left:0;width:100%;height:100%;touch-action:none}
+#bottomBar{display:flex;gap:8px;padding:8px 12px;background:var(--panel);backdrop-filter:blur(12px);border-top:1px solid var(--border);flex-wrap:wrap;align-items:center;z-index:10}
+.tool-btn{width:40px;height:40px;border:1px solid var(--border);background:transparent;color:var(--fg);border-radius:8px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.tool-btn.active{box-shadow:0 0 8px var(--accent);transform:scale(1.15);border-color:var(--accent)}
+.tool-btn:hover{background:rgba(0,255,170,0.1)}
+input[type=range]{width:80px;accent-color:var(--accent)}
+#guessInput{flex:1;min-width:120px;padding:8px 12px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-family:inherit;font-size:14px;outline:none}
+#guessInput:focus{border-color:var(--accent)}
+#sidePanel{position:absolute;right:8px;top:60px;width:200px;background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:12px;z-index:20;max-height:60vh;overflow-y:auto}
+.player-row{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.score{font-family:'JetBrains Mono',monospace;color:var(--accent);margin-left:auto}
+#aiStatus{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:12px;padding:10px 20px;z-index:20;text-align:center;display:none}
+#aiStatus.show{display:block}
+.conf-bar{width:200px;height:8px;background:rgba(255,255,255,0.1);border-radius:4px;margin-top:6px;overflow:hidden}
+.conf-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--warn));transition:width 0.3s}
+#resultsModal{position:absolute;inset:0;background:rgba(0,0,0,0.8);display:none;z-index:100;align-items:center;justify-content:center;flex-direction:column;gap:20px}
+#resultsModal.show{display:flex}
+#resultsModal h2{font-size:32px;color:var(--accent)}
+#highScore{font-family:'JetBrains Mono',monospace;color:var(--warn);font-size:24px}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--accent);padding:10px 20px;border-radius:8px;z-index:50;animation:fadeInUp 0.3s;font-size:14px}
+@keyframes fadeInUp{from{opacity:0;transform:translateX(-50%) translateY(20px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+#lobby{position:absolute;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+#lobby h1{font-size:48px;background:linear-gradient(135deg,var(--accent),var(--warn));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#lobby input{padding:12px 20px;background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-size:16px;width:300px;text-align:center}
+#lobby button{padding:12px 40px;background:var(--accent);color:var(--bg);border:none;border-radius:8px;font-size:18px;font-weight:700;cursor:pointer;transition:all 0.2s}
+#lobby button:hover{transform:scale(1.05);box-shadow:0 0 20px var(--accent)}
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="topBar">
+    <span id="roundInfo">Round 1/8</span>
+    <span id="prompt">?????</span>
+    <span id="timer">01:30</span>
+  </div>
+  <div id="canvasWrap">
+    <canvas id="canvas"></canvas>
+    <div id="aiStatus"><div id="aiText">Analyzing...</div><div class="conf-bar"><div class="conf-fill" id="confFill" style="width:0%"></div></div></div>
+    <div id="sidePanel"></div>
+  </div>
+  <div id="bottomBar">
+    <button class="tool-btn active" data-tool="ink" title="Ink">🖌️</button>
+    <button class="tool-btn" data-tool="eraser" title="Eraser">🧽</button>
+    <input type="range" id="sizeSlider" min="2" max="40" value="12">
+    <input type="text" id="guessInput" placeholder="Type your guess..." autocomplete="off">
+    <button class="tool-btn" id="sendBtn" title="Send">➤</button>
+  </div>
+  <div id="resultsModal"><h2>Round Complete!</h2><div id="scoreBreak"></div><div id="highScore">High Score: 0</div><button onclick="startRound()">Next Round</button></div>
+  <div id="lobby"><h1>NEURAL SKETCH</h1><input id="nameInput" placeholder="Enter your name"><button onclick="startGame()">Start Game</button></div>
+</div>
+<script>
+// Audio context for sound effects
+const AudioCtx=window.AudioContext||window.webkitAudioContext;
+let audio;
+function initAudio(){if(!audio)audio=new AudioCtx();}
+function playSound(freq,dur,type='sine',vol=0.1){if(!audio)return;const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.value=freq;g.gain.value=vol;g.gain.exponentialRampToValueAtTime(0.001,audio.currentTime+dur);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+dur);}
+
+// Game state
+const CFG={roundTime:90,maxRounds:8,targetScore:15};
+let state={phase:'LOBBY',round:1,score:0,highScore:0,prompt:'',drawer:true,players:[],strokes:[],guesses:[],aiConf:0,aiGuess:'',timer:CFG.roundTime};
+state.highScore=parseInt(localStorage.getItem('ns_high')||'0');
+
+// Canvas setup
+const canvas=document.getElementById('canvas');
+const ctx=canvas.getContext('2d');
+let W,H,dpr;
+function resize(){dpr=Math.min(window.devicePixelRatio,2);W=window.innerWidth;H=window.innerHeight-120;canvas.width=W*dpr;canvas.height=H*dpr;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.scale(dpr,dpr);}
+resize();
+window.addEventListener('resize',resize);
+
+// Offscreen cache
+const offC=document.createElement('canvas');
+const offCtx=offC.getContext('2d');
+
+// Prompt list
+const PROMPTS=['Cat','Dog','House','Car','Tree','Rocket','Guitar','Pizza','Dragon','Castle','Sun','Moon','Fish','Bird','Flower','Mountain','Ship','Airplane','Robot','Lightning'];
+
+// Players
+const NAMES=['You','Alice','Bob','Charlie','Diana'];
+function initPlayers(){
+  state.players=NAMES.map((n,i)=>({name:n,score:0,streak:0,role:i===0?'drawer':'guesser',avatar:'🎨',isAI:i>2}));
+}
+
+// Kalman filter (1D simplified)
+class Kalman{constructor(){this.x=0;this.p=1;this.q=0.001;this.r=0.1}}
+Kalman.prototype.update=function(z){
+  this.p+=this.q;
+  const k=this.p/(this.p+this.r);
+  this.x+=k*(z-this.x);
+  this.p*=(1-k);
+  return this.x;
+};
+
+// Stroke smoothing - Catmull-Rom
+function catmullRom(p0,p1,p2,p3,t){const t2=t*t,t3=t2*t;return{ x:0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3), y:0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3)};}
+
+// Input
+let drawing=false,pts=[],kalX=new Kalman(),kalY=new Kalman(),tool='ink',brushSize=12,lastT=0;
+function getPos(e){const r=canvas.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top}};
+function pressure(e){if(e.touches&&e.touches[0].force)return e.touches[0].force;if(e.pressure&&e.pressure>0)return e.pressure;if(drawing&&pts.length>1){const dx=pts[pts.length-1].x-pts[pts.length-2].x,dy=pts[pts.length-1].y-pts[pts.length-2].y;const spd=Math.hypot(dx,dy);return Math.max(0.2,Math.min(1,1-spd/20));}return 0.8;}
+
+canvas.addEventListener('pointerdown',e=>{initAudio();drawing=true;pts=[getPos(e)];kalX=new Kalman();kalY=new Kalman();kalX.update(pts[0].x);kalY.update(pts[0].y);playSound(440,0.05,'sine',0.05);});
+canvas.addEventListener('pointermove',e=>{if(!drawing)return;const raw=getPos(e);const p=pressure(e);const pt={x:kalX.update(raw.x),y:kalY.update(raw.y),p};
+  pts.push(pt);if(pts.length>=8){// Catmull-Rom subdivide
+    const buf=pts.slice(-8);const out=[];
+    for(let i=0;i<buf.length-3;i++){for(let t=0;t<1;t+=0.25){out.push(catmullRom(buf[i],buf[i+1],buf[i+2],buf[i+3],t));}}
+    renderStroke(out,tool,brushSize*p);
+    pts=[pts[pts.length-1]];}
+});
+canvas.addEventListener('pointerup',e=>{if(!drawing)return;drawing=false;if(pts.length>1)renderStroke(pts,tool,brushSize*0.8);pts=[];playSound(220,0.1,'triangle',0.08);spawnParticles(e);});
+
+function renderStroke(pts,tool,size){
+  if(pts.length<2)return;
+  ctx.save();
+  if(tool==='eraser'){ctx.globalCompositeOperation='destination-out';ctx.strokeStyle='rgba(0,0,0,1)';}
+  else{ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.shadowBlur=10;ctx.shadowColor='rgba(0,255,170,0.5)'}
+  ctx.lineWidth=Math.max(1,size);
+  ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
+  ctx.stroke();ctx.restore();
+  // Save stroke
+  state.strokes.push({pts:pts.map(p=>({x:p.x,y:p.y})),tool,size,time:Date.now()});
+}
+
+// Particles
+let particles=[];
+function spawnParticles(e){const r=canvas.getBoundingClientRect();const x=e.clientX-r.left,y=e.clientY-r.top;
+  for(let i=0;i<5;i++){particles.push({x,y,vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4,life:400,color:'#00FFAA',size:Math.random()*4+2});}}
+function updateParticles(dt){for(let i=particles.length-1;i>=0;i--){const p=particles[i];p.x+=p.vx*dt/16;p.y+=p.vy*dt/16;p.life-=dt;p.size*=0.97;if(p.life<=0)particles.splice(i,1);}}
+function drawParticles(){particles.forEach(p=>{ctx.save();ctx.globalAlpha=p.life/400;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();ctx.restore();});}
+
+// AI Inference simulation
+let aiTimer=0,aiConf=0;
+function aiTick(dt){
+  if(!state.drawer||state.phase!=='DRAWING')return;
+  aiTimer+=dt;
+  if(aiTimer>500){// 2 FPS
+    aiTimer=0;
+    // Simulate AI confidence
+    const match=state.prompt.toLowerCase();
+    const strokes=state.strokes.length;
+    aiConf=Math.min(1,aiConf+Math.random()*0.15-0.05+(strokes>20?0.1:0));
+    aiConf=Math.max(0.05,Math.min(0.99,aiConf));
+    const labels=['Cat','Dog','House','Car','Tree','Rocket','Guitar','Pizza','Dragon','Castle'];
+    const top=labels.sort((a,b)=>Math.random()-Math.random()).slice(0,3);
+    document.getElementById('aiText').textContent=aiConf>0.85?`It's a ${match}!`:
+      aiConf>0.5?`Looking like ${top[0]}... maybe?`:
+      aiConf>0.2?`${top[0]}? ${top[1]}? I'm confused.`:'...';
+    document.getElementById('confFill').style.width=(aiConf*100)+'%';
+    document.getElementById('aiStatus').classList.add('show');
+    // AI guess
+    if(aiConf>0.92&&!state.aiGuess){state.aiGuess=match;playSound(880,0.2,'sine',0.1);
+      addToast('AI says: '+match);if(match.toLowerCase()===state.prompt.toLowerCase()){state.score+=75;playSound(660,0.3,'square',0.1);}}
+  }
+}
+
+// Timer
+let roundStart=0;
+function updateTimer(dt){
+  if(state.phase!=='DRAWING')return;
+  state.timer-=dt/1000;
+  if(state.timer<=0){state.timer=0;endRound();}
+  const m=Math.floor(state.timer/60),s=Math.floor(state.timer%60);
+  const el=document.getElementById('timer');
+  el.textContent=`${m}:${s.toString().padStart(2,'0')}`;
+  el.className=state.timer<20?'warn':'';
+}
+
+// Scoring
+function checkGuess(text){
+  if(state.phase!=='DRAWING')return;
+  text=text.trim().toLowerCase();
+  const prompt=state.prompt.toLowerCase();
+  let pts=0,status='wrong';
+  if(text===prompt){pts=100;status='correct';state.score+=100;playSound(523,0.15,'sine',0.1);playSound(659,0.15,'sine',0.1);}
+  else if(prompt.includes(text)||text.includes(prompt)||levenshtein(text,prompt)<3){pts=50;status='partial';state.score+=50;}
+  state.guesses.push({text,pts,status,time:CFG.roundTime-state.timer});
+  playSound(440,0.1,'triangle',0.08);
+  addToast(`${status.toUpperCase()}: ${text} (+${pts})`);
+  document.getElementById('guessInput').value='';
+  // Reveal prompt on correct
+  if(status==='correct'){document.getElementById('prompt').textContent=state.prompt;}
+}
+
+function levenshtein(a,b){const m=a.length,n=b.length;const dp=Array(m+1).fill(null).map(()=>Array(n+1).fill(0));
+  for(let i=0;i<=m;i++)dp[i][0]=i;for(let j=0;j<=n;j++)dp[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+(a[i-1]!==b[j-1]?1:0));
+  return dp[m][n];}
+
+function endRound(){
+  state.phase='ROUND_END';
+  document.getElementById('aiStatus').classList.remove('show');
+  const modal=document.getElementById('resultsModal');
+  document.getElementById('scoreBreak').innerHTML=`Round score: ${state.score}<br>AI confidence: ${(aiConf*100).toFixed(0)}%`;
+  modal.classList.add('show');
+  if(state.score>state.highScore){state.highScore=state.score;localStorage.setItem('ns_high',state.highScore);}
+  document.getElementById('highScore').textContent='High Score: '+state.highScore;
+}
+
+function startRound(){
+  state.phase='DRAWING';state.timer=CFG.roundTime;state.strokes=[];state.guesses=[];state.aiGuess='';aiConf=0;aiTimer=0;
+  state.prompt=PROMPTS[Math.floor(Math.random()*PROMPTS.length)];
+  document.getElementById('prompt').textContent=state.drawer?state.prompt:'?????';
+  document.getElementById('roundInfo').textContent=`Round ${state.round}/${CFG.maxRounds}`;
+  document.getElementById('resultsModal').classList.remove('show');
+  // Clear canvas
+  ctx.clearRect(0,0,W,H);
+  offCtx.clearRect(0,0,W,H);
+}
+
+function startGame(){
+  initAudio();
+  const name=document.getElementById('nameInput').value.trim()||'Player';
+  state.players[0].name=name;
+  document.getElementById('lobby').style.display='none';
+  initPlayers();updateSidePanel();startRound();
+}
+
+function updateSidePanel(){
+  const panel=document.getElementById('sidePanel');
+  panel.innerHTML=state.players.map(p=>`<div class="player-row"><span>${p.avatar} ${p.name}</span><span class="score">${p.score}</span></div>`).join('');
+}
+
+function addToast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),2000);}
+
+// Guess input
+const guessInput=document.getElementById('guessInput');
+guessInput.addEventListener('keydown',e=>{if(e.key==='Enter')checkGuess(guessInput.value);});
+document.getElementById('sendBtn').addEventListener('click',()=>checkGuess(guessInput.value));
+
+// Tools
+document.querySelectorAll('.tool-btn[data-tool]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tool-btn[data-tool]').forEach(x=>x.classList.remove('active'));b.classList.add('active');tool=b.dataset.tool;}));
+document.getElementById('sizeSlider').addEventListener('input',e=>{brushSize=parseInt(e.target.value);});
+
+// Main loop
+let lastTime=0;
+function loop(ts){
+  const dt=Math.min(ts-lastTime,50);lastTime=ts;
+  if(state.phase==='DRAWING'){updateTimer(dt);aiTick(dt);}
+  updateParticles(dt);
+  // Redraw
+  ctx.clearRect(0,0,W,H);
+  drawParticles();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// Keyboard
+document.addEventListener('keydown',e=>{if(e.key==='z'&&e.ctrlKey){e.preventDefault();state.strokes=[];ctx.clearRect(0,0,W,H);}if(e.key===' '&&state.phase==='LOBBY')startGame();});
+</script>
+</body>
+</html>
