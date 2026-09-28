@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Block Protocol: Pressure Shift</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>" />
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',monospace;background:#0d0221;color:#fff}
+    #game{position:relative;width:100vw;height:100vh;display:block}
+    canvas{display:block;width:100%;height:100%;image-rendering pixelated}
+    .hud{position:absolute;top:0;left:0;width:100%;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;font-size:18px;z-index:10}
+    .hud .left,..hud .right{display:flex;align-items:center;gap:15px}
+    .btn{background:#222;color:#fff;border:2px solid #0ff;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;transition:all .2s}
+    .btn:hover{transform:scale(1.1);border-color:#ff0}
+    .modal{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;justify-content:center;align-items:center;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);z-index:20}
+    .modal.active{display:flex}
+    .card{background:rgba(255,255,255,.1);border:1px solid #fff;padding:30px;border-radius:15px;text-align:center;backdrop-filter:blur(10px)}
+    .timer{color:#0ff;font-weight:bold}
+  </style>
+</head>
+<body>
+  <div id="game">
+    <canvas id="canvas"></canvas>
+    <div class="hud">
+      <div class="left"><span id="level">LEVEL 1</span><span id="moves">MOVES: 0</span><span class="timer">TIME: <span id="timer">0.00</span></span></div>
+      <div class="right">
+        <button class="btn" id="reset">↺</button>
+        <button class="btn" id="pause">⏸</button>
+      </div>
+    </div>
+    <div class="modal" id="pauseModal">
+      <div class="card">
+        <h2>PAUSED</h2>
+        <button class="btn" id="resume" style="margin-top:20px">▶</button>
+      </div>
+    </div>
+    <div class="modal" id="completeModal">
+      <div class="card">
+        <h2 id="completeTitle">LEVEL COMPLETE</h2>
+        <p id="completeMoves"></p>
+        <button class="btn" id="nextLevel" style="margin-top:20px">▶</button>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

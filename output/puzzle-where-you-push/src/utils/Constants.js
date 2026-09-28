@@ -1,0 +1,1 @@
+export const CELL_SIZE=64;export const GRID_COLS=10;export const GRID_ROWS=10;export const MOVE_DURATION=120;export const COLORS={bg:'#0d0221',player:'#00ffff',block:'#00ffff',plate:'#00ff00',wall:'#333'}
