@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Electric Circuit Puzzle</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0f; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+    #game-container { position: relative; width: 100%; max-width: 800px; aspect-ratio: 4/3; touch-action: none; }
+    canvas { display: block; width: 100%; height: 100%; background: #1a1a1a; border: 2px solid #fff; border-radius: 4px; }
+    #hud { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; z-index: 10; }
+    .hud-panel { background: rgba(10,10,20,0.9); border: 1px solid #00b4d8; border-radius: 8px; padding: 8px 16px; color: #00f5ff; font-size: 14px; font-weight: 600; text-shadow: 0 0 8px #00b4d8; backdrop-filter: blur(4px); }
+    .hud-panel .label { color: #889; margin-right: 6px; }
+    .hud-panel .value { color: #00ffaa; }
+    #timer { font-family: 'Courier New', monospace; font-size: 18px; }
+    #progress-bar { position: absolute; bottom: 0; left: 0; right: 0; height: 6px; background: #111; border-top: 1px solid #333; overflow: hidden; }
+    #progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #00b4d8, #00ffaa, #ffd700); transition: width 0.3s ease; box-shadow: 0 0 10px #00ffaa; }
+    #message { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #00ffaa; font-size: 24px; font-weight: bold; text-shadow: 0 0 20px #00b4d8; opacity: 0; transition: opacity 0.3s; pointer-events: none; text-align: center; max-width: 90%; }
+    #message.show { opacity: 1; }
+    #message.error { color: #ff4444; text-shadow: 0 0 20px #ff0000; }
+    #message.success { color: #ffd700; text-shadow: 0 0 20px #ffaa00; }
+    .controls-hint { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: #556; font-size: 12px; text-align: center; pointer-events: none; }
+    @media (max-width: 600px) { .hud-panel { padding: 6px 10px; font-size: 12px; } #timer { font-size: 14px; } }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="canvas"></canvas>
+    <div id="hud">
+      <div class="hud-panel"><span class="label">⚡</span><span class="value" id="power">85%</span></div>
+      <div class="hud-panel" id="timer"><span class="label">⏱</span><span class="value" id="time">60.0s</span></div>
+      <div class="hud-panel"><span class="label">💡</span><span class="value" id="lights">0/12</span></div>
+    </div>
+    <div id="progress-bar"><div id="progress-fill"></div></div>
+    <div id="message"></div>
+    <div class="controls-hint">WASD/Arrows: Move | Space: Power Mode | Right-Click: Place Wire | Drag: Curve Wire</div>
+  </div>
+  <script>
+    // ===== GAME CONSTANTS & CONFIG =====
+    const CANVAS_W = 800, CANVAS_H = 600;
+    const COLORS = {
+      bg: '#1a1a1a', floor: '#252525', wall: '#fff', grid: '#2a2a2a',
+      wireLive: '#00b4d8', wireDead: '#555', wirePlace: '#00ffaa',
+      player: '#00f5ff', playerRing: '#00b4d8',
+      source: '#ffd700', sourceActive: '#ffaa00',
+      lightOff: '#333', lightOn: '#fff8cc', lightGlow: '#ffd700', lightBroken: '#ff4444',
+      text: '#00ffaa', textDim: '#556', error: '#ff4444', success: '#ffd700',
+      progress: ['#00b4d8', '#00ffaa', '#ffd700']
+    };
+    const MAX_SPEED = 6, ACCEL = 0.4, FRICTION = 0.85;
+    const WIRE_MAX_LEN = 120, WIRE_WIDTH = 3, WIRE_ACTIVATE_MS = 200;
+    const MAX_WIRES = 10, LIGHT_THRESHOLD = 0.2;
+    const SOURCES = [
+      {x: 40, y: 100, cap: 50, type: 'outlet'},
+      {x: 40, y: 250, cap: 50, type: 'outlet'},
+      {x: 40, y: 400, cap: 50, type: 'outlet'},
+      {x: 40, y: 550, cap: 50, type: 'outlet'},
+      {x: 350, y: 40, cap: 100, type: 'panel'},
+      {x: 650, y: 40, cap: 100, type: 'panel'},
+      {x: 760, y: 500, cap: 30, type: 'battery'}
+    ];
+    const LIGHTS = [
+      {x: 200, y: 150}, {x: 400, y: 120}, {x: 600, y: 180},
+      {x: 150, y: 300}, {x: 400, y: 300}, {x: 650, y: 320},
+      {x: 250, y: 450}, {x: 500, y: 480}, {x: 700, y: 450},
+      {x: 100, y: 520}, {x: 350, y: 550}, {x: 600, y: 550}
+    ];
+    const LEVEL_TIME = 60000;
+    
+    // ===== AUDIO ENGINE =====
+    class AudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.enabled = false;
+      }
+      init() {
+        if (this.ctx) return;
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.value = 0.3;
+        this.masterGain.connect(this.ctx.destination);
+        this.enabled = true;
+        this.startAmbient();
+      }
+      startAmbient() {
+        if (!this.enabled) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = 55;
+        gain.gain.value = 0.02;
+        osc.connect(gain).connect(this.masterGain);
+        osc.start();
+        this.ambientOsc = osc;
+        this.ambientGain = gain;
+      }
+      playTone(freq, dur, type='sine', vol=0.1) {
+        if (!this.enabled) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.value = vol;
+        osc.connect(gain).connect(this.masterGain);
+        const now = this.ctx.currentTime;
+        gain.gain.setValueAtTime(vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+        osc.start(now);
+        osc.stop(now + dur);
+      }
+      click() { this.playTone(800, 0.05, 'square', 0.05); }
+      success() { [523, 659, 784].forEach((f,i)=>setTimeout(()=>this.playTone(f,0.15,'sine',0.08),i*80)); }
+      error() { this.playTone(200, 0.2, 'sawtooth', 0.08); }
+      wirePlace() { this.playTone(440, 0.1, 'triangle', 0.06); }
+      powerUp() { this.playTone(330, 0.3, 'sine', 0.1); }
+      complete() { [523, 659, 784, 1047].forEach((f,i)=>setTimeout(()=>this.playTone(f,0.2,'sine',0.1),i*100)); }
+    }
+    const audio = new AudioEngine();
+    
+    // ===== VECTOR MATH =====
+    const Vec = {
+      add: (a,b)=>({x:a.x+b.x, y:a.y+b.y}),
+      sub: (a,b)=>({x:a.x-b.x, y:a.y-b.y}),
+      mul: (a,s)=>({x:a.x*s, y:a.y*s}),
+      len: a=>Math.hypot(a.x,a.y),
+      norm: a=>{const l=Vec.len(a); return l?{x:a.x/l,y:a.y/l}:{x:0,y:0};},
+      dist: (a,b)=>Vec.len(Vec.sub(a,b)),
+      dot: (a,b)=>a.x*b.x+a.y*b.y,
+      cross: (a,b)=>a.x*b.y-a.y*b.x,
+      lerp: (a,b,t)=>({x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t})
+    };
+    
+    // ===== WIRE SYSTEM =====
+    class Wire {
+      constructor(p1, p2, curved=false) {
+        this.p1 = {...p1}; this.p2 = {...p2};
+        this.curved = curved;
+        this.active = false;
+        this.placeTime = 0;
+        this.broken = false;
+      }
+      get mid() { return Vec.lerp(this.p1, this.p2, 0.5); }
+      get length() { return Vec.dist(this.p1, this.p2); }
+      intersects(other) {
+        if (this === other) return false;
+        const p1=this.p1, p2=this.p2, p3=other.p1, p4=other.p2;
+        const d1 = Vec.cross(Vec.sub(p4,p3), Vec.sub(p1,p3));
+        const d2 = Vec.cross(Vec.sub(p4,p3), Vec.sub(p2,p3));
+        const d3 = Vec.cross(Vec.sub(p2,p1), Vec.sub(p3,p1));
+        const d4 = Vec.cross(Vec.sub(p2,p1), Vec.sub(p4,p1));
+        return (d1*d2 < 0) && (d3*d4 < 0);
+      }
+      pointOnWire(pt, threshold=4) {
+        const v = Vec.sub(this.p2, this.p1);
+        const w = Vec.sub(pt, this.p1);
+        const c1 = Vec.dot(w, v);
+        if (c1 <= 0) return Vec.dist(pt, this.p1) < threshold;
+        const c2 = Vec.dot(v, v);
+        if (c2 <= c1) return Vec.dist(pt, this.p2) < threshold;
+        const b = c1 / c2;
+        const pb = {x: this.p1.x + b*v.x, y: this.p1.y + b*v.y};
+        return Vec.dist(pt, pb) < threshold;
+      }
+      draw(ctx, powered) {
+        ctx.beginPath();
+        ctx.moveTo(this.p1.x, this.p1.y);
+        if (this.curved) {
+          const mid = this.mid;
+          const perp = Vec.norm({x: -(this.p2.y-this.p1.y), y: this.p2.x-this.p1.x});
+          const ctrl = {x: mid.x + perp.x * 30, y: mid.y + perp.y * 30};
+          ctx.quadraticCurveTo(ctrl.x, ctrl.y, this.p2.x, this.p2.y);
+        } else {
+          ctx.lineTo(this.p2.x, this.p2.y);
+        }
+        ctx.lineWidth = WIRE_WIDTH;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = this.broken ? COLORS.wireDead : (powered ? COLORS.wireLive : COLORS.wireDead);
+        ctx.shadowColor = powered ? COLORS.wireLive : 'transparent';
+        ctx.shadowBlur = powered ? 8 : 0;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        if (!this.active && Date.now() - this.placeTime < WIRE_ACTIVATE_MS) {
+          ctx.strokeStyle = COLORS.wirePlace;
+          ctx.globalAlpha = 0.5 + 0.5*Math.sin(Date.now()/50);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+    
+    // ===== PLAYER =====
+    class Player {
+      constructor() { this.reset(); }
+      reset() {
+        this.pos = {x: 100, y: 300};
+        this.vel = {x: 0, y: 0};
+        this.powerMode = false;
+        this.wireStart = null;
+        this.curving = false;
+      }
+      update(input, dt) {
+        let ax = 0, ay = 0;
+        if (input.left) ax -= 1;
+        if (input.right) ax += 1;
+        if (input.up) ay -= 1;
+        if (input.down) ay += 1;
+        if (ax !== 0 && ay !== 0) { ax *= 0.707; ay *= 0.707; }
+        this.vel.x = this.vel.x * FRICTION + ax * ACCEL;
+        this.vel.y = this.vel.y * FRICTION + ay * ACCEL;
+        const spd = Vec.len(this.vel);
+        if (spd > MAX_SPEED) { this.vel.x *= MAX_SPEED/spd; this.vel.y *= MAX_SPEED/spd; }
+        this.pos.x = Math.max(20, Math.min(CANVAS_W-20, this.pos.x + this.vel.x));
+        this.pos.y = Math.max(20, Math.min(CANVAS_H-20, this.pos.y + this.vel.y));
+      }
+      draw(ctx) {
+        if (this.powerMode) {
+          const pulse = 10 + 5*Math.sin(Date.now()/200);
+          ctx.beginPath();
+          ctx.arc(this.pos.x, this.pos.y, pulse, 0, Math.PI*2);
+          ctx.strokeStyle = COLORS.playerRing;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.5;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, 12, 0, Math.PI*2);
+        ctx.fillStyle = COLORS.player;
+        ctx.shadowColor = COLORS.player;
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, 6, 0, Math.PI*2);
+        ctx.fillStyle = '#003';
+        ctx.fill();
+      }
+    }
+    
+    // ===== CIRCUIT SIMULATION =====
+    class Circuit {
+      constructor() {
+        this.wires = [];
+        this.sources = SOURCES.map(s=>({...s, active: false, power: s.cap}));
+        this.lights = LIGHTS.map((l,i)=>({...l, id: i, state: 'off', powered: false}));
+        this.batteryPower = 85;
+        this.graph = new Map();
+      }
+      addWire(wire) { this.wires.push(wire); }
+      removeWire(i) { this.wires.splice(i,1); }
+      buildGraph() {
+        this.graph.clear();
+        const nodes = [];
+        const addNode = (pt) => {
+          for (const n of nodes) if (Vec.dist(n, pt) < 8) return n;
+          nodes.push(pt);
+          return pt;
+        };
+        this.sources.forEach(s => addNode({x:s.x, y:s.y}));
+        this.lights.forEach(l => addNode({x:l.x, y:l.y}));
+        this.wires.forEach(w => {
+          if (w.broken) return;
+          const n1 = addNode(w.p1);
+          const n2 = addNode(w.p2);
+          if (!this.graph.has(n1)) this.graph.set(n1, []);
+          if (!this.graph.has(n2)) this.graph.set(n2, []);
+          this.graph.get(n1).push(n2);
+          this.graph.get(n2).push(n1);
+        });
+        return nodes;
+      }
+      findPaths() {
+        const nodes = this.buildGraph();
+        const sourceNodes = this.sources.filter(s=>s.active).map(s=>({x:s.x, y:s.y}));
+        const powered = new Set();
+        const queue = [...sourceNodes];
+        sourceNodes.forEach(n => powered.add(`${n.x},${n.y}`));
+        while (queue.length) {
+          const cur = queue.shift();
+          const key = `${cur.x},${cur.y}`;
+          const neighbors = this.graph.get(cur) || [];
+          for (const n of neighbors) {
+            const nkey = `${n.x},${n.y}`;
+            if (!powered.has(nkey)) {
+              powered.add(nkey);
+              queue.push(n);
+            }
+          }
+        }
+        return powered;
+      }
+      simulate() {
+        const powered = this.findPaths();
+        let lightsOn = 0;
+        this.lights.forEach(l => {
+          const key = `${l.x},${l.y}`;
+          l.powered = powered.has(key);
+          if (l.powered && l.state !== 'broken') {
+            l.state = 'on';
+            lightsOn++;
+          } else if (!l.powered && l.state === 'on') {
+            l.state = 'off';
+          }
+        });
+        const activeSources = this.sources.filter(s=>s.active).length;
+        if (lightsOn > 4 && activeSources > 0) {
+          this.batteryPower = Math.max(0, this.batteryPower - 0.05);
+          if (this.batteryPower <= 0) {
+            this.lights.forEach(l => { if (l.state === 'on') l.state = 'broken'; });
+          }
+        } else {
+          this.batteryPower = Math.min(85, this.batteryPower + 0.02);
+        }
+        this.wires.forEach(w => {
+          const p1k = `${w.p1.x},${w.p1.y}`, p2k = `${w.p2.x},${w.p2.y}`;
+          w.active = powered.has(p1k) && powered.has(p2k);
+          if (!w.active && w.placeTime > 0 && Date.now() - w.placeTime > WIRE_ACTIVATE_MS) {
+            w.broken = true;
+          }
+        });
+        return lightsOn;
+      }
+      checkShorts(newWire) {
+        for (const w of this.wires) {
+          if (w.broken) continue;
+          if (newWire.intersects(w)) return true;
+        }
+        return false;
+      }
+      activateSourceAt(pt) {
+        for (const s of this.sources) {
+          if (Vec.dist(s, pt) < 20 && !s.active) {
+            s.active = true;
+            audio.powerUp();
+            return true;
+          }
+        }
+        return false;
+      }
+      getLightCount() { return this.lights.filter(l=>l.state==='on').length; }
+      getTotalLights() { return this.lights.length; }
+      allLit() { return this.lights.every(l=>l.state==='on'); }
+    }
+    
+    // ===== UI =====
+    class UI {
+      constructor() {
+        this.messageEl = document.getElementById('message');
+        this.progressFill = document.getElementById('progress-fill');
+        this.powerEl = document.getElementById('power');
+        this.timeEl = document.getElementById('time');
+        this.lightsEl = document.getElementById('lights');
+        this.highScore = parseInt(localStorage.getItem('circuit_highscore') || '0');
+      }
+      showMessage(text, type='') {
+        this.messageEl.textContent = text;
+        this.messageEl.className = 'show ' + type;
+        clearTimeout(this.msgTimer);
+        this.msgTimer = setTimeout(()=>this.messageEl.classList.remove('show'), 2000);
+      }
+      update(circuit, timeLeft) {
+        this.powerEl.textContent = Math.round(circuit.batteryPower) + '%';
+        this.timeEl.textContent = (timeLeft/1000).toFixed(1) + 's';
+        const lit = circuit.getLightCount();
+        this.lightsEl.textContent = lit + '/' + circuit.getTotalLights();
+        this.progressFill.style.width = (lit / circuit.getTotalLights() * 100) + '%';
+      }
+      setHighScore(score) {
+        if (score > this.highScore) {
+          this.highScore = score;
+          localStorage.setItem('circuit_highscore', score.toString());
+        }
+      }
+      getHighScore() { return this.highScore; }
+    }
+    
+    // ===== MAIN GAME =====
+    class Game {
+      constructor() {
+        this.canvas = document.getElementById('canvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.resize();
+        window.addEventListener('resize', ()=>this.resize());
+        
+        this.input = {left:false,right:false,up:false,down:false,space:false,rightClick:false,mouse:{x:0,y:0}};
+        this.setupInput();
+        
+        this.player = new Player();
+        this.circuit = new Circuit();
+        this.ui = new UI();
+        
+        this.running = true;
+        this.timeLeft = LEVEL_TIME;
+        this.lastTime = 0;
+        this.wirePreview = null;
+        this.placingWire = false;
+        
+        this.canvas.addEventListener('contextmenu', e=>e.preventDefault());
+        
+        requestAnimationFrame(t=>this.loop(t));
+      }
+      resize() {
+        const container = document.getElementById('game-container');
+        const rect = container.getBoundingClientRect();
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
+        this.scaleX = this.canvas.width / CANVAS_W;
+        this.scaleY = this.canvas.height / CANVAS_H;
+      }
+      screenToWorld(x, y) {
+        return {x: x / this.scaleX, y: y / this.scaleY};
+      }
+      setupInput() {
+        window.addEventListener('keydown', e=>{
+          if (e.code==='KeyW'||e.code==='ArrowUp') this.input.up=true;
+          if (e.code==='KeyS'||e.code==='ArrowDown') this.input.down=true;
+          if (e.code==='KeyA'||e.code==='ArrowLeft') this.input.left=true;
+          if (e.code==='KeyD'||e.code==='ArrowRight') this.input.right=true;
+          if (e.code==='Space') { e.preventDefault(); this.input.space=true; }
+        });
+        window.addEventListener('keyup', e=>{
+          if (e.code==='KeyW'||e.code==='ArrowUp') this.input.up=false;
+          if (e.code==='KeyS'||e.code==='ArrowDown') this.input.down=false;
+          if (e.code==='KeyA'||e.code==='ArrowLeft') this.input.left=false;
+          if (e.code==='KeyD'||e.code==='ArrowRight') this.input.right=false;
+          if (e.code==='Space') this.input.space=false;
+        });
+        this.canvas.addEventListener('mousedown', e=>{
+          if (e.button===2) {
+            this.input.rightClick=true;
+            const pt = this.screenToWorld(e.offsetX, e.offsetY);
+            this.handleRightClick(pt);
+          }
+        });
+        this.canvas.addEventListener('mousemove', e=>{
+          this.input.mouse = this.screenToWorld(e.offsetX, e.offsetY);
+          if (this.placingWire && this.wirePreview) {
+            this.wirePreview.p2 = {...this.input.mouse};
+          }
+        });
+        this.canvas.addEventListener('mouseup', e=>{
+          if (e.button===2 && this.placingWire) {
+            this.finishWire();
+          }
+          this.input.rightClick=false;
+        });
+        this.canvas.addEventListener('touchstart', e=>{
+          e.preventDefault();
+          const t = e.touches[0];
+          const pt = this.screenToWorld(t.clientX - this.canvas.getBoundingClientRect().left, t.clientY - this.canvas.getBoundingClientRect().top);
+          this.handleRightClick(pt);
+        }, {passive:false});
+        this.canvas.addEventListener('touchmove', e=>{
+          e.preventDefault();
+          const t = e.touches[0];
+          this.input.mouse = this.screenToWorld(t.clientX - this.canvas.getBoundingClientRect().left, t.clientY - this.canvas.getBoundingClientRect().top);
+          if (this.placingWire && this.wirePreview) {
+            this.wirePreview.p2 = {...this.input.mouse};
+          }
+        }, {passive:false});
+        this.canvas.addEventListener('touchend', e=>{
+          if (this.placingWire) this.finishWire();
+        });
+      }
+      handleRightClick(pt) {
+        if (!this.player.powerMode) {
+          if (this.circuit.activateSourceAt(pt)) {
+            this.ui.showMessage('Power Source Activated!', 'success');
+          }
+          return;
+        }
+        if (this.circuit.wires.length >= MAX_WIRES) {
+          this.ui.showMessage('Max wires reached!', 'error');
+          audio.error();
+          return;
+        }
+        const nearPlayer = Vec.dist(pt, this.player.pos) < 30;
+        const nearLight = this.circuit.lights.some(l => Vec.dist(l, pt) < 20 && l.state !== 'on');
+        const nearSource = this.circuit.sources.some(s => Vec.dist(s, pt) < 20 && s.active);
+        const nearWire = this.circuit.wires.some(w => !w.broken && w.pointOnWire(pt));
+        if (!nearPlayer && !nearLight && !nearSource && !nearWire) {
+          this.ui.showMessage('Connect to player, light, source, or wire!', 'error');
+          audio.error();
+          return;
+        }
+        this.wirePreview = new Wire(this.player.pos, pt);
+        this.placingWire = true;
+      }
+      finishWire() {
+        if (!this.wirePreview) return;
+        const w = this.wirePreview;
+        if (w.length > WIRE_MAX_LEN) {
+          this.ui.showMessage('Wire too long!', 'error');
+          audio.error();
+        } else if (this.circuit.checkShorts(w)) {
+          this.ui.showMessage('Short circuit detected!', 'error');
+          audio.error();
+        } else {
+          w.placeTime = Date.now();
+          this.circuit.addWire(w);
+          audio.wirePlace();
+          this.ui.showMessage('Wire placed!', 'success');
+        }
+        this.wirePreview = null;
+        this.placingWire = false;
+      }
+      loop(time) {
+        if (!this.running) return;
+        const dt = Math.min(32, time - this.lastTime);
+        this.lastTime = time;
+        
+        if (this.input.space && !this.player.powerMode) {
+          this.player.powerMode = true;
+          audio.click();
+        } else if (!this.input.space && this.player.powerMode) {
+          this.player.powerMode = false;
+        }
+        
+        this.player.update(this.input, dt);
+        
+        this.timeLeft -= dt;
+        const lightsOn = this.circuit.simulate();
+        
+        if (this.circuit.allLit()) {
+          this.victory();
+          return;
+        }
+        if (this.timeLeft <= 0) {
+          this.defeat();
+          return;
+        }
+        
+        this.ui.update(this.circuit, this.timeLeft);
+        this.render();
+        
+        requestAnimationFrame(t=>this.loop(t));
+      }
+      render() {
+        const ctx = this.ctx;
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+        ctx.scale(this.scaleX, this.scaleY);
+        
+        // Background
+        ctx.fillStyle = COLORS.bg;
+        ctx.fillRect(0,0,CANVAS_W,CANVAS_H);
+        
+        // Grid
+        ctx.strokeStyle = COLORS.grid;
+        ctx.lineWidth = 1;
+        for (let x=0;x<CANVAS_W;x+=40) { ctx.beginPath(); ctx.moveTo(x,0); ctxlineTo(x,CANVAS_H); ctx.stroke(); }
+        for (let y=0;y<CANVAS_H;y+=40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(CANVAS_W,y); ctx.stroke(); }
+        
+        // Sources
+        this.circuit.sources.forEach(s => {
+          ctx.beginPath();
+          if (s.type === 'outlet') {
+            ctx.rect(s.x-15, s.y-15, 30, 30);
+            ctx.fillStyle = s.active ? COLORS.sourceActive : COLORS.source;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillStyle = '#000';
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(s.cap+'W', s.x, s.y+4);
+          } else if (s.type === 'panel') {
+            ctx.rect(s.x-25, s.y-25, 50, 50);
+            ctx.fillStyle = s.active ? COLORS.sourceActive : COLORS.source;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 14px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('MAIN', s.x, s.y+5);
+          } else if (s.type === 'battery') {
+            ctx.rect(s.x-20, s.y-12, 40, 24);
+            ctx.fillStyle = s.active ? COLORS.sourceActive : COLORS.source;
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.fillRect(s.x+20, s.y-6, 8, 12);
+            ctx.fillStyle = '#000';
+            ctx.font = '12px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('BATT', s.x, s.y+4);
+          }
+          if (s.active) {
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, 25 + 5*Math.sin(Date.now()/300), 0, Math.PI*2);
+            ctx.strokeStyle = COLORS.sourceActive;
+            ctx.lineWidth = 2;
+            ctx.globalAlpha = 0.3;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+          }
+        });
+        
+        // Lights
+        this.circuit.lights.forEach(l => {
+          ctx.beginPath();
+          ctx.arc(l.x, l.y, 18, 0, Math.PI*2);
+          if (l.state === 'on') {
+            const grad = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, 25);
+            grad.addColorStop(0, COLORS.lightGlow);
+            grad.addColorStop(1, 'transparent');
+            ctx.fillStyle = grad;
+            ctx.fill();
+            ctx.fillStyle = COLORS.lightOn;
+            ctx.shadowColor = COLORS.lightGlow;
+            ctx.shadowBlur = 20;
+          } else if (l.state === 'broken') {
+            ctx.fillStyle = COLORS.lightBroken;
+            ctx.shadowColor = COLORS.lightBroken;
+            ctx.shadowBlur = 10;
+          } else {
+            ctx.fillStyle = COLORS.lightOff;
+          }
+          ctx.beginPath();
+          ctx.arc(l.x, l.y, 14, 0, Math.PI*2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = '#fff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          if (l.state === 'broken') {
+            ctx.beginPath();
+            ctx.moveTo(l.x-8, l.y-8);
+            ctx.lineTo(l.x+8, l.y+8);
+            ctx.moveTo(l.x+8, l.y-8);
+            ctx.lineTo(l.x-8, l.y+8);
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+          }
+        });
+        
+        // Wires
+        this.circuit.wires.forEach(w => w.draw(ctx, false));
+        
+        // Wire preview
+        if (this.wirePreview) {
+          this.wirePreview.draw(ctx, false);
+        }
+        
+        // Player
+        this.player.draw(ctx);
+        
+        // Power mode indicator
+        if (this.player.powerMode) {
+          ctx.fillStyle = COLORS.text;
+          ctx.font = '14px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('POWER MODE - Right-click to place wire', CANVAS_W/2, 30);
+        }
+      }
+      victory() {
+        this.running = false;
+        const score = Math.round(this.circuit.batteryPower) * 100 + Math.round(this.timeLeft / 100);
+        this.ui.setHighScore(score);
+        audio.complete();
+        this.ui.showMessage(`ALL LIGHTS ON! Score: ${score} | Best: ${this.ui.getHighScore()}`, 'success');
+        setTimeout(() => {
+          if (confirm('Level Complete! Play again?')) location.reload();
+        }, 1500);
+      }
+      defeat() {
+        this.running = false;
+        audio.error();
+        this.ui.showMessage('TIME UP! Circuit failed.', 'error');
+        setTimeout(() => {
+          if (confirm('Time ran out! Try again?')) location.reload();
+        }, 1500);
+      }
+    }
+    
+    // Start on interaction
+    function startGame() {
+      audio.init();
+      new Game();
+      document.removeEventListener('click', startGame);
+      document.removeEventListener('keydown', startGame);
+      document.removeEventListener('touchstart', startGame);
+    }
+    document.addEventListener('click', startGame);
+    document.addEventListener('keydown', startGame);
+    document.addEventListener('touchstart', startGame);
+  </script>
+</body>
+</html>
