@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regex Projectile Filter</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/game.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">REGEX PROJECTILE FILTER</h1>
+            <p class="game-subtitle">Type patterns to destroy incoming projectiles before they reach the bottom!</p>
+            <div class="game-stats">
+                <div class="stat">Score: <span class="stat-value" id="score">0</span></div>
+                <div class="stat">High Score: <span class="stat-value" id="highScore">0</span></div>
+                <div class="stat">Lives: <span class="stat-value" id="lives">5</span></div>
+                <div class="stat">Level: <span class="stat-value" id="level">1</span></div>
+                <div class="stat">Time: <span class="stat-value" id="timer">0.00s</span></div>
+            </div>
+        </div>
+        
+        <div class="game-content">
+            <div class="game-canvas-container">
+                <canvas id="gameCanvas"></canvas>
+                <div class="message" id="message">
+                    <h2 id="messageTitle">Game Over</h2>
+                    <p id="messageText">You scored 0 points. Try again!</p>
+                    <button class="restart-btn" id="restartBtn">Play Again</button>
+                </div>
+            </div>
+            
+            <div class="control-panel">
+                <div class="input-group">
+                    <label for="regexInput">Enter Regex Pattern:</label>
+                    <input type="text" id="regexInput" class="regex-input" placeholder="e.g., ^[a-z]+$">
+                    <button class="submit-btn" id="submitBtn">Apply Pattern</button>
+                </div>
+                
+                <div class="pattern-display">
+                    <div class="pattern-title">Current Pattern:</div>
+                    <div class="pattern-text" id="currentPattern">^[a-z]+$</div>
+                </div>
+                
+                <div class="instructions">
+                    <h3>How to Play:</h3>
+                    <ul>
+                        <li>Projectiles with text will fall from the top</li>
+                        <li>Type a regex pattern that matches the text to destroy them</li>
+                        <li>Use regex syntax: ^ (start), $ (end), [] (character class), * (0+), + (1+), ? (0 or 1)</li>
+                        <li>Destroy projectiles to gain points</li>
+                        <li>If a projectile reaches the bottom, you lose a life</li>
+                        <li>Reach 100 points to advance to the next level</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-footer">
+            <p>Tip: Start simple with patterns like ^a to match only strings starting with 'a', then progress to more complex patterns!</p>
+        </div>
+    </div>
+
+    <script src="js/projectile.js"></script>
+    <script src="js/particle.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>
