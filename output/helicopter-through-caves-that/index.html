@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CaveRunner 3000</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='70' font-size='60' fill='%2300ffff'%3E🚁%3C/text%3E%3C/svg%3E">
+<style>body{margin:0;overflow:hidden;background:#0a0a1a;color:#fff;font-family:sans-serif}
+#gameCanvas{background:#0a0a1a;display:block;margin:0 auto;width:100%;height:auto;max-width:800px;max-height:600px}
+#hud{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:center;pointer-events:none}
+#topBar{display:flex;background:rgba(0,0,30,0.7);padding:10px;border-radius:5px}
+#score,#timer,#lives,#speed{margin:0 10px;font-size:16px}
+#gameOver{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;background:rgba(0,0,0,0.8);display:none}
+#gameOver h1{font-size:48px;margin:0 0 20px}
+#gameOver p{font-size:24px;margin:10px}
+button{cursor:pointer;padding:10px 20px;margin:5px;background:#ff6b6b;color:white;border:none;border-radius:5px;font-size:16px}
+.pauseMenu{display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);justify-content:center;align-items:center}
+.pauseMenu button{background:#4ecdc4}
+#healthBar{width:100px;height:10px;background:#333;border:1px solid #666}
+#healthFill{height:100%;width:100%;background:#4caf50;transition:width 0.2s}
+.shield{animation:spin 2s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="hud">
+  <div id="topBar">
+    <div id="score">Score: 0</div>
+    <div id="timer">Time: 00:00</div>
+    <div id="lives">❤️❤️❤️</div>
+    <div id="speed">Speed: 0.20</div>
+  </div>
+  <div id="healthBar"><div id="healthFill"></div></div>
+</div>
+<div id="gameOver">
+  <h1>GAME OVER</h1>
+  <p id="finalScore">Score: 0</p>
+  <p>Press R to Restart</p>
+  <button onclick="restartGame()">Restart</button>
+</div>
+<div class="pauseMenu" id="pauseMenu">
+  <h2>PAUSED</h2>
+  <button onclick="resumeGame()">Resume</button>
+  <button onclick="restartGame()">Restart</button>
+  <button onclick="quitGame()">Quit</button>
+</div>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let width, height, scale;
+function resize(){
+  const maxWidth = 800, maxHeight = 600;
+  width = window.innerWidth;
+  height = window.innerHeight;
+  scale = Math.min(width/maxWidth, height/maxHeight, 1);
+  canvas.width = maxWidth;
+  canvas.height = maxHeight;
+  canvas.style.width = maxWidth*scale + 'px';
+  canvas.style.height = maxHeight*scale + 'px';
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Game State
+let gameState = 'menu';
+let score = 0;
+let highScore = localStorage.getItem('caveRunnerHighScore') || 0;
+let elapsedTime = 0;
+let gameSpeed = 0.2;
+let lastSpeedIncrease = 0;
+let lastObstacleSpawn = 0;
+
+// Player
+class Player{
+  constructor(){ this.x = 100; this.y = 300; this.w = 32; this.h = 32; this.vy = 0; this.boostCooldown = 0; this.shield = false; this.shieldTimer = 0; this.health = 3; }
+  update(){ 
+    if(this.boostCooldown > 0) this.boostCooldown -= 1/60;
+    if(this.shieldTimer > 0) this.shieldTimer -= 1/60;
+    if(this.shieldTimer <= 0) this.shield = false;
+  }
+}
+const player = new Player();
+
+// Cave
+class CaveWall{
+  constructor(side){
+    this.side = side;
+    this.x = side === 'left' ? 0 : width;
+    this.gapY = height/2;
+    this.gapSize = 100;
+    this.speed = gameSpeed;
+  }
+  update(){ this.x += this.side === 'left' ? this.speed : -this.speed; }
+}
+let leftWall = new CaveWall('left');
+let rightWall = new CaveWall('right');
+let obstacles = [];
+
+// Input
+const keys = {};
+window.addEventListener('keydown', e => { keys[e.code] = true; if(e.code === 'Space') e.preventDefault(); });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// Audio
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playSound(type){
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  osc.frequency.setValueAtTime(type === 'boost' ? 440 : type === 'collision' ? 110 : 880, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+  gain.connect(osc.context.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.1);
+}
+
+// Game Loop
+function gameLoop(){ 
+  if(gameState !== 'playing') return;
+  
+  // Update
+  elapsedTime += 1/60;
+  score = Math.floor(elapsedTime * 10);
+  if(score > highScore) { highScore = score; localStorage.setItem('caveRunnerHighScore', highScore); }
+  
+  // Speed increase
+  if(elapsedTime - lastSpeedIncrease > 10){
+    gameSpeed += 0.01;
+    lastSpeedIncrease = elapsedTime;
+  }
+  
+  // Player physics
+  if(keys['ArrowUp']){ player.vy -= 0.5; }
+  if(keys['ArrowDown']){ player.vy += 0.3; }
+  if(keys['ArrowUp'] && keys['ArrowDown']){ player.vy = 0; }
+  if(!keys['ArrowUp'] && !keys['ArrowDown']){ player.vy *= 0.95; }
+  if(player.vy > 8) player.vy = 8;
+  if(player.vy < -8) player.vy = -8;
+  player.y += player.vy;
+  
+  // Boost
+  if(keys['Space'] && player.boostCooldown <= 0){
+    player.vy *= 0.5;
+    player.boostCooldown = 3;
+    playSound('boost');
+  }
+  
+  // Walls
+  leftWall.speed = gameSpeed; rightWall.speed = gameSpeed;
+  leftWall.update(); rightWall.update();
+  
+  // Obstacles
+  if(Math.random() < 0.05 && elapsedTime - lastObstacleSpawn > 1){
+    obstacles.push({x: player.x + 100, y: Math.random() * (height-100), w: 20, h: 20, vx: -gameSpeed});
+    lastObstacleSpawn = elapsedTime;
+  }
+  
+  // Update obstacles
+  obstacles.forEach((o, i)){
+    o.x += o.vx;
+    if(o.x < 0) obstacles.splice(i, 1);
+  }
+  
+  // Collision
+  if(player.y < leftWall.gapY - leftWall.gapSize/2 || player.y + player.h > leftWall.gapY + leftWall.gapSize/2){
+    if(player.x < leftWall.x + 10 || player.x + player.w > width - rightWall.x + 10){
+      endGame();
+    }
+  }
+  
+  // Draw
+  ctx.clearRect(0, 0, width, height);
+  
+  // Cave
+  ctx.fillStyle = '#2c2c3c';
+  ctx.fillRect(leftWall.x, 0, 10, height);
+  ctx.fillRect(width - rightWall.x, 0, 10, height);
+  
+  // Player
+  ctx.fillStyle = '#00ffff';
+  ctx.fillRect(player.x, player.y, player.w, player.h);
+  
+  // Obstacles
+  ctx.fillStyle = '#ff6b6b';
+  obstacles.forEach(o => ctx.fillRect(o.x, o.y, o.w, o.h));
+  
+  // HUD
+  document.getElementById('score').textContent = 'Score: ' + score;
+  document.getElementById('timer').textContent = 'Time: ' + formatTime(elapsedTime);
+  document.getElementById('speed').textContent = 'Speed: ' + gameSpeed.toFixed(2);
+  document.getElementById('healthFill').style.width = (player.health/3)*100 + '%';
+  document.getElementById('healthFill').style.background = player.health >= 2 ? '#4caf50' : player.health >= 1 ? '#ff9800' : '#f44336';
+  
+  requestAnimationFrame(gameLoop);
+}
+
+function formatTime(seconds){
+  const m = Math.floor(seconds/60);
+  const s = Math.floor(seconds%60);
+  return (m<10?'0':'') + m + ':' + (s<10?'0':'') + s;
+}
+
+function endGame(){
+  gameState = 'gameover';
+  document.getElementById('gameOver').style.display = 'flex';
+  document.getElementById('finalScore').textContent = 'Score: ' + score;
+  playSound('collision');
+}
+
+function restartGame(){
+  gameState = 'playing';
+  elapsedTime = 0; score = 0;
+  player.y = 300; player.vy = 0; player.health = 3;
+  leftWall.x = 0; rightWall.x = width;
+  obstacles = [];
+  gameSpeed = 0.2;
+  document.getElementById('gameOver').style.display = 'none';
+  gameLoop();
+}
+
+function resumeGame(){
+  gameState = 'playing';
+  document.getElementById('pauseMenu').style.display = 'none';
+  gameLoop();
+}
+
+function quitGame(){
+  gameState = 'menu';
+  document.getElementById('pauseMenu').style.display = 'none';
+}
+
+// Start
+restartGame();
+</script>
+</body>
+</html>
