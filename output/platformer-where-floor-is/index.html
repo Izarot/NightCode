@@ -1,115 +1,257 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PROJECT IGNIS ASCENT</title>
-    <!-- SNEAKY FEATURE 2: Cool Emoji Favicon -->
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIj48Y2lyY2xlIGN4PSIxMDAiIGN5PSIxMDAiIHI9IjgwIiBmaWxsPSIjZmYzNDAwIi8+PHBhdGggZD0iTTYwLDEyMCAxMDAsNjAgMTQwLDEyMCAxMDAsMTgwWiIgZmlsbD0iI2ZmODgwIi8+PHBhdGggZD0iTTYwLDEyMCAxMDAsNjAgMTQwLDEyMCAxMDAsMTgwWiIgZmlsbD0iI2ZmNDQ0NCIvPjxjaXJjbGUgY3g9IjEwMCIgY3k9IjEwMCIgcj0iMzAiIGZpbGw9IiNmZmZmZmZmIvPjwvc3ZnPg==">
-    <!-- Chromatic Aberration SVG Filter -->
-    <svg width="0" height="0" style="position:absolute">
-        <defs>
-            <filter id="chromatic">
-                <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0"/>
-                <feOffset in="SourceGraphic" dx="-2" dy="0" result="r"/>
-                <feOffset in="SourceGraphic" dx="2" dy="0" result="g"/>
-                <feOffset in="SourceGraphic" dx="0" dy="0" result="b"/>
-                <feBlend in="r" in2="g" mode="screen" result="rg"/>
-                <feBlend in="rg" in2="b" mode="screen" result="rgb"/>
-            </filter>
-        </defs>
-    </svg>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
-        html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'JetBrains Mono', monospace; color: #e0e0e0; }
-        #game-container { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
-        canvas { image-rendering: pixelated; image-rendering: crisp-edges; background: #1a1a2e; display: block; }
-        /* Mobile Controls */
-        #mobile-controls { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
-        .ctrl-btn { position: absolute; width: 80px; height: 80px; border-radius: 50%; background: rgba(0, 255, 170, 0.2); border: 2px solid #00ffaa; pointer-events: auto; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #00ffaa; box-shadow: 0 0 15px rgba(0, 255, 170, 0.5); }
-        #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 160px; height: 160px; border: 2px solid rgba(0, 255, 170, 0.3); border-radius: 50%; }
-        #joystick-knob { position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; background: #00ffaa; border-radius: 50%; transform: translate(-50%, -50%); }
-        #jump-btn { bottom: 20px; right: 20px; }
-        #dash-btn { bottom: 120px; right: 20px; background: rgba(255, 80, 0, 0.2); border-color: #ff5500; color: #ff5500; box-shadow: 0 0 15px rgba(255, 80, 0, 0.5); }
-        /* UI Overlay */
-        #ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 10px; }
-        .hud-element { position: absolute; color: #e0e0e0; text-shadow: 0 0 5px #000; font-size: 14px; line-height: 1.2; }
-        #timer { top: 10px; left: 10px; }
-        #height-meter { top: 10px; right: 10px; text-align: right; }
-        #stamina-bar-container { bottom: 40px; left: 50%; transform: translateX(-50%); width: 160px; height: 14px; background: #1a1a2e; border: 1px solid #4a4a6a; border-radius: 7px; overflow: hidden; }
-        #stamina-bar { width: 100%; height: 100%; background: linear-gradient(to right, #44ff88, #ff4444); transition: width 0.1s linear; }
-        #dash-indicator { bottom: 40px; left: 10px; display: flex; gap: 4px; }
-        .dash-icon { width: 16px; height: 16px; background: #00ffaa; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
-        /* Death Overlay */
-        #death-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 10; text-align: center; }
-        #death-overlay h1 { font-size: 48px; color: #ff4444; margin-bottom: 20px; letter-spacing: 4px; }
-        #death-overlay p { font-size: 18px; margin: 5px 0; color: #e0e0e0; }
-        .menu-btn { margin-top: 20px; padding: 10px 20px; background: #1a1a2e; border: 2px solid #00ffaa; color: #00ffaa; font-family: inherit; font-size: 16px; cursor: pointer; border-radius: 5px; transition: all 0.2s; }
-        .menu-btn:hover { background: #00ffaa; color: #1a1a2e; box-shadow: 0 0 15px #00ffaa; }
-        #shop-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 20; }
-        .shop-item { margin: 10px; padding: 15px; background: #2d2d4a; border: 1px solid #4a4a6a; border-radius: 8px; width: 300px; display: flex; justify-content: space-between; align-items: center; }
-        .shop-item span { color: #e0e0e0; font-size: 14px; }
-        .shop-item button { padding: 8px 12px; background: #00ffaa; border: none; color: #1a1a2e; cursor: pointer; border-radius: 4px; font-weight: bold; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Rising Lava</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌋</text></svg>">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#1a0f0a;overflow:hidden;font-family:'Courier New',monospace;color:#fff;touch-action:none}
+    #gameCanvas{display:block;background:#0d0806}
+    #ui{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+    .hud{position:absolute;padding:10px 15px;background:rgba(0,0,0,0.7);border:2px solid #ff6600;border-radius:8px;font-size:14px;color:#00ff88;text-shadow:0 0 5px #00ff88}
+    #timer{top:15px;right:15px;font-size:20px;font-weight:bold}
+    #score{top:15px;left:15px}
+    #highScore{bottom:15px;left:15px;color:#ffd700;text-shadow:0 0 5px #ffd700}
+    #level{top:15px;left:50%;transform:translateX(-50%);text-align:center}
+    .screen{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(13,8,6,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;gap:20px;padding:20px;text-align:center}
+    .screen h1{font-size:clamp(2rem,8vw,4rem);color:#ff4500;text-shadow:0 0 20px #ff4500,0 0 40px #ff8c00;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{text-shadow:0 0 20px #ff4500,0 0 40px #ff8c00}50%{text-shadow:0 0 30px #ff0000,0 0 60px #ff4500}}
+    .btn{background:linear-gradient(135deg,#ff4500,#ff8c00);border:none;padding:15px 40px;font-size:1.2rem;color:#fff;border-radius:30px;cursor:pointer;font-family:inherit;text-transform:uppercase;letter-spacing:2px;transition:all 0.2s;box-shadow:0 5px 20px rgba(255,69,0,0.5)}
+    .btn:hover{transform:scale(1.05);box-shadow:0 8px 30px rgba(255,69,0,0.7)}
+    .btn:active{transform:scale(0.98)}
+    .controls{display:flex;gap:15px;flex-wrap:wrap;justify-content:center;margin:10px 0}
+    .control{background:rgba(255,102,0,0.2);border:1px solid #ff6600;padding:10px 20px;border-radius:20px;font-size:0.9rem}
+    .stat{color:#00ff88;font-size:1.2rem;margin:5px 0}
+    .stat span{color:#ffd700}
+    #mobileControls{display:none;position:fixed;bottom:0;left:0;right:0;padding:15px;background:rgba(0,0,0,0.8);z-index:15}
+    .mobileRow{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+    .mobileBtn{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#ff4500,#ff8c00);border:none;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+    .mobileBtn:active{background:linear-gradient(135deg,#ff6600,#ffaa00)}
+    @media(max-width:768px){#mobileControls{display:block}.hud{font-size:12px;padding:8px 12px}#timer{font-size:16px}}
+    @media(orientation:landscape) and (max-height:500px){#mobileControls{padding:10px}.mobileBtn{width:55px;height:55px}}
+  </style>
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="game-canvas" width="480" height="270"></canvas>
-        
-        <!-- Mobile Controls -->
-        <div id="mobile-controls">
-            <div id="joystick-zone">
-                <div id="joystick-knob"></div>
-            </div>
-            <div class="ctrl-btn" id="jump-btn">JUMP</div>
-            <div class="ctrl-btn" id="dash-btn">DASH</div>
-        </div>
-
-        <!-- HUD -->
-        <div id="ui-overlay">
-            <div class="hud-element" id="timer">00:00.00</div>
-            <div class="hud-element" id="height-meter">H: 0m</div>
-            <div id="stamina-bar-container"><div id="stamina-bar"></div></div>
-            <div id="dash-indicator">
-                <div class="dash-icon" id="dash-1"></div>
-                <div class="dash-icon" id="dash-2"></div>
-                <div class="dash-icon" id="dash-3"></div>
-            </div>
-        </div>
-
-        <!-- Death Overlay -->
-        <div id="death-overlay">
-            <h1>ASCENT HALTED</h1>
-            <p id="death-time">Survival Time: 00:00.00</p>
-            <p id="death-height">Height Reached: 0m</p>
-            <p id="death-cores">Magma Cores: 0</p>
-            <button class="menu-btn" id="climb-again-btn">[ CLIMB AGAIN ]</button>
-            <button class="menu-btn" id="upgrades-btn">[ UPGRADES ]</button>
-        </div>
-
-        <!-- Shop Overlay -->
-        <div id="shop-overlay">
-            <h1 style="color:#00ffaa; margin-bottom:20px;">THERMAL UPGRADES</h1>
-            <div class="shop-item">
-                <span>Thermal Plating (1 Lava Hit): +1 HP</span>
-                <button id="buy-thermal">Buy (5 Cores)</button>
-            </div>
-            <div class="shop-item">
-                <span>Jet Boots (Double Jump): Air Jump Reset</span>
-                <button id="buy-jet">Buy (10 Cores)</button>
-            </div>
-            <div class="shop-item">
-                <span>Dash Mastery (Air Dash): Dash in Air</span>
-                <button id="buy-dash">Buy (15 Cores)</button>
-            </div>
-            <div class="shop-item">
-                <span>Stamina Lung: Max Stamina +25</span>
-                <button id="buy-stamina">Buy (12 Cores)</button>
-            </div>
-            <div class="shop-item">
-                <span>Time Dilation: Slow-mo on Aim Dash</span>
-                <button id="buy-time">Buy (20 Cores)</button>
-            </div>
-            <button class="menu-btn" id="close-shop">CLOSE</button></div>
+  <canvas id="gameCanvas"></canvas>
+  <div id="ui">
+    <div id="timer" class="hud">00:00.00</div>
+    <div id="score" class="hud">Score: 0</div>
+    <div id="level" class="hud">LEVEL 1</div>
+    <div id="highScore" class="hud">Best: 0</div>
+  </div>
+  <div id="startScreen" class="screen">
+    <h1>RISING LAVA</h1>
+    <div class="controls">
+      <div class="control">← → / A D : Move</div>
+      <div class="control">Space / W / ↑ : Jump</div>
+      <div class="control">Shift / Click : Dash</div>
+      <div class="control">Double Tap Jump : Double Jump</div>
+    </div>
+    <button class="btn" id="startBtn">START RUN</button>
+  </div>
+  <div id="gameOverScreen" class="screen" style="display:none">
+    <h1>CONSUMED</h1>
+    <div class="stat">Time: <span id="finalTime">00:00.00</span></div>
+    <div class="stat">Score: <span id="finalScore">0</span></div>
+    <div class="stat">Height: <span id="finalHeight">0m</span></div>
+    <div class="stat">Best: <span id="finalBest">0</span></div>
+    <button class="btn" id="retryBtn">RETRY</button>
+  </div>
+  <div id="victoryScreen" class="screen" style="display:none">
+    <h1>ESCAPED!</h1>
+    <div class="stat">Time: <span id="victoryTime">00:00.00</span></div>
+    <div class="stat">Score: <span id="victoryScore">0</span></div>
+    <button class="btn" id="nextBtn">NEXT RUN</button>
+  </div>
+  <div id="mobileControls">
+    <div class="mobileRow">
+      <button class="mobileBtn" id="btnLeft" aria-label="Left">←</button>
+      <button class="mobileBtn" id="btnJump" aria-label="Jump">↑</button>
+      <button class="mobileBtn" id="btnRight" aria-label="Right">→</button>
+    </div>
+    <div class="mobileRow" style="justify-content:center">
+      <button class="mobileBtn" id="btnDash" aria-label="Dash" style="width:100px">DASH</button>
+    </div>
+  </div>
+  <script>
+    const canvas=document.getElementById('gameCanvas'),ctx=canvas.getContext('2d');
+    const startScreen=document.getElementById('startScreen'),gameOverScreen=document.getElementById('gameOverScreen'),victoryScreen=document.getElementById('victoryScreen');
+    const timerEl=document.getElementById('timer'),scoreEl=document.getElementById('score'),levelEl=document.getElementById('level'),highScoreEl=document.getElementById('highScore');
+    const finalTime=document.getElementById('finalTime'),finalScore=document.getElementById('finalScore'),finalHeight=document.getElementById('finalHeight'),finalBest=document.getElementById('finalBest');
+    const victoryTime=document.getElementById('victoryTime'),victoryScore=document.getElementById('victoryScore');
+    const btnLeft=document.getElementById('btnLeft'),btnRight=document.getElementById('btnRight'),btnJump=document.getElementById('btnJump'),btnDash=document.getElementById('btnDash');
+    
+    let W,H,scale=1,gameState='MENU',startTime=0,elapsed=0,score=0,highScore=parseInt(localStorage.getItem('risingLavaHS')||'0'),level=1;
+    let player,platforms,particles,lavaY,lavaSpeed,cameraY,shake=0;
+    const GRAVITY=0.8,JUMP_FORCE=-12,MOVE_ACCEL=0.35,AIR_ACCEL=0.15,FRICTION=0.88,MAX_FALL=18,MAX_SPEED=6;
+    const DOUBLE_JUMP_CD=45,COYOTE_TIME=9,DASH_FORCE=18,DASH_CD=60;
+    const keys={left:false,right:false,jump:false,dash:false},mobileKeys={left:false,right:false,jump:false,dash:false};
+    let lastJump=0,coyote=0,doubleJumpReady=true,dashCooldown=0,onGround=false,wallSlide=false,wallDir=0;
+    
+    const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    function playTone(freq,type,dur,vol,start=0,endFreq=null){if(audioCtx.state==='suspended')audioCtx.resume();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;if(endFreq)o.frequency.exponentialRampToValueAtTime(endFreq,audioCtx.currentTime+dur);g.gain.value=vol;g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+dur);o.connect(g);g.connect(audioCtx.destination);o.start(audioCtx.currentTime+start);o.stop(audioCtx.currentTime+start+dur)}
+    function sfxJump(){playTone(220,'square',0.1,0.15);playTone(440,'square',0.05,0.1,0.05)}
+    function sfxLand(){playTone(150,'sine',0.15,0.2)}
+    function sfxDash(){playTone(300,'sawtooth',0.08,0.2,0,100)}
+    function sfxDeath(){playTone(200,'sawtooth',0.3,0.3,0,50);playTone(100,'square',0.5,0.2,0.1,30)}
+    function sfxLevel(){playTone(440,'triangle',0.2,0.2);playTone(660,'triangle',0.2,0.2,0.15);playTone(880,'triangle',0.3,0.2,0.3)}
+    function sfxLava(){playTone(60,'sine',0.5,0.1)}
+    
+    function resize(){W=window.innerWidth;H=window.innerHeight;scale=Math.min(W/480,H/800);canvas.width=W;canvas.height=H;ctx.setTransform(scale,0,0,scale,0,0)}
+    window.addEventListener('resize',resize);resize();
+    
+    function initLevel(){platforms=[];particles=[];lavaY=600;lavaSpeed=0.6;
+      const startY=500;platforms.push({x:120,y:startY,w:240,h:20,type:'ground'});
+      for(let i=1;i<15;i++){
+        const gap=60+Math.random()*40,width=80+Math.random()*100,x=50+Math.random()*(380-width);
+        platforms.push({x,y:startY-i*gap,w:width,h:16,type:i%5===0?'island':'normal',move:i%3===0?{dir:1,speed:0.5,range:100}:null});
+      }
+      platforms.push({x:140,y:startY-15*70,w:200,h:30,type:'goal'});
+      player={x:240,y:startY-30,w:16,h:24,vx:0,vy:0,color:'#00ff88',trail:[]};
+      cameraY=player.y-H/scale/2;
+    }
+    
+    function spawnParticles(x,y,color,count,velMult=1){for(let i=0;i<count;i++)particles.push({x,y,vx:(Math.random()-0.5)*4*velMult,vy:(Math.random()-0.5)*4*velMult,life:1,decay:0.02+Math.random()*0.03,color,size:2+Math.random()*4})}
+    
+    function update(){if(gameState!=='PLAYING')return;
+      elapsed=performance.now()-startTime;
+      timerEl.textContent=formatTime(elapsed);
+      
+      const inputLeft=keys.left||mobileKeys.left,inputRight=keys.right||mobileKeys.right,inputJump=keys.jump||mobileKeys.jump,inputDash=keys.dash||mobileKeys.dash;
+      
+      if(dashCooldown>0)dashCooldown--;
+      if(lastJump>0)lastJump--;
+      
+      onGround=false;wallSlide=false;
+      for(const p of platforms){
+        if(player.vy>=0&&player.x+player.w>p.x&&player.x<p.x+p.w&&player.y+player.h>=p.y&&player.y+player.h<=p.y+p.h+player.vy){
+          player.y=p.y-player.h;player.vy=0;onGround=true;lastJump=COYOTE_TIME;doubleJumpReady=true;
+          if(player.vy>2)sfxLand();
+        }
+        if(player.vy<0&&player.x+player.w>p.x&&player.x<p.x+p.w&&player.y<=p.y+p.h&&player.y>=p.y+p.h+player.vy){
+          player.y=p.y+p.h;player.vy=0;
+        }
+        if(player.vx>0&&player.x+player.w>=p.x&&player.x+player.w<=p.x+p.w&&player.y+player.h>p.y&&player.y<p.y+p.h){
+          player.x=p.x-player.w;wallSlide=true;wallDir=-1;
+        }
+        if(player.vx<0&&player.x<=p.x+p.w&&player.x>=p.x&&player.y+player.h>p.y&&player.y<p.y+p.h){
+          player.x=p.x+p.w;wallSlide=true;wallDir=1;
+        }
+      }
+      
+      if(onGround){player.vx*=FRICTION;if(inputLeft)player.vx-=MOVE_ACCEL;if(inputRight)player.vx+=MOVE_ACCEL}
+      else{if(inputLeft)player.vx-=AIR_ACCEL;if(inputRight)player.vx+=AIR_ACCEL}
+      player.vx=Math.max(-MAX_SPEED,Math.min(MAX_SPEED,player.vx));
+      
+      if(inputJump&&(onGround||lastJump>0||wallSlide||doubleJumpReady)){
+        if(wallSlide){player.vy=JUMP_FORCE*0.9;player.vx=wallDir*MAX_SPEED*0.8;wallSlide=false}
+        else if(onGround||lastJump>0){player.vy=JUMP_FORCE;sfxJump()}
+        else if(doubleJumpReady){player.vy=JUMP_FORCE*0.9;doubleJumpReady=false;setTimeout(()=>doubleJumpReady=true,DOUBLE_JUMP_CD*16);sfxJump()}
+        lastJump=0;
+      }
+      if(!inputJump&&player.vy<0)player.vy*=0.5;
+      
+      if(inputDash&&dashCooldown<=0&&(inputLeft||inputRight)){player.vx=(inputLeft?-1:1)*DASH_FORCE;dashCooldown=DASH_CD;sfxDash();spawnParticles(player.x+player.w/2,player.y+player.h/2,'#ffd700',15,2)}
+      
+      player.vy=Math.min(MAX_FALL,player.vy+GRAVITY);
+      player.x+=player.vx;player.y+=player.vy;
+      
+      player.trail.unshift({x:player.x+player.w/2,y:player.y+player.h/2,alpha:1});
+      if(player.trail.length>8)player.trail.pop();
+      player.trail.forEach(t=>t.alpha-=0.12);
+      
+      lavaY-=lavaSpeed;
+      lavaSpeed=Math.min(2.5,lavaSpeed+0.00008);
+      
+      for(const p of platforms){if(p.move){p.x+=p.move.dir*p.move.speed;if(Math.abs(p.x-p.move.range)>p.move.range)p.move.dir*=-1}}
+      
+      cameraY+=(player.y-H/scale/2-cameraY)*0.1;
+      if(cameraY<lavaY-H/scale)cameraY=lavaY-H/scale;
+      
+      if(player.y>lavaY+20){gameOver()}
+      
+      for(const p of platforms){if(p.type==='goal'&&player.x+player.w>p.x&&player.x<p.x+p.w&&player.y<p.y+p.h&&player.y+player.h>p.y){victory()}}
+      
+      if(Math.random()<0.3)spawnParticles(lavaY+Math.random()*W/scale,lavaY,'#ff'+Math.floor(Math.random()*40+20).toString(16)+'00',1,0.5);
+      
+      particles.forEach((pt,i)=>{pt.x+=pt.vx;pt.y+=pt.vy;pt.life-=pt.decay;pt.vy-=0.05;if(pt.life<=0)particles.splice(i,1)});
+      
+      score=Math.max(score,Math.floor((600-player.y)/10));
+      scoreEl.textContent='Score: '+score;
+      if(score>highScore){highScore=score;localStorage.setItem('risingLavaHS',highScore);highScoreEl.textContent='Best: '+highScore}
+      levelEl.textContent='LEVEL '+level;
+      
+      if(shake>0)shake--;
+    }
+    
+    function formatTime(ms){const m=Math.floor(ms/60000),s=Math.floor((ms%60000)/1000),cs=Math.floor((ms%1000)/10);return m.toString().padStart(2,'0')+':'+s.toString().padStart(2,'0')+'.'+cs.toString().padStart(2,'0')}
+    
+    function render(){ctx.setTransform(scale,0,0,scale,shake*(Math.random()-0.5)*4,shake*(Math.random()-0.5)*4);
+      const grad=ctx.createLinearGradient(0,cameraY,0,cameraY+H/scale);
+      grad.addColorStop(0,'#1a0f0a');grad.addColorStop(0.5,'#2d1508');grad.addColorStop(1,'#3d1a0a');
+      ctx.fillStyle=grad;ctx.fillRect(0,cameraY,W/scale,H/scale);
+      
+      for(let i=0;i<5;i++){ctx.fillStyle=`rgba(255,${100+i*30},0,${0.05+i*0.02})`;ctx.fillRect(0,cameraY+i*100,W/scale,200)}
+      
+      const lavaGrad=ctx.createLinearGradient(0,lavaY,0,lavaY+50);
+      lavaGrad.addColorStop(0,'#ff4500');lavaGrad.addColorStop(0.5,'#ff6600');lavaGrad.addColorStop(1,'#ffd700');
+      ctx.fillStyle=lavaGrad;
+      ctx.beginPath();ctx.moveTo(0,lavaY+Math.sin(performance.now()*0.004)*2);
+      for(let x=0;x<=W/scale;x+=10)ctx.lineTo(x,lavaY+Math.sin(x*0.05+performance.now()*0.004)*3);
+      ctx.lineTo(W/scale,H/scale);ctx.lineTo(0,H/scale);ctx.closePath();ctx.fill();
+      
+      ctx.fillStyle='rgba(255,100,0,0.3)';ctx.fillRect(0,lavaY-5,W/scale,10);
+      
+      for(const p of platforms){
+        if(p.y<cameraY-H/scale||p.y>cameraY+H/scale+50)continue;
+        if(p.type==='goal'){ctx.fillStyle='#00ff88';ctx.shadowColor='#00ff88';ctx.shadowBlur=20}
+        else if(p.type==='island'){ctx.fillStyle='#8b4513';ctx.shadowBlur=0}
+        else ctx.fillStyle='#4a3020';
+        ctx.fillRect(p.x,p.y,p.w,p.h);
+        ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(p.x,p.y,p.w,3);
+        ctx.shadowBlur=0;
+      }
+      
+      particles.forEach(pt=>{ctx.globalAlpha=pt.life;ctx.fillStyle=pt.color;ctx.fillRect(pt.x,pt.y,pt.size,pt.size);ctx.globalAlpha=1});
+      
+      player.trail.forEach(t=>{ctx.globalAlpha=t.alpha*0.5;ctx.fillStyle=player.color;ctx.fillRect(t.x-4,t.y-4,8,8);ctx.globalAlpha=1});
+      
+      ctx.fillStyle=player.color;ctx.shadowColor=player.color;ctx.shadowBlur=10;
+      ctx.fillRect(player.x,player.y,player.w,player.h);
+      ctx.shadowBlur=0;
+      ctx.fillStyle='#fff';ctx.fillRect(player.x+4,player.y+6,4,4);ctx.fillRect(player.x+10,player.y+6,4,4);
+      
+      ctx.setTransform(scale,0,0,scale,0,0);
+    }
+    
+    function gameLoop(){update();render();requestAnimationFrame(gameLoop)}
+    
+    function startGame(){gameState='PLAYING';startTime=performance.now();elapsed=0;score=0;level=1;initLevel();startScreen.style.display='none';gameOverScreen.style.display='none';victoryScreen.style.display='none'}
+    
+    function gameOver(){gameState='GAME_OVER';sfxDeath();shake=15;spawnParticles(player.x+player.w/2,player.y+player.h/2,'#ff4500',40,3);
+      finalTime.textContent=formatTime(elapsed);finalScore.textContent=score;finalHeight.textContent=Math.floor((600-player.y)/10)+'m';finalBest.textContent=highScore;
+      gameOverScreen.style.display='flex'}
+    
+    function victory(){gameState='VICTORY';sfxLevel();level++;
+      victoryTime.textContent=formatTime(elapsed);victoryScore.textContent=score;
+      victoryScreen.style.display='flex'}
+    
+    document.getElementById('startBtn').onclick=startGame;
+    document.getElementById('retryBtn').onclick=startGame;
+    document.getElementById('nextBtn').onclick=()=>{victoryScreen.style.display='none';initLevel();gameState='PLAYING';startTime=performance.now()-elapsed};
+    
+    window.addEventListener('keydown',e=>{if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=true;if(e.code==='ArrowRight'||e.code==='KeyD')keys.right=true;if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW'){keys.jump=true;e.preventDefault()}if(e.code==='ShiftLeft'||e.code==='ShiftRight')keys.dash=true});
+    window.addEventListener('keyup',e=>{if(e.code==='ArrowLeft'||e.code==='KeyA')keys.left=false;if(e.code==='ArrowRight'||e.code==='KeyD')keys.right=false;if(e.code==='Space'||e.code==='ArrowUp'||e.code==='KeyW')keys.jump=false;if(e.code==='ShiftLeft'||e.code==='ShiftRight')keys.dash=false});
+    
+    function setupTouch(btn,key){btn.addEventListener('touchstart',e=>{mobileKeys[key]=true;e.preventDefault()},{passive:false});btn.addEventListener('touchend',e=>{mobileKeys[key]=false;e.preventDefault()},{passive:false});btn.addEventListener('mousedown',e=>{mobileKeys[key]=true;e.preventDefault()});btn.addEventListener('mouseup',e=>{mobileKeys[key]=false;e.preventDefault()});btn.addEventListener('mouseleave',e=>{mobileKeys[key]=false})}
+    setupTouch(btnLeft,'left');setupTouch(btnRight,'right');setupTouch(btnJump,'jump');setupTouch(btnDash,'dash');
+    
+    canvas.addEventListener('click',()=>{if(audioCtx.state==='suspended')audioCtx.resume()});
+    
+    highScoreEl.textContent='Best: '+highScore;
+    gameLoop();
+  </script>
 </body>
 </html>

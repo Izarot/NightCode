@@ -1,28 +1,20 @@
-# Project Ignis Ascent
+# Rising Lava
 
-**A vertical survival platformer** where you climb endless platforms while a lava floor rises beneath you. Manage stamina, dash through danger, and survive as long as you can!
+A fast‑paced vertical platformer where the ground itself rises through molten lava. Navigate ever‑moving platforms, master precise jumps, and race to the top before the heat gets you!
 
 ## How to Play
-
-- **Move:** `A/D` or arrow keys (left/right)  
-- **Jump:** `Space` / `W` or `Up` (hold for higher jump)  
-- **Dash:** `Shift` / `Ctrl` (cooldown on ground)  
-- **Wall Jump:** Touch a wall and press jump opposite the wall  
-- **Goal:** Reach higher platforms, avoid the rising lava, and collect Magma Cores for upgrades.
-
-## Controls
-
-| Keyboard | Gamepad |
-|----------|---------|
-| Left/Right | Left Stick X |
-| Space / Up | South Button (Jump) |
-| Shift / Ctrl | East Button (Dash) |
+- **Move:** Arrow keys or WASD  
+- **Jump:** Spacebar / Shift (hold for higher jumps)  
+- **Double Jump:** Quick tap Space or A (limited cooldown)  
+- **Dash:** Right‑click or C (short burst forward)  
+- **Goal:** Reach the level’s summit while avoiding the rising lava floor.
 
 ## Tips
+- Time your jumps to ride the rising platforms.  
+- Use dashes to zip across gaps quickly.  
+- Keep an eye on the lava level indicator to know how much floor is left to climb.
 
-- Use dashes to skim over lava or dodge moving platforms.  
-- Stamina regenerates on solid landings; keep it topped up for dashes and wall slides.  
-- Collect Magma Cores to unlock upgrades in the shop after death.
+Enjoy the heat!
 
 ---
 
