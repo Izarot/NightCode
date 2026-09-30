@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Goo Bridge Builder</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🟢</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0d1117; font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; touch-action: none; }
+    #gameCanvas { display: block; width: 100vw; height: 100vh; background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%); }
+    #ui { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 10; }
+    .hud { position: absolute; pointer-events: auto; }
+    .top-bar { top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 16px; align-items: center; }
+    .timer { background: rgba(0,0,0,0.7); color: #00ff88; padding: 8px 16px; border-radius: 20px; font-family: 'Courier New', monospace; font-size: 1.2rem; font-weight: bold; border: 2px solid #00ff88; box-shadow: 0 0 15px #00ff8844; }
+    .level-name { color: #fff; font-size: 1.1rem; font-weight: 600; text-shadow: 0 0 10px #00ff88; }
+    .ball-count { background: rgba(0,0,0,0.7); color: #ffd700; padding: 8px 16px; border-radius: 20px; border: 2px solid #ffd700; font-weight: bold; }
+    .high-score { background: rgba(0,0,0,0.7); color: #ff6b6b; padding: 8px 16px; border-radius: 20px; border: 2px solid #ff6b6b; font-weight: bold; }
+    .tool-panel { bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
+    .tool-btn { width: 56px; height: 56px; border-radius: 12px; border: 2px solid #333; background: rgba(20,20,30,0.9); color: #aaa; font-size: 1.5rem; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+    .tool-btn:hover, .tool-btn.active { border-color: #00ff88; color: #00ff88; background: rgba(0,255,136,0.15); box-shadow: 0 0 20px #00ff8844; transform: scale(1.05); }
+    .tool-btn:active { transform: scale(0.95); }
+    .stability-meter { top: 10px; right: 10px; width: 200px; height: 12px; background: rgba(0,0,0,0.7); border-radius: 6px; border: 2px solid #333; overflow: hidden; }
+    .stability-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #00ff88, #ffd700, #ff6b6b); transition: width 0.3s; }
+    .goal-indicator { top: 60px; right: 10px; background: rgba(0,0,0,0.7); color: #00ffff; padding: 8px 12px; border-radius: 8px; border: 2px solid #00ffff; font-size: 0.9rem; }
+    .message { top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; }
+    .message h1 { font-size: 3rem; margin-bottom: 1rem; text-shadow: 0 0 30px currentColor; animation: pulse 1.5s infinite; }
+    .message.success { color: #00ff88; }
+    .message.fail { color: #ff6b6b; }
+    .message p { color: #ccc; font-size: 1.2rem; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+    @media (max-width: 600px) { .tool-btn { width: 48px; height: 48px; font-size: 1.2rem; } .timer { font-size: 1rem; padding: 6px 12px; } .level-name { font-size: 0.9rem; } .ball-count, .high-score { font-size: 0.85rem; padding: 6px 10px; } }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="ui">
+    <div class="hud top-bar">
+      <div class="timer" id="timer">00:00.00</div>
+      <div class="level-name" id="levelName">Level 1: First Steps</div>
+      <div class="ball-count" id="ballCount">0 / 20</div>
+      <div class="high-score" id="highScore">Best: 00:00.00</div>
+    </div>
+    <div class="hud" style="top:10px;right:10px;">
+      <div class="stability-meter"><div class="stability-fill" id="stabilityFill" style="width:100%"></div></div>
+      <div class="goal-indicator" id="goalDist">Goal: 0m</div>
+    </div>
+    <div class="hud tool-panel">
+      <button class="tool-btn active" data-tool="place" title="Place Goo (1)">⬤</button>
+      <button class="tool-btn" data-tool="connect" title="Connect (2)">↔</button>
+      <button class="tool-btn" data-tool="delete" title="Delete (3)">✕</button>
+      <button class="tool-btn" data-tool="move" title="Move (4)">✋</button>
+      <button class="tool-btn" data-tool="undo" title="Undo (Z)">↶</button>
+      <button class="tool-btn" data-tool="reset" title="Reset (R)">↺</button>
+    </div>
+    <div class="hud message" id="message"></div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
