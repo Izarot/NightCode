@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snap & Vanish</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📸</text></svg>" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; font-family: 'Segoe UI', sans-serif; }
+    #game-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+    canvas { width: 100%; height: auto; max-width: 100%; display: block; image-rendering: pixelated; }
+    #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    .btn { pointer-events: auto; position: absolute; background: rgba(255,255,255,0.1); border: 2px solid #fff; color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 16px; cursor: pointer; backdrop-filter: blur(4px); transition: all 0.2s; }
+    .btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
+    #shutter-btn { bottom: 20px; right: 20px; width: 70px; height: 70px; border-radius: 50%; font-size: 24px; }
+    #pause-btn { top: 20px; right: 20px; }
+    #settings-btn { top: 20px; left: 20px; }
+    #end-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.8); color: #fff; text-align: center; }
+    #end-screen h1 { font-size: 48px; margin-bottom: 20px; color: #ff6b6b; }
+    #end-screen p { font-size: 24px; margin: 10px 0; }
+    #end-screen .btn { margin: 10px; }
+    #menu-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.9); color: #fff; text-align: center; }
+    #menu-screen h1 { font-size: 64px; margin-bottom: 30px; color: #4ecdc4; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+    #menu-screen .btn { margin: 10px; font-size: 20px; padding: 14px 28px; }
+  </style>
+</head>
+<body>
+  <div id="menu-screen">
+    <h1>Snap &amp; Vanish</h1>
+    <button class="btn" id="start-btn">Start Game</button>
+    <button class="btn" id="toggle-music">Music: ON</button>
+  </div>
+  <div id="end-screen">
+    <h1>Game Over</h1>
+    <p id="final-score">Score: 0</p>
+    <p id="high-score">High Score: 0</p>
+    <p id="time-survived">Time: 0s</p>
+    <button class="btn" id="restart-btn">Restart</button>
+    <button class="btn" id="menu-btn">Main Menu</button>
+  </div>
+  <div id="game-container">
+    <canvas id="game-canvas" width="800" height="600"></canvas>
+    <div id="hud"></div>
+  </div>
+  <button class="btn" id="pause-btn" style="display:none;">⏸</button>
+  <button class="btn" id="settings-btn" style="display:none;">⚙</button>
+  <button class="btn" id="shutter-btn" style="display:none;">📷</button>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
