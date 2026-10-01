@@ -1,0 +1,26 @@
+export const PHYSICS = {
+    GRAVITY: 1400,
+    MAX_FALL_SPEED: 450,
+    WALK_SPEED: 180,
+    JUMP_IMPULSE: -550,
+    DRAG: 0.02,
+    COYOTE_TIME: 0.1,
+    JUMP_BUFFER: 0.1
+};
+
+export const TENTACLE = {
+    MAX_RANGE: 600,
+    PROJECTILE_SPEED: 1200,
+    STIFFNESS: 120.0,
+    DAMPING: 8.0,
+    REEL_SPEED: 400,
+    BREAK_THRESHOLD: 2500
+};
+
+export const COLORS = {
+    BACKGROUND: '#0D1117',
+    FOREGROUND: '#E6EDF3',
+    ACCENT: '#58A6FF',
+    DANGER: '#F85149',
+    INK: '#A371F7'
+};

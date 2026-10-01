@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cephalopod Drift</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHBhdGggZD0iTTAgMEgzMlYzM0gzMFYwWiIgZmlsbD0iIzBhMjM4ZiIvPjxwYXRoIGQ9Ik0xNiA2QzEwLjQ4IDYgNiAxMC40OCA2IDE2YzAgNS41MiA0LjQ4IDEwIDEwIDEwIDEwIDAgNi41MiAxMC00LjQ4IDEwLTEwIDEwLTMuNzggNy41NS0xMC0xLjQ4LTEwLTV6bS01LjUgM2wtMi41IDZsMi41IDZsMi41LTYgMi41LTZ6bS0yLjUtNmw1LjUtNiA1LjUgNi01LjUtNi01LjUtNnoiIGZpbGw9IiNmODUxNDkiLz48L3N2Zz4=">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #0D1117; font-family: 'Space Grotesk', sans-serif; }
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        canvas { background: #0D1117; image-rendering: pixelated; touch-action: none; }
+        .hud { position: absolute; pointer-events: none; color: #E6EDF3; }
+        .ink-meter { bottom: 20px; left: 50%; transform: translateX(-50%); width: 40px; height: 200px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; overflow: hidden; }
+        .ink-fill { width: 100%; height: 100%; background: linear-gradient(180deg, #A371F7, #6C3FD6); transition: height 0.1s ease; }
+        .status-indicators { bottom: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 40px; }
+        .indicator { width: 60px; height: 60px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .timer { top: 20px; right: 20px; background: rgba(0,0,0,0.3); padding: 10px 20px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 18px; }
+        .menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(13,17,23,0.8); backdrop-filter: blur(8px); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10; }
+        .menu h1 { color: #58A6FF; font-size: 4rem; margin-bottom: 2rem; text-shadow: 0 0 10px rgba(88,166,255,0.5); }
+        .menu button { background: #21262D; color: #E6EDF3; border: 1px solid rgba(255,255,255,0.15); padding: 15px 30px; margin: 10px; border-radius: 8px; font-size: 1.2rem; cursor: pointer; transition: all 0.3s; }
+        .menu button:hover { background: #30363D; border-color: #58A6FF; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas" width="1920" height="1080"></canvas>
+        <div class="hud ink-meter"><div class="ink-fill" id="ink-fill"></div></div>
+        <div class="hud status-indicators">
+            <div class="indicator" id="left-indicator">🐙</div>
+            <div class="indicator" id="right-indicator">🐙</div>
+        </div>
+        <div class="hud timer" id="timer">00:00.00</div>
+        <div class="menu" id="menu">
+            <h1>CEPHALOPOD DRIFT</h1>
+            <button id="start-btn">START</button>
+            <button id="settings-btn">SETTINGS</button>
+        </div>
+    </div>
+    <script type="module" src="src/main.ts"></script>
+</body>
+</html>
