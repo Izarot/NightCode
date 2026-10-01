@@ -1,316 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PATHFINDER: INK TRAIL</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%2300D4FF'/%3E%3Ctext x='50' y='58' font-size='40' text-anchor='middle' fill='%23fff' font-weight='bold'%3E✓%3C/text%3E%3C/svg%3E">
-<style>
-body{margin:0;padding:0;overflow:hidden;background:#1A202C;font-family:Arial, sans-serif;}
-#gameContainer{position:relative;width:100vw;height:100vh;}
-#gameCanvas{background:#1A202C;display:block;}
-.hud{position:absolute;top:0;left:0;width:100%;pointer-events:none;}
-.hud div{position:absolute;background:rgba(26,32,44,0.85);color:#E2E8F0;font-size:14px;padding:10px;}
-#levelIndicator{left:20px;top:0;}
-#inkMeter{left:200px;width:200px;top:10px;}
-#inkBar{background:#2D3748;height:12px;border-radius:6px;}
-#inkFill{background:#4299E1;height:100%;width:100%;border-radius:6px;}
-#timer{right:20px;top:10px;}
-#goBtn{right:20px;bottom:20px;background:#38A169;color:#fff;border:none;border-radius:8px;padding:10px 20px;cursor:pointer;}
-#eraseBtn{left:20px;bottom:20px;background:#4A5568;color:#fff;border:none;border-radius:8px;padding:10px 15px;cursor:pointer;}
-#clearBtn{left:150px;bottom:20px;background:#4A5568;color:#fff;border:none;border-radius:8px;padding:10px 15px;cursor:pointer;}
-#restartBtn{right:150px;bottom:20px;background:#4A5568;color:#fff;border:none;border-radius:8px;padding:10px 15px;cursor:pointer;}
-.overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(26,32,44,0.9);display:none;align-items:center;justify-content:center;flex-direction:column;}
-.overlay h1{color:#00D4FF;font-size:48px;}
-.overlay button{margin:10px;padding:10px 20px;background:#38A169;color:#fff;border:none;border-radius:8px;cursor:pointer;}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Balance‑Shift</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { background:#1a1a2e; overflow:hidden; font-family:'Segoe UI', sans-serif; }
+    canvas { display:block; width:100vw; height:100vh; touch-action:none; }
+    #ui-overlay { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:10; }
+    .hud { position:absolute; color:#fff; font-size:1.2rem; text-shadow:0 0 4px #000; pointer-events:auto; }
+    #timer { top:1rem; right:1rem; font-family:monospace; font-size:1.5rem; background:rgba(0,0,0,0.5); padding:0.5rem 1rem; border-radius:8px; }
+    #level-info { top:1rem; left:1rem; background:rgba(0,0,0,0.5); padding:0.5rem 1rem; border-radius:8px; }
+    #inventory { bottom:1rem; left:50%; transform:translateX(-50%); display:flex; gap:0.5rem; background:rgba(0,0,0,0.7); padding:0.5rem; border-radius:12px; }
+    .weight-btn { width:60px; height:60px; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:1.5rem; color:#fff; text-shadow:0 0 2px #000; transition:transform 0.1s; }
+    .weight-btn:active { transform:scale(0.9); }
+    .weight-btn.selected { outline:3px solid #ffd700; }
+    .weight-btn:disabled { opacity:0.4; cursor:not-allowed; }
+    #torque-meter { top:1rem; left:50%; transform:translateX(-50%); width:300px; height:24px; background:rgba(0,0,0,0.5); border-radius:12px; overflow:hidden; display:flex; }
+    .torque-bar { height:100%; transition:width 0.1s; }
+    #torque-left { background:#00d9ff; }
+    #torque-right { background:#ff6b6b; }
+    #torque-values { position:absolute; top:0; left:0; right:0; display:flex; justify-content:space-between; padding:0 0.5rem; font-size:0.8rem; color:#fff; text-shadow:0 0 2px #000; }
+    #hint-btn { top:1rem; right:4.5rem; width:50px; height:50px; border-radius:50%; background:#0f3460; border:none; color:#fff; font-size:1.5rem; cursor:pointer; box-shadow:0 0 10px #e94560; }
+    #pause-btn { top:1rem; right:10rem; width:50px; height:50px; border-radius:50%; background:#0f3460; border:none; color:#fff; font-size:1.5rem; cursor:pointer; }
+    .modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100; gap:1rem; }
+    .modal.hidden { display:none; }
+    .modal h2 { color:#ffd700; text-shadow:0 0 10px #e94560; }
+    .modal button { padding:0.8rem 2rem; font-size:1.2rem; border:none; border-radius:8px; background:#e94560; color:#fff; cursor:pointer; transition:background 0.2s; }
+    .modal button:hover { background:#ff6b6b; }
+    #stars { display:flex; gap:0.5rem; font-size:2rem; }
+    .star { color:#444; transition:color 0.2s; }
+    .star.filled { color:#feca57; text-shadow:0 0 8px #feca57; }
+    @media (max-width:600px) { .hud { font-size:1rem; } #timer { font-size:1.2rem; } .weight-btn { width:50px; height:50px; } #torque-meter { width:90vw; } }
+  </style>
 </head>
 <body>
-<div id="gameContainer">
-<canvas id="gameCanvas"></canvas>
-<div class="hud">
-  <div id="levelIndicator">Level <span id="lvlNum">1</span></div>
-  <div id="inkMeter">
-    <div style="color:#A0AEC0;font-size:12px;margin-bottom:5px;">INK</div>
-    <div id="inkBar"><div id="inkFill" style="width:100%"></div></div>
+  <canvas id="game"></canvas>
+  <div id="ui-overlay">
+    <div id="timer" class="hud">00:00.00</div>
+    <div id="level-info" class="hud">Level 1 / 15</div>
+    <div id="torque-meter" class="hud">
+      <div id="torque-left" class="torque-bar" style="width:50%"></div>
+      <div id="torque-right" class="torque-bar" style="width:50%"></div>
+      <div id="torque-values"><span id="torque-l">0.0</span><span id="torque-r">0.0</span></div>
+    </div>
+    <button id="hint-btn" class="hud" aria-label="Hint">💡</button>
+    <button id="pause-btn" class="hud" aria-label="Pause">⏸️</button>
+    <div id="inventory" class="hud"></div>
   </div>
-  <div id="timer">00:00</div>
-  <button id="eraseBtn">ERASE</button>
-  <button id="clearBtn">CLEAR</button>
-  <button id="goBtn">GO ▸</button>
-  <button id="restartBtn">↻ RESTART</button>
-</div>
-<div class="overlay" id="overlay">
-  <h1 id="overlayTitle">LEVEL COMPLETE</h1>
-  <div id="stars" style="font-size:48px;color:#F6E05E;margin:20px 0;">★★★</div>
-  <button id="nextBtn">NEXT LEVEL ▸</button>
-  <button id="replayBtn">REPLAY</button>
-</div>
-</div>
-<script>
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-let W = 1280, H = 720, scale = 1;
-function resize(){
-  const pw = window.innerWidth, ph = window.innerHeight;
-  scale = Math.min(pw/W, ph/H);
-  canvas.width = W*scale;
-  canvas.height = H*scale;
-  ctx.setTransform(scale,0,0,scale,0,0);
-}
-window.addEventListener('resize',resize);resize();
-
-// Game State
-let state='IDLE', level=1, ink=500, maxInk=500;
-let orbPos={x:100,y:360}, orbVel=0, path=[], particles=[];
-let obstacles=[], goal={x:1180,y:360}, origin={x:100,y:360};
-let startTime=0, elapsed=0;
-let highScore=0;
-let isEraser=false;
-
-// Audio
-const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-function playSound(type){
-  if(!audioCtx) return;
-  const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-  osc.connect(gain); gain.connect(audioCtx.destination);
-  switch(type){
-    case 'submit': osc.frequency.setValueAtTime(659, audioCtx.currentTime); gain.gain.setValueAtTime(0.2, audioCtx.currentTime); osc.type='sine'; osc.stop(audioCtx.currentTime+0.2); break;
-    case 'collision': gain.gain.setValueAtTime(0.3, audioCtx.currentTime); osc.frequency.exponentialRampTo(200, 0.3); break;
-    case 'success': osc.frequency.setValueAtTime(261, audioCtx.currentTime); gain.gain.setValueAtTime(0.15, audioCtx.currentTime); break;
-  }
-  osc.start();
-}
-
-// High Score
-function loadScore(){const s=localStorage.getItem('pathfinder_highscore');if(s)highScore=parseInt(s);}
-function saveScore(){localStorage.setItem('pathfinder_highscore',highScore.toString());}
-loadScore();
-
-// Obstacles
-function createLevel(n){
-  obstacles=[];
-  if(n===1){
-    obstacles.push({type:'STATIC',x:600,y:250,w:40,h:200});
-  } else if(n===2){
-    obstacles.push({type:'STATIC',x:600,y:250,w:40,h:200});
-    obstacles.push({type:'MOVE',x:700,y:360,w:60,h:30,axis:'vertical',amp:150,spd:1.5});
-  } else if(n===3){
-    obstacles.push({type:'STATIC',x:600,y:250,w:40,h:200});
-    obstacles.push({type:'MOVE',x:700,y:360,w:60,h:30,axis:'vertical',amp:150,spd:1.5});
-    obstacles.push({type:'BLADE',px:900,py:360,r:30,angVel:2});
-  }
-  maxInk=500+level*30;
-  ink=maxInk;
-  updateInkBar();
-}
-
-// Physics
-function update(dt){
-  if(state!=='TRAVERSING') return;
-  orbVel += 300*dt*0.1; // gravity component simplified
-  orbVel = Math.min(600, Math.max(20, orbVel));
-  orbVel *= (1-0.015);
-  // Move along path
-  if(path.length>1){
-    let closest={seg:0,t:0,d:9999};
-    for(let i=0;i<path.length-1;i++){
-      const a=path[i], b=path[i+1];
-      const t = Math.max(0, Math.min(1, ((orbPos.x-a.x)*(b.y-a.y)-(orbPos.y-a.y)*(b.x-a.x))/((b.x-a.x)*(b.x-a.x)+(b.y-a.y)*(b.y-a.y))));
-      const px = a.x + t*(b.x-a.x), py = a.y + t*(b.y-a.y);
-      const d = Math.hypot(orbPos.x-px, orbPos.y-py);
-      if(d<closest.d){closest={seg:i,t:t,d:d,px:px,py:py}};
-    }
-    const seg=path[closest.seg];
-    const len=Math.hypot(seg.x2-seg.x1, seg.y2-seg.y1);
-    const nx=(seg.y2-seg.y1)/len, ny=-(seg.x2-seg.x1)/len;
-    orbPos.x += (seg.x2-seg.x1)/len * orbVel*dt;
-    orbPos.y += (seg.y2-seg.y1)/len * orbVel*dt;
-    // Check collision
-    for(const obs of obstacles){
-      if(checkCollision(orbPos, obs)){
-        fail(); return;
-      }
-    }
-    // Check goal
-    if(Math.hypot(orbPos.x-goal.x, orbPos.y-goal.y)<20){
-      success();
-    }
-  }
-}
-
-function checkCollision(pos, obs){
-  if(obs.type==='STATIC'){
-    const dx=Math.max(0, Math.abs(pos.x-obs.x)-obs.w/2);
-    const dy=Math.max(0, Math.abs(pos.y-obs.y)-obs.h/2);
-    return dx*obs.w + dy*obs.h < 10;
-  } else if(obs.type==='BLADE'){
-    const ang = (performance.now()/1000)*obs.angVel;
-    const ex = obs.px + Math.cos(ang)*obs.r;
-    const ey = obs.py + Math.sin(ang)*obs.r;
-    return Math.hypot(pos.x-ex, pos.y-ey) < 10;
-  }
-  return false;
-}
-
-function fail(){
-  state='FAILED';
-  playSound('collision');
-  setTimeout(()=>{state='REDRAW'; path=[]; orbPos={x:origin.x,y:origin.y}; orbVel=0;}, 600);
-}
-
-function success(){
-  state='SUCCESS';
-  const time = elapsed;
-  if(time<highScore || highScore===0) highScore=time;
-  saveScore();
-  playSound('success');
-  document.getElementById('overlay').style.display='flex';
-}
-
-// Drawing
-let drawing=false, lastPt={x:0,y:0};
-canvas.addEventListener('mousedown',()=>{drawing=true;lastPt={x:0,y:0};});
-canvas.addEventListener('mousemove',(e)=>{if(!drawing)return;
-  const rect=canvas.getBoundingClientRect();
-  const x=(e.clientX-rect.left)/scale, y=(e.clientY-rect.top)/scale;
-  if(Math.hypot(x-lastPt.x,y-lastPt.y)>3){
-    if(path.length===0 && Math.hypot(x-origin.x,y-origin.y)>15){
-      path.push({x:origin.x,y:origin.y});
-    }
-    path.push({x,y});
-    ink-=0.1; if(ink<0)ink=0;
-    updateInkBar();
-    lastPt={x,y};
-  }
-});
-canvas.addEventListener('mouseup',()=>{drawing=false;});
-canvas.addEventListener('touchend',()=>{drawing=false;});
-canvas.addEventListener('touchmove',(e)=>{if(!drawing)return;
-  e.preventDefault();
-  const touch=e.touches[0];
-  const rect=canvas.getBoundingClientRect();
-  const x=(touch.clientX-rect.left)/scale, y=(touch.clientY-rect.top)/scale;
-  if(Math.hypot(x-lastPt.x,y-lastPt.y)>3){
-    if(path.length===0 && Math.hypot(x-origin.x,y-origin.y)>15){
-      path.push({x:origin.x,y:origin.y});
-    }
-    path.push({x,y});
-    ink-=0.1; if(ink<0)ink=0;
-    updateInkBar();
-    lastPt={x,y};
-  }
-},{passive:false});
-
-function updateInkBar(){
-  const pct=Math.max(0,ink/maxInk)*100;
-  document.getElementById('inkFill').style.width=pct+'%';
-  document.getElementById('inkFill').style.background=pct<20?'#D69E2E':'#4299E1';
-}
-
-// Game Loop
-function loop(t){
-  if(state==='TRAVERSING'){
-    const dt=0.016;
-    update(dt);
-    elapsed+=dt;
-    document.getElementById('timer').textContent=String(Math.floor(elapsed/60))+':'+String(Math.floor(elapsed%60)).padStart(2,'0');
-  }
-  render();
-  requestAnimationFrame(loop);
-}
-
-function render(){
-  ctx.fillStyle='#1A202C';
-  ctx.fillRect(0,0,W,H);
-  // Grid
-  ctx.strokeStyle='rgba(255,255,255,0.03)';
-  for(let x=0;x<W;x+=40){
-    ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H);
-    ctx.stroke();
-  }
-  for(let y=0;y<H;y+=40){
-    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y);
-    ctx.stroke();
-  }
-  // Obstacles
-  for(const obs of obstacles){
-    if(obs.type==='STATIC'){
-      ctx.fillStyle='#2D3748';
-      ctx.fillRect(obs.x-obs.w/2, obs.y-obs.h/2, obs.w, obs.h);
-    }
-  }
-  // Path
-  if(path.length>1){
-    ctx.strokeStyle='#00D4FF';
-    ctx.lineWidth=10;
-    ctx.lineCap='round';
-    ctx.shadowBlur=20; ctx.shadowColor='#00D4FF';
-    ctx.beginPath();
-    ctx.moveTo(path[0].x, path[0].y);
-    for(let i=1;i<path.length;i++) ctx.lineTo(path[i].x, path[i].y);
-    ctx.stroke();
-    ctx.shadowBlur=0;
-  }
-  // Orb
-  const grad=ctx.createRadialGradient(orbPos.x,orbPos.y,0,orbPos.x,orbPos.y,10);
-  grad.addColorStop(0,'#FFFFFF');
-  grad.addColorStop(0.5,'#6EC6FF');
-  grad.addColorStop(1,'#2B6CB0');
-  ctx.fillStyle=grad;
-  ctx.shadowBlur=20; ctx.shadowColor='#6EC6FF';
-  ctx.beginPath();
-  ctx.arc(orbPos.x, orbPos.y, 10, 0, Math.PI*2);
-  ctx.fill();
-  ctx.shadowBlur=0;
-  // Goal
-  ctx.fillStyle='#F6E05E';
-  ctx.beginPath();
-  ctx.arc(goal.x, goal.y, 20, 0, Math.PI*2);
-  ctx.fill();
-  // Particles
-  for(let i=particles.length-1;i>=0;i--){
-    const p=particles[i];
-    ctx.fillStyle=p.color;
-    ctx.globalAlpha=p.life/p.maxLife;
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
-    ctx.fill();
-    p.x+=p.vx; p.y+=p.vy; p.life--;
-    if(p.life<=0) particles.splice(i,1);
-  }
-  ctx.globalAlpha=1;
-}
-
-// UI
-document.getElementById('goBtn').addEventListener('click',()=>{
-  if(path.length<2) return;
-  if(Math.hypot(path[path.length-1].x-goal.x, path[path.length-1].y-goal.y)>20){
-    alert('Path must reach the goal beacon');
-    return;
-  }
-  state='TRAVERSING';
-  startTime=performance.now()/1000;
-  elapsed=0;
-  document.getElementById('overlay').style.display='none';
-});
-
-document.getElementById('eraseBtn').addEventListener('click',()=>{
-  isEraser=!isEraser;
-  document.getElementById('eraseBtn').style.background=isEraser?'#E53E3E':'#4A5568';
-});
-
-document.getElementById('clearBtn').addEventListener('click',()=>{path=[];});
-
-document.getElementById('restartBtn').addEventListener('click',()=>{level=1; state='IDLE'; path=[]; orbPos={x:origin.x,y:origin.y}; createLevel(level);});
-
-document.getElementById('nextBtn').addEventListener('click',()=>{level++; if(level>15) level=1; state='IDLE'; path=[]; orbPos={x:origin.x,y:origin.y}; createLevel(level); document.getElementById('overlay').style.display='none';});
-
-document.getElementById('replayBtn').addEventListener('click',(){state='IDLE'; path=[]; orbPos={x:origin.x,y:origin.y}; document.getElementById('overlay').style.display='none';});
-
-// Init
-createLevel(1);
-requestAnimationFrame(loop);
-</script>
+  <div id="pause-modal" class="modal hidden">
+    <h2>Paused</h2>
+    <button id="resume-btn">Resume</button>
+    <button id="restart-btn">Restart Level</button>
+    <button id="menu-btn">Main Menu</button>
+  </div>
+  <div id="complete-modal" class="modal hidden">
+    <h2>Level Complete!</h2>
+    <div id="stars"></div>
+    <p id="time-result"></p>
+    <button id="next-btn">Next Level</button>
+    <button id="replay-btn">Replay</button>
+  </div>
+  <div id="menu-modal" class="modal">
+    <h2>Balance‑Shift</h2>
+    <p style="color:#aaa; max-width:80%; text-align:center;">Place weights to balance the seesaw. Drag weights to slots. Achieve equilibrium to win.</p>
+    <button id="start-btn">Start Game</button>
+    <button id="continue-btn" class="hidden">Continue</button>
+    <button id="reset-btn">Reset Progress</button>
+  </div>
+  <script src="config.js"></script>
+  <script src="levels.js"></script>
+  <script src="audio.js"></script>
+  <script src="seesaw.js"></script>
+  <script src="renderer.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>
