@@ -1,0 +1,112 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: #0a0a0a;
+    overflow: hidden;
+    font-family: 'Courier New', monospace;
+    touch-action: none;
+}
+
+#game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#gameCanvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    max-width: 100%;
+    max-height: 100%;
+    box-shadow: 0 0 20px #0ff;
+}
+
+#hud {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    pointer-events: none;
+    z-index: 10;
+}
+
+#timer {
+    color: #0ff;
+    font-size: 24px;
+    text-shadow: 0 0 10px #0ff;
+    font-weight: bold;
+}
+
+#health-bar {
+    display: flex;
+    gap: 5px;
+}
+
+.heart {
+    width: 20px;
+    height: 20px;
+    background: #f0f;
+    box-shadow: 0 0 10px #f0f;
+    clip-path: polygon(50% 0%, 100% 35%, 100% 70%, 50% 100%, 0% 70%, 0% 35%);
+}
+
+.heart.empty { background: #333; box-shadow: none; }
+
+#abilities {
+    display: flex;
+    gap: 10px;
+}
+
+.ability-icon {
+    width: 30px;
+    height: 30px;
+    border: 2px solid #ff0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    color: #ff0;
+    text-shadow: 0 0 5px #ff0;
+}
+
+.ability-icon.locked { opacity: 0.3; border-color: #666; color: #666; }
+
+#score {
+    color: #0f0;
+    font-size: 18px;
+    text-shadow: 0 0 10px #0f0;
+}
+
+#mobile-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    display: none;
+    justify-content: space-around;
+    padding: 0 20px;
+    z-index: 20;
+}
+
+#mobile-controls button {
+    width: 70px;
+    height: 70px;
+    background: rgba(0,255,255,0.3);
+    border: 2px solid #0ff;
+    color: #0ff;
+    font-size: 20px;
+    border-radius: 50%;
+    touch-action: none;
+}
+
+@media (max-width: 768px) {
+    #mobile-controls { display: flex; }
+    #hud { font-size: 14px; }
+    #timer { font-size: 18px; }
+}
