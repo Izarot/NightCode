@@ -1,0 +1,217 @@
+JSON Decode Error: Invalid control character at: line 6 column 3900 (char 23779)
+
+Raw LLM Output that failed to parse:
+I'll create a comprehensive file structure plan for Sketch Defense based on the technical specification.
+
+```json
+{
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Sketch Defense</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>\">\n    <style>\n        * { margin: 0; padding: 0; box-sizing: border-box; }\n        body { \n            font-family: 'Inter', sans-serif; \n            background: linear-gradient(135deg, #2a1a0d 0%, #1a0f05 100%);\n            overflow: hidden;\n            color: #e0d0b0;\n        }\n        #game-container {\n            position: relative;\n            width: 100vw;\n            height: 100vh;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n        }\n        canvas {\n            max-width: 100%;\n            max-height: 100%;\n            width: 100%;\n            height: auto;\n            image-rendering: pixelated;\n        }\n        .hud {\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            pointer-events: none;\n            z-index: 10;\n        }\n        .resource-counter {\n            position: absolute;\n            top: 20px;\n            left: 20px;\n            font-size: 28px;\n            font-weight: bold;\n            color: #4ade80;\n            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);\n            pointer-events: auto;\n        }\n        .wave-indicator {\n            position: absolute;\n            top: 20px;\n            left: 50%;\n            transform: translateX(-50%);\n            font-size: 24px;\n            color: #fbbf24;\n            pointer-events: auto;\n        }\n        .wave-progress {\n            position: absolute;\n            top: 50px;\n            left: 50%;\n            transform: translateX(-50%);\n            width: 200px;\n            height: 8px;\n            background: rgba(255,255,255,0.1);\n            border-radius: 4px;\n            overflow: hidden;\n            pointer-events: auto;\n        }\n        .wave-progress-fill {\n            height: 100%;\n            background: linear-gradient(90, #fbbf24, #f59e0b);\n            width: 0%;\n            transition: width 0.3s ease;\n        }\n        .mode-toggle {\n            position: absolute;\n            top: 20px;\n            right: 20px;\n            width: 60px;\n            height: 60px;\n            border-radius: 50%;\n            background: rgba(255,255,255,0.1);\n            border: 2px solid #e0d0b0;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            font-size: 24px;\n            cursor: pointer;\n            pointer-events: auto;\n            transition: all 0.2s ease;\n        }\n        .mode-toggle:hover {\n            background: rgba(255,255,255,0.2);\n            transform: scale(1.1);\n        }\n        .pause-button {\n            position: absolute;\n            bottom: 20px;\n            right: 20px;\n            width: 80px;\n            height: 80px;\n            border-radius: 50%;\n            background: rgba(220,38,38,0.7);\n            border: 2px solid #ef4444;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            font-size: 32px;\n            cursor: pointer;\n            pointer-events: auto;\n            transition: all 0.2s ease;\n        }\n        .pause-button:hover {\n            background: rgba(220,38,38,0.9);\n            transform: scale(1.1);\n        }\n        .mini-map {\n            position: absolute;\n            bottom: 20px;\n            left: 20px;\n            width: 150px;\n            height: 150px;\n            background: rgba(0,0,0,0.3);\n            border-radius: 8px;\n            border: 2px solid #e0d0b0;\n            pointer-events: auto;\n        }\n        .quick-bar {\n            position: absolute;\n            bottom: 20px;\n            left: 50%;\n            transform: translateX(-50%);\n            display: flex;\n            gap: 10px;\n            pointer-events: auto;\n        }\n        .quick-slot {\n            width: 60px;\n            height: 60px;\n            border-radius: 8px;\n            background: rgba(255,255,255,0.1);\n            border: 2px solid #e0d0b0;\n            display: flex;\n            justify-content: center;\n            align-items: center;\n            cursor: pointer;\n            transition: all 0.2s ease;\n        }\n        .quick-slot:hover {\n            background: rgba(255,255,255,0.2);\n            transform: translateY(-5px);\n        }\n        .pause-overlay {\n            position: absolute;\n            top: 0;\n            left: 0;\n            width: 100%;\n            height: 100%;\n            background: rgba(0,0,0,0.7);\n            display: none;\n            justify-content: center;\n            align-items: center;\n            flex-direction: column;\n            gap: 20px;\n            pointer-events: auto;\n            z-index: 20;\n        }\n        .pause-overlay.active {\n            display: flex;\n        }\n        .pause-button-large {\n            padding: 15px 30px;\n            font-size: 20px;\n            border-radius: 8px;\n            background: linear-gradient(135deg, #4f46e5, #7c3aed);\n            border: none;\n            color: white;\n            cursor: pointer;\n            transition: all 0.2s ease;\n        }\n        .pause-button-large:hover {\n            transform: translateY(-3px);\n            box-shadow: 0 10px 25px rgba(0,0,0,0.3);\n        }\n        .speedrun-timer {\n            position: absolute;\n            top: 20px;\n            right: 20px;\n            font-size: 20px;\n            color: #fbbf24;\n            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);\n            pointer-events: none;\n        }\n        .shape-preview {\n            position: absolute;\n            pointer-events: none;\n            z-index: 5;\n        }\n        .reset-drawing {\n            position: absolute;\n            top: 20px;\n            right: 20px;\n            width: 40px;\n            height: 40px;\n            border-radius: 50%;\n            background: rgba(220,38,38,0.7);\n            border: 2px solid #ef4444;\n            display: none;\n            justify-content: center;\n            align-items: center;\n            font-size: 20px;\n            cursor: pointer;\n            pointer-events: auto;\n        }\n        .reset-drawing.active {\n            display: flex;\n        }\n        @media (max-width: 768px) {\n            .resource-counter { font-size: 22px; top: 15px; left: 15px; }\n            .wave-indicator { font-size: 20px; top: 15px; }\n            .mode-toggle { width: 50px; height: 50px; font-size: 20px; top: 15px; right: 15px; }\n            .pause-button { width: 60px; height: 60px; font-size: 24px; bottom: 15px; right: 15px; }\n            .mini-map { width: 120px; height: 120px; bottom: 15px; left: 15px; }\n            .quick-bar { bottom: 15px; }\n            .quick-slot { width: 50px; height: 50px; font-size: 18px; }\n            .speedrun-timer { font-size: 16px; top: 15px; right: 15px; }\n        }\n    </style>\n</head>\n<body>\n    <div id=\"game-container\">\n        <canvas id=\"game-canvas\"></canvas>\n        <div class=\"hud\">\n            <div class=\"resource-counter\" id=\"resource-counter\">Gold: 0</div>\n            <div class=\"wave-indicator\" id=\"wave-indicator\">Wave 1 / 10</div>\n            <div class=\"wave-progress\">\n                <div class=\"wave-progress-fill\" id=\"wave-progress-fill\"></div>\n            </div>\n            <div class=\"mode-toggle\" id=\"mode-toggle\" role=\"button\" aria-label=\"Toggle Draw/Upgrade Mode\">✏️</div>\n            <div class=\"speedrun-timer\" id=\"speedrun-timer\">Time: 0.00s</div>\n            <div class=\"reset-drawing\" id=\"reset-drawing\" role=\"button\" aria-label=\"Reset Drawing\">✖️</div>\n            <div class=\"mini-map\" id=\"mini-map\"></div>\n            <div class=\"quick-bar\" id=\"quick-bar\">\n                <div class=\"quick-slot\" id=\"slot-1\" role=\"button\" aria-label=\"Quick Slot 1\">1</div>\n                <div class=\"quick-slot\" id=\"slot-2\" role=\"button\" aria-label=\"Quick Slot 2\">2</div>\n                <div class=\"quick-slot\" id=\"slot-3\" role=\"button\" aria-label=\"Quick Slot 3\">3</div>\n            </div>\n            <div class=\"pause-button\" id=\"pause-button\" role=\"button\" aria-label=\"Pause Game\">⏸️</div>\n            <div class=\"pause-overlay\" id=\"pause-overlay\">\n                <button class=\"pause-button-large\" id=\"resume-button\">Resume</button>\n                <button class=\"pause-button-large\" id=\"restart-wave-button\">Restart Wave</button>\n                <button class=\"pause-button-large\" id=\"quit-button\">Quit to Menu</button>\n            </div>\n        </div>\n    </div>\n    <script type=\"module\" src=\"game.js\"></script>\n</body>\n</html>",
+  "game.js": "import { Game } from './src/game.js';\nimport { AudioManager } from './src/audio.js';\nimport { InputManager } from './src/input.js';\nimport { TowerManager } from './src/towers.js';\nimport { EnemyManager } from './src/enemies.js';\nimport { WaveManager } from './src/waves.js';\nimport { UIManager } from './src/ui.js';\nimport { Renderer } from './src/renderer.js';\nimport { Path } from './src/path.js';\nimport { ParticleSystem } from './src/particles.js';\nimport { ResourceManager } from './src/resources.js';\nimport { StateMachine } from './src/state.js';\nimport { StorageManager } from './src/storage.js';\n\n// Initialize game when DOM is loaded\nwindow.addEventListener('load', () => {\n    const canvas = document.getElementById('game-canvas');\n    const game = new Game(canvas);\n    game.start();\n});\n\n// Handle window resize for responsive canvas\nwindow.addEventListener('resize', () => {\n    const canvas = document.getElementById('game-canvas');\n    if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {\n        canvas.width = window.innerWidth;\n        canvas.height = window.innerHeight;\n    }\n});",
+  "src/game.js": "import { StateMachine } from './state.js';\nimport { InputManager } from './input.js';\nimport { Renderer } from './renderer.js';\nimport { TowerManager } from './towers.js';\nimport { EnemyManager } from './enemies.js';\nimport { WaveManager } from './waves.js';\nimport { UIManager } from './ui.js';\nimport { AudioManager } from './audio.js';\nimport { Path } from './path.js';\nimport { ParticleSystem } from './particles.js';\nimport { ResourceManager } from './resources.js';\nimport { StorageManager } from './storage.js';\n\nexport class Game {\n    constructor(canvas) {\n        this.canvas = canvas;\n        this.ctx = canvas.getContext('2d');\n        this.width = canvas.width = window.innerWidth;\n        this.height = canvas.height = window.innerHeight;\n        \n        // Core systems\n        this.stateMachine = new StateMachine();\n        this.inputManager = new InputManager(canvas);\n        this.renderer = new Renderer(this.ctx, this.width, this.height);\n        this.towerManager = new TowerManager();\n        this.enemyManager = new EnemyManager();\n        this.waveManager = new WaveManager();\n        this.uiManager = new UIManager();\n        this.audioManager = new AudioManager();\n        this.path = new Path();\n        this.particleSystem = new ParticleSystem();\n        this.resourceManager = new ResourceManager();\n        this.storageManager = new StorageManager();\n        \n        // Game state\n        this.lastTime = 0;\n        this.accumulator = 0;\n        this.fixedTimestep = 1/60;\n        this.speedrunTimer = 0;\n        this.highScore = this.storageManager.getHighScore() || 0;\n        \n        // Bind event handlers\n        this.gameLoop = this.gameLoop.bind(this);\n        this.handleResize = this.handleResize.bind(this);\n        \n        // Setup event listeners\n        window.addEventListener('resize', this.handleResize);\n        this.setupEventListeners();\n    }\n    \n    start() {\n        this.stateMachine.setState('MAIN_MENU');\n        this.loadSavedData();\n        requestAnimationFrame(this.gameLoop);\n    }\n    \n    loadSavedData() {\n        const savedData = this.storageManager.loadGameState();\n        if (savedData) {\n            this.resourceManager.gold = savedData.gold || 0;\n            this.towerManager.loadTowers(savedData.towers || []);\n            this.waveManager.currentWave = savedData.wave || 1;\n            this.highScore = savedData.highScore || 0;\n        }\n    }\n    \n    saveGameData() {\n        const gameState = {\n            gold: this.resourceManager.gold,\n            towers: this.towerManager.getTowers(),\n            wave: this.waveManager.currentWave,\n            highScore: this.highScore\n        };\n        this.storageManager.saveGameState(gameState);\n    }\n    \n    setupEventListeners() {\n        // Pause toggle\n        document.getElementById('pause-button').addEventListener('click', () => {\n            if (this.stateMachine.currentState === 'PLAYING') {\n                this.stateMachine.setState('PAUSED');\n            } else if (this.stateMachine.currentState === 'PAUSED') {\n                this.stateMachine.setState('PLAYING');\n            }\n        });\n        \n        // Resume button\n        document.getElementById('resume-button').addEventListener('click', () => {\n            this.stateMachine.setState('PLAYING');\n        });\n        \n        // Restart wave button\n        document.getElementById('restart-wave-button').addEventListener('click', () => {\n            this.waveManager.restartWave();\n            this.stateMachine.setState('PLAYING');\n        });\n        \n        // Quit button\n        document.getElementById('quit-button').addEventListener('click', () => {\n            this.stateMachine.setState('MAIN_MENU');\n        });\n        \n        // Mode toggle\n        document.getElementById('mode-toggle').addEventListener('click', () => {\n            this.uiManager.toggleMode();\n        });\n        \n        // Reset drawing\n        document.getElementById('reset-drawing').addEventListener('click', () => {\n            this.inputManager.cancelDrawing();\n        });\n        \n        // Keyboard controls\n        window.addEventListener('keydown', (e) => {\n            if (e.key === 'Escape') {\n                this.inputManager.cancelDrawing();\n            }\n            if (e.key === 'p' || e.key === 'P') {\n                if (this.stateMachine.currentState === 'PLAYING') {\n                    this.stateMachine.setState('PAUSED');\n                    this.audioManager.playSound('pause');\n                } else if (this.stateMachine.currentState === 'PAUSED') {\n                    this.stateMachine.setState('PLAYING');\n                    this.audioManager.playSound('unpause');\n                }\n            }\n            if (e.key >= '1' && e.key <= '3') {\n                this.uiManager.selectQuickSlot(parseInt(e.key));\n            }\n        });\n    }\n    \n    handleResize() {\n        this.width = this.canvas.width = window.innerWidth;\n        this.height = this.canvas.height = window.innerHeight;\n        this.renderer.resize(this.width, this.height);\n    }\n    \n    gameLoop(timestamp) {\n        const deltaTime = (timestamp - this.lastTime) / 1000;\n        this.lastTime = timestamp;\n        \n        // Fixed timestep update\n        this.accumulator += deltaTime;\n        while (this.accumulator >= this.fixedTimestep) {\n            this.update(this.fixedTimestep);\n            this.accumulator -= this.fixedTimestep;\n        }\n        \n        // Update speedrun timer\n        if (this.stateMachine.currentState === 'PLAYING') {\n            this.speedrunTimer += deltaTime;\n        }\n        \n        // Render\n        this.render();\n        \n        requestAnimationFrame(this.gameLoop);\n    }\n    \n    update(deltaTime) {\n        const state = this.stateMachine.currentState;\n        \n        switch (state) {\n            case 'MAIN_MENU':\n                this.updateMainMenu(deltaTime);\n                break;\n            case 'PLAYING':\n                this.updatePlaying(deltaTime);\n                break;\n            case 'PAUSED':\n                this.updatePaused(deltaTime);\n                break;\n            case 'GAME_OVER':\n                this.updateGameOver(deltaTime);\n                break;\n        }\n    }\n    \n    updateMainMenu(deltaTime) {\n        // Handle menu interactions\n    }\n    \n    updatePlaying(deltaTime) {\n        // Update game systems\n        this.inputManager.update(deltaTime);\n        this.towerManager.update(deltaTime);\n        this.enemyManager.update(deltaTime);\n        this.waveManager.update(deltaTime);\n        this.particleSystem.update(deltaTime);\n        this.resourceManager.update(deltaTime);\n        this.uiManager.update(deltaTime);\n        \n        // Check win/lose conditions\n        if (this.waveManager.isWaveComplete()) {\n            this.audioManager.playSound('wave_complete');\n            this.saveGameData();\n            this.waveManager.nextWave();\n        }\n        \n        if (this.enemyManager.hasEnemiesReachedEnd()) {\n            this.stateMachine.setState('GAME_OVER');\n            this.audioManager.playSound('game_over');\n            this.saveGameData();\n        }\n    }\n    \n    updatePaused(deltaTime) {\n        // Only update UI in paused state\n        this.uiManager.update(deltaTime);\n    }\n    \n    updateGameOver(deltaTime) {\n        // Update high score\n        if (this.speedrunTimer < this.highScore || this.highScore === 0) {\n            this.highScore = this.speedrunTimer;\n            this.storageManager.saveHighScore(this.highScore);\n        }\n    }\n    \n    render() {\n        const state = this.stateMachine.currentState;\n        \n        // Clear canvas\n        this.ctx.clearRect(0, 0, this.width, this.height);\n        \n        // Render background\n        this.renderer.renderBackground();\n        \n        // Render game objects\n        this.renderer.renderPath(this.path);\n        this.towerManager.render(this.ctx);\n        this.enemyManager.render(this.ctx);\n        this.particleSystem.render(this.ctx);\n        this.resourceManager.render(this.ctx);\n        \n        // Render UI\n        this.uiManager.render(this.ctx, this.resourceManager.gold, this.waveManager.currentWave, this.waveManager.totalWaves, this.speedrunTimer, this.highScore);\n        \n        // Render state-specific overlays\n        if (state === 'PAUSED') {\n            this.renderer.renderPauseOverlay();\n        }\n    }\n}\n\nexport default Game;",
+  "src/state.js": "export class StateMachine {\n    constructor() {\n        this.currentState = 'MAIN_MENU';\n        this.previousState = null;\n        this.states = {\n            MAIN_MENU: 'MAIN_MENU',\n            PLAYING: 'PLAYING',\n            PAUSED: 'PAUSED',\n            GAME_OVER: 'GAME_OVER'\n        };\n    }\n    \n    setState(newState) {\n        if (this.states[newState]) {\n            this.previousState = this.currentState;\n            this.currentState = newState;\n        }\n    }\n    \n    getState() {\n        return this.currentState;\n    }\n    \n    revertToPreviousState() {\n        if (this.previousState) {\n            this.currentState = this.previousState;\n            this.previousState = null;\n        }\n    }\n}\n\nexport default StateMachine;",
+  "src/input.js": "import { StorageManager } from './storage.js';\n\nexport class InputManager {\n    constructor(canvas) {\n        this.canvas = canvas;\n        this.ctx = canvas.getContext('2d');\n        this.isDrawing = false;\n        this.currentPath = [];\n        this.drawStartTime = 0;\n        this.lastPointerTime = 0;\n        this.inputSmoothing = 1/60; // 60Hz cap\n        \n        // Drawing settings\n        this.lineWidth = 4;\n        this.lineOpacity = 0.7;\n        this.pressure = 1;\n        this.snapToGrid = false;\n        this.gridSize = 32;\n        this.rotation = 0;\n        this.scale = 1;\n        \n        // Shape detection\n        this.shapeType = 'freeform';\n        this.shapePreview = null;\n        \n        // Bind event handlers\n        this.handlePointerDown = this.handlePointerDown.bind(this);\n        this.handlePointerMove = this.handlePointerMove.bind(this);\n        this.handlePointerUp = this.handlePointerUp.bind(this);\n        this.handleWheel = this.handleWheel.bind(this);\n        \n        // Setup event listeners\n        canvas.addEventListener('pointerdown', this.handlePointerDown);\n        canvas.addEventListener('pointermove', this.handlePointerMove);\n        canvas.addEventListener('pointerup', this.handlePointerUp);\n        canvas.addEventListener('pointercancel', this.handlePointerUp);\n        canvas.addEventListener('wheel', this.handleWheel, { passive: false });\n        \n        // Touch support\n        canvas.addEventListener('touchstart', this.handleTouch.bind(this), { passive: false });\n        canvas.addEventListener('touchmove', this.handleTouch.bind(this), { passive: false });\n        canvas.addEventListener('touchend', this.handleTouch.bind(this), { passive: false });\n    }\n    \n    handlePointerDown(e) {\n        if (e.button !== 0) return; // Only left click\n        \n        this.isDrawing = true;\n        this.currentPath = [];\n        this.drawStartTime = performance.now();\n        \n        const point = this.getCanvasCoordinates(e);\n        this.currentPath.push(point);\n        \n        // Get pressure if available\n        this.pressure = e.pressure || 1;\n        this.updateLineWidth();\n    }\n    \n    handlePointerMove(e) {\n        if (!this.isDrawing) return;\n        \n        // Cap input at 60Hz\n        const now = performance.now();\n        if (now - this.lastPointerTime < this.inputSmoothing * 1000) return;\n        this.lastPointerTime = now;\n        \n        const point = this.getCanvasCoordinates(e);\n        this.pressure = e.pressure || this.pressure;\n        this.updateLineWidth();\n        \n        // Add point with smoothing\n        if (this.currentPath.length > 0) {\n            const lastPoint = this.currentPath[this.currentPath.length - 1];\n            const distance = Math.sqrt(Math.pow(point.x - lastPoint.x, 2) + Math.pow(point.y - lastPoint.y, 2));\n            \n            // Only add point if moved enough\n            if (distance > 2) {\n                this.currentPath.push(point);\n            }\n        } else {\n            this.currentPath.push(point);\n        }\n    }\n    \n    handlePointerUp(e) {\n        if (!this.isDrawing) return;\n        \n        this.isDrawing = false;\n        \n        // Check if path is closed\n        if (this.currentPath.length > 2) {\n            const startPoint = this.currentPath[0];\n            const endPoint = this.currentPath[this.currentPath.length - 1];\n            const distance = Math.sqrt(Math.pow(endPoint.x - startPoint.x, 2) + Math.pow(endPoint.y - startPoint.y, 2));\n            \n            if (distance < 8) {\n                // Path is closed, convert to tower\n                this.completeShape();\n            } else {\n                // Open path, cancel placement\n                this.cancelDrawing();\n            }\n        } else {
+            this.cancelDrawing();
+        }
+    }
+    
+    handleWheel(e) {
+        e.preventDefault();
+        // Rotation via mouse wheel
+        this.rotation += e.deltaY > 0 ? 15 : -15;
+        this.rotation = ((this.rotation % 360) + 360) % 360;
+    }
+    
+    handleTouch(e) {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const point = {
+            x: touch.clientX,
+            y: touch.clientY,
+            pressure: touch.force || 1
+        };
+        
+        if (e.type === 'touchstart') {
+            this.handlePointerDown(point);
+        } else if (e.type === 'touchmove') {
+            this.handlePointerMove(point);
+        } else if (e.type === 'touchend') {
+            this.handlePointerUp(point);
+        }
+    }
+    
+    getCanvasCoordinates(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+            pressure: e.pressure || 1
+        };
+    }
+    
+    updateLineWidth() {
+        // Variable width based on pressure (2-8px)
+        this.lineWidth = 2 + (this.pressure * 6);
+        // Variable opacity (0.3-1.0)
+        this.lineOpacity = 0.3 + (this.pressure * 0.7);
+    }
+    
+    snapToGridPoint(x, y) {
+        if (!this.snapToGrid) return { x, y };
+        return {
+            x: Math.round(x / this.gridSize) * this.gridSize,
+            y: Math.round(y / this.gridSize) * this.gridSize
+        };
+    }
+    
+    completeShape() {
+        // Detect shape type
+        this.shapeType = this.detectShapeType();
+        
+        // Close the path
+        if (this.currentPath.length > 0) {
+            this.currentPath.push(this.currentPath[0]);
+        }
+        
+        // Return shape data for tower creation
+        return {
+            path: this.currentPath,
+            type: this.shapeType,
+            rotation: this.rotation,
+            scale: this.scale
+        };
+    }
+    
+    detectShapeType() {
+        if (this.currentPath.length < 3) return 'freeform';
+        
+        // Simplify path for shape detection
+        const simplified = this.simplifyPath(this.currentPath, 2);
+        
+        // Calculate properties
+        const area = this.calculateArea(simplified);
+        const perimeter = this.calculatePerimeter(simplified);
+        const vertexCount = simplified.length;
+        
+        // Detect circle (many vertices, compact shape)
+        if (vertexCount >= 8 && this.isCompact(area, perimeter)) {
+            return 'circle';
+        }
+        
+        // Detect triangle (3 vertices)
+        if (vertexCount === 3) {
+            return 'triangle';
+        }
+        
+        // Detect square (4 vertices, right angles)
+        if (vertexCount === 4 && this.hasRightAngles(simplified)) {
+            return 'square';
+        }
+        
+        // Detect star (10+ vertices with alternating pattern)
+        if (vertexCount >= 10 && this.hasStarPattern(simplified)) {
+            return 'star';
+        }
+        
+        return 'freeform';
+    }
+    
+    simplifyPath(path, tolerance) {
+        // Douglas-Peucker algorithm
+        if (path.length <= 2) return path;
+        
+        let maxDist = 0;
+        let index = 0;
+        
+        for (let i = 1; i < path.length - 1; i++) {
+            const dist = this.pointToLineDistance(path[i], path[0], path[path.length - 1]);
+            if (dist > maxDist) {
+                maxDist = dist;
+                index = i;
+            }
+        }
+        
+        if (maxDist > tolerance) {
+            const left = this.simplifyPath(path.slice(0, index + 1), tolerance);
+            const right = this.simplifyPath(path.slice(index), tolerance);
+            return [...left.slice(0, -1), ...right];
+        }
+        
+        return [path[0], path[path.length - 1]];
+    }
+    
+    pointToLineDistance(point, lineStart, lineEnd) {
+        const x0 = point.x;
+        const y0 = point.y;
+        const x1 = lineStart.x;
+        const y1 = lineStart.y;
+        const x2 = lineEnd.x;
+        const y2 = lineEnd.y;
+        
+        const A = x0 - x1;
+        const B = y0 - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+        
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        let param = -1;
+        
+        if (lenSq !== 0) {
+            param = dot / lenSq;
+        }
+        
+        let xx, yy;
+        
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+        
+        const dx = x0 - xx;
+        const dy = y0 - yy;
+        
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    calculateArea(path) {
+        let area = 0;
+        for (let i = 0; i < path.length; i++) {
+            const j = (i + 1) % path.length;
+            area += path[i].x * path[j].y;
+            area -= path[j].x * path[i].y;
+        }
+        return Math.abs(area) / 2;
+    }
+    
+    calculatePerimeter(path) {
+        let perimeter = 0;
+        for (let i = 0; i < path.length - 1; i++) {
+            const dx = path[i + 1].x - path[i].x;
+            const dy = path[i + 1].y - path[i].y;
+            perimeter += Math.sqrt(dx * dx + dy * dy);
+        }
+        return perimeter;
+    }
+    
+    isCompact(area, perimeter) {
+        // Circle has ratio of 4π*area/perimeter² ≈ 1
+        const ratio = (4 * Math.PI * area) / (perimeter * perimeter);
+        return ratio > 0.7; // Allow some deviation
+    }
+    
+    hasRightAngles(path) {
+        if (path.length !== 4) return false;
+        
+        for (let i = 0; i < 4; i++) {
+            const p1 = path[i];
+            const p2 = path[(i + 1) % 4];
+            const p3 = path[(i + 2) % 4];
+            
+            const v1 = { x: p2.x - p1.x, y: p2.y - p1.y };
+            const v2 = { x: p3.x - p2.x, y
