@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Ghost Racer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏎️</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0A0A1A; overflow: hidden; font-family: 'Exo 2', sans-serif; color: #CCCCCC; }
+    #gameCanvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 100vw; max-height: 100vh; }
+    #hud { position: absolute; top: 10px; left: 10px; right: 10px; pointer-events: none; z-index: 10; }
+    .hud-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    .timer { font-family: 'Orbitron', monospace; font-size: 24px; text-align: center; flex: 1; }
+    .speedometer { width: 80px; height: 80px; border: 2px solid #00D4FF; border-radius: 50%; position: relative; }
+    .speed-needle { position: absolute; bottom: 50%; left: 50%; width: 2px; height: 35px; background: #00D4FF; transform-origin: bottom center; transform: rotate(-90deg); transition: transform 0.1s; }
+    .ghost-delta { height: 8px; background: #2A2A2A; border-radius: 4px; overflow: hidden; margin-top: 5px; }
+    .ghost-delta-bar { height: 100%; width: 50%; background: #B800FF; transition: width 0.1s, background 0.1s; }
+    .mini-map { width: 120px; height: 120px; border: 1px solid #CCCCCC; background: #0A0A1A; position: absolute; bottom: 10px; left: 10px; }
+    @font-face { font-family: 'Orbitron'; src: url('https://fonts.gstatic.com/s/orbitron/v18/yMJMMIlzdpvBhQQL_SC3X9yhF25-T1nyGy9wrU6z.woff2') format('woff2'); }
+    @font-face { font-family: 'Exo 2'; src: url('https://fonts.gstatic.com/s/exo2/v18/7cHqv4Uw2GzqYMv4yNQ.woff2') format('woff2'); }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="1024" height="768"></canvas>
+  <div id="hud">
+    <div class="hud-row">
+      <div class="speedometer" id="speedometer"><div class="speed-needle" id="speedNeedle"></div></div>
+      <div class="timer" id="lapTimer">00:00.000</div>
+      <div class="speedometer" style="border-color: #B800FF;"><div class="speed-needle" style="background: #B800FF; transform: rotate(-90deg);"></div></div>
+    </div>
+    <div class="ghost-delta" id="ghostDelta"><div class="ghost-delta-bar" id="ghostDeltaBar"></div></div>
+  </div>
+  <canvas class="mini-map" id="miniMap" width="120" height="120"></canvas>
+  <script src="game.js"></script>
+</body>
+</html>
