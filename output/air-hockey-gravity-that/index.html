@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Gravity Well Air Hockey</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#050810;overflow:hidden;font-family:'Orbitron',sans-serif;touch-action:none;user-select:none}
+canvas{display:block;width:100vw;height:100vh}
+#overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+#overlay>*{pointer-events:auto}
+.menu-screen,.pause-screen,.gameover-screen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,8,16,0.92);backdrop-filter:blur(8px);opacity:1;transition:opacity 0.3s}
+.hidden{opacity:0;pointer-events:none!important}
+h1{font-size:clamp(1.5rem,5vw,3rem);font-weight:900;background:linear-gradient(90deg,#00ffff,#ff00ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:1rem}
+h2{font-size:clamp(1rem,3vw,1.5rem);color:#e0e8ff;margin-bottom:0.5rem}
+.btn{background:transparent;border:1px solid #00ffff;color:#00ffff;padding:0.8rem 2rem;margin:0.4rem;font-family:inherit;font-size:clamp(0.8rem,2vw,1rem);text-transform:uppercase;letter-spacing:0.15em;cursor:pointer;transition:all 0.2s;min-width:180px}
+.btn:hover{background:#00ffff;color:#050810;box-shadow:0 0 20px #00ffff}
+.btn.magenta{border-color:#ff00ff;color:#ff00ff}
+.btn.magenta:hover{background:#ff00ff;color:#050810;box-shadow:0 0 20px #ff00ff}
+.btn.yellow{border-color:#ffcc00;color:#ffcc00}
+.btn.yellow:hover{background:#ffcc00;color:#050810}
+#hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);text-align:center;color:#e0e8ff;font-family:inherit;pointer-events:none}
+#score{font-size:clamp(1.5rem,4vw,2.5rem);font-weight:700;display:flex;align-items:center;gap:1rem}
+#timer{font-size:clamp(0.9rem,2vw,1.2rem);margin-top:0.3rem;color:#ffcc00}
+#speedrun{position:absolute;top:10px;right:15px;color:#00ffff;font-size:clamp(0.7rem,1.5vw,0.9rem);font-family:monospace;pointer-events:none}
+#highscore{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);color:#ff00ff;font-size:clamp(0.6rem,1.5vw,0.8rem);pointer-events:none}
+#serve-indicator{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:clamp(1rem,3vw,1.5rem);color:#ffcc00;font-weight:700;opacity:0;transition:opacity 0.3s;pointer-events:none}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="overlay">
+<div id="hud" class="hidden">
+<div id="score"><span style="color:#00ffff" id="p1Score">0</span><span style="color:#444">|</span><span style="color:#ff00ff" id="p2Score">0</span></div>
+<div id="timer">01:00.0</div>
+</div>
+<div id="speedrun" class="hidden">00:00.000</div>
+<div id="highscore" class="hidden">HS: 0</div>
+<div id="serve-indicator">SERVE</div>
+<div id="menuScreen" class="menu-screen">
+<h1>GRAVITY WELL</h1>
+<h2>AIR HOCKEY</h2>
+<button class="btn" onclick="startGame(0)">VS LOCAL</button>
+<button class="btn magenta" onclick="startGame(1)">VS AI</button>
+<button class="btn yellow" onclick="showSettings()">SETTINGS</button>
+<div style="margin-top:1rem;color:#888;font-size:0.7rem">High Score: <span id="menuHS">0</span></div>
+</div>
+<div id="pauseScreen" class="pause-screen hidden">
+<h2>PAUSED</h2>
+<button class="btn" onclick="resumeGame()">RESUME</button>
+<button class="btn magenta" onclick="restartGame()">RESTART</button>
+<button class="btn yellow" onclick="quitToMenu()">MENU</button>
+</div>
+<div id="gameoverScreen" class="gameover-screen hidden">
+<h2 id="goText">VICTORY</h2>
+<div style="color:#e0e8ff;margin:1rem 0;text-align:center">
+<div>Score: <span id="goScore" style="color:#00ffff">0</span> - <span id="goScore2" style="color:#ff00ff">0</span></div>
+<div style="font-size:0.8rem;margin-top:0.5rem">Max Speed: <span id="goSpeed">0</span> m/s</div>
+<div style="font-size:0.8rem">Time: <span id="goTime">0</span>s</div>
+</div>
+<button class="btn" onclick="restartGame()">REMATCH</button>
+<button class="btn magenta" onclick="quitToMenu()">MENU</button>
+</div>
+</div>
+<script>
+// === AUDIO ENGINE ===
+const AudioCtx=window.AudioContext||window.webkitAudioContext;
+let audioCtx;
+function initAudio(){if(!audioCtx)audioCtx=new AudioCtx();if(audioCtx.state==='suspended')audioCtx.resume();}
+function playHit(speed){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sawtooth';const f=220+Math.min(speed,35)*8;o.frequency.setValueAtTime(f,audioCtx.currentTime);o.frequency.exponentialRampToValueAtTime(f*2,audioCtx.currentTime+0.05);g.gain.setValueAtTime(Math.min(speed*0.02,0.3),audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.08);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+0.08);}
+function playWall(){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=80;g.gain.setValueAtTime(0.15,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.05);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+0.05);}
+function playGoal(){[523,659,784,1047].forEach((f,i)=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(0.2,audioCtx.currentTime+i*0.1);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+i*0.1+0.3);o.connect(g);g.connect(audioCtx.destination);o.start(audioCtx.currentTime+i*0.1);o.stop(audioCtx.currentTime+i*0.1+0.3);});}
+function playUIClick(){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='square';o.frequency.value=800;g.gain.setValueAtTime(0.05,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.02);o.connect(g);g.connect(audioCtx.destination);o.start();o.stop(audioCtx.currentTime+0.02);}
+
+// === CONSTANTS ===
+const W=4.0,H=2.25,G_CONST=18.0,SOFT_R=0.05,MAX_R=1.5,PPM=Math.min(window.innerWidth/W,window.innerHeight/H);
+const FIXED_DT=1/120,PUCK_M=0.05,PUCK_R=0.0635,PUCK_REST=0.95,PUCK_DAMP=0.005,PUCK_MAX=35;
+const MALLET_M=2.0,MALLET_R=0.095,MALLET_REST=0.85,MALLET_MAX=25,KP=1200,KD=65;
+const WIN_SCORE=7,MATCH_TIME=90;
+
+// === GAME STATE ===
+let canvas,ctx,offscreen;
+let gameState='menu'; // menu, playing, paused, gameover
+let gameMode=0; // 0=vs local, 1=vs ai
+let scores=[0,0],matchTime=MATCH_TIME,serveTimer=0,sideSwitch=0;
+let puck={x:0,y:0,vx:0,vy:0,invincible:0,lastHitter:0};
+let mallets=[{x:-1.5,y:0,vx:0,vy:0,targetX:-1.5,targetY:0,color:'#00ffff',score:0},{x:1.5,y:0,vx:0,vy:0,targetX:1.5,targetY:0,color:'#ff00ff',score:0}];
+let trails=[],particles=[];
+let trauma=0,hitPause=0,shakeX=0,shakeY=0;
+let maxSpeed=0,orbitCount=0,lastOrbitDist=0,gameStartTime=0,pausedTime=0,totalPaused=0;
+let highScore=parseInt(localStorage.getItem('gwhs')||'0');
+let aiDifficulty=5,aiReaction=0,aiNoise=0.2,aiSpeed=18;
+let gravityOn=true;
+
+// === INPUT ===
+let mouseX=0,mouseY=0,keys={};
+function setupInput(){
+document.addEventListener('pointermove',e=>{mouseX=(e.clientX/window.innerWidth-0.5)*W*2;mouseY=(e.clientY/window.innerHeight-0.5)*H*2;});
+document.addEventListener('pointerdown',()=>{initAudio();if(gameState==='playing'){mallets[0].targetX=mouseX;mallets[0].targetY=mouseY;}});
+document.addEventListener('keydown',e=>{keys[e.key]=true;if(e.key==='Escape'){if(gameState==='playing')pauseGame();else if(gameState==='paused')resumeGame();}});
+document.addEventListener('keyup',e=>{keys[e.key]=false;});
+}
+
+// === PHYSICS ===
+function applyGravity(p,dt){
+if(!gravityOn||p.invincible>0)return;
+const dx=-p.x,dy=-p.y;
+const distSq=dx*dx+dy*dy;
+const dist=Math.sqrt(distSq);
+if(dist<MAX_R&&dist>0.001){
+const effDist=Math.max(dist,SOFT_R);
+const force=G_CONST/(effDist*effDist);
+const accel=Math.min(force,500);
+p.vx+=(dx/dist)*accel*dt;
+p.vy+=(dy/dist)*accel*dt;
+}
+}
+
+function stepPhysics(dt){
+if(hitPause>0){hitPause-=dt;return;}
+// Update mallets
+for(let i=0;i<mallets.length;i++){
+const m=mallets[i];
+if(i===0&&gameMode===1){// AI control
+const dx=puck.x-m.x,dy=puck.y-m.y;
+const dist=Math.sqrt(dx*dx+dy*dy);
+if(dist>0.1){
+const predX=puck.x+puck.vx*1.5;
+const predY=puck.y+puck.vy*1.5;
+const noise=(Math.random()-0.5)*aiNoise;
+m.targetX=Math.max(-W/2+MALLET_R+0.1,Math.min(-0.15,predX+noise));
+m.targetY=Math.max(-H/2+MALLET_R,Math.min(H/2-MALLET_R,predY+noise));
+}
+}
+if(i===0&&gameMode===0){// Player 1 mouse
+m.targetX=mouseX;m.targetY=mouseY;
+}
+// PID control
+const errX=m.targetX-m.x,errY=m.targetY-m.y;
+const ax=KP*errX-KD*m.vx;
+const ay=KP*errY-KD*m.vy;
+m.vx+=ax*dt;m.vy+=ay*dt;
+// Clamp speed
+const spd=Math.sqrt(m.vx*m.vx+m.vy*m.vy);
+if(spd>MALLET_MAX){m.vx=m.vx/spd*MALLET_MAX;m.vy=m.vy/spd*MALLET_MAX;}
+m.x+=m.vx*dt;m.y+=m.vy*dt;
+// Clamp to half
+const minX=i===0?-W/2+MALLET_R:-0.15;
+const maxX=i===0?-0.15:W/2-MALLET_R;
+m.x=Math.max(minX,Math.min(maxX,m.x));
+m.y=Math.max(-H/2+MALLET_R,Math.min(H/2-MALLET_R,m.y));
+}
+// Apply gravity to puck
+applyGravity(puck,dt);
+// Update puck
+puck.x+=puck.vx*dt;puck.y+=puck.vy*dt;
+puck.vx*=(1-PUCK_DAMP);puck.vy*=(1-PUCK_DAMP);
+const pspd=Math.sqrt(puck.vx*puck.vx+puck.vy*puck.vy);
+if(pspd>maxSpeed)maxSpeed=pspd;
+if(pspd>25&&puck.vx*puck.vx+puck.vy*puck.vy>0)orbitCount+=0.01;
+// Wall collisions
+if(puck.x-W/2+PUCK_R<-0.15&&puck.vx<0){puck.x=W/2-PUCK_R;puck.vx=-puck.vx*PUCK_REST;playWall();}
+if(puck.x+W/2-PUCK_R>0.15&&puck.vx>0){puck.x=-W/2+PUCK_R;puck.vx=-puck.vx*PUCK_REST;playWall();}
+if(puck.y-H/2+PUCK_R<0){puck.y=H/2-PUCK_R;puck.vy=-puck.vy*PUCK_REST;playWall();}
+if(puck.y+H/2-PUCK_R>0){puck.y=-H/2+PUCK_R;puck.vy=-puck.vy*PUCK_REST;playWall();}
+// Goal detection
+if(puck.x>W/2+0.1){scoreGoal(0);return;}
+if(puck.x<-W/2-0.1){scoreGoal(1);return;}
+// Mallet-Puck collision
+for(let i=0;i<mallets.length;i++){
+const m=mallets[i];
+const dx=puck.x-m.x,dy=puck.y-m.y;
+const dist=Math.sqrt(dx*dx+dy*dy);
+const minDist=PUCK_R+MALLET_R;
+if(dist<minDist&&dist>0.001){
+const nx=dx/dist,ny=dy/dist;
+const rvx=puck.vx-m.vx,rvy=puck.vy-m.vy;
+const velNet=rvx*nx+rvy*ny;
+if(velNet<0){
+const impulse=-(1+PUCK_REST)*velNet/(1/PUCK_M+1/MALLET_M);
+puck.vx+=impulse*nx/PUCK_M+m.vx*0.3;
+puck.vy+=impulse*ny/PUCK_M+m.vy*0.3;
+const impact=Math.abs(velNet);
+if(impact>15){hitPause=0.04;trauma+=0.05;}
+playHit(impact);
+puck.lastHitter=i;
+// Trail burst
+for(let j=0;j<5;j++){
+particles.push({x:puck.x,y:puck.y,vx:(Math.random()-0.5)*5,vy:(Math.random()-0.5)*5,life:0.3,color:m.color});
+}
+}
+}
+}
+// Orbit detection
+const distFromCenter=Math.sqrt(puck.x*puck.x+puck.y*puck.y);
+if(Math.abs(distFromCenter-0.4)<0.15&&pspd>2.5)lastOrbitDist=distFromCenter;
+if(puck.invincible>0)puck.invincible-=dt;
+}
+
+function scoreGoal(player){
+scores[player]++;
+trauma=0.15;
+playGoal();
+// Particles
+for(let i=0;i<20;i++){
+const a=Math.random()*Math.PI*2;
+particles.push({x:puck.x,y:puck.y,vx:Math.cos(a)*10,vy:Math.sin(a)*10,life:0.5,color:player===0?'#00ffff':'#ff00ff'});
+}
+if(scores[player]>=WIN_SCORE){endGame(player);return;}
+resetPuck();
+serveTimer=1.5;
+gravityOn=false;
+setTimeout(()=>{gravityOn=true;},1000);
+}
+
+function resetPuck(){
+puck.x=0;puck.y=0;puck.vx=0;puck.vy=0;puck.invincible=1.0;puck.lastHitter=0;
+}
+
+// === RENDERING ===
+function render(){
+const W2=canvas.width,H2=canvas.height;
+ctx.save();
+// Screen shake
+ctx.translate(shakeX,shakeY);
+// Clear
+ctx.fillStyle='#050810';
+ctx.fillRect(-10,-10,W2+20,H2+20);
+// Table
+const tableW=W*PPM,tableH=H*PPM;
+const ox=W2/2,oy=H2/2;
+// Table surface
+ctx.fillStyle='#0a0f1a';
+ctx.fillRect(ox-W/2*PPM,oy-H/2*PPM,W*PPM,H*PPM);
+// Border
+ctx.strokeStyle='rgba(0,255,255,0.3)';
+ctx.lineWidth=2;
+ctx.strokeRect(ox-W/2*PPM,oy-H/2*PPM,W*PPM,H*PPM);
+// Center line
+ctx.setLineDash([10,10]);
+ctx.beginPath();ctx.moveTo(ox,oy-H/2*PPM);ctx.lineTo(ox,oy+H/2*PPM);ctx.stroke();
+ctx.setLineDash([]);
+// Center circle
+ctx.beginPath();ctx.arc(ox,oy,0.45*PPM,0,Math.PI*2);ctx.stroke();
+// Goals
+const goalW=0.3*PPM;
+// Left goal
+ctx.fillStyle='rgba(0,100,255,0.2)';
+ctx.fillRect(ox-W/2*PPM-2,oy-H/2*PPM,2,H*PPM);
+ctx.fillRect(ox-W/2*PPM,oy-H/2*PPM+0.975*PPM,W*PPM+2,0.25*PPM);
+ctx.fillRect(ox-W/2*PPM,oy+H/2*PPM-1.225*PPM,W*PPM+2,0.25*PPM);
+// Right goal
+ctx.fillStyle='rgba(255,0,100,0.2)';
+ctx.fillRect(ox+W/2*PPM,oy-H/2*PPM,2,H*PPM);
+// Gravity Well visualization
+const time=Date.now()*0.001;
+ctx.globalCompositeOperation='lighter';
+for(let i=2;i>=0;i--){
+const r=(0.3+i*0.45+Math.sin(time*3+i)*0.05)*PPM;
+const grad=ctx.createRadialGradient(ox,oy,0,ox,oy,r);
+grad.addColorStop(0,'rgba(0,200,255,0.1)');
+grad.addColorStop(1,'rgba(0,50,100,0.0)');
+ctx.fillStyle=grad;
+ctx.beginPath();ctx.arc(ox,oy,r,0,Math.PI*2);ctx.fill();
+}
+// Distortion lines
+for(let i=0;i<16;i++){
+const angle=time*0.2+i*Math.PI/8;
+const r1=0.3*PPM,r2=1.2*PPM;
+ctx.strokeStyle=`rgba(0,255,255,${0.3-Math.abs(i-8)*0.03})`;
+ctx.lineWidth=1;
+ctx.beginPath();ctx.moveTo(ox+Math.cos(angle)*r1,oy+Math.sin(angle)*r1);ctx.lineTo(ox+Math.cos(angle)*r2,oy+Math.sin(angle)*r2);ctx.stroke();
+}
+// Core
+ctx.shadowColor='#00ffff';
+ctx.shadowBlur=15;
+ctx.fillStyle='rgba(255,255,255,0.9)';
+ctx.beginPath();ctx.arc(ox,oy,0.04*PPM,0,Math.PI*2);ctx.fill();
+ctx.shadowBlur=0;
+ctx.globalCompositeOperation='source-over';
+// Trails
+for(let i=0;i<trails.length;i++){
+const t=trails[i];
+ctx.globalAlpha=t.alpha*0.5;
+ctx.fillStyle=t.color;
+ctx.beginPath();ctx.arc(ox+t.x*PPM,oy+t.y*PPM,t.width*PPM,0,Math.PI*2);ctx.fill();
+}
+ctx.globalAlpha=1;
+// Particles
+for(let i=particles.length-1;i>=0;i--){
+const p=particles[i];
+p.life-=0.016;
+if(p.life<=0){particles.splice(i,1);continue;}
+ctx.globalAlpha=p.life;
+ctx.fillStyle=p.color;
+ctx.beginPath();ctx.arc(ox+p.x*PPM,oy+p.y*PPM,3*p.life,0,Math.PI*2);ctx.fill();
+}
+ctx.globalAlpha=1;
+// Puck
+ctx.shadowColor=puck.lastHitter===0?'#00ffff':'#ff00ff';
+ctx.shadowBlur=10;
+const puckGrad=ctx.createRadialGradient(ox+puck.x*PPM-2,oy+puck.y*PPM-2,0,ox+puck.x*PPM,oy+puck.y*PPM,PUCK_R*PPM);
+puckGrad.addColorStop(0,'#ffffff');puckGrad.addColorStop(1,puck.lastHitter===0?'#00ffff':'#ff00ff');
+ctx.fillStyle=puckGrad;
+ctx.beginPath();ctx.arc(ox+puck.x*PPM,oy+puck.y*PPM,PUCK_R*PPM,0,Math.PI*2);ctx.fill();
+ctx.shadowBlur=0;
+// Mallets
+for(let i=0;i<mallets.length;i++){
+const m=mallets[i];
+ctx.shadowColor=m.color;
+ctx.shadowBlur=10;
+ctx.fillStyle='#ffffff';
+ctx.beginPath();ctx.arc(ox+m.x*PPM,oy+m.y*PPM,MALLET_R*PPM,0,Math.PI*2);ctx.fill();
+ctx.strokeStyle=m.color;
+ctx.lineWidth=0.005*PPM;
+ctx.stroke();
+// Velocity indicator
+const mspd=Math.sqrt(m.vx*m.vx+m.vy*m.vy);
+if(msp>0.5){
+ctx.strokeStyle=m.color;
+ctx.lineWidth=2;
+ctx.beginPath();ctx.moveTo(ox+m.x*PPM,oy+m.y*PPM);ctx.lineTo(ox+m.x*PPM+m.vx*PPM*0.02,oy+m.y*PPM+m.vy*PPM*0.02);ctx.stroke();
+}
+ctx.shadowBlur=0;
+}
+// Serve indicator
+if(serveTimer>0){
+ctx.globalAlpha=serveTimer/1.5;
+ctx.fillStyle='#ffcc00';
+ctx.font='bold 24px Orbitron';
+ctx.textAlign='center';
+ctx.fillText('SERVE',ox,oy-50*PPM);
+ctx.globalAlpha=1;
+}
+// Hit pause flash
+if(hitPause>0){
+ctx.fillStyle='rgba(255,255,255,0.1)';
+ctx.fillRect(0,0,W2,H2);
+}
+ctx.restore();
+}
+
+// === HUD UPDATE ===
+function updateHUD(){
+const m=Math.floor(matchTime);
+const s=Math.floor((matchTime%1)*100);
+const timerEl=document.getElementById('timer');
+timerEl.textContent=String(Math.floor(matchTime/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')+'.'+String(s).padStart(2,'0');
+if(matchTime<10)timerEl.style.color='#ffcc00';
+if(matchTime<5)timerEl.style.color='#ff3333';
+document.getElementById('p1Score').textContent=scores[0];
+document.getElementById('p2Score').textContent=scores[1];
+// Speedrun
+const elapsed=gameState==='playing'?Date.now()-gameStartTime:0;
+const sr=elapsed/1000;
+document.getElementById('speedrun').textContent=String(Math.floor(sr/60)).padStart(2,'0')+':'+String(Math.floor(sr%60)).padStart(2,'0')+'.'+String(Math.floor((sr%1)*1000)).padStart(3,'0');
+document.getElementById('highscore').textContent='HS: '+highScore;
+}
+
+// === GAME LOOP ===
+let lastTime=0,accumulator=0;
+function gameLoop(timestamp){
+if(!lastTime)lastTime=timestamp;
+let dt=(timestamp-lastTime)/1000;
+lastTime=timestamp;
+if(dt>0.1)dt=0.1;
+if(gameState==='playing'){
+accumulator+=dt;
+while(accumulator>=FIXED_DT){
+stepPhysics(FIXED_DT);
+accumulator-=FIXED_DT;
+}
+// Update timer
+matchTime-=dt;
+if(matchTime<=0){matchTime=0;endGame(scores[0]>=scores[1]?0:1);}
+// Update trails
+const spd=Math.sqrt(puck.vx*puck.vx+puck.vy*puck.vy);
+if(spd>0.5){
+trails.push({x:puck.x,y:puck.y,width:PUCK_R*(1-spd/PUCK_MAX),alpha:0.5,color:puck.lastHitter===0?'#00ffff':'#ff00ff'});
+if(trails.length>15)trails.shift();
+}
+// Update trauma
+if(trauma>0)trauma*=0.9;
+shakeX=(Math.random()-0.5)*trauma*trauma*15;
+shakeY=(Math.random()-0.5)*trauma*trauma*15;
+// Serve timer
+if(serveTimer>0)serveTimer-=dt;
+// Update HUD
+updateHUD();
+}
+render();
+requestAnimationFrame(gameLoop);
+}
+
+// === GAME CONTROL ===
+function startGame(mode){
+initAudio();
+playUIClick();
+gameMode=mode;
+scores=[0,0];matchTime=MATCH_TIME;maxSpeed=0;orbitCount=0;trauma=0;
+trails=[];particles=[];
+resetPuck();
+mallets[0]={x:-1.5,y:0,vx:0,vy:0,targetX:-1.5,targetY:0,color:'#00ffff',score:0};
+mallets[1]={x:1.5,y:0,vx:0,vy:0,targetX:1.5,targetY:0,color:'#ff00ff',score:0};
+serveTimer=1.5;gravityOn=false;
+sideSwitch=0;
+gameState='playing';
+gameStartTime=Date.now();totalPaused=0;
+document.getElementById('menuScreen').classList.add('hidden');
+document.getElementById('pauseScreen').classList.add('hidden');
+document.getElementById('gameoverScreen').classList.add('hidden');
+document.getElementById('hud').classList.remove('hidden');
+document.getElementById('speedrun').classList.remove('hidden');
+document.getElementById('highscore').classList.remove('hidden');
+}
+
+function pauseGame(){
+gameState='paused';
+pausedTime=Date.now();
+document.getElementById('pauseScreen').classList.remove('hidden');
+}
+
+function resumeGame(){
+totalPaused+=Date.now()-pausedTime;
+gameState='playing';
+document.getElementById('pauseScreen').classList.add('hidden');
+}
+
+function restartGame(){
+document.getElementById('pauseScreen').classList.add('hidden');
+document.getElementById('gameoverScreen').classList.add('hidden');
+startGame(gameMode);
+}
+
+function endGame(winner){
+gameState='gameover';
+const isVictory=winner===0;
+document.getElementById('goText').textContent=isVictory?'VICTORY':'DEFEAT';
+document.getElementById('goText').style.background=isVictory?'linear-gradient(90deg,#00ffff,#ff00ff)':'linear-gradient(90deg,#ff3333,#ffcc00)';
+document.getElementById('goText').style.webkitBackgroundClip='text';
+document.getElementById('goText').style.webkitTextFillColor='transparent';
+document.getElementById('goScore').textContent=scores[0];
+document.getElementById('goScore2').textContent=scores[1];
+document.getElementById('goSpeed').textContent=maxSpeed.toFixed(1);
+document.getElementById('goTime').textContent=((Date.now()-gameStartTime-totalPaused)/1000).toFixed(1);
+// High score
+const finalScore=scores[winner];
+if(finalScore>highScore){highScore=finalScore;localStorage.setItem('gwhs',highScore.toString());}
+document.getElementById('highscore').textContent='HS: '+highScore;
+document.getElementById('gameoverScreen').classList.remove('hidden');
+}
+
+function quitToMenu(){
+gameState='menu';
+document.getElementById('gameoverScreen').classList.add('hidden');
+document.getElementById('pauseScreen').classList.add('hidden');
+document.getElementById('hud').classList.add('hidden');
+document.getElementById('speedrun').classList.add('hidden');
+document.getElementById('highscore').classList.add('hidden');
+document.getElementById('menuScreen').classList.remove('hidden');
+document.getElementById('menuHS').textContent=highScore;
+}
+
+// === CANVAS SETUP ===
+function resizeCanvas(){
+canvas=document.getElementById('gameCanvas');
+ctx=canvas.getContext('2d');
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+}
+
+// === SETTINGS ===
+function showSettings(){
+playUIClick();
+}
+
+// Start game loop
+resizeCanvas();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
