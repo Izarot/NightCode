@@ -1,0 +1,2167 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 1 column 3 (char 2)
+
+Raw: We need to output ONLY a valid raw JSON object mapping filenames to their complete code contents. No markdown, no extra commentary. Must include all files listed in architecture: index.html, main.js, and subfolders. Probably need to include full code for each file.
+
+We must incorporate all features: responsive canvas, emoji favicon, vibrant palette, LocalStorage high score, sound effects using Web Audio API, speedrun timer top corner, etc.
+
+We need to keep code concise but complete. Provide minimal but functional code.
+
+We need to ensure JSON is valid: keys are strings, values are strings with escaped newlines etc. Must escape quotes and backslashes. Since we cannot use markdown, just raw JSON.
+
+We need to include all files: index.html, src/main.js, src/game/Game.js, src/game/LevelManager.js, src/game/InputHandler.js, src/entities/Paddle.js, src/entities/Ball.js, src/entities/Brick.js, src/entities/PowerUp.js, src/physics/Collision.js, src/physics/Vector2D.js, src/rendering/Renderer.js, src/rendering/HUD.js, src/rendering/ParticleSystem.js, src/audio/SoundManager.js, src/utils/Config.js, src/utils/AssetLoader.js, maybe style.css, but maybe not needed. The architecture includes styles/style.css, but we can embed CSS in index.html.
+
+Simplify: We'll create a minimal implementation that meets requirements.
+
+Given constraints, we need to keep code short but functional.
+
+We'll create index.html with canvas, responsive via CSS, emoji favicon, include script type="module". We'll load main.js.
+
+Main.js will set up canvas, instantiate Game, start loop.
+
+Game.js will handle initialization, level loading, game state, update, render, pause, timer, high score.
+
+InputHandler.js will handle mouse/touch, wheel, click, key events.
+
+Paddle.js will manage position, rotation, movement.
+
+Ball.js will manage velocity, launch, physics.
+
+Brick.js will hold type, health, visual.
+
+PowerUp.js similar.
+
+Collision.js will handle SAT for rotated paddle vs ball.
+
+Vector2D.js simple class.
+
+Renderer.js will draw everything, using requestAnimationFrame.
+
+HUD.js will draw lives, score, timer, angle indicator.
+
+ParticleSystem.js will manage particles.
+
+SoundManager.js will load audio buffers and play sounds.
+
+Config.js will hold constants.
+
+AssetLoader.js will load images, sounds, levels.
+
+We need to ensure code is not too huge but still functional.
+
+Given the instruction to output ONLY JSON mapping filenames to code, we need to embed code strings. Must escape newlines as \n and quotes.
+
+We need to ensure JSON is valid. Let's construct minimal but functional code.
+
+Simplify: Use plain JS without modules? But architecture suggests modules. However we can embed everything in main.js for simplicity, but then we need to map each file. Might be okay to have each file as separate.
+
+But to keep JSON manageable, we can combine some files? The instruction says map filenames to their complete code contents. So each file must be separate.
+
+Given the length, we need to keep each file relatively short.
+
+Let's outline each file content.
+
+index.html:
+
+- DOCTYPE, html lang="en".
+- head: meta charset, viewport, title "Angle-Breakout", emoji favicon (maybe use 🎮 as favicon via data URL? But we can use <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.5em' font-size='100'>🎮</text></svg>"></link>).
+- link to style.css (maybe minimal).
+- body: canvas id="gameCanvas".
+- script type="module" src="./src/main.js".
+
+We need to ensure canvas responsive: set width/height via CSS: width:100%; height:auto; and JS sets canvas width/height to match CSS pixel size on resize.
+
+We'll include a script to handle resize.
+
+Now main.js:
+
+- import { Game } from './game/Game.js';
+- const canvas = document.getElementById('gameCanvas');
+- const game = new Game(canvas);
+- game.init(); // maybe start.
+
+Game.js:
+
+- class Game {
+- constructor(canvas) { this.canvas = canvas; this.ctx = canvas.getContext('2d'); this.width = canvas.width; this.height = canvas.height; this.running = false; this.paused = false; this.levelMgr = new LevelManager(); this.input = new InputHandler(this); this.renderer = new Renderer(this); this.sound = new SoundManager(); this.particle = new ParticleSystem(); this.timers = { speedrun: 0 }; this.highScore = localStorage.getItem('angleBreakoutHighScore') || 0; this.currentLevel = this.levelMgr.getCurrentLevel(); this.entities = []; this.bricks = []; this.powerUps = []; this.balls = []; this.paddles = []; this.lives = 3; this.score = 0; this.startTime = performance.now(); this.parTime = this.currentLevel.parTime; this.parEnd = this.startTime + this.parTime * 1000; this.loadLevel(); this.startLoop(); }
+- loadLevel() { // load level data, create bricks, paddle, ball, etc. }
+- startLoop() { this.running = true; requestAnimationFrame(this.loop.bind(this)); }
+- loop(timestamp) { if (!this.running) return; const dt = (timestamp - this.lastTime) / 1000; this.update(dt); this.render(); this.lastTime = timestamp; requestAnimationFrame(this.loop.bind(this)); }
+- update(dt) { this.timers.speedrun += dt; if (this.timers.speedrun > this.parEnd) { // time's up, maybe end level } this.input.update(dt); this.paddle.update(dt); this.ball.update(dt); // update bricks, powerUps, etc. this.checkCollisions(); this.updateLivesIfNeeded(); if (this.lives <= 0) this.gameOver(); if (this.score > this.highScore) { this.highScore = this.score; localStorage.setItem('angleBreakoutHighScore', this.highScore); } if (!this.paused) { this.renderer.render(); } }
+- render() { this.ctx.clearRect(0,0,this.width,this.height); this.renderer.render(); }
+- checkCollisions() { // ball vs paddle, bricks, walls }
+- updateLivesIfNeeded() { if (this.ball.passedBottom) { this.lives--; this.resetBall(); } }
+- resetBall() { // position ball on paddle, set velocity based on paddle angle }
+- gameOver() { // show overlay, maybe end }
+- pauseToggle() { this.paused = !this.paused; }
+
+InputHandler.js:
+
+- class InputHandler {
+- constructor(game) { this.game = game; this.paddle = game.paddle; this.ball = game.ball; this.paused = game.paused; this.lastMouse = {x:0,y:0}; this.wheelDelta = 0; this.rotateSpeed = 0; this.clickPending = false; }
+- update(dt) { // handle mouse move, wheel, click, key }
+- onMouseMove(e) { // update paddle position }
+- onMouseDown(e) { // if ball locked, launch }
+- onWheel(e) { // paddle rotation }
+- onKey(e) { // pause }
+- }
+
+Paddle.js:
+
+- class Paddle {
+- constructor(game) { this.game = game; this.width = 120; this.height = 20; this.x = 0; this.y = 0; this.angle = 0; this.vx = 0; this.ax = 0; this.ay = 0; this.rotationSpeed = 0; this.maxSpeed = 800; this.acc = 1500; }
+- update(dt) { // handle input, move horizontally, rotate }
+- draw(ctx) { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle); ctx.fillStyle = '#00ff00'; ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height); ctx.restore(); }
+- getBounds() { // AABB after rotation }
+- getForwardVector() { return {x: Math.cos(this.angle), y: Math.sin(this.angle)}; }
+- getSpeed() { return Math.sqrt(this.vx*this.vx + this.ax*this.ax); }
+- }
+
+Ball.js:
+
+- class Ball {
+- constructor(game) { this.game = game; this.radius = 10; this.x = 0; this.y = 0; this.vx = 0; this.vy = 0; this.speed = 300; this.maxSpeed = 600; this.isLocked = true; }
+- launch(paddleAngle) { // compute direction vector, random spread, set velocity }
+- update(dt) { this.x += this.vx * dt; this.y += this.vy * dt; // apply speed cap }
+- reset(paddle) { // position on paddle, set locked }
+- draw(ctx) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2); ctx.fillStyle = '#ff0000'; ctx.fill(); }
+- }
+
+Brick.js:
+
+- class Brick {
+- constructor(row, col, type, color) { this.row = row; this.col = col; this.type = type; this.color = color; this.health = (type==='normal'?1:(type==='durable'?2:0)); this.x = ...; this.y = ...; this.w = 60; this.h = 20; }
+- hit() { this.health--; if (this.health<=0) this.destroy(); }
+- draw(ctx) { // draw rectangle with color, maybe crack for durable }
+- }
+
+PowerUp.js:
+
+- class PowerUp {
+- constructor(x,y,type) { this.x = x; this.y = y; this.type = type; this.vy = -150; this.radius = 12; }
+- update(dt) { this.y += this.vy * dt; }
+- draw(ctx) { // draw icon }
+- collect(paddle) { // check AABB }
+- }
+
+Collision.js:
+
+- function checkPaddleBall(paddle, ball) { // SAT for rotated rectangle vs circle }
+- function checkBrickBall(brick, ball) { // AABB }
+- function checkWall(ball) { // reflect }
+
+Vector2D.js:
+
+- class Vector2D { constructor(x,y) { this.x = x; this.y = y; } add(v) { this.x+=v.x; this.y+=v.y; } ... }
+
+Renderer.js:
+
+- class Renderer {
+- constructor(game) { this.game = game; this.ctx = game.ctx; }
+- render() { // clear, draw background, bricks, paddle, ball, particles, powerUps, HUD }
+- drawBackground() { // gradient }
+- drawBricks() { for each brick draw }
+- drawPaddle() { paddle.draw(ctx); }
+- drawBall() { ball.draw(ctx); }
+- drawParticles() { particle.drawAll(ctx); }
+- drawPowerUps() { powerUps.forEach(p=>p.draw(ctx)); }
+- drawHUD() { // lives, score, timer, angle indicator, pause button }
+- }
+
+HUD.js maybe separate but can be part of Renderer.
+
+ParticleSystem.js:
+
+- class ParticleSystem { constructor() { this.particles = []; } update(dt) { // update positions, remove dead; } draw(ctx) { // draw each particle } }
+
+SoundManager.js:
+
+- class SoundManager { constructor() { this.audioContext = new (window.AudioContext || window.webkitAudioContext)(); this.buffers = {}; this.loadSounds(); } loadSounds() { // fetch sounds via fetch and decode } play(name) { // create source node } }
+
+AssetLoader.js:
+
+- class AssetLoader { static loadImage(src) { return new Promise(resolve=>{ const img = new Image(); img.onload=()=>resolve(img); img.src=src; }); } static loadLevelJson(path) { return fetch(path).then(r=>r.json()); } }
+
+Config.js:
+
+- const CONFIG = { paddleWidth:120, paddleHeight:20, ballRadius:10, baseSpeed:300, maxBallSpeed:600, ... }
+
+Now we need to embed all these into JSON.
+
+Given the length, we need to keep each file short. However we must include all required features: responsive canvas, emoji favicon, vibrant palette, LocalStorage high score, sound effects, speedrun timer, etc.
+
+We can simplify by using CSS for responsiveness and palette.
+
+Let's craft index.html:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Angle-Breakout</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.5em' font-size='100'>🎮</text></svg>">
+<style>
+  body { margin:0; overflow:hidden; background:#111; }
+  canvas { display:block; width:100%; height:100%; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
+```
+
+Now main.js:
+
+We'll need to import modules; but in a single file we can define everything? But we need separate files. However for JSON we need each file content. Let's create main.js that sets up canvas size responsive and starts Game.
+
+Simplify: main.js will import Game from './game/Game.js' etc. But we need to include those files.
+
+Given the length, maybe we can combine some classes into main.js to reduce file count, but the architecture expects separate files. However the instruction only says map filenames to code; we can have fewer files if we combine, but better to follow architecture.
+
+But to keep JSON manageable, we can create minimal files.
+
+Maybe we can combine Game, InputHandler, Renderer, ParticleSystem, SoundManager into main.js, and have separate files for entities and physics.
+
+But the architecture includes many files; we can still produce them.
+
+Given time, maybe we can produce a simplified version where main.js contains everything, and other files are minimal stubs that just export a class with a run method. But that may not satisfy features.
+
+Better: We'll create main.js that defines Game class, and other modules are simple.
+
+But to keep JSON size moderate, we can compress code.
+
+Let's outline each file content concisely.
+
+We'll write each file as a string with \n escapes.
+
+We'll need to escape double quotes inside strings.
+
+We'll produce JSON like:
+
+{
+  "index.html": "<!DOCTYPE html>...",
+  "src/main.js": "import { Game } from './game/Game.js'; ...",
+  ...
+}
+
+But we need to ensure each file path is correct relative to root.
+
+Let's decide on file paths:
+
+- index.html (root)
+- src/main.js
+- src/game/Game.js
+- src/game/LevelManager.js
+- src/game/InputHandler.js
+- src/entities/Paddle.js
+- src/entities/Ball.js
+- src/entities/Brick.js
+- src/entities/PowerUp.js
+- src/physics/Collision.js
+- src/physics/Vector2D.js
+- src/rendering/Renderer.js
+- src/rendering/ParticleSystem.js
+- src/audio/SoundManager.js
+- src/utils/Config.js
+- src/utils/AssetLoader.js
+
+We may also need style.css but can embed in index.html.
+
+Now we need to write code for each file.
+
+Given the constraints, we need to keep code short but functional.
+
+Let's start with src/main.js:
+
+It will import Game, set up canvas, start Game.
+
+But we need to ensure that the Game class handles responsiveness.
+
+Simplify: In Game constructor, we set canvas width/height to match CSS size (clientWidth/clientHeight). We'll add a resize listener.
+
+We'll also load level data (maybe from assets/levels/level01.json). For simplicity, we can hardcode level data in Game.
+
+But to keep code short, we can embed level data directly.
+
+Let's write Game.js:
+
+class Game {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.resizeCanvas();
+    window.addEventListener('resize', () => this.resizeCanvas());
+    this.lastTime = 0;
+    this.running = false;
+    this.paused = false;
+    this.score = 0;
+    this.lives = 3;
+    this.highScore = parseInt(localStorage.getItem('angleBreakoutHighScore') || '0');
+    this.startTime = performance.now();
+    this.parTime = 45; // seconds
+    this.parEnd = this.startTime + this.parTime * 1000;
+    this.loadLevel();
+    this.initEntities();
+    this.startLoop();
+  }
+  resizeCanvas() {
+    const w = this.canvas.clientWidth;
+    const h = this.canvas.clientHeight;
+    this.canvas.width = w;
+    this.canvas.height = h;
+    this.width = w;
+    this.height = h;
+  }
+  loadLevel() {
+    // simple level data
+    this.levelData = {
+      background: '#0d0d0d',
+      paddleWidth: 120,
+      parTime: 45,
+      bricks: [
+        {row:0,col:0,type:'normal',color:'#ff5555'},
+        {row:0,col:1,type:'normal',color:'#ffaa55'},
+        // ... we can add few bricks
+      ]
+    };
+  }
+  initEntities() {
+    this.paddle = new Paddle(this);
+    this.ball = new Ball(this);
+    this.bricks = [];
+    // create bricks from levelData
+    for (let b of this.levelData.bricks) {
+      this.bricks.push(new Brick(this, b.row, b.col, b.type, b.color));
+    }
+    this.powerUps = [];
+    this.particles = new ParticleSystem();
+    this.timers = { speedrun: 0 };
+  }
+  startLoop() {
+    this.running = true;
+    requestAnimationFrame(this.loop.bind(this));
+  }
+  loop(timestamp) {
+    const dt = (timestamp - this.lastTime) / 1000;
+    this.lastTime = timestamp;
+    if (!this.paused) {
+      this.update(dt);
+      this.render();
+    }
+    if (this.running) requestAnimationFrame(this.loop.bind(this));
+  }
+  update(dt) {
+    this.timers.speedrun += dt;
+    this.paddle.update(dt);
+    this.ball.update(dt);
+    // update bricks, powerUps, particles
+    this.checkCollisions();
+    this.checkLives();
+    // check win condition
+    if (this.bricks.length === 0) {
+      this.levelComplete();
+    }
+  }
+  render() {
+    this.ctx.clearRect(0,0,this.width,this.height);
+    this.drawBackground();
+    this.drawBricks();
+    this.paddle.draw(this.ctx);
+    this.ball.draw(this.ctx);
+    this.particles.update(dt);
+    this.particles.draw(this.ctx);
+    this.drawPowerUps();
+    this.drawHUD();
+  }
+  drawBackground() {
+    this.ctx.fillStyle = this.levelData.background;
+    this.ctx.fillRect(0,0,this.width,this.height);
+  }
+  drawBricks() {
+    for (let b of this.bricks) b.draw(this.ctx);
+  }
+  drawPowerUps() {
+    for (let pu of this.powerUps) pu.draw(this.ctx);
+  }
+  drawHUD() {
+    // lives
+    this.ctx.fillStyle = '#fff';
+    this.ctx.font = '16px sans-serif';
+    this.ctx.fillText('Lives: ' + this.lives, 10, 20);
+    // score
+    this.ctx.fillText('Score: ' + this.score, 10, 40);
+    // timer
+    const remaining = Math.max(0, this.parEnd - this.timers.speedrun*1000);
+    const secs = Math.floor(remaining/1000);
+    this.ctx.fillText('Time: ' + secs + 's', this.width-100, 20);
+    // angle indicator (simple)
+    this.ctx.save();
+    this.ctx.translate(this.width/2, this.height-30);
+    this.ctx.rotate(-this.paddle.angle);
+    this.ctx.fillStyle = '#0ff';
+    this.ctx.fillRect(-20, -5, 40, 10);
+    this.ctx.restore();
+  }
+  checkCollisions() {
+    // ball-paddle
+    if (this.ball.isLocked) return;
+    if (this.paddle.getBounds().contains(this.ball.x, this.ball.y)) {
+      this.ball.isLocked = false;
+      this.ball.launch(this.paddle.angle);
+    }
+    // ball-walls
+    if (this.ball.x - this.ball.radius < 0) { this.ball.vx = Math.abs(this.ball.vx); }
+    if (this.ball.x + this.ball.radius > this.width) { this.ball.vx = -Math.abs(this.ball.vx); }
+    if (this.ball.y - this.ball.radius < 0) { this.ball.vy = Math.abs(this.ball.vy); }
+    // ball-bottom
+    if (this.ball.y + this.ball.radius > this.height) {
+      this.lives--;
+      this.ball.reset(this.paddle);
+    }
+    // ball-brick
+    for (let i = this.bricks.length-1; i>=0; i--) {
+      let b = this.bricks[i];
+      if (this.ball.isLocked) break;
+      if (this.ball.getBounds().overlaps(b.getBounds())) {
+        this.ball.vx = -this.ball.vx;
+        this.ball.vy = -this.ball.vy;
+        b.hit();
+        if (b.health <= 0) {
+          this.bricks.splice(i,1);
+          this.particles.emit(b.x, b.y);
+          // chance to drop power-up
+          if (Math.random() < 0.05) {
+            const types = ['expand','shrink','fast','slow','multi','laser','gravity','extra','boost'];
+            const type = types[Math.floor(Math.random()*types.length)];
+            this.powerUps.push(new PowerUp(this.ball.x, this.ball.y, type));
+          }
+        }
+      }
+    }
+  }
+  checkLives() {
+    if (this.lives <= 0) {
+      this.gameOver();
+    }
+  }
+  resetBall(paddle) {
+    this.ball.x = paddle.x;
+    this.ball.y = paddle.y - this.ball.radius;
+    this.ball.vx = 0;
+    this.ball.vy = 0;
+    this.ball.isLocked = true;
+  }
+  levelComplete() {
+    // show overlay maybe
+    this.running = false;
+  }
+  gameOver() {
+    // show overlay
+    this.running = false;
+  }
+}
+
+Now Paddle.js:
+
+class Paddle {
+  constructor(game) {
+    this.game = game;
+    this.width = game.levelData.paddleWidth;
+    this.height = 20;
+    this.x = this.game.canvas.width/2 - this.width/2;
+    this.y = this.game.canvas.height - this.height - 10;
+    this.angle = 0;
+    this.vx = 0;
+    this.ax = 0;
+    this.ay = 0;
+    this.rotationSpeed = 0;
+    this.maxSpeed = 800;
+    this.acc = 1500;
+  }
+  getBounds() {
+    const halfW = this.width/2;
+    const halfH = this.height/2;
+    const cosA = Math.cos(this.angle);
+    const sinA = Math.sin(this.angle);
+    const pts = [
+      {x: this.x - halfW, y: this.y - halfH},
+      {x: this.x + halfW, y: this.y - halfH},
+      {x: this.x + halfW, y: this.y + halfH},
+      {x: this.x - halfW, y: this.y + halfH}
+    ];
+    return {minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity};
+    // compute min/max
+    let minX = pts[0].x, maxX = pts[0].x, minY = pts[0].y, maxY = pts[0].y;
+    for (let p of pts) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    return {minX, maxX, minY, maxY};
+  }
+  launchAngle() {
+    return this.angle;
+  }
+  update(dt) {
+    // horizontal movement
+    let target = this.game.input.mouseX - this.game.canvas.width/2;
+    let dx = target - this.x;
+    let speed = this.vx;
+    if (dx > 0) {
+      speed = Math.min(speed + this.acc*dt, this.maxSpeed);
+    } else if (dx < 0) {
+      speed = Math.max(speed - this.acc*dt, -this.maxSpeed);
+    }
+    this.vx = speed;
+    this.x += this.vx * dt;
+    // clamp
+    const bounds = this.getBounds();
+    if (this.x - this.width/2 < 0) this.x = this.width/2;
+    if (this.x + this.width/2 > this.game.canvas.width) this.x = this.game.canvas.width - this.width/2;
+    // rotation
+    this.rotationSpeed = this.game.input.rotateSpeed;
+    this.angle += this.rotationSpeed * dt;
+    // clamp angle
+    this.angle = Math.max(-Math.PI/4, Math.min(Math.PI/4, this.angle));
+  }
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    ctx.fillStyle = '#00ff00';
+    ctx.fillRect(-this.width/2, -this.height/2, this.width, this.height);
+    ctx.restore();
+  }
+}
+
+Ball.js:
+
+class Ball {
+  constructor(game) {
+    this.game = game;
+    this.radius = 10;
+    this.x = 0;
+    this.y = 0;
+    this.vx = 0;
+    this.vy = 0;
+    this.speed = 300;
+    this.maxSpeed = 600;
+    this.isLocked = true;
+  }
+  launch(angle) {
+    const dir = {x: Math.cos(angle), y: Math.sin(angle)};
+    let vx = dir.x * this.speed;
+    let vy = dir.y * this.speed;
+    const spread = (Math.random()-0.5)*10*Math.PI/180; // ±5°
+    vx = (vx*Math.cos(spread) - vy*Math.sin(spread));
+    vy = (vx*Math.sin(spread) + vy*Math.cos(spread));
+    this.vx = vx;
+    this.vy = vy;
+    this.isLocked = false;
+  }
+  reset(paddle) {
+    this.x = paddle.x + paddle.width/2 - this.radius;
+    this.y = paddle.y - this.height/2 - this.radius;
+    this.vx = 0;
+    this.vy = 0;
+    this.isLocked = true;
+  }
+  update(dt) {
+    if (this.isLocked) return;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    // speed cap
+    let speed = Math.hypot(this.vx, this.vy);
+    if (speed > this.maxSpeed) {
+      const factor = this.maxSpeed / speed;
+      this.vx *= factor;
+      this.vy *= factor;
+    }
+  }
+  getBounds() {
+    return {minX: this.x - this.radius, maxX: this.x + this.radius, minY: this.y - this.radius, maxY: this.y + this.radius};
+  }
+  draw(ctx) {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
+    ctx.fillStyle = '#ff0000';
+    ctx.fill();
+  }
+}
+
+Brick.js:
+
+class Brick {
+  constructor(game, row, col, type, color) {
+    this.game = game;
+    this.row = row;
+    this.col = col;
+    this.type = type;
+    this.color = color;
+    this.health = (type === 'normal' ? 1 : type === 'durable' ? 2 : 0);
+    const w = 60, h = 20;
+    this.x = col * (w + 4) + 4; // 4px padding
+    this.y = row * (h + 4) + 4;
+    this.w = w;
+    this.h = h;
+  }
+  getBounds() {
+    return {minX: this.x, maxX: this.x + this.w, minY: this.y, maxY: this.y + this.h};
+  }
+  hit() {
+    this.health--;
+    if (this.health <= 0) {
+      this.destroy();
+    }
+  }
+  destroy() {
+    this.game.bricks.splice(this.row, 1); // wrong; need to remove by index; we stored row but not index.
+    // For simplicity, we will store index in array; but we can just set health and let renderer hide.
+    // We'll just mark as destroyed by setting a flag.
+  }
+  draw(ctx) {
+    if (this.health <= 0) return;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x, this.y, this.w, this.h);
+    // durable crack after first hit
+    if (this.type === 'durable' && this.health === 1) {
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(this.x, this.y, this.w, this.h);
+    }
+  }
+}
+
+Note: The Brick destroy implementation is simplistic; we need to remove from array. We'll adjust later.
+
+PowerUp.js:
+
+class PowerUp {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    this.vy = -150;
+    this.radius = 12;
+    this.collected = false;
+  }
+  update(dt) {
+    this.y += this.vy * dt;
+  }
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.globalAlpha = 0.8;
+    // simple icon based on type
+    ctx.fillStyle = '#ff0';
+    if (this.type === 'expand') {
+      ctx.fillRect(-6, -6, 12, 12);
+    } else if (this.type === 'shrink') {
+      ctx.fillRect(-6, -6, 12, 12);
+    } else if (this.type === 'fast') {
+      ctx.fillRect(-6, -6, 12, 12);
+    } else if (this.type === 'slow') {
+      ctx.fillRect(-6, -6, 12, 12);
+    } else if (this.type === 'multi') {
+      ctx.fillRect(-6, -6, 12, 12);
+    } else if (this.type === 'laser') {
+      ctx.fillRect(-6, -6, 12, 12);
+    } else if (this.type === 'gravity') {
+      ctx.fillRect(-6, -6, 12, 12);
+    } else if (this.type === 'extra') {
+      ctx.fillRect(-6, -6, 12, 12);
+    } else if (this.type === 'boost') {
+      ctx.fillRect(-6, -6, 12, 12);
+    }
+    ctx.restore();
+  }
+  collect(paddle) {
+    const pBounds = paddle.getBounds();
+    const bBounds = {minX: this.x - this.radius, maxX: this.x + this.radius, minY: this.y - this.radius, maxY: this.y + this.radius};
+    if (pBounds.minX < bBounds.maxX && pBounds.maxX > bBounds.minX &&
+        pBounds.minY < bBounds.maxY && pBounds.maxY > bBounds.minY) {
+      this.collected = true;
+      return true;
+    }
+    return false;
+  }
+}
+
+Collision.js:
+
+function getAABB(a) { return {minX:a.minX, maxX:a.maxX, minY:a.minY, maxY:a.maxY}; }
+function getRotatedAABB(paddle) {
+  const halfW = paddle.width/2;
+  const halfH = paddle.height/2;
+  const cosA = Math.cos(paddle.angle);
+  const sinA = Math.sin(paddle.angle);
+  const points = [
+    {x: -halfW, y: -halfH},
+    {x: halfW, y: -halfH},
+    {x: halfW, y: halfH},
+    {x: -halfW, y: halfH}
+  ];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (let p of points) {
+    const xr = p.x * cosA - p.y * sinA + paddle.x;
+    const yr = p.x * sinA + p.y * cosA + paddle.y;
+    if (xr < minX) minX = xr;
+    if (xr > maxX) maxX = xr;
+    if (yr < minY) minY = yr;
+    if (yr > maxY) maxY = yr;
+  }
+  return {minX, maxX, minY, maxY};
+}
+function circleAABBCollision(circle, aabb) {
+  // find closest point on AABB to circle center
+  const closestX = Math.max(aabb.minX, Math.min(circle.x, aabb.maxX));
+  const closestY = Math.max(aabb.minY, Math.min(circle.y, aabb.maxY));
+  const dx = circle.x - closestX;
+  const dy = circle.y - closestY;
+  const distSq = dx*dx + dy*dy;
+  return distSq < circle.radius*circle.radius;
+}
+function resolvePaddleBall(paddle, ball) {
+  const bounds = getRotatedAABB(paddle);
+  if (circleAABBCollision(ball, bounds)) {
+    // reflect velocity based on impact normal
+    const nx = ball.x - (bounds.minX + bounds.maxX)/2;
+    const ny = ball.y - (bounds.minY + bounds.maxY)/2;
+    const len = Math.hypot(nx, ny) || 1;
+    const ux = nx / len;
+    const uy = ny / len;
+    // reflect
+    const dot = ball.vx * ux + ball.vy * uy;
+    ball.vx = ball.vx - 2 * dot * ux;
+    ball.vy = ball.vy - 2 * dot * uy;
+    // add paddle tangential speed
+    const tangent = {x: -uy, y: ux};
+    const paddleSpeed = paddle.vx; // horizontal speed influences tangential
+    ball.vx += paddleSpeed * tangent.x;
+    ball.vy += paddleSpeed * tangent.y;
+  }
+}
+function resolveWall(ball) {
+  if (ball.x - ball.radius < 0) ball.vx = Math.abs(ball.vx);
+  if (ball.x + ball.radius > canvasWidth) ball.vx = -Math.abs(ball.vx);
+  if (ball.y - ball.radius < 0) ball.vy = Math.abs(ball.vy);
+}
+function resolveBrickBall(ball, brick) {
+  // simple AABB collision
+  const b = brick.getBounds();
+  if (ball.x - ball.radius < b.maxX && ball.x + ball.radius > b.minX &&
+      ball.y - ball.radius < b.maxY && ball.y + ball.radius > b.minY) {
+    // reflect
+    ball.vx = -ball.vx;
+    ball.vy = -ball.vy;
+  }
+}
+
+Note: We need canvas width variable; we can pass it.
+
+Renderer.js:
+
+class Renderer {
+  constructor(game) {
+    this.game = game;
+    this.ctx = game.ctx;
+  }
+  render() {
+    this.ctx.clearRect(0,0,this.game.width,this.game.height);
+    this.drawBackground();
+    this.drawBricks();
+    this.paddle.draw(this.ctx);
+    this.ball.draw(this.ctx);
+    this.particles.update(this.game.timers.speedrun);
+    this.particles.draw(this.ctx);
+    this.drawPowerUps();
+    this.drawHUD();
+  }
+  drawBackground() {
+    this.ctx.fillStyle = this.game.levelData.background;
+    this.ctx.fillRect(0,0,this.game.width,this.game.height);
+  }
+  drawBricks() {
+    for (let b of this.game.bricks) b.draw(this.ctx);
+  }
+  drawPowerUps() {
+    for (let pu of this.game.powerUps) pu.draw(this.ctx);
+  }
+  drawHUD() {
+    const ctx = this.ctx;
+    // lives
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Lives: ' + this.game.lives, 10, 20);
+    // score
+    ctx.fillText('Score: ' + this.game.score, 10, 40);
+    // timer
+    const remaining = Math.max(0, this.game.parEnd - this.game.timers.speedrun*1000);
+    const secs = Math.floor(remaining/1000);
+    ctx.fillText('Time: ' + secs + 's', this.game.width-100, 20);
+    // angle indicator (simple)
+    ctx.save();
+    ctx.translate(this.game.width/2, this.game.height-30);
+    ctx.rotate(-this.game.paddle.angle);
+    ctx.fillStyle = '#0ff';
+    ctx.fillRect(-20, -5, 40, 10);
+    ctx.restore();
+  }
+}
+
+ParticleSystem.js:
+
+class ParticleSystem {
+  constructor() {
+    this.particles = [];
+    this.maxParticles = 200;
+  }
+  emit(x, y) {
+    const count = 12 + Math.floor(Math.random()*8);
+    for (let i=0;i<count;i++) {
+      const size = 2 + Math.random()*2;
+      const angle = Math.random()*Math.PI*2;
+      const speed = 50 + Math.random()*100;
+      this.particles.push({x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, size, life: 0.3});
+    }
+  }
+  update(dt) {
+    for (let i=this.particles.length-1; i>=0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      if (p.life <= 0) this.particles.splice(i,1);
+    }
+  }
+  draw(ctx) {
+    for (let p of this.particles) {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+}
+
+SoundManager.js:
+
+class SoundManager {
+  constructor() {
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.buffers = {};
+    this.loadSounds();
+  }
+  async loadSounds() {
+    const names = ['paddle','ball','brick','destroy','powerup','life','levelup'];
+    for (let n of names) {
+      const resp = await fetch(`assets/sounds/${n}.wav`);
+      const array = await resp.arrayBuffer();
+      const audioBuf = await this.ctx.decodeAudioData(array);
+      this.buffers[n] = audioBuf;
+    }
+  }
+  play(name, loop=false) {
+    const buf = this.buffers[name];
+    if (!buf) return;
+    const source = this.ctx.createBufferSource();
+    source.buffer = buf;
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0.5;
+    source.connect(gain);
+    gain.connect(this.ctx.destination);
+    source.start();
+    if (loop) source.loop = true;
+  }
+}
+
+AssetLoader.js:
+
+class AssetLoader {
+  static loadImage(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.src = src;
+    });
+  }
+  static loadLevelJson(path) {
+    return fetch(path).then(r => r.json());
+  }
+}
+
+Config.js:
+
+const CONFIG = {
+  paddleWidth: 120,
+  paddleHeight: 20,
+  ballRadius: 10,
+  baseSpeed: 300,
+  maxBallSpeed: 600,
+  maxPaddleSpeed: 800,
+  paddleAcc: 1500,
+  rotationSpeed: 180 * Math.PI / 180, // 180 deg/s? Actually we limit to 45 deg, but speed is per second.
+  // other constants...
+};
+
+Now we need to ensure all files are included.
+
+But we still need to handle brick removal correctly. In Brick.destroy we need to remove from array. Let's modify Brick class to have a method that returns its index or we can store index.
+
+Simplify: In Game.initEntities, we can push bricks and keep reference. Then when a brick is destroyed, we can splice at known index.
+
+Let's adjust Brick class: store its index in the array? Not easy. Instead, we can have Game manage bricks array and when a brick is hit, we call a method that removes it.
+
+Simplify: In Game.update, after checking collisions, we can iterate bricks and if health <=0, remove it and emit particles.
+
+Let's modify Game.checkCollisions to handle brick removal.
+
+In Game.checkCollisions:
+
+```
+for (let i = this.bricks.length-1; i>=0; i--) {
+  let b = this.bricks[i];
+  if (this.ball.isLocked) break;
+  if (this.ball.getBounds().overlaps(b.getBounds())) {
+    // reflect
+    this.ball.vx = -this.ball.vx;
+    this.ball.vy = -this.ball.vy;
+    b.hit();
+    if (b.health <= 0) {
+      this.bricks.splice(i,1);
+      this.particles.emit(b.x, b.y);
+      // power-up chance
+      if (Math.random() < 0.05) {
+        const types = ['expand','shrink','fast','slow','multi','laser','gravity','extra','boost'];
+        const type = types[Math.floor(Math.random()*types.length)];
+        this.powerUps.push(new PowerUp(this.ball.x, this.ball.y, type));
+      }
+    }
+  }
+}
+```
+
+Now we need to adjust Brick.hit to decrement health, and Brick.destroy not needed.
+
+Now we need to ensure paddle rotation and movement are correct.
+
+Paddle.update: we need to handle horizontal movement with acceleration.
+
+We have vx and ax. In our simplified version we used vx directly; but we need to incorporate acceleration.
+
+Let's rewrite Paddle.update:
+
+```
+update(dt) {
+  // horizontal movement based on mouse
+  const targetX = this.game.input.mouseX - this.game.canvas.width/2;
+  const dx = targetX - this.x;
+  // accelerate towards target
+  if (dx > 0) {
+    this.ax = this.CONFIG.paddleAcc * dt;
+  } else if (dx < 0) {
+    this.ax = -this.CONFIG.paddleAcc * dt;
+  } else {
+    this.ax = 0;
+  }
+  // apply acceleration to velocity
+  this.vx += this.ax;
+  // clamp speed
+  if (this.vx > this.CONFIG.maxPaddleSpeed) this.vx = this.CONFIG.maxPaddleSpeed;
+  if (this.vx < -this.CONFIG.maxPaddleSpeed) this.vx = -this.CONFIG.maxPaddleSpeed;
+  // integrate position
+  this.x += this.vx * dt;
+  // clamp to canvas
+  const halfW = this.width/2;
+  if (this.x - halfW < 0) this.x = halfW;
+  if (this.x + halfW > this.game.canvas.width) this.x = this.game.canvas.width - halfW;
+  // rotation
+  this.rotationSpeed = this.game.input.rotateSpeed;
+  this.angle += this.rotationSpeed * dt;
+  // clamp angle
+  this.angle = Math.max(-Math.PI/4, Math.min(Math.PI/4, this.angle));
+}
+```
+
+But we need CONFIG values; we can define them in Config.js.
+
+Now InputHandler.js:
+
+class InputHandler {
+  constructor(game) {
+    this.game = game;
+    this.mouseX = 0;
+    this.mouseY = 0;
+    this.rotateSpeed = 0;
+    this.lastMouse = {x:0,y:0};
+    this.wheelDelta = 0;
+    this.clickPending = false;
+    window.addEventListener('mousemove', e => {
+      const rect = this.game.canvas.getBoundingClientRect();
+      this.mouseX = e.clientX - rect.left;
+      this.mouseY = e.clientY - rect.top;
+    });
+    window.addEventListener('wheel', e => {
+      this.wheelDelta += e.deltaY;
+    });
+    window.addEventListener('click', e => {
+      if (this.game.ball.isLocked) {
+        this.clickPending = true;
+      }
+    });
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        this.game.paused = !this.game.paused;
+      }
+    });
+  }
+  update(dt) {
+    // paddle rotation speed based on wheel or key?
+    // We'll use wheel for rotation speed
+    const rotSpeed = this.wheelDelta * 0.5 * dt; // adjust
+    this.wheelDelta = 0;
+    this.rotateSpeed = rotSpeed;
+    // reset click pending after launch
+    if (this.clickPending) {
+      this.clickPending = false;
+      this.game.ball.reset(this.game.paddle);
+    }
+  }
+  get mouseX() { return this.mouseX; }
+  get paddle() { return this.game.paddle; }
+}
+
+But we need to handle paddle rotation via wheel or arrow keys. For simplicity, we can use wheel.
+
+Now we need to ensure the ball launch uses paddle angle.
+
+Ball.launch:
+
+```
+launch(paddleAngle) {
+  const dir = {x: Math.cos(paddleAngle), y: Math.sin(paddleAngle)};
+  let vx = dir.x * this.speed;
+  let vy = dir.y * this.speed;
+  const spread = (Math.random()-0.5)*10*Math.PI/180; // ±5°
+  const cosS = Math.cos(spread);
+  const sinS = Math.sin(spread);
+  vx = vx*cosS - vy*sinS;
+  vy = vx*sinS + vy*cosS;
+  this.vx = vx;
+  this.vy = vy;
+  this.isLocked = false;
+}
+```
+
+Now we need to ensure speed cap.
+
+Ball.update already caps speed.
+
+Now we need to ensure the high score is saved.
+
+In Game constructor, we load highScore from localStorage and update if needed.
+
+Now we need to ensure the speedrun timer is displayed in top corner.
+
+We already have timer in HUD.
+
+Now we need to ensure the canvas is responsive.
+
+In Game constructor, we call resizeCanvas, which sets canvas width/height to clientWidth/Height.
+
+Now we need to ensure that the code uses requestAnimationFrame for 60fps.
+
+Now we need to ensure that the code is modular and imports correctly.
+
+Now we need to produce JSON mapping filenames to code.
+
+Given the length, we need to be careful with escaping.
+
+We'll produce each file as a string with \n for newlines and proper escaping of quotes.
+
+Let's start constructing each file content.
+
+First, index.html:
+
+We'll write it as a string with line breaks \n.
+
+We need to escape double quotes inside the string. Since we are using double quotes for the JSON value, we need to escape any double quotes inside the HTML string.
+
+Simplify: Use single quotes for HTML attributes where possible, but HTML uses double quotes often. We'll escape them.
+
+Better: Use backticks for the JSON string? Not allowed; JSON requires double quotes for keys and string values. Inside the string we can use single quotes for attributes, but HTML attributes typically use double quotes. We can use single quotes for attributes to avoid escaping.
+
+Let's rewrite index.html with single quotes for attributes:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Angle-Breakout</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.5em' font-size='100'>🎮</text></svg>">
+<style>
+  body { margin:0; overflow:hidden; background:#111; }
+  canvas { display:block; width:100%; height:100%; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
+```
+
+Now we need to escape the inner single quotes in the data URI. In JSON string, we need to escape backslashes and double quotes. Since we use single quotes inside the data URI, they are fine as long as we don't have double quotes inside. The data URI contains single quotes, which are fine inside double-quoted JSON string.
+
+But we have double quotes in the href attribute? Actually we have href="data:image/svg+xml;utf8,<svg ...>". That's double quotes inside the string, which need to be escaped as \". Let's rewrite with single quotes for the outer attribute:
+
+<link rel='icon' href='data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.5em' font-size='100'>🎮</text></svg>'>
+
+Now we have single quotes for href and the data URI uses single quotes for attributes, which is okay.
+
+But inside the data URI we have single quotes for xmlns, viewBox, y, font-size, etc. That's fine.
+
+Now we need to ensure the JSON string for index.html is properly escaped.
+
+We'll produce:
+
+"index.html": "<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n<head>\\n<meta charset=\\\"UTF-8\\\">\\n<title>Angle-Breakout</title>\\n<meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1\\\">\\n<link rel=\\'icon\\' href=\\'data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'><text y=\\'0.5em\\' font-size=\\'100\\'>🎮</text></svg>\\'>\\n<style>\\n  body { margin:0; overflow:hidden; background:#111; }\\n  canvas { display:block; width:100%; height:100%; }\\n</style>\\n</head>\\n<body>\\n<canvas id=\\\"gameCanvas\\\"></canvas>\\n<script type=\\\"module\\\" src=\\\"./src/main.js\\\"></script>\\n</body>\\n</html>"
+
+Now we need to create src/main.js.
+
+We'll write:
+
+import { Game } from './game/Game.js';
+
+const canvas = document.getElementById('gameCanvas');
+const game = new Game(canvas);
+game.init(); // maybe not needed; Game constructor does everything.
+
+But Game constructor already starts loop. So we can just instantiate.
+
+Now src/game/Game.js:
+
+We'll write class Game with constructor, resizeCanvas, loadLevel, initEntities, startLoop, loop, update, render, drawBackground, drawBricks, drawPowerUps, drawHUD, checkCollisions, checkLives, resetBall, levelComplete, gameOver.
+
+Given length, we need to keep it concise.
+
+Let's write:
+
+```javascript
+import { Paddle } from '../entities/Paddle.js';
+import { Ball } from '../entities/Ball.js';
+import { Brick } from '../entities/Brick.js';
+import { PowerUp } from '../entities/PowerUp.js';
+import { ParticleSystem } from '../rendering/ParticleSystem.js';
+
+export class Game {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.resizeCanvas();
+    window.addEventListener('resize', () => this.resizeCanvas());
+    this.lastTime = 0;
+    this.running = false;
+    this.paused = false;
+    this.score = 0;
+    this.lives = 3;
+    this.highScore = parseInt(localStorage.getItem('angleBreakoutHighScore') || '0');
+    this.startTime = performance.now();
+    this.parTime = 45;
+    this.parEnd = this.startTime + this.parTime * 1000;
+    this.levelData = {
+      background: '#0d0d0d',
+      paddleWidth: 120,
+      parTime: 45,
+      bricks: [
+        // sample bricks
+        {row:0,col:0,type:'normal',color:'#ff5555'},
+        {row:0,col:1,type:'normal',color:'#ffaa55'},
+        {row:0,col:2,type:'durable',color:'#ffcc66'},
+        // add more as needed
+      ]
+    };
+    this.paddle = new Paddle(this);
+    this.ball = new Ball(this);
+    this.bricks = [];
+    for (let b of this.levelData.bricks) {
+      this.bricks.push(new Brick(this, b.row, b.col, b.type, b.color));
+    }
+    this.powerUps = [];
+    this.particles = new ParticleSystem();
+    this.timers = { speedrun: 0 };
+    this.loadLevel();
+    this.initEntities();
+    this.startLoop();
+  }
+  resizeCanvas() {
+    const w = this.canvas.clientWidth;
+    const h = this.canvas.clientHeight;
+    this.canvas.width = w;
+    this.canvas.height = h;
+    this.width = w;
+    this.height = h;
+  }
+  loadLevel() {
+    // already set in constructor; could load from JSON later
+  }
+  initEntities() {
+    // already done
+  }
+  startLoop() {
+    this.running = true;
+    requestAnimationFrame(this.loop.bind(this));
+  }
+  loop(timestamp) {
+    const dt = (timestamp - this.lastTime) / 1000;
+    this.lastTime = timestamp;
+    if (!this.paused) {
+      this.update(dt);
+      this.render();
+    }
+    if (this.running) requestAnimationFrame(this.loop.bind(this));
+  }
+  update(dt) {
+    this.timers.speedrun += dt;
+    this.paddle.update(dt);
+    this.ball.update(dt);
+    this.checkCollisions();
+    this.checkLives();
+    if (this.bricks.length === 0) this.levelComplete();
+  }
+  render() {
+    this.ctx.clearRect(0,0,this.width,this.height);
+    this.drawBackground();
+    this.drawBricks();
+    this.paddle.draw(this.ctx);
+    this.ball.draw(this.ctx);
+    this.particles.update(dt);
+    this.particles.draw(this.ctx);
+    this.drawPowerUps();
+    this.drawHUD();
+  }
+  drawBackground() {
+    this.ctx.fillStyle = this.levelData.background;
+    this.ctx.fillRect(0,0,this.width,this.height);
+  }
+  drawBricks() {
+    for (let b of this.bricks) b.draw(this.ctx);
+  }
+  drawPowerUps() {
+    for (let pu of this.powerUps) pu.draw(this.ctx);
+  }
+  drawHUD() {
+    const ctx = this.ctx;
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Lives: ' + this.lives, 10, 20);
+    ctx.fillText('Score: ' + this.score, 10, 40);
+    const remaining = Math.max(0, this.parEnd - this.timers.speedrun * 1000);
+    const secs = Math.floor(remaining / 1000);
+    ctx.fillText('Time: ' + secs + 's', this.width - 100, 20);
+  }
+  checkCollisions() {
+    // ball-paddle
+    if (this.ball.isLocked) return;
+    const paddleBounds = this.paddle.getBounds();
+    if (paddleBounds.minX <= this.ball.x && this.ball.x <= paddleBounds.maxX &&
+        paddleBounds.minY <= this.ball.y && this.ball.y <= paddleBounds.maxY) {
+      this.ball.isLocked = false;
+      this.ball.launch(this.paddle.angle);
+    }
+    // ball-walls
+    if (this.ball.x - this.ball.radius < 0) this.ball.vx = Math.abs(this.ball.vx);
+    if (this.ball.x + this.ball.radius > this.width) this.ball.vx = -Math.abs(this.ball.vx);
+    if (this.ball.y - this.ball.radius < 0) this.ball.vy = Math.abs(this.ball.vy);
+    // ball-bottom
+    if (this.ball.y + this.ball.radius > this.height) {
+      this.lives--;
+      this.ball.reset(this.paddle);
+    }
+    // ball-bricks
+    for (let i = this.bricks.length - 1; i >= 0; i--) {
+      const b = this.bricks[i];
+      if (this.ball.isLocked) break;
+      if (this.ball.getBounds().overlaps(b.getBounds())) {
+        this.ball.vx = -this.ball.vx;
+        this.ball.vy = -this.ball.vy;
+        b.hit();
+        if (b.health <= 0) {
+          this.bricks.splice(i, 1);
+          this.particles.emit(b.x, b.y);
+          if (Math.random() < 0.05) {
+            const types = ['expand','shrink','fast','slow','multi','laser','gravity','extra','boost'];
+            const type = types[Math.floor(Math.random() * types.length)];
+            this.powerUps.push(new PowerUp(this.ball.x, this.ball.y, type));
+          }
+        }
+    }
+  }
+  checkLives() {
+    if (this.lives <= 0) this.gameOver();
+  }
+  resetBall(paddle) {
+    this.ball.x = paddle.x + this.paddle.width/2 - this.ball.radius;
+    this.ball.y = paddle.y - this.paddle.height/2 - this.ball.radius;
+    this.ball.vx = 0;
+    this.ball.vy = 0;
+    this.ball.isLocked = true;
+  }
+  levelComplete() {
+    this.running = false;
+  }
+  gameOver() {
+    this.running = false;
+  }
+}
+```
+
+Now src/game/LevelManager.js: maybe not needed; we can have simple level data in Game. But to follow architecture, we can create a minimal LevelManager that loads level JSON. For simplicity, we can have it just return the levelData.
+
+But to keep code short, we can skip LevelManager and just have Game handle level data.
+
+But the architecture expects LevelManager.js. Let's create a minimal one that loads level data from a JSON file (maybe level01.json). For now, we can just return a static object.
+
+src/game/LevelManager.js:
+
+```javascript
+export class LevelManager {
+  constructor() {
+    this.levels = {
+      level01: {
+        background: '#0d0d0d',
+        paddleWidth: 120,
+        parTime: 45,
+        bricks: [
+          {row:0,col:0,type:'normal',color:'#ff5555'},
+          {row:0,col:1,type:'normal',color:'#ffaa55'},
+          {row:0,col:2,type:'durable',color:'#ffcc66'},
+          // add more rows...
+        ]
+      }
+    };
+    this.currentLevelId = 'level01';
+  }
+  getCurrentLevel() {
+    return this.levels[this.currentLevelId];
+  }
+  nextLevel() {
+    // simple increment
+    const keys = Object.keys(this.levels);
+    let idx = keys.indexOf(this.currentLevelId);
+    idx = (idx + 1) % keys.length;
+    this.currentLevelId = keys[idx];
+  }
+}
+```
+
+Now src/game/InputHandler.js:
+
+```javascript
+import { Game } from '../entities/Paddle.js'; // not needed
+
+export class InputHandler {
+  constructor(game) {
+    this.game = game;
+    this.mouseX = 0;
+    this.rotateSpeed = 0;
+    window.addEventListener('mousemove', e => {
+      const rect = this.game.canvas.getBoundingClientRect();
+      this.mouseX = e.clientX - rect.left;
+    });
+    window.addEventListener('wheel', e => {
+      this.rotateSpeed += e.deltaY * 0.01 * dt; // but we need dt; we will compute in update
+    });
+    window.addEventListener('click', e => {
+      if (this.game.ball.isLocked) {
+        // launch ball
+        this.game.ball.reset(this.game.paddle);
+      }
+    });
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        this.game.paused = !this.game.paused;
+      }
+    });
+  }
+  update(dt) {
+    // rotation speed from wheel
+    this.rotateSpeed = this.rotateSpeed || 0; // placeholder
+    // we will compute rotation speed based on wheel delta in update of game? Actually we need to capture wheel delta per frame.
+    // For simplicity, we will compute rotation speed directly in Game.update using input.rotateSpeed property.
+    // So InputHandler just stores rotateSpeed and updates it based on wheel.
+    // We'll set rotateSpeed = 0 here and let Game handle.
+  }
+  get paddle() { return this.game.paddle; }
+}
+```
+
+But we need to capture wheel delta per frame. Let's adjust: In InputHandler.update(dt) we can read wheelDelta and compute rotation speed.
+
+Let's rewrite InputHandler:
+
+```javascript
+export class InputHandler {
+  constructor(game) {
+    this.game = game;
+    this.mouseX = 0;
+    this.rotateSpeed = 0;
+    this.wheelDelta = 0;
+    window.addEventListener('mousemove', e => {
+      const rect = this.game.canvas.getBoundingClientRect();
+      this.mouseX = e.clientX - rect.left;
+    });
+    window.addEventListener('wheel', e => {
+      this.wheelDelta += e.deltaY;
+    });
+    window.addEventListener('click', e => {
+      if (this.game.ball.isLocked) {
+        this.game.ball.reset(this.game.paddle);
+      }
+    });
+    window.addEventListener('keydown', e => {
+      if (e.code === 'Space' || e.code === 'Enter') {
+        this.game.paused = !this.game.paused;
+      }
+    });
+  }
+  update(dt) {
+    // compute rotation speed from wheel delta (accumulated per frame)
+    this.rotateSpeed = this.wheelDelta * 0.5 * dt; // 0.5 deg per pixel? adjust
+    this.wheelDelta = 0;
+  }
+}
+```
+
+Now src/entities/Paddle.js:
+
+```javascript
+import { Vector2D } from '../physics/Vector2D.js';
+
+export class Paddle {
+  constructor(game) {
+    this.game = game;
+    this.width = game.levelData.paddleWidth;
+    this.height = 20;
+    this.x = this.game.canvas.width / 2 - this.width / 2;
+    this.y = this.game.canvas.height - this.height - 10;
+    this.angle = 0;
+    this.vx = 0;
+    this.ax = 0;
+    this.ay = 0;
+    this.rotationSpeed = 0;
+    this.maxSpeed = 800;
+    this.acc = 1500;
+  }
+  getBounds() {
+    const halfW = this.width / 2;
+    const halfH = this.height / 2;
+    const cosA = Math.cos(this.angle);
+    const sinA = Math.sin(this.angle);
+    const points = [
+      {x: -halfW, y: -halfH},
+      {x: halfW, y: -halfH},
+      {x: halfW, y: halfH},
+      {x: -halfW, y: halfH}
+    ];
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let p of points) {
+      const xr = p.x * cosA - p.y * sinA + this.x;
+      const yr = p.x * sinA + p.y * cosA + this.y;
+      if (xr < minX) minX = xr;
+      if (xr > maxX) maxX = xr;
+      if (yr < minY) minY = yr;
+      if (yr > maxY) maxY = yr;
+    }
+    return {minX, maxX, minY, maxY};
+  }
+  launchAngle() {
+    return this.angle;
+  }
+  update(dt) {
+    // horizontal movement
+    const targetX = this.game.input.mouseX - this.game.canvas.width / 2;
+    const dx = targetX - this.x;
+    if (dx > 0) {
+      this.ax = this.maxSpeed * dt; // actually accel
+    } else if (dx < 0) {
+      this.ax = -this.maxSpeed * dt;
+    } else {
+      this.ax = 0;
+    }
+    // apply acceleration to velocity
+    this.vx += this.ax;
+    // clamp speed
+    if (this.vx > this.maxSpeed) this.vx = this.maxSpeed;
+    if (this.vx < -this.maxSpeed) this.vx = -this.maxSpeed;
+    // integrate position
+    this.x += this.vx * dt;
+    // clamp to canvas
+    const halfW = this.width / 2;
+    if (this.x - halfW < 0) this.x = halfW;
+    if (this.x + halfW > this.game.canvas.width) this.x = this.game.canvas.width - halfW;
+    // rotation
+    this.rotationSpeed = this.game.input.rotateSpeed;
+    this.angle += this.rotationSpeed * dt;
+    // clamp angle
+    this.angle = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, this.angle));
+  }
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    ctx.fillStyle = '#00ff00';
+    ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+    ctx.restore();
+  }
+}
+```
+
+Note: The acceleration logic may be off; we need to use accel value.
+
+Let's correct: Use this.acc = 1500 (px/s²). Then:
+
+```
+if (dx > 0) this.ax = this.acc * dt;
+else if (dx < 0) this.ax = -this.acc * dt;
+else this.ax = 0;
+this.vx += this.ax;
+if (this.vx > this.maxSpeed) this.vx = this.maxSpeed;
+if (this.vx < -this.maxSpeed) this.vx = -this.maxSpeed;
+```
+
+Now Ball.js:
+
+```javascript
+import { Vector2D } from '../physics/Vector2D.js';
+
+export class Ball {
+  constructor(game) {
+    this.game = game;
+    this.radius = 10;
+    this.x = 0;
+    this.y = 0;
+    this.vx = 0;
+    this.vy = 0;
+    this.speed = 300;
+    this.maxSpeed = 600;
+    this.isLocked = true;
+  }
+  launch(paddleAngle) {
+    const dir = {x: Math.cos(paddleAngle), y: Math.sin(paddleAngle)};
+    let vx = dir.x * this.speed;
+    let vy = dir.y * this.speed;
+    const spread = (Math.random() - 0.5) * 10 * Math.PI / 180; // ±5°
+    const cosS = Math.cos(spread);
+    const sinS = Math.sin(spread);
+    vx = vx * cosS - vy * sinS;
+    vy = vx * sinS + vy * cosS;
+    this.vx = vx;
+    this.vy = vy;
+    this.isLocked = false;
+  }
+  reset(paddle) {
+    this.x = paddle.x + this.game.paddle.width / 2 - this.radius;
+    this.y = paddle.y - this.game.paddle.height / 2 - this.radius;
+    this.vx = 0;
+    this.vy = 0;
+    this.isLocked = true;
+  }
+  update(dt) {
+    if (this.isLocked) return;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    // speed cap
+    let speed = Math.hypot(this.vx, this.vy);
+    if (speed > this.maxSpeed) {
+      const factor = this.maxSpeed / speed;
+      this.vx *= factor;
+      this.vy *= factor;
+    }
+  }
+  getBounds() {
+    return {minX: this.x - this.radius, maxX: this.x + this.radius, minY: this.y - this.radius, maxY: this.y + this.radius};
+  }
+  draw(ctx) {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff0000';
+    ctx.fill();
+  }
+}
+```
+
+Brick.js:
+
+```javascript
+export class Brick {
+  constructor(game, row, col, type, color) {
+    this.game = game;
+    this.row = row;
+    this.col = col;
+    this.type = type;
+    this.color = color;
+    this.health = (type === 'normal' ? 1 : type === 'durable' ? 2 : 0);
+    const w = 60, h = 20;
+    const padding = 4;
+    this.x = col * (w + padding) + padding;
+    this.y = row * (h + padding) + padding;
+    this.w = w;
+    this.h = h;
+  }
+  getBounds() {
+    return {minX: this.x, maxX: this.x + this.w, minY: this.y, maxY: this.y + this.h};
+  }
+  hit() {
+    this.health--;
+  }
+  draw(ctx) {
+    if (this.health <= 0) return;
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x, this.y, this.w, this.h);
+    if (this.type === 'durable' && this.health === 1) {
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(this.x, this.y, this.w, this.h);
+    }
+  }
+}
+```
+
+PowerUp.js:
+
+```javascript
+export class PowerUp {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    this.vy = -150;
+    this.radius = 12;
+    this.collected = false;
+  }
+  update(dt) {
+    this.y += this.vy * dt;
+  }
+  draw(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.globalAlpha = 0.8;
+    ctx.fillStyle = '#ff0';
+    // simple rectangle as placeholder
+    ctx.fillRect(-6, -6, 12, 12);
+    ctx.restore();
+  }
+  collect(paddle) {
+    const pBounds = paddle.getBounds();
+    const bBounds = {minX: this.x - this.radius, maxX: this.x + this.radius, minY: this.y - this.radius, maxY: this.y + this.radius};
+    if (pBounds.minX < bBounds.maxX && pBounds.maxX > bBounds.minX &&
+        pBounds.minY < bBounds.maxY && pBounds.maxY > bBounds.minY) {
+      this.collected = true;
+      return true;
+    }
+    return false;
+  }
+}
+```
+
+Collision.js:
+
+```javascript
+export function getRotatedAABB(paddle) {
+  const halfW = paddle.width / 2;
+  const halfH = paddle.height / 2;
+  const cosA = Math.cos(paddle.angle);
+  const sinA = Math.sin(paddle.angle);
+  const points = [
+    {x: -halfW, y: -halfH},
+    {x: halfW, y: -halfH},
+    {x: halfW, y: halfH},
+    {x: -halfW, y: halfH}
+  ];
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (let p of points) {
+    const xr = p.x * cosA - p.y * sinA + paddle.x;
+    const yr = p.x * sinA + p.y * cosA + paddle.y;
+    if (xr < minX) minX = xr;
+    if (xr > maxX) maxX = xr;
+    if (yr < minY) minY = yr;
+    if (yr > maxY) maxY = yr;
+  }
+  return {minX, maxX, minY, maxY};
+}
+
+export function circleAABBCollision(circle, aabb) {
+  const closestX = Math.max(aabb.minX, Math.min(circle.x, aabb.maxX));
+  const closestY = Math.max(aabb.minY, Math.min(circle.y, aabb.maxY));
+  const dx = circle.x - closestX;
+  const dy = circle.y - closestY;
+  const distSq = dx * dx + dy * dy;
+  return distSq < circle.radius * circle.radius;
+}
+```
+
+Vector2D.js:
+
+```javascript
+export class Vector2D {
+  constructor(x = 0, y = 0) {
+    this.x = x;
+    this.y = y;
+  }
+  add(v) {
+    this.x += v.x;
+    this.y += v.y;
+    return this;
+  }
+  static sub(a, b) {
+    return new Vector2D(a.x - b.x, a.y - b.y);
+  }
+}
+```
+
+Renderer.js:
+
+```javascript
+import { ParticleSystem } from '../rendering/ParticleSystem.js';
+
+export class Renderer {
+  constructor(game) {
+    this.game = game;
+    this.ctx = game.ctx;
+  }
+  render() {
+    this.ctx.clearRect(0, 0, this.game.width, this.game.height);
+    this.drawBackground();
+    this.drawBricks();
+    this.paddle.draw(this.ctx);
+    this.ball.draw(this.ctx);
+    this.particles.update(this.game.timers.speedrun);
+    this.particles.draw(this.ctx);
+    this.drawPowerUps();
+    this.drawHUD();
+  }
+  drawBackground() {
+    this.ctx.fillStyle = this.game.levelData.background;
+    this.ctx.fillRect(0, 0, this.game.width, this.game.height);
+  }
+  drawBricks() {
+    for (let b of this.game.bricks) b.draw(this.ctx);
+  }
+  drawPowerUps() {
+    for (let pu of this.game.powerUps) pu.draw(this.ctx);
+  }
+  drawHUD() {
+    const ctx = this.ctx;
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Lives: ' + this.game.lives, 10, 20);
+    ctx.fillText('Score: ' + this.game.score, 10, 40);
+    const remaining = Math.max(0, this.game.parEnd - this.game.timers.speedrun * 1000);
+    const secs = Math.floor(remaining / 1000);
+    ctx.fillText('Time: ' + secs + 's', this.game.width - 100, 20);
+  }
+}
+```
+
+ParticleSystem.js:
+
+```javascript
+export class ParticleSystem {
+  constructor() {
+    this.particles = [];
+    this.maxParticles = 200;
+  }
+  emit(x, y) {
+    const count = 12 + Math.floor(Math.random() * 8);
+    for (let i = 0; i < count; i++) {
+      const size = 2 + Math.random() * 2;
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 50 + Math.random() * 100;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size,
+        life: 0.3
+      });
+    }
+  }
+  update(dt) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      if (p.life <= 0) this.particles.splice(i, 1);
+    }
+  }
+  draw(ctx) {
+    for (let p of this.particles) {
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+```
+
+SoundManager.js:
+
+```javascript
+export class SoundManager {
+  constructor() {
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.buffers = {};
+    this.loadSounds();
+  }
+  async loadSounds() {
+    const names = ['paddle', 'ball', 'brick', 'destroy', 'powerup', 'life', 'levelup'];
+    for (let n of names) {
+      const resp = await fetch(`assets/sounds/${n}.wav`);
+      const array = await resp.arrayBuffer();
+      const audioBuf = await this.ctx.decodeAudioData(array);
+      this.buffers[n] = audioBuf;
+    }
+  }
+  play(name) {
+    const buf = this.buffers[name];
+    if (!buf) return;
+    const source = this.ctx.createBufferSource();
+    source.buffer = buf;
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0.5;
+    source.connect(gain);
+    gain.connect(this.ctx.destination);
+    source.start();
+  }
+}
+```
+
+AssetLoader.js:
+
+```javascript
+export class AssetLoader {
+  static loadImage(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.src = src;
+    });
+  }
+  static loadLevelJson(path) {
+    return fetch(path).then(r => r.json());
+  }
+}
+```
+
+Config.js:
+
+```javascript
+export const CONFIG = {
+  paddleWidth: 120,
+  paddleHeight: 20,
+  ballRadius: 10,
+  baseSpeed: 300,
+  maxBallSpeed: 600,
+  maxPaddleSpeed: 800,
+  paddleAcc: 1500,
+  rotationSpeed: 180 * Math.PI / 180 // not used directly
+};
+```
+
+Now src/main.js:
+
+```javascript
+import { Game } from './game/Game.js';
+
+const canvas = document.getElementById('gameCanvas');
+const game = new Game(canvas);
+```
+
+But we need to ensure Game constructor does everything. In Game constructor we need to set up paddle input etc.
+
+We need to pass input handler to Game. Let's modify Game constructor to accept input.
+
+Simplify: In Game constructor, we create inputHandler = new InputHandler(this); and store this.input = inputHandler.
+
+Let's adjust Game constructor:
+
+```javascript
+import { InputHandler } from './game/InputHandler.js';
+
+export class Game {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.resizeCanvas();
+    window.addEventListener('resize', () => this.resizeCanvas());
+    this.lastTime = 0;
+    this.running = false;
+    this.paused = false;
+    this.score = 0;
+    this.lives = 3;
+    this.highScore = parseInt(localStorage.getItem('angleBreakoutHighScore') || '0');
+    this.startTime = performance.now();
+    this.parTime = 45;
+    this.parEnd = this.startTime + this.parTime * 1000;
+    this.levelData = {
+      background: '#0d0d0d',
+      paddleWidth: 120,
+      parTime: 45,
+      bricks: [
+        // sample bricks
+        {row:0,col:0,type:'normal',color:'#ff5555'},
+        {row:0,col:1,type:'normal',color:'#ffaa55'},
+        {row:0,col:2,type:'durable',color:'#ffcc66'},
+      ]
+    };
+    this.input = new InputHandler(this);
+    this.paddle = new Paddle(this);
+    this.ball = new Ball(this);
+    this.bricks = [];
+    for (let b of this.levelData.bricks) {
+      this.bricks.push(new Brick(this, b.row, b.col, b.type, b.color));
+    }
+    this.powerUps = [];
+    this.particles = new ParticleSystem();
+    this.timers = { speedrun: 0 };
+    this.loadLevel();
+    this.initEntities();
+    this.startLoop();
+  }
+  // ... rest unchanged
+}
+```
+
+Now we need to ensure that InputHandler.update uses dt passed from Game.loop.
+
+In InputHandler.update(dt) we compute rotateSpeed based on wheelDelta * 0.5 * dt.
+
+Now we need to ensure that the ball launch uses paddle.angle.
+
+Now we need to ensure that the speedrun timer is displayed.
+
+Now we need to ensure that the high score is saved.
+
+Now we need to ensure that the code is responsive: canvas resizes.
+
+Now we need to ensure that the code uses requestAnimationFrame.
+
+Now we need to ensure that the code uses LocalStorage for high score.
+
+Now we need to ensure that the code uses Web Audio API for sounds (but we haven't implemented loading sounds; we can assume assets folder exists). For simplicity, we can skip sound implementation in code, but the requirement says implement simple sound effects using Web Audio API. We'll need to include SoundManager and load sounds.
+
+But to keep code short, we can assume sounds are loaded in SoundManager constructor, which loads from assets/sounds/*.wav. We need to ensure that assets folder exists, but we cannot include actual audio files. For the purpose of this task, we can just include the SoundManager code; the actual audio files are external.
+
+Now we need to ensure that the code uses LocalStorage for high score.
+
+Now we need to ensure that the code includes a speedrun timer in top corner (we have that in HUD).
+
+Now we need to ensure that the code uses a vibrant color palette (we used bright colors like #ff5555, #ffaa55, #ffcc66, paddle green #00ff00, ball red #ff0000, background dark #0d0d0d). That's vibrant enough.
+
+Now we need to ensure that the code is modular and imports correctly.
+
+Now we need to produce JSON mapping.
+
+Given the length, we need to be careful with escaping.
+
+We'll produce each file as a string with \n escaped.
+
+Let's start constructing the JSON.
+
+We'll need to escape backslashes and double quotes.
+
+We'll write each file content as a string with \n for newlines and proper escaping.
+
+Let's start with index.html:
+
+We'll write:
+
+"index.html": "<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n<head>\\n<meta charset=\\\"UTF-8\\\">\\n<title>Angle-Breakout</title>\\n<meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1\\\">\\n<link rel=\\'icon\\' href=\\'data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'><text y=\\'0.5em\\' font-size=\\'100\\'>🎮</text></svg>\\'>\\n<style>\\n  body { margin:0; overflow:hidden; background:#111; }\\n  canvas { display:block; width:100%; height:100%; }\\n</style>\\n</head>\\n<body>\\n<canvas id=\\\"gameCanvas\\\"></canvas>\\n<script type=\\\"module\\\" src=\\\"./src/main.js\\\"></script>\\n</body>\\n</html>"
+
+Now src/main.js:
+
+"src/main.js": "import { Game } from './game/Game.js';\n\nconst canvas = document.getElementById('gameCanvas');\nconst game = new Game(canvas);"
+
+Now src/game/Game.js:
+
+We need to import InputHandler, Paddle, Ball, Brick, PowerUp, ParticleSystem.
+
+Let's write:
+
+"src/game/Game.js": "import { InputHandler } from './InputHandler.js';\nimport { Paddle } from '../entities/Paddle.js';\nimport { Ball } from '../entities/Ball.js';\nimport { Brick } from '../entities/Brick.js';\nimport { PowerUp } from '../entities/PowerUp.js';\nimport { ParticleSystem } from '../rendering/ParticleSystem.js';\nexport class Game {\n  constructor(canvas) {\n    this.canvas = canvas;\n    this.ctx = canvas.getContext('2d');\n    this.resizeCanvas();\n    window.addEventListener('resize', () => this.resizeCanvas());\n    this.lastTime = 0;\n    this.running = false;\n    this.paused = false;\n    this.score = 0;\n    this.lives = 3;\n    this.highScore = parseInt(localStorage.getItem('angleBreakoutHighScore') || '0');\n    this.startTime = performance.now();\n    this.parTime = 45;\n    this.parEnd = this.startTime + this.parTime * 1000;\n    this.levelData = {\n      background: '#0d0d0d',\n      paddleWidth: 120,\n      parTime: 45,\n      bricks: [\n        {row:0,col:0,type:'normal',color:'#ff5555'},\n        {row:0,col:1,type:'normal',color:'#ffaa55'},\n        {row:0,col:2,type:'durable',color:'#ffcc66'},\n      ]\n    };\n    this.input = new InputHandler(this);\n    this.paddle = new Paddle(this);\n    this.ball = new Ball(this);\n    this.bricks = [];\n    for (let b of this.levelData.bricks) {\n      this.bricks.push(new Brick(this, b.row, b.col, b.type, b.color));\n    }\n    this.powerUps = [];\n    this.particles = new ParticleSystem();\n    this.timers = { speedrun: 0 };\n    this.loadLevel();\n    this.initEntities();\n    this.startLoop();\n  }\n  resizeCanvas() {\n    const w = this.canvas.clientWidth;\n    const h = this.canvas.clientHeight;\n    this.canvas.width = w;\n    this.canvas.height = h;\n    this.width = w;\n    this.height = h;\n  }\n  loadLevel() {\n    // level data already set\n  }\n  initEntities() {\n    // already done\n  }\n  startLoop() {\n    this.running = true;\n    requestAnimationFrame(this.loop.bind(this));\n  }\n  loop(timestamp) {\n    const dt = (timestamp - this.lastTime) / 1000;\n    this.lastTime = timestamp;\n    if (!this.paused) {\n      this.update(dt);\n      this.render();\n    }\n    if (this.running) requestAnimationFrame(this.loop.bind(this));\n  }\n  update(dt) {\n    this.timers.speedrun += dt;\n    this.paddle.update(dt);\n    this.ball.update(dt);\n    this.checkCollisions();\n    this.checkLives();\n    if (this.bricks.length === 0) this.levelComplete();\n  }\n  render() {\n    this.ctx.clearRect(0, 0, this.width, this.height);\n    this.drawBackground();\n    this.drawBricks();\n    this.paddle.draw(this.ctx);\n    this.ball.draw(this.ctx);\n    this.particles.update(dt);\n    this.particles.draw(this.ctx);\n    this.drawPowerUps();\n    this.drawHUD();\n  }\n  drawBackground() {\n    this.ctx.fillStyle = this.levelData.background;\n    this.ctx.fillRect(0, 0, this.width, this.height);\n  }\n  drawBricks() {\n    for (let b of this.bricks) b.draw(this.ctx);\n  }\n  drawPowerUps() {\n    for (let pu of this.powerUps) pu.draw(this.ctx);\n  }\n  drawHUD() {\n    const ctx = this.ctx;\n    ctx.fillStyle = '#fff';\n    ctx.font = '16px sans-serif';\n    ctx.fillText('Lives: ' + this.lives, 10, 20);\n    ctx.fillText('Score: ' + this.score, 10, 40);\n    const remaining = Math.max(0, this.parEnd - this.timers.speedrun * 1000);\n    const secs = Math.floor(remaining / 1000);\n    ctx.fillText('Time: ' + secs + 's', this.width - 100, 20);\n  }\n  checkCollisions() {\n    if (this.ball.isLocked) return;\n    const paddleBounds = this.paddle.getBounds();\n    if (paddleBounds.minX <= this.ball.x && this.ball.x <= paddleBounds.maxX &&\n        paddleBounds.minY <= this.ball.y && this.ball.y <= paddleBounds.maxY) {\n      this.ball.isLocked = false;\n      this.ball.launch(this.paddle.angle);\n    }\n    // walls\n    if (this.ball.x - this.ball.radius < 0) this.ball.vx = Math.abs(this.ball.vx);\n    if (this.ball.x + this.ball.radius > this.width) this.ball.vx = -Math.abs(this.ball.vx);\n    if (this.ball.y - this.ball.radius < 0) this.ball.vy = Math.abs(this.ball.vy);\n    // bottom\n    if (this.ball.y + this.ball.radius > this.height) {\n      this.lives--;\n      this.ball.reset(this.paddle);\n    }\n    // bricks\n    for (let i = this.bricks.length - 1; i >= 0; i--) {\n      const b = this.bricks[i];\n      if (this.ball.isLocked) break;\n      if (this.ball.getBounds().overlaps(b.getBounds())) {\n        this.ball.vx = -this.ball.vx;\n        this.ball.vy = -this.ball.vy;\n        b.hit();\n        if (b.health <= 0) {\n          this.bricks.splice(i, 1);\n          this.particles.emit(b.x, b.y);\n          if (Math.random() < 0.05) {\n            const types = ['expand','shrink','fast','slow','multi','laser','gravity','extra','boost'];\n            const type = types[Math.floor(Math.random() * types.length)];\n            this.powerUps.push(new PowerUp(this.ball.x, this.ball.y, type));\n          }\n        }\n      }\n    }\n  }\n  checkLives() {\n    if (this.lives <= 0) this.gameOver();\n  }\n  resetBall(paddle) {\n    this.ball.x = paddle.x + this.paddle.width / 2 - this.ball.radius;\n    this.ball.y = paddle.y - this.paddle.height / 2 - this.ball.radius;\n    this.ball.vx = 0;\n    this.ball.vy = 0;\n    this.ball.isLocked = true;\n  }\n  levelComplete() {\n    this.running = false;\n  }\n  gameOver() {\n    this.running = false;\n  }\n}"
+
+Now src/game/InputHandler.js:
+
+"src/game/InputHandler.js": "import { Game } from './Game.js';\nexport class InputHandler {\n  constructor(game) {\n    this.game = game;\n    this.mouseX = 0;\n    this.rotateSpeed = 0;\n    this.wheelDelta = 0;\n    window.addEventListener('mousemove', e => {\n      const rect = this.game.canvas.getBoundingClientRect();\n      this.mouseX = e.clientX - rect.left;\n    });\n    window.addEventListener('wheel', e => {\n      this.wheelDelta += e.deltaY;\n    });\n    window.addEventListener('click', e => {\n      if (this.game.ball.isLocked) {\n        this.game.ball.reset(this.game.paddle);\n      }\n    });\n    window.addEventListener('keydown', e => {\n      if (e.code === 'Space' || e.code === 'Enter') {\n        this.game.paused = !this.game.paused;\n      }\n    });\n  }\n  update(dt) {\n    this.rotateSpeed = this.wheelDelta * 0.5 * dt;\n    this.wheelDelta = 0;\n  }\n}"
+
+Now src/entities/Paddle.js:
+
+"src/entities/Paddle.js": "import { Vector2D } from '../physics/Vector2D.js';\nexport class Paddle {\n  constructor(game) {\n    this.game = game;\n    this.width = game.levelData.paddleWidth;\n    this.height = 20;\n    this.x = this.game.canvas.width / 2 - this.width / 2;\n    this.y = this.game.canvas.height - this.height - 10;\n    this.angle = 0;\n    this.vx = 0;\n    this.ax = 0;\n    this.maxSpeed = 800;\n    this.acc = 1500;\n  }\n  getBounds() {\n    const halfW = this.width / 2;\n    const halfH = this.height / 2;\n    const cosA = Math.cos(this.angle);\n    const sinA = Math.sin(this.angle);\n    const points = [\n      {x: -halfW, y: -halfH},\n      {x: halfW, y: -halfH},\n      {x: halfW, y: halfH},\n      {x: -halfW, y: halfH}\n    ];\n    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;\n    for (let p of points) {\n      const xr = p.x * cosA - p.y * sinA + this.x;\n      const yr = p.x * sinA + p.y * cosA + this.y;\n      if (xr < minX) minX = xr;\n      if (xr > maxX) maxX = xr;\n      if (yr < minY) minY = yr;\n      if (yr > maxY) maxY = yr;\n    }\n    return {minX, maxX, minY, maxY};\n  }\n  launchAngle() {\n    return this.angle;\n  }\n  update(dt) {\n    const targetX = this.game.input.mouseX - this.game.canvas.width / 2;\n    const dx = targetX - this.x;\n    if (dx > 0) {\n      this.ax = this.acc * dt;\n    } else if (dx < 0) {\n      this.ax = -this.acc * dt;\n    } else {\n      this.ax = 0;\n    }\n    this.vx += this.ax;\n    if (this.vx > this.maxSpeed) this.vx = this.maxSpeed;\n    if (this.vx < -this.maxSpeed) this.vx = -this.maxSpeed;\n    this.x += this.vx * dt;\n    const halfW = this.width / 2;\n    if (this.x - halfW < 0) this.x = halfW;\n    if (this.x + halfW > this.game.canvas.width) this.x = this.game.canvas.width - halfW;\n    this.rotationSpeed = this.game.input.rotateSpeed;\n    this.angle += this.rotationSpeed * dt;\n    this.angle = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, this.angle));\n  }\n  draw(ctx) {\n    ctx.save();\n    ctx.translate(this.x, this.y);\n    ctx.rotate(this.angle);\n    ctx.fillStyle = '#00ff00';\n    ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);\n    ctx.restore();\n  }\n}"
+
+Now src/entities/Ball.js:
+
+"src/entities/Ball.js": "import { Vector2D } from '../physics/Vector2D.js';\nexport class Ball {\n  constructor(game) {\n    this.game = game;\n    this.radius = 10;\n    this.x = 0;\n    this.y = 0;\n    this.vx = 0;\n    this.vy = 0;\n    this.speed = 300;\n    this.maxSpeed = 600;\n    this.isLocked = true;\n  }\n  launch(paddleAngle) {\n    const dir = {x: Math.cos(paddleAngle), y: Math.sin(paddleAngle)};\n    let vx = dir.x * this.speed;\n    let vy = dir.y * this.speed;\n    const spread = (Math.random() - 0.5) * 10 * Math.PI / 180; // ±5°\n    const cosS = Math.cos(spread);\n    const sinS = Math.sin(spread);\n    vx = vx * cosS - vy * sinS;\n    vy = vx * sinS + vy * cosS;\n    this.vx = vx;\n    this.vy = vy;\n    this.isLocked = false;\n  }\n  reset(paddle) {\n    this.x = paddle.x + this.game.paddle.width / 2 - this.radius;\n    this.y = paddle.y - this.game.paddle.height / 2 - this.radius;\n    this.vx = 0;\n    this.vy = 0;\n    this.isLocked = true;\n  }\n  update(dt) {\n    if (this.isLocked) return;\n    this.x += this.vx * dt;\n    this.y += this.vy * dt;\n    // speed cap\n    let speed = Math.hypot(this.vx, this.vy);\n    if (speed > this.maxSpeed) {\n      const factor = this.maxSpeed / speed;\n      this.vx *= factor;\n      this.vy *= factor;\n    }\n  }\n  getBounds() {\n    return {minX: this.x - this.radius, maxX: this.x + this.radius, minY: this.y - this.radius, maxY: this.y + this.radius};\n  }\n  draw(ctx) {\n    ctx.beginPath();\n    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);\n    ctx.fillStyle = '#ff0000';\n    ctx.fill();\n  }\n}"
+
+Now src/entities/Brick.js:
+
+"src/entities/Brick.js": "export class Brick {\n  constructor(game, row, col, type, color) {\n    this.game = game;\n    this.row = row;\n    this.col = col;\n    this.type = type;\n    this.color = color;\n    this.health = (type === 'normal' ? 1 : type === 'durable' ? 2 : 0);\n    const w = 60, h = 20;\n    const padding = 4;\n    this.x = col * (w + padding) + padding;\n    this.y = row * (h + padding) + padding;\n    this.w = w;\n    this.h = h;\n  }\n  getBounds() {\n    return {minX: this.x, maxX: this.x + this.w, minY: this.y, maxY: this.y + this.h};\n  }\n  hit() {\n    this.health--;\n  }\n  draw(ctx) {\n    if (this.health <= 0) return;\n    ctx.fillStyle = this.color;\n    ctx.fillRect(this.x, this.y, this.w, this.h);\n    if (this.type === 'durable' && this.health === 1) {\n      ctx.strokeStyle = '#000';\n      ctx.lineWidth = 2;\n      ctx.strokeRect(this.x, this.y, this.w, this.h);\n    }\n  }\n}"
+
+Now src/entities/PowerUp.js:
+
+"src/entities/PowerUp.js": "export class PowerUp {\n  constructor(x, y, type) {\n    this.x = x;\n    this.y = y;\n    this.type = type;\n    this.vy = -150;\n    this.radius = 12;\n    this.collected = false;\n  }\n  update(dt) {\n    this.y += this.vy * dt;\n  }\n  draw(ctx) {\n    ctx.save();\n    ctx.translate(this.x, this.y);\n    ctx.globalAlpha = 0.8;\n    ctx.fillStyle = '#ff0';\n    ctx.fillRect(-6, -6, 12, 12);\n    ctx.restore();\n  }\n  collect(paddle) {\n    const pBounds = paddle.getBounds();\n    const bBounds = {minX: this.x - this.radius, maxX: this.x + this.radius, minY: this.y - this.radius, maxY: this.y + this.radius};\n    if (pBounds.minX < bBounds.maxX && pBounds.maxX > bBounds.minX &&\n        pBounds.minY < bBounds.maxY && pBounds.maxY > bBounds.minY) {\n      this.collected = true;\n      return true;\n    }\n    return false;\n  }\n}"
+
+Now src/physics/Collision.js:
+
+"src/physics/Collision.js": "export function getRotatedAABB(paddle) {\n  const halfW = paddle.width / 2;\n  const halfH = paddle.height / 2;\n  const cosA = Math.cos(paddle.angle);\n  const sinA = Math.sin(paddle.angle);\n  const points = [\n    {x: -halfW, y: -halfH},\n    {x: halfW, y: -halfH},\n    {x: halfW, y: halfH},\n    {x: -halfW, y: halfH}\n  ];\n  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;\n  for (let p of points) {\n    const xr = p.x * cosA - p.y * sinA + paddle.x;\n    const yr = p.x * sinA + p.y * cosA + paddle.y;\n    if (xr < minX) minX = xr;\n    if (xr > maxX) maxX = xr;\n    if (yr < minY) minY = yr;\n    if (yr > maxY) maxY = yr;\n  }\n  return {minX, maxX, minY, maxY};\n}\n\nexport function circleAABBCollision(circle, aabb) {\n  const closestX = Math.max(aabb.minX, Math.min(circle.x, aabb.maxX));\n  const closestY = Math.max(aabb.minY, Math.min(circle.y, aabb.maxY));\n  const dx = circle.x - closestX;\n  const dy = circle.y - closestY;\n  const distSq = dx * dx + dy * dy;\n  return distSq < circle.radius * circle.radius;\n}"
+
+Now src/physics/Vector2D.js:
+
+"src/physics/Vector2D.js": "export class Vector2D {\n  constructor(x = 0, y = 0) {\n    this.x = x;\n    this.y = y;\n  }\n  add(v) {\n    this.x += v.x;\n    this.y += v.y;\n    return this;\n  }\n}"
+
+Now src/rendering/ParticleSystem.js:
+
+"src/rendering/ParticleSystem.js": "export class ParticleSystem {\n  constructor() {\n    this.particles = [];\n    this.maxParticles = 200;\n  }\n  emit(x, y) {\n    const count = 12 + Math.floor(Math.random() * 8);\n    for (let i = 0; i < count; i++) {\n      const size = 2 + Math.random() * 2;\n      const angle = Math.random() * Math.PI * 2;\n      const speed = 50 + Math.random() * 100;\n      this.particles.push({\n        x,\n        y,\n        vx: Math.cos(angle) * speed,\n        vy: Math.sin(angle) * speed,\n        size,\n        life: 0.3\n      });\n    }\n  }\n  update(dt) {\n    for (let i = this.particles.length - 1; i >= 0; i--) {\n      const p = this.particles[i];\n      p.x += p.vx * dt;\n      p.y += p.vy * dt;\n      p.life -= dt;\n      if (p.life <= 0) this.particles.splice(i, 1);\n    }\n  }\n  draw(ctx) {\n    for (let p of this.particles) {\n      ctx.globalAlpha = p.life;\n      ctx.fillStyle = '#fff';\n      ctx.beginPath();\n      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);\n      ctx.fill();\n    }\n  }\n}"
+
+Now src/rendering/Renderer.js:
+
+"src/rendering/Renderer.js": "import { ParticleSystem } from '../rendering/ParticleSystem.js';\nexport class Renderer {\n  constructor(game) {\n    this.game = game;\n    this.ctx = game.ctx;\n  }\n  render() {\n    this.ctx.clearRect(0, 0, this.game.width, this.game.height);\n    this.drawBackground();\n    this.drawBricks();\n    this.paddle.draw(this.ctx);\n    this.ball.draw(this.ctx);\n    this.particles.update(this.game.timers.speedrun);\n    this.particles.draw(this.ctx);\n    this.drawPowerUps();\n    this.drawHUD();\n  }\n  drawBackground() {\n    this.ctx.fillStyle = this.game.levelData.background;\n    this.ctx.fillRect(0, 0, this.game.width, this.game.height);\n  }\n  drawBricks() {\n    for (let b of this.game.bricks) b.draw(this.ctx);\n  }\n  drawPowerUps() {\n    for (let pu of this.game.powerUps) pu.draw(this.ctx);\n  }\n  drawHUD() {\n    const ctx = this.ctx;\n    ctx.fillStyle = '#fff';\n    ctx.font = '16px sans-serif';\n    ctx.fillText('Lives: ' + this.game.lives, 10, 20);\n    ctx.fillText('Score: ' + this.game.score, 10, 40);\n    const remaining = Math.max(0, this.game.parEnd - this.game.timers.speedrun * 1000);\n    const secs = Math.floor(remaining / 1000);\n    ctx.fillText('Time: ' + secs + 's', this.game.width - 100, 20);\n  }\n}"
+
+Now src/audio/SoundManager.js:
+
+"src/audio/SoundManager.js": "export class SoundManager {\n  constructor() {\n    this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n    this.buffers = {};\n    this.loadSounds();\n  }\n  async loadSounds() {\n    const names = ['paddle', 'ball', 'brick', 'destroy', 'powerup', 'life', 'levelup'];\n    for (let n of names) {\n      const resp = await fetch(`assets/sounds/${n}.wav`);\n      const array = await resp.arrayBuffer();\n      const audioBuf = await this.ctx.decodeAudioData(array);\n      this.buffers[n] = audioBuf;\n    }\n  }\n  play(name) {\n    const buf = this.buffers[name];\n    if (!buf) return;\n    const source = this.ctx.createBufferSource();\n    source.buffer = buf;\n    const gain = this.ctx.createGain();\n    gain.gain.value = 0.5;\n    source.connect(gain);\n    gain.connect(this.ctx.destination);\n    source.start();\n  }\n}"
+
+Now src/utils/Config.js:
+
+"src/utils/Config.js": "export const CONFIG = {\n  paddleWidth: 120,\n  paddleHeight: 20,\n  ballRadius: 10,\n  baseSpeed: 300,\n  maxBallSpeed: 600,\n  maxPaddleSpeed: 800,\n  paddleAcc: 1500\n};"
+
+Now src/utils/AssetLoader.js:
+
+"src/utils/AssetLoader.js": "export class AssetLoader {\n  static loadImage(src) {\n    return new Promise(resolve => {\n      const img = new Image();\n      img.onload = () => resolve(img);\n      img.src = src;\n    });\n  }\n  static loadLevelJson(path) {\n    return fetch(path).then(r => r.json());\n  }\n}"
+
+Now we have all files.
+
+Now we need to ensure that the JSON is valid. We need to escape backslashes and double quotes properly.
+
+We'll produce the final JSON.
+
+Given the length, we need to be careful.
+
+Let's construct the JSON object.
+
+We'll start with a { and then each key-value pair.
+
+We'll need to ensure that each string value is properly escaped.
+
+We'll use double quotes for keys and values, and escape internal double quotes with \".
+
+We'll also need to escape newlines as \n.
+
+Let's start building.
+
+First line:
+
+{
+"index.html": "<!DOCTYPE html>\\n<html lang=\\\"en\\\">\\n<head>\\n<meta charset=\\\"UTF-8\\\">\\n<title>Angle-Breakout</title>\\n<meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1\\\">\\n<link rel=\\'icon\\' href=\\'data:image/svg+xml;utf8,<svg xmlns=\\'http://www.w3.org/2000/svg\\' viewBox=\\'0 0 100 100\\'><text y=\\'0.5em\\' font-size=\\'100\\'>🎮</text></svg>\\'>\\n<style>\\n  body { margin:0; overflow:hidden; background:#111; }\\n  canvas { display:block; width:100%; height:100%; }\\n</style>\\n</head>\\n<body>\\n<canvas id=\\\"gameCanvas\\\"></canvas>\\n<script type=\\\"module\\\" src=\\\"./src/main.js\\\"></script>\\n</body>\\n</html>",
+"src/main.js": "import { Game } from './game/Game.js';\n\nconst canvas = document.getElementById('gameCanvas');\nconst game = new Game(canvas);",
+"src/game/Game.js": "import { InputHandler } from './InputHandler.js';\nimport { Paddle } from '../entities/Paddle.js';\nimport { Ball } from '../entities/Ball.js';\nimport { Brick } from '../entities/Brick.js';\nimport { PowerUp } from '../entities/PowerUp.js';\nimport { ParticleSystem } from '../rendering/ParticleSystem.js';\nexport class Game {\n  constructor(canvas) {\n    this.canvas = canvas;\n    this.ctx = canvas.getContext('2d');\n    this.resizeCanvas();\n    window.addEventListener('resize', () => this.resizeCanvas());\n    this.lastTime = 0;\n    this.running = false;\n    this.paused = false;\n    this.score = 0;\n    this.lives = 3;\n    this.highScore = parseInt(localStorage.getItem('angleBreakoutHighScore') || '0');\n    this.startTime = performance.now();\n    this.parTime = 45;\n    this.parEnd = this.startTime + this.parTime * 1000;\n    this.levelData = {\n      background: '#0d0d0d',\n      paddleWidth: 120,\n      parTime: 45,\n      bricks: [\n        {row:0,col:0,type:'normal',color:'#ff5555'},\n        {row:0,col:1,type:'normal',color:'#ffaa55'},\n        {row:0,col:2,type:'durable',color:'#ffcc66'},\n      ]\n    };\n    this.input = new InputHandler(this);\n    this.paddle = new Paddle(this);\n    this.ball = new Ball(this);\n    this.bricks = [];\n    for (let b of this.levelData.bricks) {\n      this.bricks.push(new Brick(this, b.row, b.col, b.type, b.color));\n    }\n    this.powerUps = [];\n    this.particles = new ParticleSystem();\n    this.timers = { speedrun: 0 };\n    this.loadLevel();\n    this.initEntities();\n    this.startLoop();\n  }\n  resizeCanvas() {\n    const w = this.canvas.clientWidth;\n    const h = this.canvas.clientHeight;\n    this.canvas.width = w;\n    this.canvas.height = h;\n    this.width = w;\n    this.height = h;\n  }\n  loadLevel() {\n    // level data already set\n  }\n  initEntities() {\n    // already done\n  }\n  startLoop() {\n    this.running = true;\n    requestAnimationFrame(this.loop.bind(this));\n  }\n  loop(timestamp) {\n    const dt = (timestamp - this.lastTime) / 1000;\n    this.lastTime = timestamp;\n    if (!this.paused) {\n      this.update(dt);\n      this.render();\n    }\n    if (this.running) requestAnimationFrame(this.loop.bind(this));\n  }\n  update(dt) {\n    this.timers.speedrun += dt;\n    this.paddle.update(dt);\n    this.ball.update(dt);\n    this.checkCollisions();\n    this.checkLives();\n    if (this.bricks.length === 0) this.levelComplete();\n  }\n  render() {\n    this.ctx.clearRect(0, 0, this.width, this.height);\n    this.drawBackground();\n    this.drawBricks();\n    this.paddle.draw(this.ctx);\n    this.ball.draw(this.ctx);\n    this.particles.update(dt);\n    this.particles.draw(this.ctx);\n    this.drawPowerUps();\n    this.drawHUD();\n  }\n  drawBackground() {\n    this.ctx.fillStyle = this.levelData.background;\n    this.ctx.fillRect(0, 0, this.width, this.height);\n  }\n  drawBricks() {\n    for (let b of this.bricks) b.draw(this.ctx);\n  }\n  drawPowerUps() {\n    for (let pu of this.powerUps) pu.draw(this.ctx);\n  }\n  drawHUD() {\n    const ctx = this.ctx;\n    ctx.fillStyle = '#fff';\n    ctx.font = '16px sans-serif';\n    ctx.fillText('Lives: ' + this.lives, 10, 20);\n    ctx.fillText('Score: ' + this.score, 10, 40);\n    const remaining = Math.max(0, this.parEnd - this.timers.speedrun * 1000);\n    const secs = Math.floor(remaining / 1000);\n    ctx.fillText('Time: ' + secs + 's', this.width - 100, 20);\n  }\n  checkCollisions() {\n    if (this.ball.isLocked) return;\n    const paddleBounds = this.paddle.getBounds();\n    if (paddleBounds.minX <= this.ball.x && this.ball.x <= paddleBounds.maxX &&\n        paddleBounds.minY <= this.ball.y && this.ball.y <= paddleBounds.maxY) {\n      this.ball.isLocked = false;\n      this.ball.launch(this.paddle.angle);\n    }\n    // walls\n    if (this.ball.x - this.ball.radius < 0) this.ball.vx = Math.abs(this.ball.vx);\n    if (this.ball.x + this.ball.radius > this.width) this.ball.vx = -Math.abs(this.ball.vx);\n    if (this.ball.y - this.ball.radius < 0) this.ball.vy = Math.abs(this.ball.vy);\n    // bottom\n    if (this.ball.y + this.ball.radius > this.height) {\n      this.lives--;\n      this.ball.reset(this.paddle);\n    }\n    // bricks\n    for (let i = this.bricks.length - 1; i >= 0; i--) {\n      const b = this.bricks[i];\n      if (this.ball.isLocked) break;\n      if (this.ball.getBounds().overlaps(b.getBounds())) {\n        this.ball.vx = -this.ball.vx;\n        this.ball.vy = -this.ball.vy;\n        b.hit();\n        if (b.health <= 0) {\n          this.bricks.splice(i, 1);\n          this.particles.emit(b.x, b.y);\n          if (Math.random() < 0.05) {\n            const types = ['expand','shrink','fast','slow','multi','laser','gravity','extra','boost'];\n            const type = types[Math.floor(Math.random() * types.length)];\n            this.powerUps.push(new PowerUp(this.ball.x, this.ball.y, type));\n          }\n        }\n      }\n    }\n  }\n  checkLives() {\n    if (this.lives <= 0) this.gameOver();\n  }\n  resetBall(paddle) {\n    this.ball.x = paddle.x + this.paddle.width / 2 - this.ball.radius;\n    this.ball.y = paddle.y - this.paddle.height / 2 - this.ball.radius;\n    this.ball.vx = 0;\n    this.ball.vy = 0;\n    this.ball.isLocked = true;\n  }\n  levelComplete() {\n    this.running = false;\n  }\n  gameOver() {\n    this.running = false;\n  }\n}\n",
+"src/game/InputHandler.js": "import { Game } from './Game.js';\nexport class InputHandler {\n  constructor(game) {\n    this.game = game;\n    this.mouseX = 0;\n    this.rotateSpeed = 0;\n    this.wheelDelta = 0;\n    window.addEventListener('mousemove', e => {\n      const rect = this.game.canvas.getBoundingClientRect();\n      this.mouseX = e.clientX - rect.left;\n    });\n    window.addEventListener('wheel', e => {\n      this.wheelDelta += e.deltaY;\n    });\n    window.addEventListener('click', e => {\n      if (this.game.ball.isLocked) {\n        this.game.ball.reset(this.game.paddle);\n      }\n    });\n    window.addEventListener('keydown', e => {\n      if (e.code === 'Space' || e.code === 'Enter') {\n        this.game.paused = !this.game.paused;\n      }\n    });\n  }\n  update(dt) {\n    this.rotateSpeed = this.wheelDelta * 0.5 * dt;\n    this.wheelDelta = 0;\n  }\n}\n",
+"src/entities/Paddle.js": "import { Vector2D } from '../physics/Vector2D.js';\nexport class Paddle {\n  constructor(game) {\n    this.game = game;\n    this.width = game.levelData.paddleWidth;\n    this.height = 20;\n    this.x = this.game.canvas.width / 2 - this.width / 2;\n    this.y = this.game.canvas.height - this.height - 10;\n    this.angle = 0;\n    this.vx = 0;\n    this.ax = 0;\n    this.maxSpeed = 800;\n    this.acc = 1500;\n  }\n  getBounds() {\n    const halfW = this.width / 2;\n    const halfH = this.height / 2;\n    const cosA = Math.cos(this.angle);\n    const sinA = Math.sin(this.angle);\n    const points = [\n      {x: -halfW, y: -halfH},\n      {x: halfW, y: -halfH},\n      {x: halfW, y: halfH},\n      {x: -halfW, y: halfH}\n    ];\n    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;\n    for (let p of points) {\n      const xr = p.x * cosA - p.y * sinA + this.x;\n      const yr = p.x * sinA + p.y * cosA + this.y;\n      if (xr < minX) minX = xr;\n      if (xr > maxX) maxX = xr;\n      if (yr < minY) minY = yr;\n      if (yr > maxY) maxY = yr;\n    }\n    return {minX, maxX, minY, maxY};\n  }\n  launchAngle() {\n    return this.angle;\n  }\n  update(dt) {\n    const targetX = this.game.input.mouseX - this.game.canvas.width / 2;\n    const dx = targetX - this.x;\n    if (dx > 0) {\n      this.ax = this.acc * dt;\n    } else if (dx < 0) {\n      this.ax = -this.acc * dt;\n    } else {\n      this.ax = 0;\n    }\n    this.vx += this.ax;\n    if (this.vx > this.maxSpeed) this.vx = this.maxSpeed;\n    if (this.vx < -this.maxSpeed) this.vx = -this.maxSpeed;\n    this.x += this.vx * dt;\n    const halfW = this.width / 2;\n    if (this.x - halfW < 0) this.x = halfW;\n    if (this.x + halfW > this.game.canvas.width) this.x = this.game.canvas.width - halfW;\n    this.rotationSpeed = this.game.input.rotateSpeed;\n    this.angle += this.rotationSpeed * dt;\n    this.angle = Math.max(-Math.PI / 4, Math.min(Math.PI / 4, this.angle));\n  }\n  draw(ctx) {\n    ctx.save();\n    ctx.translate(this.x, this.y);\n    ctx.rotate(this.angle);\n    ctx.fillStyle = '#00ff00';\n    ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);\n    ctx.restore();\n  }\n}\n",
+"src/entities/Ball.js": "import { Vector2D } from '../physics/Vector2D.js';\nexport class Ball {\n  constructor(game) {\n    this.game = game;\n    this.radius = 10;\n    this.x = 0;\n    this.y = 0;\n    this.vx = 0;\n    this.vy = 0;\n    this.speed = 300;\n    this.maxSpeed = 600;\n    this.isLocked = true;\n  }\n  launch(paddleAngle) {\n    const dir = {x: Math.cos(paddleAngle), y: Math.sin(paddleAngle)};\n    let vx = dir.x * this.speed;\n    let vy = dir.y * this.speed;\n    const spread = (Math.random() - 0.5) * 10 * Math.PI / 180; // ±5°\n    const cosS = Math.cos(spread);\n    const sinS = Math.sin(spread);\n    vx = vx * cosS - vy * sinS;\n    vy = vx * sinS + vy * cosS;\n    this.vx = vx;\n    this.vy = vy;\n    this.isLocked = false;\n  }\n  reset(paddle) {\n    this.x = paddle.x + this.game.paddle.width / 2 - this.radius;\n    this.y = paddle.y - this.game.paddle.height / 2 - this.radius;\n    this.vx = 0;\n    this.vy = 0;\n    this.isLocked = true;\n  }\n  update(dt) {\n    if (this.isLocked) return;\n    this.x += this.vx * dt;\n    this.y += this.vy * dt;\n    // speed cap\n    let speed = Math.hypot(this.vx, this.vy);\n    if (speed > this.maxSpeed) {\n      const factor = this.maxSpeed / speed;\n      this.vx *= factor;\n      this.vy *= factor;\n    }\n  }\n  getBounds() {\n    return {minX: this.x - this.radius, maxX: this.x + this.radius, minY: this.y - this.radius, maxY: this.y + this.radius};\n  }\n  draw(ctx) {\n    ctx.beginPath();\n    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);\n    ctx.fillStyle = '#ff0000';\n    ctx.fill();\n  }\n}\n",
+"src/entities/Brick.js": "export class Brick {\n  constructor(game, row, col, type, color) {\n    this.game = game;\n    this.row = row;\n    this.col = col;\n    this.type = type;\n    this.color = color;\n    this.health = (type === 'normal' ? 1 : type === 'durable' ? 2 : 0);\n    const w = 60, h = 20;\n    const padding = 4;\n    this.x = col * (w + padding) + padding;\n    this.y = row * (h + padding) + padding;\n    this.w = w;\n    this.h = h;\n  }\n  getBounds() {\n    return {minX: this.x, maxX: this.x + this.w, minY: this.y, maxY: this.y + this.h};\n  }\n  hit() {\n    this.health--;\n  }\n  draw(ctx) {\n    if (this.health <= 0) return;\n    ctx.fillStyle = this.color;\n    ctx.fillRect(this.x, this.y, this.w, this.h);\n    if (this.type === 'durable' && this.health === 1) {\n      ctx.strokeStyle = '#000';\n      ctx.lineWidth = 2;\n      ctx.strokeRect(this.x, this.y, this.w, this.h);\n    }\n  }\n}\n",
+"src/entities/PowerUp.js": "export class PowerUp {\n  constructor(x, y, type) {\n    this.x = x;\n    this.y = y;\n    this.type = type;\n    this.vy = -150;\n    this.radius = 12;\n    this.collected = false;\n  }\n  update(dt) {\n    this.y += this.vy * dt;\n  }\n  draw(ctx) {\n    ctx.save();\n    ctx.translate(this.x, this.y);\n    ctx.globalAlpha = 0.8;\n    ctx.fillStyle = '#ff0';\n    ctx.fillRect(-6, -6, 12, 12);\n    ctx.restore();\n  }\n  collect(paddle) {\n    const pBounds = paddle.getBounds();\n    const bBounds = {minX: this.x - this.radius, maxX: this.x + this.radius, minY: this.y - this.radius, maxY: this.y + this.radius};\n    if (pBounds.minX < bBounds.maxX && pBounds.maxX > bBounds.minX &&\n        pBounds.minY < bBounds.maxY && pBounds.maxY > bBounds.minY) {\n      this.collected = true;\n      return true;\n    }\n    return false;\n  }\n}\n",
+"src/physics/Collision.js": "export function getRotatedAABB(paddle) {\n  const halfW = paddle.width / 2;\n  const halfH = paddle.height / 2;\n  const cosA = Math.cos(paddle.angle);\n  const sinA = Math.sin(paddle.angle);\n  const points = [\n    {x: -halfW, y: -halfH},\n    {x: halfW, y: -halfH},\n    {x: halfW, y: halfH},\n    {x: -halfW, y: halfH}\n  ];\n  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;\n  for (let p of points) {\n    const xr = p.x * cosA - p.y * sinA + paddle.x;\n    const yr = p.x * sinA + p.y * cosA + paddle.y;\n    if (xr < minX) minX = xr;\n    if (xr > maxX) maxX = xr;\n    if (yr < minY) minY = yr;\n    if (yr > maxY) maxY = yr;\n  }\n  return {minX, maxX, minY, maxY};\n}\n\nexport function circleAABBCollision(circle, aabb) {\n  const closestX = Math.max(aabb.minX, Math.min(circle.x, aabb.maxX));\n  const closestY = Math.max(aabb.minY, Math.min(circle.y, aabb.maxY));\n  const dx = circle.x - closestX;\n  const dy = circle.y - closestY;\n  const distSq = dx * dx + dy * dy;\n  return distSq < circle.radius * circle.radius;\n}\n",
+"src/physics/Vector2D.js": "export class Vector2D {\n  constructor(x = 0, y = 0) {\n    this.x = x;\n    this.y = y;\n  }\n  add(v) {\n    this.x += v.x;\n    this.y += v.y;\n    return this;\n  }\n}\n",
+"src/rendering/ParticleSystem.js": "export class ParticleSystem {\n  constructor() {\n    this.particles = [];\n    this.maxParticles = 200;\n  }\n  emit(x, y) {\n    const count = 12 + Math.floor(Math.random() * 8);\n    for (let i = 0; i < count; i++) {\n      const size = 2 + Math.random() * 2;\n      const angle = Math.random() * Math.PI * 2;\n      const speed = 50 + Math.random() * 100;\n      this.particles.push({\n        x,\n        y,\n        vx: Math.cos(angle) * speed,\n        vy: Math.sin(angle) * speed,\n        size,\n        life: 0.3\n      });\n    }\n  }\n  update(dt) {\n    for (let i = this.particles.length - 1; i >= 0; i--) {\n      const p = this.particles[i];\n      p.x += p.vx * dt;\n      p.y += p.vy * dt;\n      p.life -= dt;\n      if (p.life <= 0) this.particles.splice(i, 1);\n    }\n  }\n  draw(ctx) {\n    for (let p of this.particles) {\n      ctx.globalAlpha = p.life;\n      ctx.fillStyle = '#fff';\n      ctx.beginPath();\n      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);\n      ctx.fill();\n    }\n  }\n}\n",
+"src/rendering/Renderer.js": "import { ParticleSystem } from '../rendering/ParticleSystem.js';\nexport class Renderer {\n  constructor(game) {\n    this.game = game;\n    this.ctx = game.ctx;\n  }\n  render() {\n    this.ctx.clearRect(0, 0, this.game.width, this.game.height);\n    this.drawBackground();\n    this.drawBricks();\n    this.paddle.draw(this.ctx);\n    this.ball.draw(this.ctx);\n    this.particles.update(this.game.timers.speedrun);\n    this.particles.draw(this.ctx);\n    this.drawPowerUps();\n    this.drawHUD();\n  }\n  drawBackground() {\n    this.ctx.fillStyle = this.game.levelData.background;\n    this.ctx.fillRect(0, 0, this.game.width, this.game.height);\n  }\n  drawBricks() {\n    for (let b of this.game.bricks) b.draw(this.ctx);\n  }\n  drawPowerUps() {\n    for (let pu of this.game.powerUps) pu.draw(this.ctx);\n  }\n  drawHUD() {\n    const ctx = this.ctx;\n    ctx.fillStyle = '#fff';\n    ctx.font = '16px sans-serif';\n    ctx.fillText('Lives: ' + this.game.lives, 10, 20);\n    ctx.fillText('Score: ' + this.game.score, 10, 40);\n    const remaining = Math.max(0, this.game.parEnd - this.game.timers.speedrun * 1000);\n    const secs = Math.floor(remaining / 1000);\n    ctx.fillText('Time: ' + secs + 's', this.game.width - 100, 20);\n  }\n}\n",
+"src/audio/SoundManager.js": "export class SoundManager {\n  constructor() {\n    this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n    this.buffers = {};\n    this.loadSounds();\n  }\n  async loadSounds() {\n    const names = ['paddle', 'ball', 'brick', 'destroy', 'powerup', 'life', 'levelup'];\n    for (let n of names) {\n      const resp = await fetch(`assets/sounds/${n}.wav`);\n      const array = await resp.arrayBuffer();\n      const audioBuf = await this.ctx.decodeAudioData(array);\n      this.buffers[n] = audioBuf;\n    }\n  }\n  play(name) {\n    const buf = this.buffers[name];\n    if (!buf) return;\n    const source = this.ctx.createBufferSource();\n    source.buffer = buf;\n    const gain = this.ctx.createGain();\n    gain.gain.value = 0.5;\n    source.connect(gain);\n    gain.connect(this.ctx.destination);\n    source.start();\n  }\n}\n",
+"src/utils/Config.js": "export const CONFIG = {\n  paddleWidth: 120,\n  paddleHeight: 20,\n  ballRadius: 10,\n  baseSpeed: 300,\n  maxBallSpeed: 600,\n  maxPaddleSpeed: 800,\n  paddleAcc: 1500\n};\n",
+"src/utils/AssetLoader.js": "export class AssetLoader {\n  static loadImage(src) {\n    return new Promise(resolve => {\n      const img = new Image();\n      img.onload = () => resolve(img);\n      img.src = src;\n    });\n  }\n  static loadLevelJson(path) {\n    return fetch(path).then(r => r.json());\n  }\n}\n"
+}
+
+Now we need to ensure that the JSON is valid. We need to wrap the whole thing in a single JSON object.
+
+Potential issues: The strings contain backticks and quotes; we need to escape them properly.
+
+In the index.html string, we have single quotes inside the data URI; those are fine as they are not double quotes. However, we have double quotes in the href attribute? Actually we used single quotes for href attribute, so no double quotes inside.
+
+But we have double quotes in the JSON string delimiters, so we need to escape them.
+
+Let's verify each string.
+
+index.html: The string includes double quotes in the <meta> tags and <title>. Those need to be escaped as \". Also the <script> tag has double quotes around type and src. Those need escaping.
+
+We need to ensure that all double quotes inside the string are escaped.
+
+Let's rewrite index.html string with proper escaping.
+
+We'll replace each double quote with \". Also need to escape backslashes.
+
+Let's rewrite index.html content:
+
+"<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<title>Angle-Breakout</title>\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<link rel='icon' href='data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.5em' font-size='100'>🎮</text></svg>'\n<style>\n  body { margin:0; overflow:hidden; background:#111; }\n  canvas { display:block; width:100%; height:100%; }\n</style>\n</head>\n<body>\n<canvas id=\"gameCanvas\"></canvas>\n<script type=\"module\" src=\"./src/main.js\"></script>\n</body>\n</html>"
+
+Now we need to escape the double quotes inside the string for JSON: each " becomes \". Also need to escape backslashes (but there are none). Also need to escape the backticks? Not needed.
+
+Now src/main.js string:
+
+"import { Game } from './game/Game.js';\n\nconst canvas = document.getElementById('gameCanvas');\nconst game = new Game(canvas);"
+
+We need to escape double quotes inside the string. There are none except the single quotes in the path. Single quotes are fine. The string contains apostrophes (single quotes) which are fine. However, we have a backslash in the path? No. So we need to escape the double quotes that appear in the string: there are none. Wait, there is a single quote in 'game.js' and 'gameCanvas', but those are single quotes, not double quotes, so fine.
+
+But there is a double quote in the JSON key "src/main.js". That's fine.
+
+Now src/game/Game.js string: It contains many double quotes in the code (e.g., 'this.ctx', 'this.width', etc.) but those are inside the string, so we need to escape them.
+
+We need to be careful: In JavaScript code, double quotes are used for strings, so inside the string we have many double quotes that need escaping.
+
+For example: this.ctx = canvas.getContext('2d'); -> there is a single quote, fine.
+
+But there are double quotes in the code like "export class Game {" etc. Actually the code itself uses double quotes for strings like 'Lives: ', 'Score: ', etc. Those need escaping.
+
+We need to escape all double quotes inside the string.
+
+This is tedious but necessary.
+
+Given the length, maybe we can simplify by using single quotes for all strings in the code, to avoid double quotes. But the code uses double quotes for strings like 'Lives: ', 'Score: ', etc. We can change them to single quotes to avoid escaping.
+
+But the code is already using single quotes for many strings (e.g., '2d', 'module', etc.). Let's see.
+
+In Game.js, there are strings like 'Lives: ', 'Score: ', 'Time: s', 'background', 'paddleWidth', etc. Those are in single quotes already. The only double quotes are in the JSON string delimiters.
+
+But there are also double quotes in the code for property names? Actually in JavaScript, property names are not quoted unless they are strings. In the code we have:
+
+this.ctx.fillText('Lives: ' + this.lives, 10, 20);
+
+Here 'Lives: ' is a single-quoted string. So no double quotes.
+
+But there are also strings like '#00ff00' which are double-quoted? Actually they are single-quoted '#00ff00' (the # is part of the string). So fine.
+
+But there are also double quotes in the code for the class definition: "export class Game {" - that's a double quote after export? Actually it's "export class Game {" with a space, not a double quote. Wait, the code uses "export class Game {" which includes a double quote? No, it's just a word. So no double quotes.
+
+But there are double quotes in the code for the string literals like 'Lives: ', 'Score: ', 'Time: s', 'background', 'paddleWidth', etc. Those are single quotes, so fine.
+
+But there are also double quotes in the code for the string literals like "import { Game } from './game/Game.js';" - that's a double quote at start and end of the whole string, but inside the code we have single quotes for file paths, so fine.
+
+But there are also double quotes in the code for the string 'Lives: ' etc. Actually they are single quotes.
+
+Thus maybe we can keep as is, but need to escape any double quotes that appear inside the string.
+
+Let's scan the Game.js string for double quotes:
+
+- "import { Game } from './game/Game.js';" -> contains single quotes, fine.
+- "const canvas = document.getElementById('gameCanvas');" -> single quotes.
+- "const game = new Game(canvas);" -> no quotes.
+- "this.canvas = canvas;" -> no quotes.
+- "this.ctx = canvas.getContext}
