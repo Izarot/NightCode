@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Ice Hockey Practice Rink</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏒</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0d1b2a; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+    #gameCanvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+    #uiOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; color: #e0f7fa; font-size: clamp(12px, 3vw, 18px); }
+    .hud { position: absolute; padding: 10px 15px; background: rgba(13,27,42,0.85); border-radius: 8px; border: 1px solid #00bcd4; backdrop-filter: blur(4px); }
+    #topLeft { top: 10px; left: 10px; }
+    #topRight { top: 10px; right: 10px; text-align: right; }
+    #bottomCenter { bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    #miniMap { position: absolute; bottom: 10px; right: 10px; width: 120px; height: 60px; border: 2px solid #00bcd4; border-radius: 4px; background: rgba(13,27,42,0.9); }
+    #powerMeter { width: 200px; height: 12px; background: #1a2a3a; border: 1px solid #00bcd4; border-radius: 6px; overflow: hidden; }
+    #powerFill { height: 100%; width: 0%; background: linear-gradient(90deg, #00e5ff, #ff6d00); transition: width 0.05s; }
+    #passRing { width: 60px; height: 60px; border: 3px solid #00bcd4; border-radius: 50%; position: relative; }
+    #passRing::before { content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0; border-radius: 50%; background: #00e5ff; transform: translate(-50%, -50%); transition: width 0.1s, height 0.1s; }
+    .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(13,27,42,0.98); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; z-index: 10; }
+    .screen.hidden { display: none; }
+    h1 { font-size: clamp(2rem, 8vw, 3.5rem); background: linear-gradient(135deg, #00e5ff, #ff6d00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 30px rgba(0,229,255,0.5); }
+    .btn { padding: 12px 30px; font-size: clamp(14px, 3vw, 18px); background: linear-gradient(135deg, #00bcd4, #0097a7); border: none; border-radius: 30px; color: white; cursor: pointer; transition: transform 0.1s, box-shadow 0.2s; box-shadow: 0 4px 15px rgba(0,188,212,0.4); }
+    .btn:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(0,188,212,0.6); }
+    .btn:active { transform: scale(0.98); }
+    .drillBtn { width: 80%; max-width: 300px; margin: 5px; }
+    .difficultyBtns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .difficultyBtn { padding: 10px 20px; background: #1a2a3a; border: 2px solid #00bcd4; color: #00e5ff; border-radius: 20px; cursor: pointer; transition: all 0.2s; }
+    .difficultyBtn.selected { background: #00bcd4; color: #0d1b2a; box-shadow: 0 0 15px #00bcd4; }
+    #finalStats { text-align: left; min-width: 250px; }
+    .statRow { display: flex; justify-content: space-between; margin: 8px 0; padding: 5px 0; border-bottom: 1px solid #00bcd444; }
+    .statLabel { color: #80deea; }
+    .statValue { color: #ffeb3b; font-weight: bold; }
+    #speedrunTimer { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); font-size: clamp(18px, 4vw, 28px); font-weight: bold; color: #ffeb3b; text-shadow: 0 0 10px #ff6d00, 0 0 20px #ff6d00; font-family: 'Courier New', monospace; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="uiOverlay">
+    <div id="speedrunTimer">00:00.00</div>
+    <div id="topLeft" class="hud"><div id="drillName">DRILL: CORNER SHOT</div><div id="roundTimer">TIME: 60.0s</div></div>
+    <div id="topRight" class="hud"><div>SHOTS: <span id="shots">0</span></div><div>GOALS: <span id="goals">0</span></div><div>PASS %: <span id="passAcc">100</span>%</div></div>
+    <div id="bottomCenter" class="hud">
+      <div id="powerMeter"><div id="powerFill"></div></div>
+      <div id="passRing"></div>
+    </div>
+    <canvas id="miniMap" width="120" height="60"></canvas>
+  </div>
+  <div id="startScreen" class="screen">
+    <h1>ICE HOCKEY PRACTICE</h1>
+    <div>SELECT DRILL</div>
+    <button class="btn drillBtn" data-drill="corner">CORNER SHOT</button>
+    <button class="btn drillBtn" data-drill="passMove">PASS & MOVE</button>
+    <button class="btn drillBtn" data-drill="oneTimer">ONE-TIMER</button>
+    <button class="btn drillBtn" data-drill="breakaway">BREAKAWAY</button>
+    <button class="btn drillBtn" data-drill="crossPass">CROSS-PASS</button>
+    <div>DIFFICULTY</div>
+    <div class="difficultyBtns">
+      <button class="difficultyBtn selected" data-speed="1.0">ROOKIE</button>
+      <button class="difficultyBtn" data-speed="1.3">PRO</button>
+      <button class="difficultyBtn" data-speed="1.6">ALL-STAR</button>
+    </div>
+    <button id="startBtn" class="btn" style="margin-top: 10px;">START PRACTICE</button>
+    <div style="font-size: 0.8rem; color: #80deea;">HIGH SCORE: <span id="highScore">0</span></div>
+  </div>
+  <div id="gameOverScreen" class="screen hidden">
+    <h1>DRILL COMPLETE</h1>
+    <div id="finalStats"></div>
+    <button id="restartBtn" class="btn">RETRY DRILL</button>
+    <button id="menuBtn" class="btn" style="background: linear-gradient(135deg, #546e7a, #37474f);">MAIN MENU</button>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>

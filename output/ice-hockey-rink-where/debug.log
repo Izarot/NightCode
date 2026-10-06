@@ -1,0 +1,562 @@
+JSON Decode Error: Extra data: line 1 column 40 (char 39)
+
+Raw LLM Output that failed to parse:
+We need to produce a JSON mapping filenames to code contents. The user wants a simple ice hockey practice rink game with many features. But they also say "Start over and write shorter code." So we need to produce a concise but functional implementation that includes the sneaky features: responsive canvas, emoji favicon, vibrant color palette, high score localStorage, sound effects using Web Audio API, speedrun timer in top corner.
+
+We need to output only a valid raw JSON object mapping filenames to their complete code contents. No markdown formatting, no conversational commentary.
+
+We need to decide which files to include. Likely index.html, game.js, style.css maybe combined. But they want raw JSON mapping filenames to code contents. We can include maybe "index.html", "game.js", "style.css". Or combine CSS into HTML style tag to reduce files. But they want complete code contents. We can produce three files.
+
+We need to ensure JSON is valid: keys are filenames, values are strings of code. Must escape any quotes inside strings. We'll need to produce compact code.
+
+We need to implement: responsive canvas, emoji favicon (e.g., 🏒), color palette, high score localStorage, sound effects using Web Audio API, speedrun timer in top corner.
+
+Simplify: A basic rink, player skate, puck, shooting with mouse, goalie AI maybe minimal. But must include some features.
+
+Given the brevity requirement, we can create a minimal but functional game.
+
+We'll create index.html with canvas, CSS in style tag, and script logic in same file or separate game.js. Might be easier to put everything in index.html with inline script to reduce files. But they asked for mapping filenames to code contents; we can have index.html containing HTML and script, and maybe style.css minimal.
+
+But they said "Shorter code". So maybe combine all into one HTML file with <script> and <style>. That would be one file: "index.html". That would satisfy mapping with one key.
+
+But they said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."})". So we can have multiple files, but we can also have just one file.
+
+I'll produce two files: "index.html" and "style.css". But the script can be inside index.html. However, they may expect separate game.js. But we can put all logic in index.html <script> tag, and style in separate CSS file. That's okay.
+
+I'll produce JSON: {"index.html": "...", "style.css": "..."}.
+
+Need to ensure the HTML includes canvas, responsive, favicon with emoji, color palette defined, localStorage high score, Web Audio API sounds (maybe simple oscillators), speedrun timer top corner.
+
+We'll need to keep code short. Use simple JS to draw rink, player, puck, move with WASD, shoot with mouse, simple goalie.
+
+We'll include a timer counting seconds since start, display in top corner. High score stored.
+
+We'll produce code maybe ~300 lines.
+
+Given the output must be raw JSON, we need to escape newlines? Actually JSON string can contain newline characters escaped as \n, but we can include actual newlines inside the JSON string? JSON specification allows literal control characters? Actually JSON strings must be double-quoted, with backslash escapes for special characters, but newline characters are allowed as \n. But we can include actual line breaks inside the string if we format the JSON properly? Typically, JSON does not allow literal unescaped newlines; they must be escaped. But many editors accept multi-line strings if they are inside the JSON file with proper escaping. Safer to escape newlines as \n.
+
+But producing a huge escaped string may be lengthy. However, we can keep code minimal and maybe use single-line code? But readability suffers.
+
+Given the constraint, I think we can output the JSON with raw strings containing \n escaped. But writing that manually is tedious.
+
+Alternative: we could output the JSON with the code as a single line (no newlines). That would be easier: put entire HTML content as a single line string. But that's huge but possible.
+
+But they said "shorten code". So maybe we can keep code minimal and also keep it as single line? Could be okay.
+
+But the JSON must be valid. So we can have:
+
+{
+  "index.html": "<!DOCTYPE html>...<script>......</script>",
+  "style.css": "body{...}"
+}
+
+We need to ensure the string does not contain unescaped double quotes. We'll need to escape double quotes inside the HTML. That's messy.
+
+Maybe better to put the code in separate files and reference them, but the JSON values are the file contents. We can use triple quotes? No, JSON doesn't support triple quotes.
+
+We could use base64? No.
+
+Probably easiest: Provide two files: index.html and game.js, with style inline in HTML. But still need to escape.
+
+Given the difficulty, maybe we can output a JSON with keys "index.html" and "game.js" where the values are minimal code with escaped quotes.
+
+I'll attempt to produce concise code, and escape double quotes with \". I'll also use single quotes for HTML attributes where possible, but HTML typically uses double quotes. I can use single quotes for attributes and keep internal JS strings with double quotes.
+
+But the JSON string itself uses double quotes for keys and values. So any double quote inside the value must be escaped. So I need to escape all double quotes inside the HTML/JS code.
+
+I can minimize double quotes by using template literals with backticks, but those contain double quotes maybe. But backticks are okay in JSON string as long as they are not double quotes. However, JSON string cannot contain unescaped backticks? Actually backticks are just regular characters, allowed. So I can use template literals and keep double quotes inside the code as part of the string, but they'd need to be escaped if they appear inside the JSON string delimited by double quotes. But if I use template literals inside the code, the code itself will have backticks, but the JSON string will contain those backticks and any double quotes inside need escaping.
+
+Alternative: Use single quotes for JS strings, and avoid double quotes in the HTML markup by using single quotes for attributes. That reduces double quotes.
+
+I can write HTML with attribute values in single quotes, and JS strings with double quotes? But then double quotes inside JS strings will need escaping. Better to use single quotes for JS strings as well.
+
+Thus, I can write code using single quotes for all strings, and HTML attributes in single quotes. Then the only double quotes will be the ones surrounding the JSON values. That may reduce escaping.
+
+But HTML typically uses <tag attribute='value'>. That's fine. For <canvas> no attributes with quotes needed maybe.
+
+I'll produce code with minimal double quotes.
+
+I'll create index.html with <!DOCTYPE html> <html lang='en'> <head> <meta charset='UTF-8'> <title>Ice Hockey Practice</title> <style>...style...</style> <link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏒</text></svg>'> ... etc. The favicon with emoji can be data URI.
+
+I need to ensure the data URI encodes the emoji; but we can simplify: <link rel='icon' href='🏒'> maybe not valid but some browsers support. But we can use data URI with percent-encoded emoji.
+
+But to keep short, maybe just use <link rel='icon' href='data:image/svg+xml;base64,...'> but that's long.
+
+Alternative: Use <link rel='icon' type='image/svg+xml' href='...'> with emoji path.
+
+Simplify: Use <link rel='icon' href='🏒.png'> not realistic. But the requirement: "Add a cool emoji favicon in the HTML head." Could be simply <link rel="icon" href="🏒"> maybe works in some browsers. I'll use that.
+
+But JSON string will have double quotes around the href value. If I write href="🏒", that's a double quote inside the JSON string, need escaping. I could use single quotes for the attribute: href='🏒'. That's fine.
+
+Thus, <link rel='icon' href='🏒'>.
+
+Now the code.
+
+I'll design a minimal loop:
+
+- Canvas size: width = window.innerWidth, height = window.innerHeight; responsive.
+
+- Render rink: draw rectangles for boards, center line, face-off circles.
+
+- Player: represented as triangle or simple rectangle with color.
+
+- Puck: small circle.
+
+- Movement: WASD with acceleration, friction, max speed.
+
+- Shift to slow.
+
+- Mouse aim for shooting: power meter.
+
+- Shoot on click, release: apply velocity to puck.
+
+- Goalie AI: simple lateral movement towards shot direction.
+
+- Timer: seconds elapsed, display top corner.
+
+- High score: store shots/goal ratio? We'll store highest score (goals) in localStorage.
+
+- Sound effects: using Web Audio API, generate simple oscillator sounds for skate scrape, puck hit, goal horn, etc.
+
+Given the brevity, we can approximate.
+
+I'll write the code roughly 300-400 characters? Actually lines.
+
+But the JSON string will be long. However, we need to output only JSON, no commentary.
+
+Given the complexity, maybe we can produce a very concise code that meets the core features: responsive canvas, emoji favicon, color palette, high score localStorage, sound effects, speedrun timer.
+
+I'll attempt to produce code around maybe 800-1000 characters. That's okay.
+
+I'll produce JSON with two keys: "index.html" and "style.css". But style can be embedded in index.html; but we can have separate CSS file.
+
+But if I include style.css, I need to ensure its content also doesn't have unescaped double quotes. I can write minimal CSS using single quotes? CSS property values can use single quotes. But typical CSS uses colon and semicolons, no quotes needed. I can write CSS with no quotes.
+
+Thus style.css can be something like:
+
+body{margin:0;background:#0a0a0a;font-family:sans-serif}canvas{display:block}
+
+That has no double quotes.
+
+Ok.
+
+Now index.html will contain <style> inline maybe, but we already have separate CSS file. I'll include <link rel='stylesheet' href='style.css'>.
+
+But the CSS file referenced; but the JSON will have the CSS content in style.css key.
+
+Now index.html will reference it.
+
+Alright.
+
+Now produce JSON.
+
+I'll write the HTML string with single quotes for attributes and JS strings. Use double quotes only for JSON delimiters.
+
+Need to escape any single quotes inside the HTML? JSON string uses double quotes, so single quotes are fine. However, if the HTML contains a single quote, it's fine; no need to escape. But if we have a string like 'WASD', that's single quotes inside the HTML; but the JSON string will include those single quotes as part of the string, which is okay because JSON string is delimited by double quotes. So single quotes are fine.
+
+But we need to be careful about backslashes; we may need to escape backslashes.
+
+I'll try to keep code simple, avoid backslashes.
+
+Now produce code.
+
+I'll start with index.html:
+
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'>
+<title>Ice Hockey Practice</title>
+<link rel='icon' href='🏒'>
+<link rel='stylesheet' href='style.css'>
+</head>
+<body>
+<canvas id='rink'></canvas>
+<div id='hud'>Drill: Corner Shot | Timer: <span id='timer'>0</span>s | Shots: <span id='shots'>0</span> | Goals: <span id='goals'>0</span></div>
+<script>
+/* JS code */
+</script>
+</body>
+</html>
+
+But need to include CSS in <style> maybe not needed if external.
+
+But we need to include the JS code that does everything.
+
+I'll embed JS at bottom.
+
+Now JS code:
+
+We'll define variables: canvas, ctx, width, height, player = {x:..., y:..., vx:0, vy:0, angle:0, speed:8, accel:0.4, friction:0.96, slowFactor:0.5, turning:6}, puck = {x:,y:,vx:,vy:,radius:}, goalie = {...}, score = {shots:0, goals:0, highScore:parseInt(localStorage.getItem('iceHockeyHighScore')||0)}, timerStart = Date.now(), elapsed = 0.
+
+Input handling: keydown/keyup for WASD and Shift.
+
+Mouse: get cursor position, compute angle to player.
+
+Shooting: on mousedown, start power accumulation; on mouseup, shoot with power% *1.2 velocity.
+
+Power meter: draw bar.
+
+Goal: check if puck enters goal area (rect at bottom). If yes, increment goals, update high score if goals > highScore, store in localStorage.
+
+Goalie AI: move towards shot direction with delay.
+
+Sound: create function playSound(type) using AudioContext, oscillator, gain, connect to destination.
+
+Timer: setInterval updating elapsed seconds, display.
+
+We'll keep code minimal.
+
+Given the length constraints, I will try to compress JS into a small script, maybe using arrow functions, minimal variables.
+
+I'll attempt to write maybe 30 lines of code, but need to implement features.
+
+But maybe we can produce a more compact code using a game loop with requestAnimationFrame.
+
+I'll try to write something like:
+
+<canvas id=c width=w height=h style=...>. But we need responsive: set canvas width/height to innerWidth/innerHeight on load and on resize.
+
+I'll include window.onresize.
+
+Alright.
+
+Now produce the JSON.
+
+But the JSON string must contain the entire HTML and JS and CSS references. I need to ensure that any double quotes inside are escaped. I'll use single quotes in HTML and JS as much as possible.
+
+But there will be strings like "WASD" inside comments; I can use single quotes: 'WASD'. That's fine.
+
+But there may be double quotes for attribute values like href='🏒' is single quote, fine.
+
+But the <meta charset='UTF-8'> uses single quotes.
+
+The <title>Ice Hockey Practice</title> has double quotes? Actually I wrote title='Ice Hockey Practice' using single quotes.
+
+The <link rel='stylesheet' href='style.css'> uses single quotes.
+
+The <link rel='icon' href='🏒'> uses single quotes.
+
+The <canvas id='rink'></canvas> no quotes needed.
+
+The <div id='hud'>... using single quotes.
+
+The <span id='timer'> etc.
+
+The JS code will have variable assignments using =, and function expressions.
+
+I need to ensure no double quotes appear inside the JS string literals. I can use template literals with backticks, but backticks are okay. But if I need to output HTML within JS, I might need double quotes. I'll avoid strings that need double quotes.
+
+I'll use single-quoted strings for any text.
+
+For example: const drills = ['Corner Shot','Pass & Move','One-Timer','Breakaway','Cross-Pass']; The strings are single-quoted inside array, but the array literal uses single quotes, which is fine inside JSON string because JSON string delimited by double quotes; single quotes are just characters.
+
+But the comma and brackets are fine.
+
+But the string 'Pass & Move' contains an ampersand, fine.
+
+Now the JS code may have object literals with property names and string values; those property names can be unquoted if they are valid identifiers, but for safety I'll quote them with double quotes? That would introduce double quotes. Better to keep property names unquoted if possible, but JSON doesn't allow that, but the content is not JSON, it's JS code inside a string. So we can use double quotes in the JS code because it's just a string; but we need to escape them in JSON. To avoid escaping, we can use single quotes for property names as well: const player = {x:0,y:0}; that's fine.
+
+But if we need string values like "high score", we can use single quotes: const highScore = localStorage.getItem('highScore'); That's fine.
+
+Thus, we can write JS with single quotes for strings, and no double quotes except maybe for object property names that are numbers? But we can keep them unquoted.
+
+Thus, the only double quotes will be the ones surrounding the JSON values. So we must ensure that the entire HTML/JS string does not contain any double quote characters. That includes the doctype declaration <!DOCTYPE html> has no quotes. <html lang='en'> okay. <meta charset='UTF-8'> okay. <title>Ice Hockey Practice</title> - the title text has no quotes. But the tag <title>Ice Hockey Practice</title> has no quotes around the text; it's just text. That's fine.
+
+But the <link rel='icon' href='🏒'> has single quotes.
+
+The <style> maybe not needed.
+
+Now the JS code: I'll write a script tag with language=javascript, but no need for quotes.
+
+I'll need to use document.querySelector etc, which use strings selectors like '#timer' with single quotes? Actually querySelector('#timer') uses a string argument; I can write document.querySelector('#timer') the string is unquoted? In JS, you need to quote the selector: document.querySelector('#timer') the '#timer' is a string literal; I need to write it as '#timer' with double quotes or single quotes. I'll use single quotes: document.querySelector('#timer')? Actually to use single quotes, I'd write document.querySelector('#timer') but the string literal must be delimited by either single or double quotes. If I use single quotes for the outer JS string (the JSON value), then I cannot have single quotes inside the code because they'd need to be escaped? Wait, the JSON string is delimited by double quotes. So inside the JSON string, single quotes are fine and don't need escaping. So I can have single quotes inside the code. So I can write document.querySelector('#timer') using double quotes around '#timer' would be double quotes, which need escaping in JSON. Better to use single quotes: document.querySelector('#timer')? Actually the selector string is '#timer'; I can write it as '#timer' using single quotes: document.querySelector('#timer')? Wait, the syntax is document.querySelector('selector'). The selector is a string literal. I can write document.querySelector('#timer') using double quotes around '#timer', but that would be double quotes inside the JSON string, which need escaping. I can use single quotes: document.querySelector('#timer')? Actually I need to write document.querySelector('#timer') but the '#timer' must be quoted. If I use single quotes around '#timer', it's '#timer' with single quotes. That's allowed: document.querySelector('#timer')? I'm confused.
+
+Let's clarify: In JavaScript code, to select by ID, you can write document.querySelector('#timer') where the argument is a string literal. The string literal can be written with either double quotes ("#timer") or single quotes ('#timer'). Both are valid. So I can choose single quotes: document.querySelector('#timer')? Actually I need to type the quotes: document.querySelector('#timer') - the '#timer' is inside double quotes? Let's see: If I write document.querySelector('#timer'), the '#timer' is between single quotes? No, it's between double quotes? Actually the code: document.querySelector('#timer') - the '#timer' is inside double quotes? Let's examine: The string starts with " and ends with ", so it's double-quoted. If I want single-quoted, I'd write document.querySelector('#timer')? Wait, I'm mixing.
+
+Better to avoid querySelector and use getElementById which takes id string without quotes? getElementById('timer') also needs a string literal. Same issue.
+
+I can use document.getElementById('timer') with double quotes, but that introduces double quotes. I can instead assign variables to elements by ID using document.getElementById('timer') but I can circumvent by using the id attribute and then accessing via window['timer']? Not good.
+
+Alternative: I can use document.querySelector('[id=timer]') but that also has brackets.
+
+Maybe I can avoid JS DOM manipulation and just use canvas drawing for HUD, but the spec says HUD with stats. But we can draw HUD on canvas as well, avoiding DOM. That would be easier: we can draw timer, shots, goals on canvas using ctx.fillText. That avoids needing getElementById with string quotes.
+
+Yes! That's a great simplification: render HUD on canvas, no need for DOM elements, thus no double quotes for selector strings. We can just use canvas context.
+
+Thus, the HTML can have just <canvas id='rink'></canvas> and maybe a small <div id='hud'> but we can draw on canvas.
+
+But the spec says HUD / UI with top-left drill name + timer, top-right stats, etc. We can draw those on canvas.
+
+Thus, we can keep HTML minimal: <!DOCTYPE html><html lang='en'><head>...<body><canvas id='rink'></canvas></body></html>
+
+And all drawing done in JS on canvas.
+
+Thus, we avoid DOM strings with double quotes.
+
+Now the JS code will use canvas width/height, draw rink, player, puck, HUD.
+
+We'll need to track score, timer, high score, etc.
+
+We'll draw HUD text using ctx.fillText('Timer: ' + Math.floor(elapsed) + 's', 10, 20) etc.
+
+Thus, no need for getElementById.
+
+Great.
+
+Now we can write JS code with single quotes for any string literals, but we may not need many strings.
+
+We'll need to store drill name; we can have a variable drillName = 'Corner Shot'; that's a string with single quotes.
+
+We'll need to store high score key: maybe localStorage.setItem('highScore', score).
+
+All good.
+
+Now the sound effects: using Web Audio API, we can create function playSound(type) that creates OscillatorNode and GainNode. We'll need AudioContext; we can create it once.
+
+We'll need to play sounds on events: skate, puck hit, goal.
+
+We'll keep it simple: generate a short beep.
+
+Now the color palette: we can define colors as variables: const rinkBoard = '#fff', rinkIce = '#a0e0ff', etc. Vibrant colors.
+
+Now the responsive canvas: set canvas width = window.innerWidth, height = window.innerHeight on load and on resize.
+
+Now the player movement physics as described.
+
+Now the shooting: aim with mouse cursor, hold click for power (0-100%), release to shoot. Shot velocity = power × 1.2.
+
+We'll need to track mouse state: mousedown, mousemove to compute angle and power.
+
+Power meter: draw a bar that fills based on hold time.
+
+Now the goalie AI: predictive lateral movement, 15% reaction delay, dive animation on close shots. We'll implement simple movement: goalie moves towards puck's x position with some delay.
+
+Now the drill system: 5 drill types, but we can just have a drill variable and display name.
+
+Now the speedrun timer: top corner timer counting seconds since start, display.
+
+Now high score: store highest goals in localStorage.
+
+Now the emoji favicon: <link rel='icon' href='🏒'>.
+
+Now the color palette: we'll define colors.
+
+Now the code length: we need to fit all this into a relatively short JSON string. Might be large but okay.
+
+We need to output JSON with keys "index.html" and "style.css". The style.css can be minimal.
+
+Now let's draft the code.
+
+First, style.css:
+
+body{margin:0;background:#050505;font-family:sans-serif}canvas{display:block;background:#a0e0ff}
+
+That's fine.
+
+Now index.html code:
+
+We'll have <!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><title>Ice Hockey Practice</title><link rel='icon' href='🏒'><link rel='stylesheet' href='style.css'></head><body><canvas id='rink'></canvas></body><script>
+// JavaScript code
+</script></html>
+
+Now the JS code.
+
+I'll draft JS code step by step, trying to keep it compact.
+
+We'll need to define canvas, ctx, width, height.
+
+On load, set canvas size, add event listeners.
+
+Variables:
+
+let w, h, c, ctx;
+let player = {x:w/2, y:h-100, vx:0, vy:0, r:12, color:'#00f'};
+let puck = {x:w/2, y:h-200, vx:0, vy:0, r:8, color:'#fff'};
+let goalie = {x:w/2, y:60, vx:0, vy:0, r:15, color:'#f00'};
+let score = {shots:0, goals:0, high:parseInt(localStorage.getItem('iceHockeyHigh')||0)};
+let drill = 'Corner Shot';
+let timerStart = Date.now();
+let power = 0;
+let shooting = false;
+let mouse = {x:0, y:0};
+
+Colors: const ICE = '#a0e0ff', BOARD = '#fff', BOARD_LINE = '#c00', GOAL_LINE = '#c00', PLAYER_COLOR = '#00f', PUCK_COLOR = '#fff', GOALIE_COLOR = '#f00', HUD_COLOR = '#fff';
+
+Now the game loop:
+
+function loop(){
+  ctx.clearRect(0,0,w,h);
+  // draw ice gradient maybe simple fill.
+  // draw boards: rectangles.
+  // draw center line, face-off circles.
+  // update player physics.
+  // draw player.
+  // update puck physics, collisions with boards, friction.
+  // draw puck.
+  // update goalie AI.
+  // draw goalie.
+  // draw goal area.
+  // check goal.
+  // draw HUD: timer, shots, goals, drill, power meter if shooting.
+  requestAnimationFrame(loop);
+}
+loop();
+
+Now event listeners:
+
+window.addEventListener('resize',()=>{w=innerWidth;h=innerHeight;c.width=w;c.height=h;});
+window.addEventListener('mousedown',()=>{shooting=true; start=Date.now();});
+window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+window.addEventListener('mouseup',()=>{shoot();});
+
+For shooting: compute angle from player to mouse: dx = mouse.x - player.x; dy = mouse.y - player.y; angle = Math.atan2(dy,dx); power = Math.min(1, (Date.now()-start)/1000); // 0-1 over 1 sec maybe. But we can cap at 1 sec.
+
+Shot velocity = power * 1.2; then apply to puck: puck.vx = Math.cos(angle)*velocity; puck.vy = Math.sin(angle)*velocity;
+
+Reset power.
+
+Now player movement:
+
+on keydown: if W: player.vy -= accel; etc. Actually need to handle direction.
+
+Simplify: use WASD to apply acceleration vector.
+
+Let's define speed factor: acc = player.accel; friction = 0.96; maxSpeed = 8;
+
+Each frame: player.vx *= friction; player.vy *= friction; then add acceleration based on pressed keys.
+
+But need to limit max speed: if Math.hypot(player.vx,player.vy) > maxSpeed { player.vx *= maxSpeed / Math.hypot(...); player.vy *= ... }
+
+Also shift to slow: if shiftHold then speed halved? We can reduce accel or maxSpeed.
+
+Simplify: if shiftKey: player.maxSpeed = 4; else 8.
+
+Turning: rotation per frame at full speed 6°, at low speed 12°. We can rotate player angle towards direction of velocity.
+
+We can compute desired angle = Math.atan2(player.vy,player.vx); then player.angle += (desiredAngle - player.angle) * 0.1? But spec says turning 6° per frame at full speed, 12° at low speed. We'll just rotate player angle by that amount each frame towards direction of movement.
+
+Simplify: player.angle += (Math.atan2(player.vy,player.vx) - player.angle) * (shift?0.2:0.1); but okay.
+
+Given the complexity, maybe we simplify player movement: just apply velocity, no rotation needed for visual? But spec says turning.
+
+We can approximate: player.r (rotation) += (targetAngle - player.r) * factor; and then draw player as triangle rotated.
+
+But to keep code short, maybe we skip rotation and just draw player as a rectangle facing up, but we can ignore turning.
+
+But spec requires turning; but we can implement simple rotation per frame based on speed.
+
+I'll include a simple rotation update:
+
+let targetAngle = Math.atan2(player.vy,player.vx) || 0;
+let turnSpeed = player.vx*player.vx + player.vy*player.vy < 20 ? 12*Math.PI/180 : 6*Math.PI/180; // radians per frame
+player.angle += (targetAngle - player.angle + Math.PI) % (2*Math.PI) - Math.PI; // normalize? Actually we can just add turnSpeed * sign.
+
+Simplify: player.angle += (targetAngle - player.angle) * 0.1; // smooth turn.
+
+But we need 6° or 12° per frame at full/low speed. We can set player.angle += (targetAngle - player.angle) * (shift?0.2:0.1); but not exact.
+
+Given the time, maybe we can simplify: player.angle = targetAngle; // instantly face direction of movement. That's okay.
+
+Now puck physics: apply friction 0.98 per frame, elastic collision with boards: if puck.x - r < 0 then puck.x = r, puck.vx *= 0.8; etc.
+
+Goal area: a rectangle at bottom center: goalRect = {x:w/2-50, y:h-30, w:100, h:30}. If puck inside after update, goal.
+
+Goalie: simple movement towards puck's x with delay: goalie.x += (puck.x - goalie.x) * 0.05; // 15% reaction delay? Actually 0.05 is 5% per frame, but we can adjust.
+
+Now sound: create AudioContext on first interaction maybe.
+
+function playSound(type){ const ctx = new (window.AudioContext||window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.frequency.setValueAtTime(type==='goal'?200:100,ctx.currentTime); osc.type='sine'; osc.connect(gain); gain.gain.setValueAtTime(0.1,ctx.currentTime); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime+0.2); }
+
+But we need to create AudioContext only once to avoid multiple contexts. We'll create global audioContext on first play.
+
+Simplify: on first user interaction (mousedown) we create audioContext.
+
+Now timer: elapsed = Math.floor((Date.now()-timerStart)/1000); display on HUD.
+
+High score: if score.goals > score.high { score.high = score.goals; localStorage.setItem('iceHockeyHigh',score.high); }
+
+Now drill selection: at start, maybe prompt but we can hardcode drill variable.
+
+Now the code length: I'll try to write concise JS.
+
+Given the difficulty of writing all this in a short space, maybe we can produce a minimal viable game with core features: responsive canvas, emoji favicon, color palette, high score localStorage, sound effects, speedrun timer, basic player movement, shooting, goalie, HUD.
+
+We'll sacrifice some advanced features like dribble toggle, stick handling, drill types, pass accuracy, etc., to keep code short.
+
+But the spec mentions many features, but the user said "Start over and write shorter code." So we need to produce shorter code that includes the sneaky features but not necessarily all mechanics.
+
+Thus, we can produce a simplified game.
+
+I'll write code that includes:
+
+- Responsive canvas.
+- Emoji favicon.
+- Color palette variables.
+- High score localStorage.
+- Web Audio API sound effects (skate, goal).
+- Speedrun timer top corner.
+- Player movement with WASD, friction, max speed.
+- Shooting with mouse hold power.
+- Goalie AI moving towards shot.
+- HUD showing timer, shots, goals.
+- Basic rink drawing.
+
+We'll keep code maybe ~200 lines.
+
+Now produce JSON.
+
+I'll write the HTML and JS as a single string, with line breaks escaped as \n. But to avoid escaping newlines, I can write the entire code as a single line (no line breaks). That would be easier: just one long line of code. But readability suffers, but JSON will be valid.
+
+But the user might prefer readable code, but they didn't specify format aside from valid JSON.
+
+I think it's okay to have newlines escaped as \n, but I need to produce them. I can write the code with actual newlines inside the JSON string, but then I need to escape them as \n. That's more work.
+
+Simpler: I'll produce the code as a single line string, no newline characters. I'll use semicolons to separate statements.
+
+But the HTML markup will have spaces and line breaks; but I can put everything on one line.
+
+But the JSON string must be enclosed in double quotes; inside, I can have any characters except unescaped double quotes and backslashes. So I need to ensure no double quotes inside.
+
+Thus, I will write the entire HTML+JS as a single line, using single quotes for attributes, and avoid double quotes entirely.
+
+I need to be careful about the <script> tag: it will contain JS code with single quotes for strings. That's fine.
+
+But the <link rel='icon' href='🏒'> will have single quotes.
+
+The <meta charset='UTF-8'> single quotes.
+
+The <title>Ice Hockey Practice</title> no quotes around title text.
+
+The <canvas id='rink'></canvas> okay.
+
+The <style> maybe not needed as external.
+
+Now the JS code: I'll write it as a single line, but it will be very long. However, I can compress it.
+
+But I need to ensure it's functional. I'll try to write compact JS.
+
+Maybe I can use arrow functions, minimal whitespace.
+
+I'll draft the JS code in a compressed manner.
+
+Given the difficulty of writing a full functional game in a single line, maybe I can output two files: index.html and game.js, with the JS in separate file. That would allow the JS code to be multi-line, but within the JSON string, I still need to represent it as a string with escaped newlines or as a single line.
+
+But I can still put the JS code as a single line string.
+
+But maybe it's easier to put the JS in a separate file and have the HTML reference it. The JSON will have "index.html" and "game.js". The game.js content can be a single line as well.
+
+But the HTML will have <script src='game.js'></script>. That avoids putting JS inside HTML, reducing double quotes issues.
+
+Thus, we can have:
+
+index.html: HTML with <link rel='stylesheet' href='style.css'> and <script src='game.js'></script>.
+
+game.js: the JS code as a string (maybe multi-line but we will represent as single line with \n escapes? But we can still put it as a single line.
+
+style.css: minimal CSS.
+
+Thus, JSON keys: "index.html", "game.js", "style.css". That's three files.
+
+But the user example shows {"index.html": "...", "game.js": "..."} so two files. But we can add style.css.
+
+But they said "Start over and write shorter code." So maybe we can combine CSS into HTML style tag to reduce files
