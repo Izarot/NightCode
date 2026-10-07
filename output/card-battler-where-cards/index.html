@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tempest Duel</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌪️</text></svg>">
+    <style>
+        body { margin: 0; padding: 20px; background: #1a1a2e; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Arial', sans-serif; }
+        .game-container { position: relative; width: 800px; max-width: 100%; }
+        canvas { width: 100%; height: auto; border: 2px solid #444; border-radius: 8px; background: #0f0f23; }
+        .ui-overlay { position: absolute; top: 10px; left: 10px; color: white; font-size: 14px; text-shadow: 1px 1px 2px black; }
+        .ui-overlay.right { left: auto; right: 10px; text-align: right; }
+        .health-bar { width: 160px; height: 16px; background: #333; border-radius: 8px; margin-top: 5px; overflow: hidden; }
+        .health-fill { height: 100%; transition: width 0.3s; }
+        .player1 .health-fill { background: #4CAF50; }
+        .player2 .health-fill { background: #F44336; }
+        .weather-timer { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); color: #FFD700; font-size: 24px; font-weight: bold; }
+        .energy-counter { position: absolute; bottom: 60px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+        .energy-orb { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #FFD700; background: rgba(255,215,0,0.2); }
+        .energy-orb.filled { background: #FFD700; }
+        .card-hand { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px; }
+        .card { width: 60px; height: 90px; background: linear-gradient(145deg, #f0f0f0, #cccccc); border-radius: 8px; border: 1px solid #999; cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 10px; text-align: center; padding: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); transition: transform 0.2s; }
+        .card:hover { transform: translateY(-5px) scale(1.05); }
+        .card.cost-1 { border-left: 4px solid #4CAF50; }
+        .card.cost-2 { border-left: 4px solid #2196F3; }
+        .card.cost-3 { border-left: 4px solid #FF9800; }
+        .card.weather { font-weight: bold; }
+        .card.rain { border-top: 4px solid #4A90E2; }
+        .card.sandstorm { border-top: 4px solid #D4A017; }
+        .card.fire { border-top: 4px solid #FF4500; }
+        .card.blizzard { border-top: 4px solid #87CEEB; }
+        .card.aurora { border-top: 4px solid #9370DB; }
+        .pause-menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; flex-direction: column; justify-content: center; align-items: center; color: white; z-index: 10; }
+        .pause-menu button { margin: 10px; padding: 10px 20px; font-size: 16px; cursor: pointer; background: #444; color: white; border: none; border-radius: 4px; }
+        .toast { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 8px; font-size: 18px; z-index: 20; animation: fadeInOut 2s forwards; }
+        @keyframes fadeInOut { 0% { opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        
+        <div class="ui-overlay player1">
+            <div>Player 1</div>
+            <div>HP: <span id="p1hp">100</span>/100</div>
+            <div class="health-bar player1">
+                <div class="health-fill" id="p1health" style="width: 100%"></div>
+            </div>
+        </div>
+        
+        <div class="ui-overlay right player2">
+            <div>Player 2</div>
+            <div>HP: <span id="p2hp">100</span>/100</div>
+            <div class="health-bar player2">
+                <div class="health-fill" id="p2health" style="width: 100%"></div>
+            </div>
+        </div>
+        
+        <div class="weather-timer" id="weatherTimer"></div>
+        
+        <div class="energy-counter" id="energyCounter"></div>
+        
+        <div class="card-hand" id="cardHand"></div>
+        
+        <div class="pause-menu" id="pauseMenu">
+            <h2>PAUSED</h2>
+            <button onclick="resumeGame()">Resume</button>
+            <button onclick="restartGame()">Restart</button>
+            <button onclick="quitGame()">Quit</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
