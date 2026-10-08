@@ -1,119 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>Connect-Dots Quest 🎨</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎨</text></svg>" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Pipe-Flow Puzzle</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 100%; height: 100%; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; }
-  #app { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%); }
-  #canvas-wrap { position: relative; width: 100%; max-width: 1024px; aspect-ratio: 4/3; max-height: 100vh; box-shadow: 0 20px 60px rgba(0,0,0,.6); border-radius: 12px; overflow: hidden; background: #fff; }
-  canvas { display: block; width: 100% !important; height: 100% !important; touch-action: none; cursor: crosshair; }
-  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; background: rgba(15,12,41,.92); color: #fff; z-index: 10; backdrop-filter: blur(6px); }
-  .screen.hidden { display: none; }
-  h1 { font-size: clamp(28px, 6vw, 48px); background: linear-gradient(90deg,#ff6ec7,#00d4ff,#ffd86b); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; text-align: center; }
-  h2 { font-size: clamp(22px,4.5vw,34px); color: #ffd86b; }
-  .btn { padding: 12px 28px; font-size: 18px; border: none; border-radius: 30px; background: linear-gradient(90deg,#00d4ff,#7b2ff7); color: #fff; cursor: pointer; font-weight: 600; box-shadow: 0 4px 14px rgba(0,212,255,.4); transition: transform .15s; min-width: 160px; }
-  .btn:hover, .btn:active { transform: scale(1.05); }
-  .btn.alt { background: linear-gradient(90deg,#ff6ec7,#ffd86b); box-shadow: 0 4px 14px rgba(255,110,199,.4); }
-  .level-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 12px; width: 100%; max-width: 600px; max-height: 60vh; overflow-y: auto; padding: 10px; }
-  .level-card { aspect-ratio: 1; border-radius: 12px; background: linear-gradient(135deg,#7b2ff7,#00d4ff); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: #fff; cursor: pointer; position: relative; transition: transform .2s; }
-  .level-card:hover { transform: scale(1.06); }
-  .level-card.locked { background: #444; color: #888; cursor: not-allowed; filter: grayscale(1); }
-  .level-card .stars { position: absolute; bottom: 4px; font-size: 12px; }
-  #hud { position: absolute; top: 0; left: 0; right: 0; padding: 10px 14px; display: flex; justify-content: space-between; pointer-events: none; font-weight: 600; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.5); z-index: 5; font-size: clamp(13px, 2.5vw, 16px); }
-  #hud > div { background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 20px; backdrop-filter: blur(4px); }
-  #hud-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px 14px; display: flex; justify-content: space-between; pointer-events: none; font-weight: 600; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.5); z-index: 5; font-size: clamp(13px, 2.5vw, 16px); }
-  #hud-bottom > div { background: rgba(0,0,0,.35); padding: 6px 12px; border-radius: 20px; backdrop-filter: blur(4px); pointer-events: auto; }
-  #hud-bottom button { background: none; border: none; color: #fff; font-size: inherit; cursor: pointer; font-weight: 600; }
-  #toast { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); padding: 10px 22px; background: rgba(0,0,0,.8); color: #fff; border-radius: 24px; font-weight: 600; opacity: 0; transition: opacity .3s; z-index: 6; pointer-events: none; }
-  #toast.show { opacity: 1; }
-  #toast.success { background: linear-gradient(90deg,#00b894,#00d4ff); }
-  #toast.error { background: linear-gradient(90deg,#e74c3c,#ff6ec7); }
-  .menu-bg { position: absolute; inset: 0; z-index: 0; opacity: .3; }
-  .settings-row { display: flex; align-items: center; gap: 12px; color: #fff; font-size: 15px; }
-  .settings-row input[type=range] { flex: 1; }
-  @media (max-width: 600px) {
-    .btn { padding: 10px 20px; font-size: 15px; min-width: 130px; }
-    h1 { font-size: 32px; }
-  }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0f0f1a;font-family:'Press Start 2P',monospace;overflow:hidden;touch-action:none}
+canvas{display:block;image-rendering:pixelated;width:100vw;height:100vh}
+#hud{position:fixed;top:10px;left:10px;color:#00f5d4;font-size:10px;text-shadow:0 0 10px #00f5d4;pointer-events:none}
+#timer{position:fixed;top:10px;right:10px;color:#ffe66d;font-size:12px;text-shadow:0 0 10px #ffe66d}
+#score{position:fixed;bottom:10px;left:10px;color:#ff6b6b;font-size:9px}
+#palette{position:fixed;right:10px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px}
+.pipe-btn{width:48px;height:48px;background:#2a2a3a;border:2px solid #4ecdc4;cursor:pointer;image-rendering:pixelated}
+.pipe-btn.active{border-color:#ffe66d;box-shadow:0 0 15px #ffe66d}
+#flowBtn{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:12px 24px;background:#ff006e;color:#fff;border:none;font-family:inherit;font-size:10px;cursor:pointer;image-rendering:pixelated}
+#flowBtn:hover{background:#ff3388}
 </style>
 </head>
 <body>
-<div id="app">
-  <div id="canvas-wrap">
-    <canvas id="game"></canvas>
-    <div id="hud" style="display:none;">
-      <div id="hud-level">Level 1</div>
-      <div id="hud-timer">⏱ 0:00</div>
-    </div>
-    <div id="hud-bottom" style="display:none;">
-      <div id="hud-stars">⭐ 0</div>
-      <div id="hud-strokes">Strokes: 0</div>
-      <div><button id="btn-hint">💡 Hint</button> <button id="btn-pause">⏸</button></div>
-    </div>
-    <div id="toast"></div>
-  </div>
+<canvas id="game"></canvas>
+<div id="hud">WATER: <span id="water">100</span> | FLOW: <span id="flow">0</span></div>
+<div id="timer">00:00</div>
+<div id="score">SCORE: <span id="pts">0</span> | BEST: <span id="best">0</span></div>
+<div id="palette"></div>
+<button id="flowBtn">▶ FLOW</button>
+<script>
+const C=document.getElementById('game'),X=C.getContext('2d');
+let W,H,G=10,T=32,S=0,O=[],R=[],F=[],P=[],H2=0,T2=0,I=null,A=null;
+const pipes=[{name:'Straight',c:'#4ecdc4',dirs:[[0,-1],[0,1]]},{name:'Corner',c:'#ff6b6b',dirs:[[0,-1],[1,0]]},{name:'T-Junc',c:'#ffe66d',dirs:[[0,-1],[0,1],[1,0]]},{name:'Cross',c:'#ff006e',dirs:[[0,-1],[0,1],[1,0],[-1,0]]},{name:'End',c:'#a8a8a8',dirs:[[0,-1]]}];
+const src={x:0,y:0},flowers=[{x:9,y:9}];
 
-  <div id="screen-main" class="screen">
-    <canvas id="menu-bg" class="menu-bg"></canvas>
-    <h1>Connect-Dots Quest</h1>
-    <p style="color:#ccc;max-width:420px;text-align:center;font-size:14px;">Draw lines to connect the dots and reveal beautiful hidden pictures!</p>
-    <button class="btn" data-action="play">▶ Play</button>
-    <button class="btn alt" data-action="levels">🖼 Levels</button>
-    <button class="btn" data-action="howto">❓ How to Play</button>
-    <button class="btn alt" data-action="settings">⚙ Settings</button>
-    <div style="color:#aaa;font-size:12px;margin-top:8px;">🏆 High Score: <span id="menu-highscore">0</span> pts</div>
-  </div>
+function init(){C.width=W=window.innerWidth;C.height=H=window.innerHeight;T=Math.min(32,Math.floor(Math.min(W,H)/14));S=Math.floor((W-T*G)/2);reset();}
+function reset(){O=Array(G).fill().map(()=>Array(G).fill(null));R=Array(G).fill().map(()=>Array(G).fill(0));F=Array(G).fill().map(()=>Array(G).fill(0));P=100;T2=0;H2=0;S=0;loadBest();}
+function loadBest(){document.getElementById('best').textContent=localStorage.getItem('pipeBest')||0;}
+function saveBest(){localStorage.setItem('pipeBest',Math.max(H2,localStorage.getItem('pipeBest')||0));}
 
-  <div id="screen-levels" class="screen hidden">
-    <h2>Select Level</h2>
-    <div class="level-grid" id="level-grid"></div>
-    <button class="btn alt" data-action="back">← Back</button>
-  </div>
+function draw(){X.fillStyle='#0f0f1a';X.fillRect(0,0,W,H);
+for(let y=0;y<G;y++)for(let x=0;x<G;x++){let px=S+x*T,py=100+y*T;X.strokeStyle='#2a2a3a';X.strokeRect(px,py,T,T);
+if(O[y][x]!==null){let p=pipes[O[y][x]],r=R[y][x],d=p.dirs.map(([dx,dy])=>[(dx+dy+r)%2?dx:dy,(dx+dy+r)%2?dy:-dx]);
+X.fillStyle=p.c;X.fillRect(px+2,py+2,T-4,T-4);X.strokeStyle='#fff';X.lineWidth=2;
+for(let[dx,dy]of d){let ex=px+T/2+dx*T/2,ey=py+T/2+dy*T/2;X.beginPath();X.moveTo(px+T/2,py+T/2);X.lineTo(ex,ey);X.stroke();}}
+if(F[y][x]>0){X.fillStyle=`rgba(0,245,212,${F[y][x]})`;X.fillRect(px,py,T,T);}}
+if(O[src.y][src.x]===null){X.fillStyle='#00f5d4';X.fillRect(S+src.x*T+4,100+src.y*T+4,T-8,T-8);X.fillStyle='#fff';X.font='10px monospace';X.fillText('S',S+src.x*T+T/2-4,100+src.y*T+T/2+4);}
+flowers.forEach(f=>{let px=S+f.x*T,py=100+f.y*T,on=F[f.y][f.x]>0;X.fillStyle=on?'#ff006e':'#660033';X.beginPath();X.arc(px+T/2,py+T/2,T/3,0,Math.PI*2);X.fill();if(on){X.shadowColor='#ff006e';X.shadowBlur=15;X.fill();X.shadowBlur=0;}});
+X.fillStyle='#fff';X.font='8px monospace';X.fillText('SELECT: '+pipes[S%pipes.length].name,10,H-30);};
 
-  <div id="screen-howto" class="screen hidden">
-    <h2>How to Play</h2>
-    <div style="color:#ddd;max-width:480px;text-align:left;line-height:1.6;font-size:15px;">
-      <p>🖱 <b>Mouse/Touch</b>: Press on a dot and drag to connect it to another dot.</p>
-      <p>🎯 Connect the dots in the right order to reveal the hidden image.</p>
-      <p>⭐ Earn up to 3 stars by being fast and efficient.</p>
-      <p>⌨ <b>R</b> = Redo, <b>Z</b> = Undo, <b>Space</b> = Pause</p>
-    </div>
-    <button class="btn alt" data-action="back">← Back</button>
-  </div>
+function sim(){F=Array(G).fill().map(()=>Array(G).fill(0));let q=[{x:src.x,y:src.y,f:1}],v=Array(G).fill().map(()=>Array(G).fill(false));
+while(q.length){let{x,y,f}=q.shift();if(v[y][x]||x<0||y<0||x>=G||y>=G)continue;v[y][x]=true;F[y][x]=f;
+if(O[y][x]===null)continue;let p=pipes[O[y][x]],r=R[y][x],dirs=p.dirs.map(([dx,dy])=>[(dx+dy+r)%2?dx:dy,(dx+dy+r)%2?dy:-dx]);
+for(let[dx,dy]of dirs){let nx=x+dx,ny=y+dy;if(nx>=0&&ny>=0&&nx<G&&ny<G&&O[ny][nx]!==null){let op=pipes[O[ny][nx]],or2=R[ny][nx],od=op.dirs.map(([dx2,dy2])=>[(dx2+dy2+or2)%2?dx2:dy2,(dx2+dy2+or2)%2?dy2:-dx2]);
+if(od.some(([ddx,ddy])=>ddx===-dx&&ddy===-dy))q.push({x:nx,y:ny,f:Math.max(0,f-0.1)});}}}
+flowers.forEach(f=>{if(F[f.y][f.x]>0.5)H2+=10;});P=Math.max(0,P-0.01);if(P<=0)clearInterval(I);
+if(H2>0&&flowers.every(f=>F[f.y][f.x]>0.5)){saveBest();alert('WIN! Score: '+H2);reset();}};
 
-  <div id="screen-settings" class="screen hidden">
-    <h2>Settings</h2>
-    <div style="display:flex;flex-direction:column;gap:14px;width:90%;max-width:400px;">
-      <div class="settings-row"><label>🔊 Master</label><input type="range" id="vol-master" min="0" max="100" value="70"></div>
-      <div class="settings-row"><label>🎵 Music</label><input type="range" id="vol-music" min="0" max="100" value="50"></div>
-      <div class="settings-row"><label>🔉 SFX</label><input type="range" id="vol-sfx" min="0" max="100" value="80"></div>
-      <div class="settings-row"><label>🏷 Node Numbers</label><input type="checkbox" id="opt-numbers" checked></div>
-      <div class="settings-row"><label>🧲 Snap</label><input type="checkbox" id="opt-snap" checked></div>
-      <div class="settings-row"><label>🖱 Line Width</label><input type="range" id="opt-width" min="2" max="10" value="4"></div>
-    </div>
-    <button class="btn alt" data-action="back">← Back</button>
-  </div>
+function loop(){T2++;if(T2%20===0)sim();draw();document.getElementById('water').textContent=Math.floor(P);document.getElementById('flow').textContent=flowers.filter(f=>F[f.y][f.x]>0.5).length;document.getElementById('pts').textContent=H2;
+let m=Math.floor(T2/60),s=m%60,mm=Math.floor(m/60);document.getElementById('timer').textContent=String(mm).padStart(2,'0')+':'+String(s).padStart(2,'0');requestAnimationFrame(loop);};
 
-  <div id="screen-pause" class="screen hidden">
-    <h2>⏸ Paused</h2>
-    <button class="btn" data-action="resume">▶ Resume</button>
-    <button class="btn alt" data-action="restart">🔄 Restart</button>
-    <button class="btn" data-action="quit">🏠 Quit</button>
-  </div>
+C.addEventListener('click',e=>{let rect=C.getBoundingClientRect(),mx=(e.clientX-rect.left),my=(e.clientY-rect.top);
+let gx=Math.floor((mx-S)/T),gy=Math.floor((my-100)/T);
+if(gx>=0&&gx<G&&gy>=0&&gy<G){if(O[gy][gx]===null){O[gy][gx]=S%pipes.length;playSound(200,0.1);}else{R[gy][gx]=(R[gy][gx]+1)%4;playSound(400,0.1);}sim();}});
 
-  <div id="screen-complete" class="screen hidden">
-    <h2 id="complete-title">🎉 Complete!</h2>
-    <div id="complete-stars" style="font-size:48px;">⭐⭐⭐</div>
-    <div id="complete-stats" style="color:#ddd;"></div>
-    <button class="btn" data-action="next">Next Level ▶</button>
-    <button class="btn alt" data-action="quit">🏠 Menu</button>
-  </div>
-</div>
+C.addEventListener('contextmenu',e=>{e.preventDefault();let rect=C.getBoundingClientRect(),mx=(e.clientX-rect.left),my=(e.clientY-rect.top);
+let gx=Math.floor((mx-S)/T),gy=Math.floor((my-100)/T);
+if(gx>=0&&gx<G&&gy>=0&&gy<G&&O[gy][gx]!==null){O[gy][gx]=null;R[gy][gx]=0;playSound(100,0.1);sim();}});
 
-<script src="game.js"></script>
+let ps=null;
+C.addEventListener('touchstart',e=>{e.preventDefault();let t=e.touches[0],rect=C.getBoundingClientRect();ps={x:t.clientX-rect.left,y:t.clientY-rect.top};});
+C.addEventListener('touchend',e=>{if(!ps)return;let rect=C.getBoundingClientRect(),mx=e.changedTouches[0].clientX-rect.left,my=e.changedTouches[0].clientY-rect.top;
+if(Math.abs(mx-ps.x)>20||Math.abs(my-ps.y)>20){let a=Math.atan2(my-ps.y,mx-ps.x)*180/Math.PI;if(a>-45&&a<=45){S=(S+1)%pipes.length;updatePalette();}ps=null;return;}
+let gx=Math.floor((mx-S)/T),gy=Math.floor((my-100)/T);
+if(gx>=0&&gx<G&&gy>=0&&gy<G){if(O[gy][gx]===null){O[gy][gx]=S%pipes.length;playSound(200,0.1);}else{R[gy][gx]=(R[gy][gx]+1)%4;playSound(400,0.1);}sim();}ps=null;});
+
+function playSound(f,d){if(!A)A=new(window.AudioContext||window.webkitAudioContext)();let o=A.createOscillator(),g=A.createGain();o.connect(g);g.connect(A.destination);o.frequency.value=f;o.type='square';g.gain.value=0.1;o.start();g.gain.exponentialRampToValueAtTime(0.001,A.currentTime+d);o.stop(A.currentTime+d);}
+
+document.getElementById('flowBtn').onclick=()=>{if(!I){P=100;I=setInterval(()=>{P=Math.max(0,P-0.5);if(P<=0)clearInterval(I);},100);sim();playSound(800,0.2);}};
+
+function updatePalette(){let pal=document.getElementById('palette');pal.innerHTML='';pipes.forEach((p,i)=>{let b=document.createElement('div');b.className='pipe-btn'+(i===S%pipes.length?' active':'');b.style.background=p.c;b.onclick=()=>{S=i;updatePalette();};pal.appendChild(b);});}
+
+window.addEventListener('resize',init);window.addEventListener('keydown',e=>{if(e.key==='r'){S=(S+1)%pipes.length;updatePalette();}if(e.key===' '){document.getElementById('flowBtn').click();}});
+init();updatePalette();loop();
+</script>
 </body>
 </html>
