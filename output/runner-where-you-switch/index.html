@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#2C3E50">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>LaneFlip</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏃</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      overflow: hidden;
+      touch-action: none;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #game-container { 
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+      aspect-ratio: 9/16;
+      max-height: 100vh;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.1);
+      background: #000;
+    }
+    canvas { display: block; width: 100%; height: 100%; }
+    
+    .screen { 
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, rgba(26,26,46,0.95) 0%, rgba(22,33,62,0.95) 100%);
+      backdrop-filter: blur(10px);
+      z-index: 10;
+      padding: 20px;
+      text-align: center;
+      color: #fff;
+    }
+    .screen.hidden { display: none; }
+    
+    h1 { 
+      font-size: clamp(2rem, 8vw, 3.5rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #FF6B6B, #FFE66D, #4ECDC4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 4px 20px rgba(255,107,107,0.3);
+    }
+    .subtitle { 
+      color: #a0b0d0;
+      font-size: clamp(0.9rem, 3vw, 1.2rem);
+      margin-bottom: 2rem;
+      font-weight: 300;
+    }
+    
+    .btn { 
+      padding: 1rem 2.5rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary { 
+      background: linear-gradient(135deg, #FF6B6B, #FF8E8E);
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(255,107,107,0.4);
+    }
+    .btn-primary:active { transform: scale(0.96); }
+    .btn-secondary { 
+      background: rgba(255,255,255,0.1);
+      color: #FFE66D;
+      border: 2px solid #FFE66D;
+      margin-top: 1rem;
+    }
+    .btn-secondary:active { background: rgba(255,230,109,0.2); }
+    
+    .stats { 
+      display: flex;
+      gap: 2rem;
+      margin: 2rem 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .stat { 
+      background: rgba(255,255,255,0.05);
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+      min-width: 120px;
+    }
+    .stat-label { 
+      font-size: 0.75rem;
+      color: #6a7aa0;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.25rem;
+    }
+    .stat-value { 
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #FFE66D;
+    }
+    
+    .controls-hint { 
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      font-size: 0.85rem;
+      color: #6a7aa0;
+    }
+    .hint { display: flex; align-items: center; gap: 0.5rem; }
+    .hint kbd { 
+      background: rgba(255,255,255,0.1);
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+    
+    .lane-btn { 
+      position: absolute;
+      bottom: 20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      border: 2px solid rgba(255,255,255,0.3);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: #fff;
+      touch-action: manipulation;
+      user-select: none;
+      z-index: 5;
+      transition: all 0.1s;
+    }
+    .lane-btn:active { 
+      background: rgba(255,255,255,0.3);
+      transform: scale(0.9);
+    }
+    .lane-btn.left { left: 20px; }
+    .lane-btn.right { right: 20px; }
+    .lane-btn.jump { 
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 80px;
+      font-size: 2rem;
+    }
+    
+    .hud { 
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 5;
+      pointer-events: none;
+      padding: 8px;
+    }
+    .hud-item { 
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(10px);
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+    .hud-item.accent { color: #FFE66D; }
+    .hud-item.danger { color: #FF6B6B; }
+    .hud-item.speed { color: #4ECDC4; }
+    
+    .speed-bar { 
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80%;
+      max-width: 200px;
+      height: 6px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 3px;
+      overflow: hidden;
+      z-index: 5;
+    }
+    .speed-fill { 
+      height: 100%;
+      background: linear-gradient(90deg, #4ECDC4, #FFE66D, #FF6B6B);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+    
+    @media (orientation: landscape) and (max-height: 500px) {
+      #game-container { max-width: 90vh; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game"></canvas>
+    
+    <div class="hud" id="hud">
+      <div class="hud-item" id="score">Score: 0</div>
+      <div class="hud-item accent" id="timer">0.00s</div>
+      <div class="hud-item" id="highscore">Best: 0</div>
+    </div>
+    <div class="speed-bar"><div class="speed-fill" id="speedFill"></div></div>
+    
+    <button class="lane-btn left" id="btnLeft" aria-label="Move Left">◀</button>
+    <button class="lane-btn jump" id="btnJump" aria-label="Jump">⬆</button>
+    <button class="lane-btn right" id="btnRight" aria-label="Move Right">▶</button>
+    
+    <div class="screen" id="startScreen">
+      <h1>LaneFlip</h1>
+      <p class="subtitle">Flip, dodge, survive. How far can you go?</p>
+      <button class="btn btn-primary" id="startBtn">Start Run</button>
+      <div class="controls-hint">
+        <div class="hint"><kbd>←</kbd><kbd>→</kbd> Move Lanes</div>
+        <div class="hint"><kbd>Space</kbd> / <kbd>↑</kbd> Jump</div>
+        <div class="hint"><kbd>P</kbd> Pause</div>
+      </div>
+    </div>
+    
+    <div class="screen hidden" id="pauseScreen">
+      <h1>Paused</h1>
+      <p class="subtitle">Take a breath, runner.</p>
+      <button class="btn btn-primary" id="resumeBtn">Resume</button>
+      <button class="btn btn-secondary" id="restartBtn">Restart</button>
+    </div>
+    
+    <div class="screen hidden" id="gameOverScreen">
+      <h1>Run Complete</h1>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Final Score</div><div class="stat-value" id="finalScore">0</div></div>
+        <div class="stat"><div class="stat-label">Distance</div><div class="stat-value" id="finalDistance">0m</div></div>
+        <div class="stat"><div class="stat-label">Time</div><div class="stat-value" id="finalTime">0.00s</div></div>
+      </div>
+      <button class="btn btn-primary" id="playAgainBtn">Run Again</button>
+      <button class="btn btn-secondary" id="shareBtn">Share Score</button>
+    </div>
+  </div>
+
+  <script>
+    // ===== GAME CONFIGURATION =====
+    const CONFIG = {
+      // Canvas
+      DESIGN_WIDTH: 360,
+      DESIGN_HEIGHT: 640,
+      
+      // Lanes
+      LANE_COUNT: 3,
+      LANE_WIDTH: 100,
+      LANE_GAP: 20,
+      LANE_START_X: 30,
+      
+      // Player
+      PLAYER_WIDTH: 40,
+      PLAYER_HEIGHT: 60,
+      PLAYER_Y_OFFSET: 100,
+      LANE_SWITCH_DURATION: 300,
+      JUMP_DURATION: 500,
+      JUMP_HEIGHT: 80,
+      
+      // Gameplay
+      BASE_SPEED: 8,
+      SPEED_INCREASE: 0.5,
+      SPEED_INCREASE_INTERVAL: 30000,
+      MAX_SPEED: 24,
+      SPAWN_INTERVAL_MIN: 1500,
+      SPAWN_INTERVAL_MAX: 3000,
+      MIN_OBSTACLE_GAP: 1500,
+      
+      // Colors
+      COLORS: {
+        bgTop: '#1a1a2e',
+        bgBottom: '#0f3460',
+        lane: '#2a2a4a',
+        laneLine: '#4a4a6a',
+        player: '#FF6B6B',
+        playerAccent: '#FFE66D',
+        obstacleLow: '#4ECDC4',
+        obstacleHigh: '#FF6B6B',
+        obstacleMoving: '#FFE66D',
+        obstacleBoost: '#8A2BE2',
+        particle: '#FFE66D',
+        text: '#ffffff',
+        textDim: '#a0b0d0',
+        hudBg: 'rgba(0,0,0,0.6)',
+        speedBarBg: 'rgba(0,0,0,0.5)',
+      },
+      
+      // Parallax layers
+      PARALLAX_LAYERS: [
+        { speed: 0.05, color: '#1a1a2e', height: 0.4 },
+        { speed: 0.15, color: '#16213e', height: 0.3 },
+        { speed: 0.3, color: '#0f3460', height: 0.3 },
+      ],
+    };
+
+    // ===== UTILITY CLASSES =====
+    class Vec2 {
+      constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+      add(v) { return new Vec2(this.x + v.x, this.y + v.y); }
+      sub(v) { return new Vec2(this.x - v.x, this.y - v.y); }
+      mul(s) { return new Vec2(this.x * s, this.y * s); }
+      lerp(v, t) { return new Vec2(this.x + (v.x - this.x) * t, this.y + (v.y - this.y) * t); }
+      clone() { return new Vec2(this.x, this.y); }
+    }
+
+    class Rect {
+      constructor(x, y, w, h) { this.x = x; this.y = y; this.w = w; this.h = h; }
+      intersects(other, margin = 0.8) {
+        const mw = this.w * (1 - margin) / 2;
+        const mh = this.h * (1 - margin) / 2;
+        const ow = other.w * (1 - margin) / 2;
+        const oh = other.h * (1 - margin) / 2;
+        return !(this.x + this.w - mw < other.x + ow ||
+                 other.x + other.w - ow < this.x + mw ||
+                 this.y + this.h - mh < other.y + oh ||
+                 other.y + other.h - oh < this.y + mh);
+      }
+    }
+
+    // Object Pool
+    class Pool {
+      constructor(createFn, resetFn, initialSize = 20) {
+        this.createFn = createFn;
+        this.resetFn = resetFn;
+        this.available = [];
+        this.active = [];
+        for (let i = 0; i < initialSize; i++) this.available.push(createFn());
+      }
+      acquire() {
+        const obj = this.available.pop() || this.createFn();
+        this.active.push(obj);
+        return obj;
+      }
+      release(obj) {
+        const idx = this.active.indexOf(obj);
+        if (idx !== -1) this.active.splice(idx, 1);
+        this.resetFn(obj);
+        this.available.push(obj);
+      }
+      releaseAll() {
+        this.active.forEach(obj => {
+          this.resetFn(obj);
+          this.available.push(obj);
+        });
+        this.active = [];
+      }
+      getActive() { return this.active; }
+    }
+
+    // ===== AUDIO SYSTEM =====
+    class AudioSystem {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+        this.masterGain = null;
+        this.init();
+      }
+      init() {
+        try {
+          this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+          this.masterGain = this.ctx.createGain();
+          this.masterGain.connect(this.ctx.destination);
+          this.masterGain.gain.value = 0.3;
+        } catch (e) { this.enabled = false; }
+      }
+      resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); }
+      playTone(freq, duration, type = 'sine', volume = 1, startTime = 0) {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.type = type;
+        osc.frequency.value = freq;
+        const now = this.ctx.currentTime + startTime;
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(volume * 0.1, now + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.start(now);
+        osc.stop(now + duration);
+      }
+      playJump() { this.playTone(440, 0.15, 'square', 0.5); }
+      playLaneSwitch() { this.playTone(330, 0.1, 'triangle', 0.3); }
+      playScore() { this.playTone(660, 0.1, 'sine', 0.2); }
+      playBoost() { 
+        this.playTone(523, 0.1, 'sawtooth', 0.3);
+        this.playTone(784, 0.1, 'sawtooth', 0.3, 0.05);
+        this.playTone(1047, 0.1, 'sawtooth', 0.3, 0.1);
+      }
+      playHit() { 
+        this.playTone(200, 0.3, 'sawtooth', 0.5);
+        this.playTone(150, 0.4, 'square', 0.4, 0.05);
+      }
+      playGameOver() {
+        [330, 294, 262, 220].forEach((f, i) => this.playTone(f, 0.3, 'sine', 0.3, i * 0.15));
+      }
+    }
+
+    // ===== PARTICLE SYSTEM =====
+    class Particle {
+      constructor() { this.reset(); }
+      reset() {
+        this.pos = new Vec2();
+        this.vel = new Vec2();
+        this.life = 0;
+        this.maxLife = 1;
+        this.size = 4;
+        this.color = '#FFE66D';
+        this.alpha = 1;
+        this.gravity = 0;
+      }
+      update(dt) {
+        this.pos = this.pos.add(this.vel.mul(dt));
+        this.vel.y += this.gravity * dt;
+        this.life -= dt;
+        this.alpha = this.life / this.maxLife;
+        return this.life > 0;
+      }
+      draw(ctx, scale) {
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.pos.x * scale, this.pos.y * scale, this.size * scale * this.alpha, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+    }
+
+    // ===== GAME ENTITIES =====
+    class Player {
+      constructor(lanes) {
+        this.lanes = lanes;
+        this.currentLane = 1;
+        this.targetLane = 1;
+        this.pos = new Vec2();
+        this.targetPos = new Vec2();
+        this.switchProgress = 1;
+        this.isJumping = false;
+        this.jumpProgress = 0;
+        this.jumpHeight = 0;
+        this.width = CONFIG.PLAYER_WIDTH;
+        this.height = CONFIG.PLAYER_HEIGHT;
+        this.animFrame = 0;
+        this.animTime = 0;
+        this.invulnerable = 0;
+        this.boostTime = 0;
+        this.updatePosition();
+      }
+      updatePosition() {
+        const lane = this.lanes[this.currentLane];
+        this.pos.x = lane.centerX - this.width / 2;
+        this.pos.y = lane.y - this.height - CONFIG.PLAYER_Y_OFFSET;
+        this.targetPos = this.pos.clone();
+      }
+      switchLane(dir) {
+        const newLane = Math.max(0, Math.min(CONFIG.LANE_COUNT - 1, this.currentLane + dir));
+        if (newLane !== this.currentLane) {
+          this.currentLane = newLane;
+          this.targetLane = newLane;
+          this.switchProgress = 0;
+          const lane = this.lanes[this.currentLane];
+          this.targetPos.x = lane.centerX - this.width / 2;
+          return true;
+        }
+        return false;
+      }
+      jump() {
+        if (!this.isJumping) {
+          this.isJumping = true;
+          this.jumpProgress = 0;
+          return true;
+        }
+        return false;
+      }
+      update(dt, gameSpeed) {
+        // Lane switching animation
+        if (this.switchProgress < 1) {
+          this.switchProgress = Math.min(1, this.switchProgress + dt / CONFIG.LANE_SWITCH_DURATION);
+          const eased = this.easeOutCubic(this.switchProgress);
+          this.pos.x = this.pos.x + (this.targetPos.x - this.pos.x) * eased;
+        }
+        
+        // Jump physics
+        if (this.isJumping) {
+          this.jumpProgress += dt / CONFIG.JUMP_DURATION;
+          if (this.jumpProgress >= 1) {
+            this.isJumping = false;
+            this.jumpProgress = 0;
+            this.jumpHeight = 0;
+          } else {
+            const curve = Math.sin(this.jumpProgress * Math.PI);
+            this.jumpHeight = curve * CONFIG.JUMP_HEIGHT;
+          }
+        }
+        
+        // Animation
+        this.animTime += dt;
+        if (this.animTime > 150) {
+          this.animFrame = (this.animFrame + 1) % 4;
+          this.animTime = 0;
+        }
+        
+        // Timers
+        if (this.invulnerable > 0) this.invulnerable -= dt;
+        if (this.boostTime > 0) this.boostTime -= dt;
+      }
+      easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+      getBounds() {
+        return new Rect(
+          this.pos.x + 6,
+          this.pos.y - this.jumpHeight + 6,
+          this.width - 12,
+          this.height - 12
+        );
+      }
+      draw(ctx, scale) {
+        ctx.save();
+        ctx.translate(this.pos.x * scale, (this.pos.y - this.jumpHeight) * scale);
+        
+        // Invulnerability flash
+        if (this.invulnerable > 0 && Math.floor(this.invulnerable / 50) % 2 === 0) {
+          ctx.globalAlpha = 0.5;
+        }
+        
+        // Boost glow
+        if (this.boostTime > 0) {
+          ctx.shadowColor = '#8A2BE2';
+          ctx.shadowBlur = 15 * scale;
+        }
+        
+        // Body
+        const w = this.width * scale;
+        const h = this.height * scale;
+        
+        // Legs animation
+        const legOffset = this.isJumping ? 0 : Math.sin(this.animFrame * Math.PI / 2) * 4 * scale;
+        
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(w/2, h + 5*scale, w/3, 4*scale, 0, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Body
+        const grad = ctx.createLinearGradient(0, 0, w, h);
+        grad.addColorStop(0, CONFIG.COLORS.player);
+        grad.addColorStop(1, '#cc4444');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.roundRect(4*scale, 4*scale, w-8*scale, h-8*scale, 8*scale);
+        ctx.fill();
+        
+        // Accent stripe
+        ctx.fillStyle = CONFIG.COLORS.playerAccent;
+        ctx.fillRect(w/2 - 3*scale, 8*scale, 6*scale, h-16*scale);
+        
+        // Eyes
+        ctx.fillStyle = '#fff';
+        const eyeY = 16*scale + (this.isJumping ? -2*scale : 0);
+        ctx.beginPath();
+        ctx.arc(w/2 - 6*scale, eyeY, 4*scale, 0, Math.PI*2);
+        ctx.arc(w/2 + 6*scale, eyeY, 4*scale, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Pupils
+        ctx.fillStyle = '#1a1a2e';
+        ctx.beginPath();
+        ctx.arc(w/2 - 6*scale, eyeY, 2*scale, 0, Math.PI*2);
+        ctx.arc(w/2 + 6*scale, eyeY, 2*scale, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Legs
+        ctx.fillStyle = '#cc4444';
+        ctx.fillRect(8*scale, h - 12*scale + legOffset, 10*scale, 12*scale);
+        ctx.fillRect(w - 18*scale, h - 12*scale - legOffset, 10*scale, 12*scale);
+        
+        ctx.restore();
+      }
+    }
+
+    class Obstacle {
+      constructor() { this.reset(); }
+      reset() {
+        this.type = 'low';
+        this.lane = 0;
+        this.pos = new Vec2();
+        this.width = 80;
+        this.height = 40;
+        this.active = false;
+        this.moveDir = 0;
+        this.moveRange = 0;
+        this.moveSpeed = 0;
+        this.moveOffset = 0;
+        this.color = CONFIG.COLORS.obstacleLow;
+        this.glowColor = '';
+      }
+      init(type, lane, y, speed) {
+        this.type = type;
+        this.lane = lane;
+        this.pos.y = y;
+        this.active = true;
+        
+        switch(type) {
+          case 'low':
+            this.width = 90;
+            this.height = 30;
+            this.color = CONFIG.COLORS.obstacleLow;
+            this.glowColor = 'rgba(78,205,196,0.5)';
+            break;
+          case 'high':
+            this.width = 80;
+            this.height = 120;
+            this.color = CONFIG.COLORS.obstacleHigh;
+            this.glowColor = 'rgba(255,107,107,0.5)';
+            break;
+          case 'moving':
+            this.width = 70;
+            this.height = 70;
+            this.color = CONFIG.COLORS.obstacleMoving;
+            this.glowColor = 'rgba(255,230,109,0.5)';
+            this.moveDir = Math.random() > 0.5 ? 1 : -1;
+            this.moveRange = 1;
+            this.moveSpeed = 0.003;
+            this.moveOffset = Math.random() * Math.PI * 2;
+            break;
+          case 'boost':
+            this.width = 60;
+            this.height = 60;
+            this.color = CONFIG.COLORS.obstacleBoost;
+            this.glowColor = 'rgba(138,43,226,0.5)';
+            break;
+        }
+        const laneData = this.lanes[this.lane];
+        this.pos.x = laneData.centerX - this.width / 2;
+      }
+      update(dt, gameSpeed) {
+        this.pos.y += gameSpeed * dt / 16.67;
+        
+        if (this.type === 'moving' && this.active) {	his.moveOffset += this.moveSpeed * dt;
+        const laneData = this.lanes[this.lane];
+        const laneLeft = laneData.centerX - laneData.width / 2;
+        const laneRight = laneData.centerX + laneData.width / 2;
+        const targetX = laneData.centerX + Math.sin(this.moveOffset) * this.moveRange * (laneData.width / 2 - this.width / 2);
+        this.pos.x = targetX - this.width / 2;
+      }
+      getBounds() {
+        return new Rect(this.pos.x + 4, this.pos.y + 4, this.width - 8, this.height - 8);
+      }
+      draw(ctx, scale) {
+        if (!this.active) return;
+        ctx.save();
+        ctx.translate(this.pos.x * scale, this.pos.y * scale);
+        
+        // Glow
+        if (this.glowColor) {
+          ctx.shadowColor = this.glowColor;
+          ctx.shadowBlur = 10 * scale;
+        }
+        
+        const w = this.width * scale;
+        const h = this.height * scale;
+        
+        switch(this.type) {
+          case 'low':
+            // Low barrier
+            const grad = ctx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, this.color);
+            grad.addColorStop(1, '#2a8a80');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(0, 0, w, h, 6*scale);
+            ctx.fill();
+            // Stripes
+            ctx.fillStyle = 'rgba(255,255,255,0.2)';
+            for (let i = 0; i < w; i += 12*scale) {
+              ctx.fillRect(i, 0, 6*scale, h);
+            }
+            break;
+          case 'high':
+            // High wall
+            const grad2 = ctx.createLinearGradient(0, 0, w, 0);
+            grad2.addColorStop(0, this.color);
+            grad2.addColorStop(1, '#cc4444');
+            ctx.fillStyle = grad2;
+            ctx.beginPath();
+            ctx.roundRect(0, 0, w, h, 8*scale);
+            ctx.fill();
+            // Warning stripes
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            for (let i = 0; i < h; i += 16*scale) {
+              ctx.fillRect(0, i, w, 8*scale);
+            }
+            break;
+          case 'moving':
+            // Moving platform
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(w/2, h/2, Math.min(w,h)/2 - 2*scale, 0, Math.PI*2);
+            ctx.fill();
+            // Arrow indicator
+            ctx.fillStyle = '#1a1a2e';
+            ctx.beginPath();
+            const dir = this.moveDir > 0 ? 1 : -1;
+            ctx.moveTo(w/2 - dir*8*scale, h/2 - 6*scale);
+            ctx.lineTo(w/2 + dir*8*scale, h/2);
+            ctx.lineTo(w/2 - dir*8*scale, h/2 + 6*scale);
+            ctx.fill();
+            break;
+          case 'boost':
+            // Boost orb
+            const pulse = 1 + Math.sin(Date.now() / 200) * 0.1;
+            const grad3 = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/2 * pulse);
+            grad3.addColorStop(0, '#fff');
+            grad3.addColorStop(0.5, this.color);
+            grad3.addColorStop(1, '#4a0080');
+            ctx.fillStyle = grad3;
+            ctx.beginPath();
+            ctx.arc(w/2, h/2, w/2 * pulse, 0, Math.PI*2);
+            ctx.fill();
+            // Sparkle
+            ctx.fillStyle = '#fff';
+            for (let i = 0; i < 4; i++) {
+              const angle = (Date.now() / 500 + i * Math.PI/2) % (Math.PI*2);
+              const r = (w/2 + 5*scale) * pulse;
+              ctx.beginPath();
+              ctx.arc(w/2 + Math.cos(angle)*r, h/2 + Math.sin(angle)*r, 3*scale, 0, Math.PI*2);
+              ctx.fill();
+            }
+            break;
+        }
+        ctx.restore();
+      }
+    }
+
+    // ===== MAIN GAME CLASS =====
+    class Game {
+      constructor() {
+        this.canvas = document.getElementById('game');
+        this.ctx = this.canvas.getContext('2d');
+        this.scale = 1;
+        
+        this.lanes = [];
+        this.player = null;
+        this.obstaclePool = new Pool(() => new Obstacle(), (o) => o.reset(), 30);
+        this.particlePool = new Pool(() => new Particle(), (p) => p.reset(), 100);
+        
+        this.state = 'start';
+        this.score = 0;
+        this.distance = 0;
+        this.time = 0;
+        this.gameSpeed = CONFIG.BASE_SPEED;
+        this.spawnTimer = 0;
+        this.nextSpawnInterval = 2000;
+        this.lastObstacleY = {};
+        
+        this.audio = new AudioSystem();
+        
+        this.keys = {};
+        this.touchStartX = 0;
+        
+        this.init();
+      }
+      
+      init() {
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        
+        // Create lanes
+        const totalWidth = CONFIG.LANE_COUNT * CONFIG.LANE_WIDTH + (CONFIG.LANE_COUNT - 1) * CONFIG.LANE_GAP;
+        const startX = (CONFIG.DESIGN_WIDTH - totalWidth) / 2;
+        
+        for (let i = 0; i < CONFIG.LANE_COUNT; i++) {
+          const x = startX + i * (CONFIG.LANE_WIDTH + CONFIG.LANE_GAP);
+          this.lanes.push({
+            x: x,
+            width: CONFIG.LANE_WIDTH,
+            centerX: x + CONFIG.LANE_WIDTH / 2,
+            y: CONFIG.DESIGN_HEIGHT - 50
+          });
+          this.lastObstacleY[i] = -Infinity;
+        }
+        
+        this.player = new Player(this.lanes);
+        
+        // Event listeners
+        this.setupControls();
+        
+        // UI buttons
+        document.getElementById('startBtn').addEventListener('click', () => this.start());
+        document.getElementById('resumeBtn').addEventListener('click', () => this.resume());
+        document.getElementById('restartBtn').addEventListener('click', () => this.restart());
+        document.getElementById('playAgainBtn').addEventListener('click', () => this.restart());
+        document.getElementById('shareBtn').addEventListener('click', () => this.shareScore());
+        
+        // Touch controls
+        document.getElementById('btnLeft').addEventListener('click', (e) => { e.preventDefault(); this.player.switchLane(-1); this.audio.playLaneSwitch(); });
+        document.getElementById('btnRight').addEventListener('click', (e) => { e.preventDefault(); this.player.switchLane(1); this.audio.playLaneSwitch(); });
+        document.getElementById('btnJump').addEventListener('click', (e) => { e.preventDefault(); if (this.player.jump()) this.audio.playJump(); });
+        
+        // Prevent context menu on long press
+        document.querySelectorAll('.lane-btn').forEach(btn => {
+          btn.addEventListener('contextmenu', e => e.preventDefault());
+        });
+        
+        this.showScreen('startScreen');
+        this.loadHighScore();
+        this.gameLoop(0);
+      }
+      
+      resize() {
+        const container = document.getElementById('game-container');
+        const rect = container.getBoundingClientRect();
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
+        this.scale = rect.width / CONFIG.DESIGN_WIDTH;
+      }
+      
+      setupControls() {
+        window.addEventListener('keydown', (e) => {
+          this.keys[e.code] = true;
+          if (this.state === 'playing') {
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') { this.player.switchLane(-1); this.audio.playLaneSwitch(); }
+            else if (e.code === 'ArrowRight' || e.code === 'KeyD') { this.player.switchLane(1); this.audio.playLaneSwitch(); }
+            else if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') { if (this.player.jump()) this.audio.playJump(); }
+            else if (e.code === 'KeyP' || e.code === 'Escape') { this.pause(); }
+          } else if (this.state === 'paused') {
+            if (e.code === 'KeyP' || e.code === 'Escape') { this.resume(); }
+          }
+        });
+        window.addEventListener('keyup', (e) => { this.keys[e.code] = false; });
+        
+        // Touch swipe for lane switching
+        this.canvas.addEventListener('touchstart', (e) => {
+          this.touchStartX = e.touches[0].clientX;
+        }, { passive: true });
+        
+        this.canvas.addEventListener('touchend', (e) => {
+          if (this.state !== 'playing') return;
+          const dx = e.changedTouches[0].clientX - this.touchStartX;
+          if (Math.abs(dx) > 30) {
+            if (dx < 0) { this.player.switchLane(-1); this.audio.playLaneSwitch(); }
+            else { this.player.switchLane(1); this.audio.playLaneSwitch(); }
+          }
+        }, { passive: true });
+      }
+      
+      start() {
+        this.audio.resume();
+        this.resetGame();
+        this.state = 'playing';
+        this.hideAllScreens();
+      }
+      
+      pause() {
+        this.state = 'paused';
+        this.showScreen('pauseScreen');
+      }
+      
+      resume() {
+        this.state = 'playing';
+        this.hideAllScreens();
+      }
+      
+      restart() {
+        this.resetGame();
+        this.state = 'playing';
+        this.hideAllScreens();
+      }
+      
+      resetGame() {
+        this.score = 0;
+        this.distance = 0;
+        this.time = 0;
+        this.gameSpeed = CONFIG.BASE_SPEED;
+        this.spawnTimer = 0;
+        this.nextSpawnInterval = this.randomRange(CONFIG.SPAWN_INTERVAL_MIN, CONFIG.SPAWN_INTERVAL_MAX);
+        this.lastObstacleY = {};
+        for (let i = 0; i < CONFIG.LANE_COUNT; i++) this.lastObstacleY[i] = -Infinity;
+        
+        this.obstaclePool.releaseAll();
+        this.particlePool.releaseAll();
+        
+        this.player.currentLane = 1;
+        this.player.targetLane = 1;
+        this.player.switchProgress = 1;
+        this.player.isJumping = false;
+        this.player.jumpProgress = 0;
+        this.player.jumpHeight = 0;
+        this.player.invulnerable = 0;
+        this.player.boostTime = 0;
+        this.player.updatePosition();
+        
+        this.updateHUD();
+      }
+      
+      gameLoop(timestamp) {
+        const dt = 16.67; // Fixed timestep for consistency
+        
+        if (this.state === 'playing') {
+          this.update(dt);
+        }
+        
+        this.render();
+        requestAnimationFrame((ts) => this.gameLoop(ts));
+      }
+      
+      update(dt) {
+        this.time += dt;
+        
+        // Speed increase
+        if (this.time % CONFIG.SPEED_INCREASE_INTERVAL < dt) {
+          this.gameSpeed = Math.min(CONFIG.MAX_SPEED, this.gameSpeed + CONFIG.SPEED_INCREASE);
+        }
+        
+        // Update player
+        this.player.update(dt, this.gameSpeed);
+        
+        // Spawn obstacles
+        this.spawnTimer += dt;
+        if (this.spawnTimer >= this.nextSpawnInterval) {
+          this.spawnObstacle();
+          this.spawnTimer = 0;
+          this.nextSpawnInterval = this.randomRange(CONFIG.SPAWN_INTERVAL_MIN, CONFIG.SPAWN_INTERVAL_MAX);
+        }
+        
+        // Update obstacles
+        const activeObstacles = this.obstaclePool.getActive();
+        for (let i = activeObstacles.length - 1; i >= 0; i--) {
+          const obs = activeObstacles[i];
+          obs.update(dt, this.gameSpeed);
+          
+          // Check collision
+          if (obs.active && this.checkCollision(this.player, obs)) {
+            this.handleCollision(obs);
+          }
+          
+          // Score for passing obstacle
+          if (obs.active && obs.pos.y > this.player.pos.y + this.player.height && !obs.scored) {
+            obs.scored = true;
+            this.addScore(10);
+            this.audio.playScore();
+          }
+          
+          // Remove off-screen obstacles
+          if (obs.pos.y > CONFIG.DESIGN_HEIGHT + 100) {
+            this.obstaclePool.release(obs);
+          }
+        }
+        
+        // Update particles
+        const activeParticles = this.particlePool.getActive();
+        for (let i = activeParticles.length - 1; i >= 0; i--) {
+          if (!activeParticles[i].update(dt)) {
+            this.particlePool.release(activeParticles[i]);
+          }
+        }
+        
+        // Update distance
+        this.distance += this.gameSpeed * dt / 16.67;
+        
+        this.updateHUD();
+      }
+      
+      spawnObstacle() {
+        // Pick lane with enough gap
+        const availableLanes = [];
+        for (let i = 0; i < CONFIG.LANE_COUNT; i++) {
+          if (this.lastObstacleY[i] < -CONFIG.MIN_OBSTACLE_GAP) {
+            availableLanes.push(i);
+          }
+        }
+        
+        if (availableLanes.length === 0) return;
+        
+        const lane = availableLanes[Math.floor(Math.random() * availableLanes.length)];
+        const y = -100;
+        
+        // Determine obstacle type based on score/distance
+        let type = 'low';
+        const rand = Math.random();
+        if (this.score > 500 && rand < 0.15) type = 'boost';
+        else if (this.score > 300 && rand < 0.3) type = 'moving';
+        else if (this.score > 150 && rand < 0.4) type = 'high';
+        else type = 'low';
+        
+        const obs = this.obstaclePool.acquire();
+        obs.lanes = this.lanes;
+        obs.init(type, lane, y, this.gameSpeed);
+        obs.scored = false;
+        this.lastObstacleY[lane] = y;
+      }
+      
+      checkCollision(player, obstacle) {
+        if (player.invulnerable > 0) return false;
+        if (obstacle.type === 'high' && player.isJumping) return false;
+        return player.getBounds().intersects(obstacle.getBounds(), 0.7);
+      }
+      
+      handleCollision(obstacle) {
+        if (obstacle.type === 'boost') {
+          this.player.boostTime = 3000;
+          this.gameSpeed = Math.min(CONFIG.MAX_SPEED, this.gameSpeed * 1.5);
+          this.spawnParticles(obstacle.pos.x + obstacle.width/2, obstacle.pos.y + obstacle.height/2, 20, '#8A2BE2');
+          this.audio.playBoost();
+          this.obstaclePool.release(obstacle);
+          return;
+        }
+        
+        this.gameOver();
+      }
+      
+      gameOver() {
+        this.state = 'gameover';
+        this.audio.playGameOver();
+        
+        // Explosion particles
+        this.spawnParticles(this.player.pos.x + this.player.width/2, this.player.pos.y + this.player.height/2, 30, '#FF6B6B');
+        
+        // Save high score
+        const highScore = Math.max(this.getHighScore(), this.score);
+        localStorage.setItem('laneflip_highscore', highScore.toString());
+        
+        // Show game over screen
+        document.getElementById('finalScore').textContent = this.score;
+        document.getElementById('finalDistance').textContent = Math.floor(this.distance / 10) + 'm';
+        document.getElementById('finalTime').textContent = (this.time / 1000).toFixed(2) + 's';
+        
+        this.showScreen('gameOverScreen');
+      }
+      
+      spawnParticles(x, y, count, color) {
+        for (let i = 0; i < count; i++) {
+          const p = this.particlePool.acquire();
+          p.pos = new Vec2(x, y);
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 100 + Math.random() * 200;
+          p.vel = new Vec2(Math.cos(angle) * speed, Math.sin(angle) * speed - 100);
+          p.life = p.maxLife = 0.5 + Math.random() * 0.5;
+          p.size = 3 + Math.random() * 5;
+          p.color = color;
+          p.gravity = 300;
+        }
+      }
+      
+      addScore(points) {
+        this.score += points;
+        if (this.player.boostTime > 0) this.score += points; // Double score during boost
+      }
+      
+      updateHUD() {
+        document.getElementById('score').textContent = 'Score: ' + this.score;
+        document.getElementById('timer').textContent = (this.time / 1000).toFixed(2) + 's';
+        document.getElementById('highscore').textContent = 'Best: ' + this.getHighScore();
+        
+        // Speed bar
+        const speedPercent = (this.gameSpeed - CONFIG.BASE_SPEED) / (CONFIG.MAX_SPEED - CONFIG.BASE_SPEED);
+        document.getElementById('speedFill').style.width = (speedPercent * 100) + '%';
+      }
+      
+      getHighScore() {
+        return parseInt(localStorage.getItem('laneflip_highscore') || '0', 10);
+      }
+      
+      loadHighScore() {
+        document.getElementById('highscore').textContent = 'Best: ' + this.getHighScore();
+      }
+      
+      shareScore() {
+        const text = `I scored ${this.score} points in LaneFlip! 🏃 Can you beat me?`;
+        if (navigator.share) {
+          navigator.share({ title: 'LaneFlip Score', text }).catch(() => {});
+        } else {
+          navigator.clipboard.writeText(text).then(() => {
+            const btn = document.getElementById('shareBtn');
+            const original = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = original, 1500);
+          });
+        }
+      }
+      
+      randomRange(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+      
+      showScreen(id) {
+        document.getElementById(id).classList.remove('hidden');
+      }
+      
+      hideAllScreens() {
+        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+      }
+      
+      render() {
+        const ctx = this.ctx;
+        const w = CONFIG.DESIGN_WIDTH;
+        const h = CONFIG.DESIGN_HEIGHT;
+        
+        // Clear
+        ctx.fillStyle = CONFIG.COLORS.bgTop;
+        ctx.fillRect(0, 0, w, h);
+        
+        // Parallax background
+        this.drawParallax(ctx);
+        
+        // Lanes
+        this.drawLanes(ctx);
+        
+        // Obstacles
+        this.obstaclePool.getActive().forEach(obs => obs.draw(ctx, this.scale));
+        
+        // Particles
+        this.particlePool.getActive().forEach(p => p.draw(ctx, this.scale));
+        
+        // Player
+        this.player.draw(ctx, this.scale);
+      }
+      
+      drawParallax(ctx) {
+        const time = this.time * 0.001;
+        CONFIG.PARALLAX_LAYERS.forEach((layer, i) => {
+          const offset = (time * layer.speed * 100) % CONFIG.DESIGN_HEIGHT;
+          const layerH = CONFIG.DESIGN_HEIGHT * layer.height;
+          
+          const grad = ctx.createLinearGradient(0, 0, 0, layerH);
+          grad.addColorStop(0, layer.color);
+          grad.addColorStop(1, i === 2 ? CONFIG.COLORS.bgBottom : CONFIG.PARALLAX_LAYERS[i+1]?.color || CONFIG.COLORS.bgBottom);
+          
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, -offset, CONFIG.DESIGN_WIDTH, layerH + offset);
+          ctx.fillRect(0, CONFIG.DESIGN_HEIGHT - offset, CONFIG.DESIGN_WIDTH, layerH + offset);
+        });
+        
+        // Stars
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        for (let i = 0; i < 30; i++) {
+          const x = (i * 127 + time * 5) % CONFIG.DESIGN_WIDTH;
+          const y = (i * 311 + time * 2) % CONFIG.DESIGN_HEIGHT;
+          const size = (i % 3 + 1) * 0.5;
+          ctx.beginPath();
+          ctx.arc(x, y, size, 0, Math.PI*2);
+          ctx.fill();
+        }
+      }
+      
+      drawLanes(ctx) {
+        this.lanes.forEach((lane, i) => {
+          // Lane background
+          const grad = ctx.createLinearGradient(lane.x, lane.y, lane.x, lane.y - 400);
+          grad.addColorStop(0, CONFIG.COLORS.lane);
+          grad.addColorStop(1, '#1a1a3a');
+          ctx.fillStyle = grad;
+          ctx.fillRect(lane.x, lane.y - 400, lane.width, 400);
+          
+          // Lane lines
+          ctx.strokeStyle = CONFIG.COLORS.laneLine;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([20, 15]);
+          ctx.lineDashOffset = -this.time * 0.01;
+          ctx.beginPath();
+          ctx.moveTo(lane.x, lane.y);
+          ctx.lineTo(lane.x, lane.y - 400);
+          ctx.moveTo(lane.x + lane.width, lane.y);
+          ctx.lineTo(lane.x + lane.width, lane.y - 400);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          
+          // Lane number
+          ctx.fillStyle = 'rgba(255,255,255,0.1)';
+          ctx.font = 'bold 24px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText((i+1).toString(), lane.centerX, lane.y - 20);
+        });
+      }
+    }
+
+    // Initialize game when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => new Game());
+    } else {
+      new Game();
+    }
+  </script>
+</body>
+</html>
