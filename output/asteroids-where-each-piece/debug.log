@@ -1,0 +1,293 @@
+JSON Decode Error after continuation: Invalid control character at: line 8 column 9016 (char 24263)
+
+Raw: ```json
+{
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>AstroManeuver: Fractured Cosmos</title>\n    <!-- Emoji favicon -->\n    <img src=\"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48Y2lyY2xlIGN4PSI1MCUiIGN5PSI1MCUiPjxsaW5lIHQ9Imh0dHA6Ly93vbj4+PKVuZ24vcGFja2V0LXRleChjMS4wMDAwLjA1IiBmaWxsPSJub25lIi8+\n        LXJlYXRlIHgxLXN0b3Igc3Ryb2tlLXNlcnZpY2U9ImFkb2JlZW12Ii8+PC9zdmc+\" \n          alt=\"🚀\" style=\"display:block;width:40px;height:40px;margin:20px auto;\">\n    </img>\n    <link rel=\"stylesheet\" href=\"styles.css\">\n    <script src=\"src/main.js\"></script>\n</head>\n<body>\n    <div id=\"game-container\">\n        <canvas id=\"gameCanvas\" width=\"100%\" height=\"100%\" butts-in-viewport></canvas>\n        \n        <!-- Speedrun Timer (top right) -->\n        <div id=\"speedrun-timer\">⏱️ 180</div>\n        \n        <!-- HUD (top left) -->\n        <div id=\"hud\">\n            <div class=\"health-bar\">\n                <div id=\"health-fill\" style=\"width:100%;background:#ff3366;transition:width 0.3s ease;\"></div>\n            </div>\n            <div class=\"score-display\">SCORE: <span id=\"score\">0</span></div>\n            <div class=\"mini-map\">\n                <div id=\"minimap\" style=\"position:absolute;top:10px;right:10px;width:120px;height:120px;\"></div>\n            </div>\n        </div>\n        \n        <!-- Start Screen -->\n        <div id=\"start-screen\">\n            <h1>AstroManeuver: Fractured Cosmos</h1>\n            <p>Navigate the fractured cosmos. Survive as long as you can.</p>\n            <button id=\"start-btn\">START MISSION</button>\n        </div>\n        \n        <!-- Game Over Screen -->\n        <div id=\"game-over-screen\">\n            <h1>GAME OVER</h1>\n            <p>Final Score: <span id=\"final-score\">0</span></p>\n            <p>High Score: <span id=\"high-score\">0</span></p>\n            <button id=\"restart-btn\">RESTART</button>\n        </div>\n        \n        <!-- Pause Menu -->\n        <div id=\"pause-menu\">\n            <button id=\"resume-btn\">RESUME</button>\n            <button id=\"quit-btn\">QUIT</button>\n        </div>\n    </div>\n    <script src=\"src/audio.js\"></script>\n    <script src=\"src/engine/physics.js\"></script>\n    <script src=\"src/engine/collision.js\"></script>\n    <script src=\"src/entities/player.js\"></script>\n    <script src=\"src/entities/asteroid.js\"></script>\n    <script src=\"src/entities/powerup.js\"></script>\n    <script src=\"src/ui/hud.js\"></script>\n    <script src=\"src/main.js\"></script>\n</body>\n</html>",
+  "styles.css": "/* Global Styles */\n* {\n    margin: 0;\n    padding: 0;\n    box-sizing: border-box;\n}\n\nbody {\n    font-family: 'Orbitron', 'Monospace', sans-serif;\n    background: #000011;\n    overflow: hidden;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    min-height: 100vh;\n}\n\n#game-container {\n    position: relative;\n    cursor: crosshair;\n}\n\ncanvas {\n    display: block;\n    image-rendering: pixelated;\n}\n\n/* --- Emoji Favicon Already In HTML Head --- */\n\n/* --- HUD Styles --- */\n#hud {\n    position: absolute;\n    top: 16px;\n    left: 16px;\n    z-index: 100;\n    display: flex;\n    gap: 24px;\n}\n\n.health-bar {\n    width: 120px;\n    height: 8px;\n    background: #1a1a2e;\n    border-radius: 4px;\n    transition: width 0.3s ease;\n}\n\n.score-display {\n    font-size: 28px;\n    font-weight: bold;\n    color: #fff;\n    text-shadow: 0 0 10px rgba(255,255,255,0.5);\n    min-width: 60px;\n}\n\n.mini-map {\n    position: absolute;\n    bottom: 16px;\n    right: 16px;\n    width: 100px;\n    height: 100px;\n    background: rgba(0,0,0,0.7);\n    border: 2px solid #00ffff;\n    border-radius: 8px;\n    overflow: hidden;\n}\n\n/* --- Start Screen --- */\n#start-screen,\n#game-over-screen {\n    position: absolute;\n    inset: 0;\n    display: none;\n    flex-direction: column;\n    align-items: center;\n    justify-content: center;\n    background: rgba(0,0,0,0.85);\n    z-index: 200;\n}\n\n#start-screen h1 {\n    font-size: 48px;\n    color: #ff3366;\n    text-shadow: 0 0 20px #ff3366;\n    margin-bottom: 32px;\n}\n\n#game-over-screen h1 {\n    font-size: 36px;\n    color: #ff00ff;\n    text-shadow: 0 0 20px #ff00ff;\n}\n\n#start-screen button,\n#game-over-screen button,\n#pause-menu button {\n    padding: 16px 48px;\n    font-size: 20px;\n    font-weight: bold;\n    color: #fff;\n    background: #00ffff;\n    border: none;\n    border-radius: 8px;\n    cursor: pointer;\n    transition: all 0.3s ease;\n}\n\n#start-screen button:hover,\n#game-over-screen button:hover {\n    transform: scale(1.05);\n    box-shadow: 0 0 30px #00ffff;\n}\n\n/* --- Speedrun Timer --- */\n#speedrun-timer {\n    position: absolute;\n    top: 16px;\n    right: 16px;\n    font-size: 24px;\n    font-weight: bold;\n    color: #00ff88;\n    text-align: right;\n}\n\n/* --- Pause Menu --- */\n#pause-menu {\n    position: absolute;\n    inset: 0;\n    background: rgba(0,0,0,0.95);\n    display: none;\n    flex-direction: column;\n    align-items: center;\n    justify-content: center;\n    z-index: 150;\n}\n\n#pause-menu.active {\n    display: flex;\n}\n\n#pause-menu button {\n    margin: 12px;\n    padding: 12px 32px;\n    font-size: 18px;\n    border: 2px solid #00ff88;\n    background: #1a1a2e;\n    color: #00ff88;\n    border-radius: 6px;\n    cursor: pointer;\n}\n\n#pause-menu button:hover {\n    background: #00ff88;\n    color: #000;\n}\n\n/* --- Animations --- */\n@keyframes pulse {\n    0%, 100% { opacity: 1; }\n    50% { opacity: 0.5; }\n}\n\n.health-fill.pulse {\n    animation: pulse 1s infinite;\n}\n",
+  "src/audio.js": "// Web Audio API sound effects module\nconst AudioContext = window.AudioContext || window.webkitAudioContext;\n\nclass GameAudio {\n    constructor() {\n        this.ctx = new AudioContext();\n        this.initialized = false;\n    }\n\n    async init() {\n        if (!this.initialized) {\n            this.ctx = new AudioContext();\n            this.initialized = true;\n        }\n    }\n\n    // Laser shot sound\n    playLaser() {\n        if (!this.ctx) return;\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.type = 'square';\n        osc.frequency.setValueAtTime(800, this.ctx.currentTime);\n        gain.gain.setValueAtTime(0.3, this.ctx.currentTime);\n        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);\n        osc.connect(gain);\n        gain.connect(this.ctx.destination);\n        osc.start();\n        osc.stop(this.ctx.currentTime + 0.1);\n    }\n\n    // Explosion sound\n    playExplosion() {\n        if (!this.ctx) return;\n        const bufferSize = this.ctx.sampleRate * 0.3;\n        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);\n        const data = buffer.getChannelData(0);\n        for (let i = 0; i < bufferSize; i++) {\n            data[i] = Math.random() * 2 - 1;\n        }\n        const source = this.ctx.createBufferSource();\n        source.buffer = buffer;\n        const filter = this.ctx.createBiquadFilter();\n        filter.type = 'distortion';\n        filter.Q = 5;\n        source.connect(filter);\n        filter.connect(this.ctx.destination);\n        source.start();\n        source.stop(this.ctx.currentTime + 0.4);\n    }\n\n    // Power-up chime\n    playPowerUp() {\n        if (!this.ctx) return;\n        const notes = [523, 659, 784]; // C5, E5, G5\n        notes.forEach((freq, i) => {\n            const osc = this.ctx.createOscillator();\n            const gain = this.ctx.createGain();\n            osc.frequency.value = freq;\n            gain.gain.setValueAtTime(0.2, this.ctx.currentTime + i * 0.08);\n            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + i * 0.08 + 0.2);\n            osc.connect(gain);\n            gain.connect(this.ctx.destination);\n            osc.start(this.ctx.currentTime + i * 0.08);\n            osc.stop(this.ctx.currentTime + i * 0.08 + 0.2);\n        });\n    }\n\n    // Speedrun timer tick\n    tickTimer() {\n        if (!this.ctx) return;\n        const current = this.ctx.currentTime;\n        const elapsed = Math.floor((current % this.ctx.frameRate) / 0.016);\n        document.getElementById('speedrun-timer').textContent = elapsed;\n    }\n}\n\n// Singleton instance\nconst gameAudio = new GameAudio();",
+  "src/engine/physics.js": "// Custom 2D Physics Engine\nclass PhysicsEngine {\n    static update(deltaTime) {\n        // Update player velocity and position\n        if (player) {\n            player.update(deltaTime);\n        }\n        \n        // Update asteroids\n        for (const asteroid of asteroids) {\n            asteroid.update(deltaTime);\n        }\n        \n        // Update power-ups\n        for (const powerup of powerups) {\n            powerup.update(deltaTime);\n        }\n        \n        // Update bullets\n        for (const bullet of bullets) {\n            bullet.update(deltaTime);\n        }\n        \n        // Update speedrun timer\n        if (speedrunTimer) {\n            speedrunTimer.delta += deltaTime;\n        }\n    }\n    \n    static getCollisionAreas() {\n        return [\n            player ? [player] : [],\n            ...asteroids,\n            ...powerups\n        ];\n    }\n}\n\n// Simple drag/friction model\nconst frictionCoefficient = 0.98;\nconst inertiaMass = 1.0;\nconst maxThrust = 5.0; // pixels per frame\n\nfunction applyFriction(obj) {\n    if (obj.isBullet) return;\n    obj.velocity.x *= frictionCoefficient;\n    obj.velocity.y *= frictionCoefficient;\n}\n\nfunction applyThrust(obj, direction) {\n    if (direction === null) return;\n    const force = obj.maxThrust * 0.5; // partial thrust\n    obj.velocity.x += direction.x * force;\n    obj.velocity.y += direction.y * force;\n}\n\n// Angular momentum for rotation\nconst angularVelocity = 0.1; // rad/frame\n\nfunction applyRotation(obj) {\n    if (obj.isShip) {\n        obj.angle += angularVelocity;\n    }\n}\n",
+  "src/engine/collision.js": "// Collision Detection Module\nconst COLLISION_RADIUS = 15; // base radius for circle collision\n\n// Circle vs Circle collision function\nfunction checkCircleCollision(circleA, circleB) {\n    const dx = circleA.x - circleB.x;\n    const dy = circleA.y - circleB.y;\n    const distance = Math.sqrt(dx * dx + dy * dy);\n    return distance <= COLLISION_RADIUS * 2 && distance > 0;\n}\n\n// Circle vs Rectangle (for minimap markers)\nfunction checkCircleRectCollision(circle, rect) {\n    const closestX = Math.max(rect.x, Math.min(circle.x, rect.x + rect.width));\n    const closestY = Math.max(rect.y, Math.min(circle.y, rect.y + rect.height));\n    const dx = circle.x - closestX;\n    const dy = circle.y - closestY;\n    const distance = Math.sqrt(dx * dx + dy * dy);\n    return distance <= COLLISION_RADIUS;\n}\n\n// Check if any entity collides with another\nconst checkAllCollisions = () => {\n    const entities = [...new Set([...player, ...asteroids, ...powerups])];\n    for (let i = 0; i < entities.length; i++) {\n        for (let j = i + 1; j < entities.length; j++) {\n            const a = entities[i];\n            const b = entities[j];\n            if (checkCircleCollision(a, b)) {\n                return { type: 'collision', affected: [a, b], normal: calculateNormal(a, b); };\n            }\n        }\n    }\n    return null;\n};\n\nfunction calculateNormal(a, b) {\n    const dx = b.x - a.x;\n    const dy = b.y - a.y;\n    const len = Math.sqrt(dx * dx + dy * dy);\n    return { x: dx / len, y: dy / len };\n}\n\n// Particle system helper\nconst ParticleSystem = {\n    particles: [],\n    emit(type, position, count = 10) {\n        for (let i = 0; i < count; i++) {\n            const angle = (Math.PI * 2 * i) / count;\n            const speed = type === 'explosion' ? 6 : 2;\n            this.particles.push({\n                x: position.x,\n                y: position.y,\n                vx: Math.cos(angle) * speed,\n                vy: Math.sin(angle) * speed,\n                life: 1.0,\n                decay: 0.02,\n                color: type === 'explosion' ? '#ff3366' : '#00ffff',\n                size: type === 'explosion' ? 4 : 2\n            });\n        }\n    }\n};\n",
+  "src/entities/player.js": "// Player Entity Class\nconst Player = {\n    // Properties\n    x: 0,\n    y: 0,\n    angle: 0,\n    velocityX: 0,\n    velocityY: 0,\n    isBullet: false,\n    health: 100,\n    maxHealth: 100,\n    score: 0,\n    speedRunTimer: 0,\n    lastFrame: 0,\n    \n    // Methods\n    update(deltaTime) {\n        this.lastFrame = performance.now();\n        const frameDelta = (performance.now() - this.lastFrame) / 1000;\n        \n        // Rotation from input\n        if (keys['ArrowLeft']) this.angle -= angularVelocity;\n        if (keys['ArrowRight']) this.angle += angularVelocity;\n        \n        // Thrust\n        let thrustDir = null;\n        if (keys['Space'] && !this.isBullet) {\n            thrustDir = this.getDirection(this.angle);\n        }\n        \n        if (thrustDir) {\n            applyThrust(this, thrustDir);\n        }\n        \n        // Apply friction\n        applyFriction(this);\n        \n        // Move\n        this.x += this.velocityX;\n        this.y += this.velocityY;\n        \n        // Boundary checks\n        this.x = Math.max(-80, Math.min(80, this.x));\n        this.y = Math.max(-80, Math.min(80, this.y));\n        \n        // Screen wrapping (keep within bounds)\n        if (this.x < -10) this.x = -10;\n        if (this.x > 70) this.x = 70;\n        if (this.y < -10) this.y = -10;\n        if (this.y > 70) this.y = 70;\n        \n        // Collision with walls (stop if hitting edges)\n        if (this.x < -10) this.x = -10;\n        if (this.x > 70) this.x = 70;\n        if (this.y < -10) this.y = -10;\n        if (this.y > 70) this.y = 70;\n    },\n    \n    getDirection(angle) {\n        return {\n            x: Math.cos(angle),\n            y: Math.sin(angle)\n        };\n    },\n    \n    draw(ctx) {\n        ctx.save();\n        ctx.translate(this.x, this.y);\n        ctx.rotate(this.angle);\n        \n        // Ship body (triangular hull)\n        ctx.beginPath();\n        ctx.moveTo(0, -15);\n        ctx.lineTo(20, 10);\n        ctx.lineTo(-20, 10);\n        ctx.closePath();\n        ctx.fillStyle = '#00ffff';\n        ctx.fill();\n        \n        // Glow\n        ctx.shadowColor = '#00ffff';\n        ctx.shadowBlur = 15;\n        ctx.strokeStyle = '#00ffff';\n        ctx.lineWidth = 2;\n        ctx.stroke();\n        \n        // Thrusters\n        ctx.fillStyle = '#ff3366';\n        ctx.beginPath();\n        ctx.arc(0, 3, 5, 0, Math.PI * 2);\n        ctx.fill();\n        \n        ctx.restore();\n    },\n    \n    takeDamage(damage) {\n        this.health -= damage;\n        if (this.health <= 0) {\n            this.health = 0;\n            endGame();\n        }\n    }\n};",
+  "src/entities/asteroid.js": "// Asteroid Entity with Polymorphic Behavior\nconst Asteroid = {\n    id: null,\n    type: null,\n    size: 0, // radius\n    velocityX: 0,\n    velocityY: 0,\n    rotationSpeed: 0,\n    behavior: null,\n    behaviorType: null,\n    lifespan: 60, // frames until destroyed\n    mass: 1.0,\n    \n    constructor(x, y, type) {\n        this.id = Math.random().toString(36).substr(2, 6);\n        this.x = x;\n        this.y = y;\n        this.size = type === 'large' ? 30 : type === 'medium' ? 15 : 8;\n        this.velocityX = (Math.random() - 0.5) * 3;\n        this.velocityY = (Math.random() - 0.5) * 3;\n        this.rotationSpeed = (Math.random() - 0.5) * 0.1;\n        this.lifespan = 60;\n        this.mass = type === 'large' ? 2.0 : 1.5;\n        \n        // Assign behavior type\n        this.behavior = null;\n        this.behaviorType = null;\n        \n        // Initialize behavior\n        this.initBehavior();\n    },\n    \n    initBehavior() {\n        switch (this.type) {\n            case 'homing':\n                this.behavior = new HomingBehavior(this);\n                this.behaviorType = 'homing';\n                break;\n            case 'splitter':\n                this.behavior = new SplitterBehavior(this);\n                this.behaviorType = 'splitter';\n                break;\n            case 'phaser':\n                this.behavior = new PhaserBehavior(this);\n                this.behaviorType = 'phaser';\n                break;\n            case 'spawner':\n                this.behavior = new SpawnerBehavior(this);\n                this.behaviorType = 'spawner';\n                break;\n            case 'gravitywell':\n                this.behavior = new GravityWellBehavior(this);\n                this.behaviorType = 'gravity_well';\n                break;\n            case 'mirror':\n                this.behavior = new MirrorBehavior(this);\n                this.behaviorType = 'mirror';\n                break;\n            default:\n                this.behavior = new DefaultBehavior(this);\n                this.behaviorType = 'default';\n        }\n    },\n    \n    update(deltaTime) {\n        // Apply velocity\n        this.x += this.velocityX;\n        this.y += this.velocityY;\n        \n        // Rotation\n        if (this.behavior) {\n            this.behavior.update(deltaTime);\n        }\n        \n        // Lifespan\n        this.lifespan--;\n        if (this.lifespan <= 0) {\n            this.destroy();\n        }\n    },\n    \n    destroy() {\n        // Remove from arrays\n        if (this.id) removeFromArrays(this.id);\n        \n        // Create explosion particles\n        ParticleSystem.emit('explosion', { x: this.x, y: this.y }, 20);\n        \n        // Score\n        const points = this.behavior ? this.behaviorType === 'splitter' ? 200 : 100;\n        if (this.behaviorType === 'splitter') {\n            player.score += points;\n        }\n        \n        // Spawn children if splitter\n        if (this.behaviorType === 'splitter') {\n            const childTypes = ['medium', 'small'];\n            const numChildren = Math.floor(Math.random() * 3) + 1;\n            for (let i = 0; i < numChildren; i++) {\n                const childType = childTypes[Math.floor(Math.random() * childTypes.length)];\n                const child = new Asteroid(this.x, this.y, childType);\n                // Add to game list\n                addToGameList(child);\n            }\n        }\n    },\n    \n    draw(ctx) {\n        ctx.save();\n        ctx.translate(this.x, this.y);\n        ctx.rotate(this.rotationAngle || 0);\n        \n        // Base shape based on size/type\n        ctx.beginPath();\n        ctx.arc(0, 0, this.size, 0, Math.PI * 2);\n        ctx.fillStyle = this.getColor();\n        ctx.fill();\n        \n        // Detail pattern based on type\n        ctx.fillStyle = '#333';\n        ctx.beginPath();\n        for (let i = 0; i < 8; i++) {\n            const angle = (i / 8) * Math.PI * 2;\n            const r = this.size * (0.3 + Math.random() * 0.5);\n            ctx.lineTo(\n                Math.cos(angle) * r,\n                Math.sin(angle) * r\n            );\n        }\n        ctx.fill();\n        \n        ctx.restore();\n    },\n    \n    getColor() {\n        switch (this.type) {\n            case 'homing': return '#ff3366'; // Crimson\n            case 'splitter': return '#ffaa00'; // Orange\n            case 'phaser': return '#00ffff'; // Cyan\n            case 'spawner': return '#cc00ff'; // Purple\n            case 'gravity_well': return '#1a0033'; // Deep purple\n            case 'mirror': return '#cccccc'; // Silver\n            default: return '#888';\n        }\n    },\n    \n    getRotationAngle() {\n        return this.rotationAngle || (this.velocityX * 0.05 + this.velocityY * 0.03);\n    }\n};\n\n// Behavior Classes\nconst DefaultBehavior = {\n    update(deltaTime) {},\n    destroy() {}\n};\n\nconst HomingBehavior = {\n    constructor(asteroid) {\n        this.asteroid = asteroid;\n        this.targetAngle = 0;\n    },\n    \n    update(deltaTime) {\n        // Smoothly track player position\n        const targetAngle = player.angle;\n        this.targetAngle += (targetAngle - this.angle) * 0.3;\n        \n        // Calculate direction towards target\n        const dx = player.x - this.asteroid.x;\n        const dy = player.y - this.asteroid.y;\n        const dist = Math.sqrt(dx * dx + dy * dy);\n        \n        if (dist > 0) {\n            this.velocityX = Math.cos(this.targetAngle) * 2;\n            this.velocityY = Math.sin(this.targetAngle) * 2;\n        } else {\n            this.velocityX = 0;\n            this.velocityY = 0;\n        }\n        \n        // Slow down slightly\n        this.velocityX *= 0.99;\n        this.velocityY *= 0.99;\n    },\n    \n    destroy() {}\n};\n\nconst SplitterBehavior = {\n    constructor(asteroid) {\n        this.asteroid = asteroid;\n        this.splitCount = 0;\n    },\n    \n    update(deltaTime) {\n        // Random chance to split\n        if (Math.random() < 0.15) {\n            this.splitCount++;\n            // Split into 2 medium or 4 small\n            const splitType = Math.random() < 0.5 ? 'medium' : 'small';\n            const numParts = splitType === 'medium' ? 2 : 4;\n            \n            // Create child asteroids\n            for (let i = 0; i < numParts; i++) {\n                const child = new Asteroid(\n                    this.asteroid.x + (Math.random() - 0.5) * 20,\n                    this.asteroid.y + (Math.random() - 0.5) * 20,\n                    splitType\n                );\n                addToGameList(child);\n            }\n            \n            // Reduce lifespan to prevent infinite chain\n            this.asteroid.lifespan = Math.max(10, this.asteroid.lifespan - 10);\n        }\n    },\n    \n    destroy() {}\n};\n\nconst PhaserBehavior = {\n    constructor(asteroid) {\n        this.asteroid = asteroid;\n        this.hitCooldown = 0;\n    },\n    \n    update(deltaTime) {\n        // Only act after first hit\n        if (this.hitCooldown > 0) {\n            this.hitCooldown--;\n            return;\n        }\n        \n        // Move away from player\n        const dx = player.x - this.asteroid.x;\n        const dy = player.y - this.asteroid.y;\n        const dist = Math.sqrt(dx * dx + dy * dy);\n        \n        if (dist > 0) {\n            this.velocityX = -Math.cos(player.angle) * 4;\n            this.velocityY = -Math.sin(player.angle) * 4;\n        } else {\n            this.velocityX = 0;\n            this.velocityY = 0;\n        }\n        \n        // Slow down over time\n        this.velocityX *= 0.98;\n        this.velocityY *= 0.98;\n        \n        // Decrease cooldown\n        this.hitCooldown = 30;\n    },\n    \n    destroy() {}\n};\n\nconst SpawnerBehavior = {\n    constructor(asteroid) {\n        this.asteroid = asteroid;\n        this.cooldown = 0;\n    },\n    \n    update(deltaTime) {\n        if (this.cooldown > 0) {\n            this.cooldown--;\n            return;\n        }\n        \n        // Emit projectiles toward player\n        if (Math.random() < 0.6) {\n            const angle = player.angle + Math.PI / 2; // Aim at player\n            shootProjectile(this.asteroid, angle);\n        }\n        \n        this.cooldown = Math.max(0, this.cooldown - 0.1);\n    },\n    \n    shootProjectile(asteroid, angle) {\n        // Find nearest player\n        let nearest = player;\n        for (let other of [player]) {\n            if (other !== player) {\n                const d = Math.hypot(other.x - asteroid.x, other.y - asteroid.y);\n                if (d < nearest.dist) nearest = other;\n            }\n        }\n        \n        if (nearest) {\n            const proj = new Projectile(nearest.x, nearest.y, angle, 4);\n            projectiles.push(proj);\n        }\n    },\n    \n    destroy() {}\n};\n\nconst GravityWellBehavior =}
+// Behavior Classes
+const DefaultBehavior = {
+    update(deltaTime) {},
+    destroy {}
+};
+const HomingBehavior = {
+    constructor(asteroid) {
+        this.asteroid = asteroid;
+        this.targetAngle = 0;
+    },
+    update(deltaTime) {
+        // Smoothly track player position
+        const targetAngle = player.angle;
+        this.targetAngle += (targetAngle - this.angle) * 0.3;
+
+        // Calculate direction towards target
+        const dx = player.x - this.asteroid.x;
+        const dy = player.y - this.asteroid.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 0) {
+            this.velocityX = Math.cos(this.targetAngle) * 2;
+            this.velocityY = Math.sin(this.targetAngle) * 2;
+        } else {
+            this.velocityX = 0;
+            this.velocityY = 0;
+        }
+
+        // Slow down slightly
+        this.velocityX *= 0.99;
+        this.velocityY *= 0.99;
+    },
+    destroy {}
+};
+const SplitterBehavior = {
+    constructor(asteroid) {
+        this.asteroid = asteroid;
+        this.splitCount = 0;
+    },
+    update(deltaTime) {
+        // Random chance to split
+        if (Math.random() < 0.15) {
+            this.splitCount++;
+            // Split into 2 medium or 4 small
+            const splitType = Math.random() < 0.5 ? 'medium' : 'small';
+            const numParts = splitType === 'medium' ? 2 : 4;
+
+            // Create child asteroids
+            for (let i = 0; i < numParts; i++) {
+                const child = new Asteroid(
+                    this.asteroid.x + (Math.random() - 0.5) * 20,
+                    this.asteroid.y + (Math.random() - 0.5) * 20,
+                    splitType
+                );
+                addToGameList(child);
+            }
+
+            // Reduce lifespan to prevent infinite chain
+            this.asteroid.lifespan = Math.max(10, this.asteroid.lifespan - 10);
+        }
+    },
+    destroy {}
+};
+const PhaserBehavior = {
+    constructor(asteroid) {
+        this.asteroid = asteroid;
+        this.hitCooldown = 0;
+    },
+    update(deltaTime) {
+        // Only act after first hit
+        if (this.hitCooldown > 0) {
+            this.hitCooldown--;
+            return;
+        }
+
+        // Move away from player
+        const dx = player.x - this.asteroid.x;
+        const dy = player.y - this.asteroid.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 0) {
+            this.velocityX = -Math.cos(player.angle) * 4;
+            this.velocityY = -Math.sin(player.angle) * 4;
+        } else {
+            this.velocityX = 0;
+            this.velocityY = 0;
+        }
+
+        // Slow down over time
+        this.velocityX *= 0.98;
+        this.velocityY *= 0.98;
+
+        // Decrease cooldown
+        this.hitCooldown = 30;
+    },
+    destroy {}
+};
+const SpawnerBehavior = {
+    constructor(asteroid) {
+        this.asteroid = asteroid;
+        this.cooldown = 0;
+    },
+    update(deltaTime) {
+        if (this.cooldown > 0) {
+            this.cooldown--;
+            return;
+        }
+
+        // Emit projectiles toward player
+        if (Math.random() < 0.6) {
+            const angle = player.angle + Math.PI / 2; // Aim at player
+            shootProjectile(this.asteroid, angle);
+        }
+
+        this.cooldown = Math.max(0, this.cooldown - 0.1);
+    },
+    shootProjectile(asteroid, angle) {
+        // Find nearest player
+        let nearest = player;
+        for (let other of [player]) {
+            if (other !== player) {
+                const d = Math.hypot(other.x - asteroid.x, other.y - asteroid.y);
+                if (d < nearest.dist) nearest = other;
+            }
+        }
+
+        if (nearest) {
+            const proj = new Projectile(nearest.x, nearest.y, angle, 4);
+            projectiles.push(proj);
+        }
+    },
+    destroy {}
+};
+const GravityWellBehavior = {
+    constructor(asteroid) {
+        this.asteroid = asteroid;
+        this.radius = 25; // Collision radius
+        this.speed = 1.5; // Movement speed
+    },
+    update(deltaTime) {
+        // Orbital motion around the well
+        const angle = player.angle;
+        this.x = Math.cos(angle) * this.radius;
+        this.y = Math.sin(angle) * this.radius;
+
+        // Small random perturbation
+        this.x += Math.sin(deltaTime * 5) * 0.5;
+        this.y += Math.cos(deltaTime * 5) * 0.5;
+    },
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(angle);
+
+        // Dark circular body
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = '#1a0033';
+        ctx.fill();
+
+        // Inner glow
+        ctx.shadowColor = '#4a0080';
+        ctx.shadowBlur = 20;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.7, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 100, 100, 0.5)';
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        ctx.restore();
+    },
+    getColor() {
+        return '#1a0033';
+    }
+};
+
+// Utility functions
+const removeFromArrays = (id) => {
+    // Implementation would remove entity from various arrays
+};
+
+// Main application entry point
+const initializeGame = () => {
+    // Initialize physics engine
+    PhysicsEngine.update(0);
+
+    // Create player
+    const player = new Player();
+
+    // Create some asteroids
+    const asteroids = [
+        new Asteroid(0, 0, 'large'),
+        new Asteroid(50, 30, 'medium'),
+        new Asteroid(-40, 70, 'small')
+    ];
+
+    // Create power-ups
+    const powerups = [
+        new Powerup(10, 20, 'energy'),
+        new Powerup(50, 80, 'shield')
+    ];
+
+    // Setup UI elements
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('restart-btn').addEventListener('click', restartGame);
+
+    // Start the game loop
+    requestAnimationFrame(gameLoop);
+};
+
+const startGame = async () => {
+    await gameAudio.init();
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('game-over-screen').style.display = 'none';
+    document.getElementById('pause-menu').style.display = 'none';
+
+    // Reset game state
+    player.reset();
+
+    // Spawn initial obstacles
+    spawnAsteroids();
+
+    // Start the game loop
+    gameLoop();
+};
+
+const restartGame = () => {
+    stopGame();
+    setTimeout(() => startGame(), 300);
+};
+
+const stopGame = () => {
+    cancelAnimationFrame(currentFrameId);
+    clearInterval(gameLoopId);
+
+    // Hide screens
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('game-over-screen').style.display = 'none';
+    document.getElementById('pause-menu').style.display = 'none';
+
+    // Reset game state
+    player.reset();
+};
+
+const gameLoop = () => {
+    const deltaTime = (performance.now() - currentFrameId) / 1000;
+
+    // Update game entities
+    PhysicsEngine.update(deltaTime);
+
+    // Update audio
+    gameAudio.tickTimer();
+
+    // Update UI
+    updateHUD();
+
+    // Schedule next frame
+    currentFrameId = performance.now();
+    requestAnimationFrame(gameLoop);
+};
+
+const updateHUD = () => {
+    // Update score display
+    document.getElementById('score').textContent = player.score;
+
+    // Update health bar
+    const healthFill = document.getElementById('health-fill');
+    if (player.health > 0) {
+        healthFill.style.width = `${player.health}%`;
+    } else {
+        healthFill.style.width = '0%';
+    }
+};
+
+// Export functions for use in other modules
+window.game = {
+    initialize: initializeGame,
+    restart: restartGame,
+    stop: stopGame
+};
+
+// End of JSON
