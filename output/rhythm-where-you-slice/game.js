@@ -1,131 +1,112 @@
-import { Renderer } from './renderer.js';
-import { InputHandler } from './input.js';
-import { AudioEngine } from './audio.js';
-
-const canvas = document.getElementById('gameCanvas');
+// Rhythm Slice: Katana Fruit - Minimal Implementation
+const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-const renderer = new Renderer(ctx, canvas);
-const input = new InputHandler(canvas);
-const audio = new AudioEngine();
+let W = canvas.width = window.innerWidth;
+let H = canvas.height = window.innerHeight;
+window.addEventListener('resize', ()=>{W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;});
 
-let gameState = 'menu';
-let score = 0;
-let combo = 0;
-let maxCombo = 0;
-let health = 5;
-let highScore = localStorage.getItem('rhythmHighScore') || 0;
-let startTime = 0;
-let elapsed = 0;
+// Palette
+const COLORS = {bg:'#0f0c29', fruit:'#ff2a6d', melon:'#00f3ff', pine:'#ffd700', bomb:'#ff006e', katana:'#00ffea', text:'#ffffff'};
 
-const LANE_COUNT = 4;
-const LANE_WIDTH = 80;
-const LANE_GAP = 20;
-const HIT_ZONE_Y = 620;
-const NOTE_SPEED = 4;
-const BPM = 120;
-const BEAT_INTERVAL = 60 / BPM;
-const NOTES = [];
-
-function spawnNote(lane, time) {
-  NOTES.push({ lane, y: 0, time, hit: false });
+// Audio
+const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+function playSound(freq=200, dur=0.1, type='sine'){
+ const o=audioCtx.createOscillator(); const g=audioCtx.createGain();
+ o.type=type; o.frequency.value=freq; o.connect(g); g.connect(audioCtx.destination);
+ o.start(); g.gain.exponentialRampToValueAtTime(0.001,dur); o.stop(audioCtx.currentTime+dur);
 }
 
-function initNotes() {
-  NOTES.length = 0;
-  const intervals = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0];
-  intervals.forEach((t, i) => spawnNote(i % LANE_COUNT, t));
+// Game state
+let score=0, combo=0, highScore=parseInt(localStorage.getItem('highScore'))||0;
+let fruits=[], particles=[], mouse={x:0,y:0}, lastPos=[], slashing=false;
+let startTime=performance.now(), lastTime=0;
+let spawnTimer=0;
+
+// Input
+canvas.addEventListener('mousemove', e=>{const r=canvas.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;lastPos.push({x:mouse.x,y:mouse.y});if(lastPos.length>5)lastPos.shift();});
+canvas.addEventListener('mousedown', e=>{slashing=true;playSound(300,0.05,'square');});
+canvas.addEventListener('mouseup', e=>{slashing=false;});
+
+// Fruit class
+class Fruit{
+ constructor(type){
+ this.type=type; this.x=Math.random()*W; this.y=-30;
+ this.vx=(Math.random()-0.5)*4; this.vy=120+Math.random()*80;
+ this.size=20+Math.random()*10;
+ this.angle=0;
+ this.points=type==='apple'?100:type==='melon'?200:type==='pineapple'?500:0;
+ this.color=COLORS[type];
+ }
+ update(dt){this.x+=this.vx*dt;this.y+=this.vy*dt;this.angle+=dt*3;}
+ draw(ctx){ctx.save();ctx.translate(this.x,this.y);ctx.rotate(this.angle);ctx.fillStyle=this.color;ctx.beginPath();ctx.arc(0,0,this.size,0,Math.PI*2);ctx.fill();ctx.restore();}
 }
 
-function update(deltaTime) {
-  if (gameState !== 'play') return;
-  elapsed = (performance.now() - startTime) / 1000;
-  NOTES.forEach(n => {
-    n.y += NOTE_SPEED;
-    if (!n.hit && n.y >= HIT_ZONE_Y - 30 && n.y <= HIT_ZONE_Y + 30) {
-      checkHit(n);
-    }
-    if (n.y > HIT_ZONE_Y + 50 && !n.hit) {
-      missNote(n);
-    }
-  });
+// Particle
+class Particle{
+ constructor(x,y,c){this.x=x;this.y=y;this.vx=(Math.random()-0.5)*4;this.vy=(Math.random()-0.5)*4;this.life=1;this.c=c;}
+ update(dt){this.x+=this.vx; this.y+=this.vy; this.life-=dt*2;}
+ draw(ctx){ctx.fillStyle=this.c;ctx.globalAlpha=this.life;ctx.fillRect(this.x,this.y,3,3);ctx.globalAlpha=1;}
 }
 
-function checkHit(note) {
-  const sliceX = input.cursorX;
-  const laneX = getLaneX(note.lane);
-  const dist = Math.abs(sliceX - laneX);
-  if (dist < 50 && input.isSlicing) {
-    note.hit = true;
-    const accuracy = Math.abs(note.y - HIT_ZONE_Y);
-    let points = 0;
-    if (accuracy < 10) { points = 100 * Math.min(combo / 10 + 1, 5); combo++; audio.play('perfect'); }
-    else if (accuracy < 30) { points = 75 * Math.min(combo / 10 + 1, 5); combo++; audio.play('good'); }
-    else { combo = 0; audio.play('miss'); }
-    maxCombo = Math.max(maxCombo, combo);
-    score += points;
-    highScore = Math.max(highScore, score);
-    localStorage.setItem('rhythmHighScore', highScore);
-    if (points > 0) health = Math.min(5, health + 0.5);
-  }
+// Slash detection
+function checkSlash(){
+ if(!slashing || lastPos.length<3) return;
+ const p1=lastPos[lastPos.length-3], p2=lastPos[lastPos.length-2], p3=lastPos[lastPos.length-1];
+ const dx=p3.x-p1.x, dy=p3.y-p1.y;
+ const dist=Math.sqrt(dx*dx+dy*dy);
+ const time=(lastPos.length-1)*16; // approx ms
+ const vel=dist/(time/1000);
+ if(vel<800) return;
+ const angle=Math.atan2(dy,dx);
+ // Check each fruit
+ for(let i=fruits.length-1;i>=0;i--){
+ const f=fruits[i];
+ const fx=f.x-mouse.x, fy=f.y-mouse.y;
+ const projX=fx*Math.cos(angle)+fy*Math.sin(angle);
+ const projY=-fx*Math.sin(angle)+fy*Math.cos(angle);
+ if(Math.abs(projY)<f.size+10 && projX>-20 && projX<40){
+ // Hit!
+ const pts=f.points;
+ if(f.type==='bomb'){combo=0;playSound(80,0.2,'sawtooth');}else{score+=pts*(1+combo*0.1);combo++;playSound(200+f.type.charCodeAt(0),0.1,'triangle');}
+ for(let j=0;j<10;j++)particles.push(new Particle(f.x,f.y,f.color));
+ fruits.splice(i,1);
+ }
+ }
 }
 
-function missNote(note) {
-  if (!note.hit) { note.hit = true; combo = 0; health--; audio.play('miss'); }
+// Spawn fruits
+function spawnFruit(){
+ const types=['apple','apple','melon','pineapple','bomb'];
+ const t=types[Math.floor(Math.random()*types.length)];
+ fruits.push(new Fruit(t));
 }
 
-function getLaneX(lane) {
-  const totalWidth = LANE_COUNT * LANE_WIDTH + (LANE_COUNT - 1) * LANE_GAP;
-  const startX = (canvas.width - totalWidth) / 2;
-  return startX + lane * (LANE_WIDTH + LANE_GAP) + LANE_WIDTH / 2;
+// Main loop
+function loop(timestamp){
+ const dt=(timestamp-lastTime)/1000; lastTime=timestamp;
+ if(!dt||dt>0.1) return requestAnimationFrame(loop);
+ 
+ // Update
+ spawnTimer+=dt; if(spawnTimer>0.5){spawnFruit();spawnTimer=0;}
+ for(const f of fruits)f.update(dt);
+ for(let i=particles.length-1;i>=0;i;){const p=particles[i];p.update(dt);if(p.life<=0)particles.splice(i,1);}
+ checkSlash();
+ 
+ // Draw
+ ctx.fillStyle=COLORS.bg; ctx.fillRect(0,0,W,H);
+ for(const f of fruits)f.draw(ctx);
+ for(const p of particles)p.draw(ctx);
+ 
+ // UI
+ document.getElementById('score').textContent=`Score: ${score.toLocaleString()}`;
+ document.getElementById('combo').textContent=`Combo: ${combo}`;
+ const elapsed=(timestamp-startTime)/1000;
+ document.getElementById('timer').textContent=`Time: ${elapsed.toFixed(3)}`;
+ 
+ // High score
+ if(score>highScore){highScore=score;localStorage.setItem('highScore',highScore);} 
+ 
+ requestAnimationFrame(loop);
 }
 
-function draw() {
-  renderer.clear();
-  if (gameState === 'menu') {
-    renderer.drawMenu();
-    return;
-  }
-  if (gameState === 'settings') {
-    renderer.drawSettings();
-    return;
-  }
-  renderer.drawGame(NOTES, getLaneX, HIT_ZONE_Y, LANE_COUNT, LANE_WIDTH, LANE_GAP);
-  renderer.drawHUD(score, combo, maxCombo, health, highScore, elapsed);
-  if (input.isSlicing) renderer.drawSlice(input.cursorX, HIT_ZONE_Y);
-}
-
-function loop() {
-  const now = performance.now();
-  const deltaTime = now - (loop.lastTime || now);
-  loop.lastTime = now;
-  update(deltaTime);
-  draw();
-  requestAnimationFrame(loop);
-}
-
-function startGame() {
-  gameState = 'play';
-  score = 0; combo = 0; maxCombo = 0; health = 5;
-  startTime = performance.now();
-  initNotes();
-  audio.play('bgm', true);
-  document.getElementById('menu').classList.add('hidden');
-}
-
-function showSettings() {
-  gameState = 'settings';
-  document.getElementById('menu').classList.add('hidden');
-  document.getElementById('settings').classList.remove('hidden');
-}
-
-function backToMenu() {
-  gameState = 'menu';
-  document.getElementById('settings').classList.add('hidden');
-  document.getElementById('menu').classList.remove('hidden');
-}
-
-document.getElementById('playBtn').addEventListener('click', startGame);
-document.getElementById('settingsBtn').addEventListener('click', showSettings);
-document.getElementById('backBtn').addEventListener('click', backToMenu);
-
-loop();
+requestAnimationFrame(loop);

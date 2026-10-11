@@ -1,34 +1,33 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Rhythm Slice</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>" />
-  <style>
-    html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#0f0f2a;font-family:'Segoe UI',sans-serif}
-    #gameCanvas{display:block;width:100%;height:100%;background:#0f0f2a}
-    .hidden{visibility:hidden}
-    button{background:#ff6ec7;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:18px;cursor:pointer;transition:.2s}
-    button:hover{transform:scale(1.05)}
-    .menu{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
-    .menu h1{font-size:48px;color:#fff;margin-bottom:20px}
-    .hidden{visibility:hidden}
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rhythm Slice: Katana Fruit</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗡️</text></svg>" />
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0f0c29; color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; }
+canvas { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+#ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+.bar { position: absolute; top: 0; left: 0; width: 100%; padding: 10px; display: flex; justify-content: space-between; font-size: 18px; pointer-events: none; }
+.bottom-bar { top: auto; bottom: 0; flex-direction: column; align-items: center; }
+.timing-bar { width: 300px; height: 20px; background: rgba(255,255,255,0.1); border-radius: 10px; margin: 10px; position: relative; }
+.cursor { position: absolute; width: 4px; height: 20px; background: #fff; top: 0; left: 50%; transform: translateX(-50%); }
+.score-popup { position: absolute; font-size: 24px; font-weight: bold; pointer-events: none; animation: fadeUp 1s forwards; }
+@keyframes fadeUp { to { transform: translateY(-50px); opacity: 0; } }
+.combo { font-size: 32px; font-weight: bold; color: #ff2a6d; text-shadow: 0 0 10px #ff2a6d; }
+.timer { font-size: 20px; color: #00f3ff; text-shadow: 0 0 8px #00f3ff; }
+</style>
 </head>
 <body>
-  <canvas id="gameCanvas" width="1280" height="720"></canvas>
-  <div id="menu" class="menu">
-    <h1>Rhythm Slice</h1>
-    <button id="playBtn">Play</button>
-    <button id="settingsBtn">Settings</button>
-  </div>
-  <div id="settings" class="menu hidden">
-    <h2>Settings</h2>
-    <label>Music Volume: <input type="range" id="musicVol" min="0" max="100" value="80"></label><br>
-    <label>SFX Volume: <input type="range" id="sfxVol" min="0" max="100" value="80"></label><br>
-    <button id="backBtn">Back</button>
-  </div>
-  <script type="module" src="game.js"></script>
+<canvas id="game"></canvas>
+<div id="ui">
+<div class="bar"><div id="score">Score: 0</div><div id="combo" class="combo">Combo: 0</div><div id="timer" class="timer">Time: 0.000</div></div>
+<div class="bottom-bar">
+<div class="timing-bar"><div class="cursor"></div></div>
+</div>
+</div>
+<script src="game.js"></script>
 </body>
 </html>
