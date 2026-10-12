@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forest Fire Fighter 🚒🔥</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='70' font-size='60' font-family='Arial' text-anchor='middle' fill='%23ff4500'%3E🔥%3C/text%3E%3C/svg%3E">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: linear-gradient(135deg, #1a2a6c, #2c3e50); overflow: hidden; font-family: 'Arial', sans-serif; }
+        #gameCanvas { display: block; background: #87CEEB; width: 100vw; height: 100vh; }
+        .hud { position: absolute; top: 10px; left: 10px; color: white; font-family: Arial, sans-serif; z-index: 10; }
+        .gauge { background: rgba(0,0,0,0.5); border-radius: 10px; padding: 10px; margin: 5px 0; }
+        .bar { height: 20px; background: linear-gradient(90deg, #4CAF50, #8BC34A); border-radius: 5px; overflow: hidden; }
+        .bar.red { background: linear-gradient(90deg, #f44336, #ff9800); }
+        .bar.yellow { background: linear-gradient(90deg, #ff9800, #ffc107); }
+        .counter { font-size: 24px; font-weight: bold; color: #FFD700; text-shadow: 2px 2px 0 #000; }
+        #minimap { position: absolute; top: 10px; right: 10px; border: 2px solid #fff; background: #228B22; }
+        #timer { position: absolute; top: 10px; right: 120px; font-size: 20px; color: #FF4500; font-weight: bold; }
+        .combo { position: absolute; top: 50px; right: 10px; background: #FFD700; color: #8B4513; padding: 5px 10px; border-radius: 5px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="hud">
+        <div class="gauge"><div class="bar" id="fuelBar"></div></div>
+        <div class="gauge"><div class="bar" id="waterBar"></div></div>
+        <div class="counter" id="score">0</div>
+        <div id="timer">Time: 00:00</div>
+        <div class="combo" id="combo">COMBO x1!</div>
+    </div>
+    <canvas id="minimap"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const mini = document.getElementById('minimap');
+        const miniCtx = mini.getContext('2d');
+        const fuelBar = document.getElementById('fuelBar');
+        const waterBar = document.getElementById('waterBar');
+        const scoreEl = document.getElementById('score');
+        const timerEl = document.getElementById('timer');
+        const comboEl = document.getElementById('combo');
+        
+        let W = canvas.width = window.innerWidth;
+        let H = canvas.height = window.innerHeight;
+        mini.width = mini.height = 128;
+        
+        // Game state
+        const state = {
+            score: 0,
+            fuel: 100,
+            water: 500,
+            waterMax: 500,
+            combo: 1,
+            comboTime: 0,
+            startTime: Date.now(),
+            highScore: parseInt(localStorage.getItem('firefighterHighScore') || '0'),
+            gameOver: false
+        };
+        
+        // Aircraft
+        const aircraft = {
+            x: W/2, y: H/2,
+            vx: 0, vy: 0,
+            angle: 0,
+            thrust: 0,
+            ax: 0, ay: 0
+        };
+        
+        // Fire system
+        const fires = [];
+        const grid = [];
+        const GRID_W = 40, GRID_H = 30;
+        const CELL_SIZE = 16;
+        
+        // Water drops
+        const drops = [];
+        const FIRE_TYPES = ['tree', 'grass', 'rock', 'water'];
+        
+        // Wind
+        let wind = { angle: 0, strength: 1 };
+        
+        // Particles
+        const particles = [];
+        
+        // Colors
+        const COLORS = {
+            sky: ['#87CEEB', '#E0F7FF'],
+            forest: ['#228B22', '#006400'],
+            fire: ['#FF4500', '#FF6347', '#FF8C00', '#FFFF00'],
+            smoke: ['rgba(100,100,100,0.5)', 'rgba(150,150,150,0.3)'],
+            water: '#00BFFF'
+        };
+        
+        // Audio
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(freq, duration = 0.1) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.frequency.value = freq;
+            osc.type = 'sawtooth';
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+        
+        // Initialize
+        function init() {
+            for(let i = 0; i < GRID_W; i++) {
+                grid[i] = [];
+                for(let j = 0; j < GRID_H; j++) {
+                    grid[i][j] = { type: 'grass', burning: false, intensity: 0 };
+                }
+            }
+            
+            // Create initial fires
+            for(let i = 0; i < 15; i++) {
+                const x = Math.floor(Math.random() * GRID_W);
+                const y = Math.floor(Math.random() * GRID_H);
+                if(grid[x][y].type === 'grass') {
+                    grid[x][y].burning = true;
+                    grid[x][y].intensity = 1;
+                    fires.push({x, y, intensity: 1});
+                }
+            }
+            
+            updateWind();
+            spawnRain();
+        }
+        
+        function updateWind() {
+            wind.angle = Math.random() * Math.PI * 2;
+            wind.strength = 0.5 + Math.random() * 2;
+            setTimeout(updateWind, 30000 + Math.random() * 30000);
+        }
+        
+        function spawnRain() {
+            for(let i = 0; i < 50; i++) {
+                particles.push({
+                    x: Math.random() * W,
+                    y: -10,
+    vy: 2 + Math.random() * 3,
+                    type: 'rain'
+                });
+            }
+            setTimeout(spawnRain, 2000);
+        }
+        
+        // Input
+        const keys = {};
+        window.addEventListener('keydown', e => { keys[e.key] = true; });
+        window.addEventListener('keyup', e => { keys[e.key] = false; });
+        canvas.addEventListener('mousedown', e => { aimDrop(e); });
+        canvas.addEventListener('touchstart', e => { aimDrop(e.touches[0]); });
+        
+        function aimDrop(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            dropWater(aircraft.x, aircraft.y, x, y);
+        }
+        
+        function dropWater() {
+            if(state.water <= 0) return;
+            
+            drops.push({
+                x: aircraft.x,
+                y: aircraft.y,
+                vx: (Math.random() - 0.5) * 20,
+                vy: Math.random() * 10 - 5,
+                radius: 40,
+                age: 0
+            });
+            
+            state.water -= 100;
+            playSound(200, 0.15);
+        }
+        
+        // Game loop
+        let lastTime = 0;
+        function gameLoop(timestamp) {
+            const dt = (timestamp - lastTime) / 1000 || 0.016;
+            lastTime = timestamp;
+            
+            update(dt);
+            render();
+            
+            if(!state.gameOver) {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+        
+        function update(dt) {
+            // Input
+            aircraft.thrust = 0;
+            if(keys['w'] || keys['ArrowUp']) aircraft.thrust = 1;
+            if(keys['a'] || keys['ArrowLeft']) aircraft.angle -= 3 * dt;
+            if(keys['d'] || keys['ArrowRight']) aircraft.angle += 3 * dt;
+            
+            // Physics
+            const thrustForce = aircraft.thrust * 150;
+            aircraft.vx += (Math.cos(aircraft.angle) * thrustForce - aircraft.vx * 100) * dt;
+            aircraft.vy += (Math.sin(aircraft.angle) * thrustForce - aircraft.vy * 100) * dt;
+            
+            const speed = Math.sqrt(aircraft.vx**2 + aircraft.vy**2);
+            if(speed > 200) {
+                aircraft.vx = aircraft.vx / speed * 200;
+                aircraft.vy = aircraft.vy / speed * 200;
+            }
+            
+            aircraft.x += aircraft.vx * dt;
+            aircraft.y += aircraft.vy * dt;
+            
+            // Bounds
+            aircraft.x = Math.max(20, Math.min(W-20, aircraft.x));
+            aircraft.y = Math.max(20, Math.min(H-20, aircraft.y));
+            
+            // Fuel
+            state.fuel -= 0.5 * dt;
+            if(state.fuel <= 0) state.fuel = 0;
+            
+            // Water cooldown
+            if(state.water < state.waterMax && !keys[' ']) {
+                if(Math.random() < 0.5 * dt) {
+                    state.water = Math.min(state.waterMax, state.water + 50);
+                }
+            }
+            
+            // Water drops
+            for(let i = drops.length-1; i >= 0; i--) {
+                const d = drops[i];
+                d.age += dt;
+                
+                // Check fire cells
+                const gx = Math.floor(d.x / CELL_SIZE);
+                const gy = Math.floor(d.y / CELL_SIZE);
+                
+                if(gx >= 0 && gx < GRID_W && gy >= 0 && gy < GRID_H) {
+                    if(grid[gx][gy].burning) {
+                        grid[gx][gy].intensity -= 0.5;
+                        state.score += 10;
+                        if(grid[gx][gy].intensity <= 0) {
+                            grid[gx][gy].burning = false;
+                            fires.splice(fires.indexOf({x: gx, y: gy}), 1);
+                        }
+                        state.combo++;
+                        state.comboTime = 3;
+                        playSound(400 + state.combo * 20, 0.1);
+                    }
+                }
+                
+                if(d.age > 2) drops.splice(i, 1);
+            }
+            
+            // Fire spread
+            for(const fire of fires) {
+                if(Math.random() < 0.3 * dt) {
+                    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+                    const dir = dirs[Math.floor(Math.random()*dirs.length)];
+                    const nx = fire.x + dir[0];
+                    const ny = fire.y + dir[1];
+                    
+                    if(nx >= 0 && nx < GRID_W && ny >= 0 && ny < GRID_H) {
+                        if(!grid[nx][ny].burning && grid[nx][ny].type !== 'rock') {
+                            grid[nx][ny].burning = true;
+                            grid[nx][ny].intensity = 1;
+                            fires.push({x: nx, y: ny, intensity: 1});
+                            state.score += 5;
+                            playSound(150, 0.2);
+                        }
+                    }
+                }
+            }
+            
+            // Update fires
+            for(let i = fires.length-1; i >= 0; i--) {
+                const f = fires[i];
+                if(!grid[f.x][f.y].burning) fires.splice(i, 1);
+            }
+            
+            // Combo
+            state.comboTime -= dt;
+            if(state.comboTime <= 0) {
+                state.combo = 1;
+            }
+            
+            // High score
+            if(state.score > state.highScore) {
+                state.highScore = state.score;
+                localStorage.setItem('firefighterHighScore', state.highScore);
+            }
+            
+            // Game over
+            if(state.fuel <= 0 && fires.length > 20) {
+                state.gameOver = true;
+            }
+        }
+        
+        function render() {
+            // Clear
+            ctx.fillStyle = COLORS.sky[0];
+            ctx.fillRect(0, 0, W, H);
+            
+            // Sky gradient
+            for(let i = 0; i < 50; i++) {
+                const y = i * 5;
+                ctx.fillStyle = COLORS.sky[0];
+                ctx.fillRect(0, y, W, 5);
+            }
+            
+            // Terrain
+            for(let i = 0; i < GRID_W; i++) {
+                for(let j = 0; j < GRID_H; j++) {
+                    const x = i * CELL_SIZE;
+                    const y = j * CELL_SIZE;
+                    
+                    if(grid[i][j].type === 'rock') {
+                        ctx.fillStyle = '#8B4513';
+                        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    } else if(grid[i][j].type === 'water') {
+                        ctx.fillStyle = COLORS.water;
+                        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    } else {
+                        ctx.fillStyle = grid[i][j].burning ? COLORS.fire[0] : COLORS.forest[1];
+                        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                    }
+                    
+                    if(grid[i][j].burning) {
+                        ctx.fillStyle = COLORS.fire[1];
+                        ctx.fillRect(x+4, y+4, CELL_SIZE-8, CELL_SIZE-8);
+                    }
+                }
+            }
+            
+            // Fires
+            for(const fire of fires) {
+                const x = fire.x * CELL_SIZE + CELL_SIZE/2;
+                const y = fire.y * CELL_SIZE + CELL_SIZE/2;
+                ctx.fillStyle = COLORS.fire[2];
+                ctx.beginPath();
+                ctx.arc(x, y, 8, 0, Math.PI*2);
+                ctx.fill();
+            }
+            
+            // Aircraft
+            ctx.save();
+            ctx.translate(aircraft.x, aircraft.y);
+            ctx.rotate(aircraft.angle);
+            ctx.fillStyle = '#4169E1';
+            ctx.beginPath();
+            ctx.moveTo(-20, 0);
+            ctx.lineTo(20, -10);
+            ctx.lineTo(20, 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+            
+            // Water drops
+            ctx.fillStyle = COLORS.water;
+            for(const d of drops) {
+                ctx.beginPath();
+                ctx.arc(d.x, d.y, 5, 0, Math.PI*2);
+                ctx.fill();
+            }
+            
+            // Particles
+            for(let i = particles.length-1; i >= 0; i--) {
+                const p = particles[i];
+                p.y += p.vy;
+                ctx.strokeStyle = 'rgba(173,216,230,0.5)';
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x+2, p.y+5);
+                ctx.stroke();
+                if(p.y > H) particles.splice(i, 1);
+            }
+            
+            // UI
+            const fuelPct = state.fuel / 100;
+            fuelBar.style.width = (fuelPct * 100) + '%';
+            if(fuelPct < 0.3) fuelBar.className = 'bar red';
+            else if(fuelPct < 0.6) fuelBar.className = 'bar yellow';
+            else fuelBar.className = 'bar';
+            
+            const waterPct = state.water / state.waterMax;
+            waterBar.style.width = (waterPct * 100) + '%';
+            
+            scoreEl.textContent = state.score;
+            comboEl.textContent = `COMBO x${state.combo}`;
+            
+            const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+            const mins = Math.floor(elapsed / 60);
+            const secs = elapsed % 60;
+            timerEl.textContent = `Time: ${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`;
+            
+            // Minimap
+            miniCtx.fillStyle = '#228B22';
+            miniCtx.fillRect(0, 0, 128, 128);
+            
+            for(let i = 0; i < GRID_W; i++) {
+                for(let j = 0; j < GRID_H; j++) {
+                    const sx = i * 128 / GRID_W;
+                    const sy = j * 128 / GRID_H;
+                    const sw = 128 / GRID_W;
+                    const sh = 128 / GRID_H;
+                    
+                    if(grid[i][j].burning) {
+                        miniCtx.fillStyle = '#FF4500';
+                        miniCtx.fillRect(sx, sy, sw, sh);
+                    }
+                }
+            }
+            
+            miniCtx.fillStyle = '#4169E1';
+            miniCtx.beginPath();
+            miniCtx.arc(aircraft.x * 128 / W, aircraft.y * 128 / H, 3, 0, Math.PI*2);
+            miniCtx.fill();
+        }
+        
+        // Resize
+        window.addEventListener('resize', () => {
+            W = canvas.width = window.innerWidth;
+            H = canvas.height = window.innerHeight;
+        });
+        
+        // Start
+        init();
+        requestAnimationFrame(gameLoop);
+    </script>
+</body>
+</html>
