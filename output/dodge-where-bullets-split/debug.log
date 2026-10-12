@@ -1,0 +1,691 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 2 column 13 (char 14)
+
+Raw: ```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FRACTURE POINT</title>
+    <!-- Emoji Favicon -->
+    <link href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='%2300F5D4'/%3E%3Cpath d='M32 8 L36 18 L44 18 L38 26 L34 42 L28 38 L20 38 L22 42 L14 42 L18 38 L24 26 L28 18 Z' fill='%23FF2E63'/%3E%3C/svg%3E" width="64" height="64" style="display:none;">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-void: #05050A;
+            --grid-line: #1A1A2E;
+            --player-primary: #00F5D4;
+            --seed-color: #FF2E63;
+            --shard-color: #FFE600;
+            --pulse-core: #FFFFFF;
+            --pulse-edge: #00F5D4;
+            --graze: #FFFFFF;
+            --ui-accent: #00F5D4;
+            --text-off: #E0E0E0;
+            --text-muted: #666;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: var(--bg-void);
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-off);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            touch-action: none;
+        }
+        
+        /* ============ HERO SECTION ============ */
+        .hero {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            background: linear-gradient(135deg, var(--player-primary), #00B8D4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: glitch 0.5s infinite alternate;
+        }
+        
+        @keyframes glitch {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            20% { transform: translate(-2px, 2px) rotate(1deg); }
+            40% { transform: translate(2px, -1px) rotate(-0.5deg); }
+            60% { transform: translate(-1px, 1px) rotate(0.5deg); }
+            80% { transform: translate(1px, -2px) rotate(-1deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        
+        .subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            letter-spacing: 0.15em;
+        }
+        
+        /* ============ MAIN CANVAS ============ */
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        #hud-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        /* ============ HUD ELEMENTS ============ */
+        .score-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--player-primary);
+            text-shadow: 0 0 20px rgba(0,245,212,0.5);
+            min-width: 80px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .phase-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.2rem;
+            color: var(--player-primary);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        
+        .high-score {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            font-size: 1.1rem;
+            color: var(--text-off);
+            text-align: right;
+        }
+        
+        .integrality-nodes {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 16px;
+        }
+        
+        .life-node {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--bg-void);
+            border: 1px solid var(--seed-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            transition: all 0.3s ease;
+        }
+        
+        .life-node.full {
+            background: var(--player-primary);
+            border-color: var(--pulse-core);
+            box-shadow: 0 0 15px rgba(0,245,212,0.5);
+        }
+        
+        .life-node.lost {
+            background: rgba(255,46,99,0.3);
+            border-color: var(--seed-color);
+            animation: crack 0.5s ease-in-out;
+        }
+        
+        @keyframes crack {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(0.8); }
+        }
+        
+        .pulse-meter {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 2px solid var(--pulse-core);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .pulse-ring {
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: conic-gradient(#00F5D4 0% / #00F5D4 360%);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        .pulse-ring.ready {
+            animation: pulse 0.8s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+        
+        /* ============ SPEEDRUN TIMER ============ */
+        #speedrun-timer {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--pulse-core);
+            text-shadow: 0 0 10px rgba(0,245,212,0.8);
+            z-index: 10;
+            min-width: 80px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        /* ============ RESPONSIVE ADJUSTMENTS ============ */
+        @media (max-width: 768px) {
+            .score-display { font-size: 2rem; }
+            .phase-indicator { font-size: 1rem; }
+            .high-score { font-size: 0.9rem; }
+            .integrality-nodes { gap: 10px; }
+            .life-node { width: 36px; height: 36px; font-size: 1rem; }
+        }
+        
+        @media (max-width: 480px) {
+            .hero { padding: 10px; }
+            h1 { font-size: 1.8rem; }
+            .subtitle { font-size: 0.75rem; }
+            #game-canvas { position: fixed; inset: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1>FRACTURE POINT</h1>
+        <p class="subtitle">Arcade Bullet-Hell / Dodge 'Em Up</p>
+    </div>
+
+    <!-- Main Game Canvas -->
+    <canvas id="game-canvas"></canvas>
+    
+    <!-- HUD Canvas (separate layer for crisp text) -->
+    <canvas id="hud-canvas"></canvas>
+
+    <!-- Speedrun Timer -->
+    <div id="speedrun-timer">00:00.000</div>
+
+    <script type="module">
+        import { initAudio, playSound } from './audio.js';
+        import { resizeCanvas, getDevicePixelRatio } from './resizer.js';
+        import { GameEngine } from './engine.js';
+
+        // Initialize audio context (must be done once)
+        initAudio();
+
+        // Get canvas dimensions
+        const gameCanvas = document.getElementById('game-canvas');
+        const hudCanvas = document.getElementById('hud-canvas');
+
+        function resizeCanvases() {
+            const dpr = getDevicePixelRatio();
+            const maxWidth = window.innerWidth - 40;
+            const maxHeight = window.innerHeight - 160;
+
+            gameCanvas.width = Math.floor(maxWidth * dpr);
+            gameCanvas.height = Math.floor(maxHeight * dpr);
+            hudCanvas.width = Math.floor(maxWidth * dpr);
+            hudCanvas.height = Math.floor(maxHeight * dpr);
+
+            // Set canvas units to logical pixels (handled by CSS)
+            gameCanvas.style.width = `${gameCanvas.width}px`;
+            gameCanvas.style.height = `${gameCanvas.height}px`;
+            hudCanvas.style.width = `${hudCanvas.width}px`;
+            hudCanvas.style.height = `${hudCanvas.height}px`;
+        }
+
+        window.addEventListener('resize', resizeCanvases);
+        resizeCanvases();
+
+        // Initialize Game Engine
+        const game = new GameEngine({
+            width: gameCanvas.width,
+            height: gameCanvas.height,
+            dpr: getDevicePixelRatio()
+        });
+
+        // Start the render loop
+        requestAnimationFrame(game.loop);
+    </script>
+</body>
+</html>
+```
+
+Now let me create the supporting JavaScript modules. I'll create them as separate files since the specification mentions ES modules.
+
+**audio.js** - Web Audio API sound system
+**resizer.js** - Canvas resizing with DPR support
+**engine.js** - Core game engine (physics, entities, collision, director AI)
+
+Let me write these files:<|tool_call_start|>[write(filepath='/audio.js', content='// ============================================
+// Audio System - Web Audio API
+// ============================================
+
+class AudioSystem {
+    constructor() {
+        this.audioContext = null;
+        this.sources = new Map(); // name -> AudioSource
+        this.scheduled = new Map(); // delay -> AudioSource
+    }
+
+    async initialize() {
+        if (this.audioContext) return;
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.audioContext = ctx;
+        // Enable analytics stream for Web Audio
+        ctx.destination.volume.value = 0.7;
+    }
+
+    // Generate short SFX using oscillators (no external assets needed)
+    generateClick() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(1200, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(2000, ctx.currentTime + 0.03);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.03);
+        return osc;
+    }
+
+    generateThwip() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1200, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.05);
+        return osc;
+    }
+
+    generateFracture() {
+        // Glass break effect: noise burst + descending tones
+        const noise = this.createNoiseBuffer(0.05);
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        // Noise burst
+        noise.start(ctx.currentTime);
+        noise.stop(ctx.currentTime + 0.05);
+        
+        // Descending tone
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.3);
+        return noise;
+    }
+
+    generateShardSpawn() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1000, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.1);
+        return osc;
+    }
+
+    generatePulseFire() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(110, ctx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.4);
+        return osc;
+    }
+
+    generateGraze() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1500, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.02);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.02);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.02);
+        return osc;
+    }
+
+    createOscillator() {
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, this.audioContext.currentTime);
+        osc.connect(this.audioContext.destination);
+        return osc;
+    }
+
+    createGain() {
+        const g = this.audioContext.createGain();
+        g.gain.value = 0.3;
+        return g;
+    }
+
+    createNoiseBuffer(duration) {
+        const sampleRate = this.audioContext.sampleRate;
+        const length = duration * sampleRate;
+        const buffer = this.audioContext.createBuffer(1, sampleRate * 4, length);
+        const data = buffer.getChannelData(0);
+        
+        for (let i = 0; i < length; i++) {
+            data[i] = (Math.random() * 2 - 1) * 0.5;
+        }
+        
+        return buffer;
+    }
+
+    playSound(type) {
+        if (!this.audioContext) return;
+        switch (type) {
+            case 'click':
+                playSound('click');
+                break;
+            case 'thwip':
+                playSound('thwip');
+                break;
+            case 'fracture':
+                playSound('fracture');
+                break;
+            case 'shard':
+                playSound('shard');
+                break;
+            case 'pulse':
+                playSound('pulse');
+                break;
+            case 'graze':
+                playSound('graze');
+                break;
+            default:
+                // Fallback: ambient drone
+                this.playAmbient();
+        }
+    }
+
+    playAmbient() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(55, this.audioContext.currentTime);
+        gain.gain.setValueAtTime(0.02, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+        osc.start(this.audioContext.currentTime);
+        osc.stop(this.audioContext.currentTime + 0.5);
+    }
+
+    // Schedule a sound to play after a delay
+    scheduleSound(name, callback, delayMs) {
+        const source = this.generateClick();
+        setTimeout(() => {
+            this.schedules.set(delayMs, source);
+            source.onEnd = () => this.schedules.delete(delayMs);
+        }, delayMs);
+    }
+}
+
+export { AudioSystem };
+EOF', write(path='/audio.js', content='// ============================================
+// Audio System - Web Audio API
+// ============================================
+
+class AudioSystem {
+    constructor() {
+        this.audioContext = null;
+        this.sources = new Map(); // name -> AudioSource
+        this.scheduled = new Map(); // delay -> AudioSource
+    }
+
+    async initialize() {
+        if (this.audioContext) return;
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.audioContext = ctx;
+        // Enable analytics stream for Web Audio
+        ctx.destination.volume.value = 0.7;
+    }
+
+    // Generate short SFX using oscillators (no external assets needed)
+    generateClick() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1200, this.audioContext.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(2000, this.audioContext.currentTime + 0.03);
+        gain.gain.setValueAtTime(0.15, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.03);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(this.audioContext.currentTime);
+        osc.stop(this.audioContext.currentTime + 0.03);
+        return osc;
+    }
+
+    generateThwip() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1200, this.audioContext.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(300, this.audioContext.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.12, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(this.audioContext.currentTime);
+        osc.stop(this.audioContext.currentTime + 0.05);
+        return osc;
+    }
+
+    generateFracture() {
+        // Glass break effect: noise burst + descending tones
+        const noise = this.createNoiseBuffer(0.05);
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        // Noise burst
+        noise.start(this.audioContext.currentTime);
+        noise.stop(this.audioContext.currentTime + 0.05);
+        
+        // Descending tone
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(800, this.audioContext.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(this.audioContext.currentTime);
+        osc.stop(this.audioContext.currentTime + 0.3);
+        return noise;
+    }
+
+    generateShardSpawn() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1000, this.audioContext.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(400, this.audioContext.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.08, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(this.audioContext.currentTime);
+        osc.stop(this.audioContext.currentTime + 0.1);
+        return osc;
+    }
+
+    generatePulseFire() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, this.audioContext.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(110, this.audioContext.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.15, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(this.audioContext.currentTime);
+        osc.stop(this.audioContext.currentTime + 0.4);
+        return osc;
+    }
+
+    generateGraze() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1500, this.audioContext.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, this.audioContext.currentTime + 0.02);
+        gain.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.02);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(this.audioContext.currentTime);
+        osc.stop(this.audioContext.currentTime + 0.02);
+        return osc;
+    }
+
+    createOscillator() {
+        const osc = this.audioContext.createOscillator();
+        osc.type = 'triangle';
+        return osc;
+    }
+
+    createGain() {
+        const g = this.audioContext.createGain();
+        return g;
+    }
+
+    createNoiseBuffer(duration) {
+        const sampleRate = this.audioContext.sampleRate;
+        const length = duration * sampleRate;
+        const buffer = this.audioContext.createBuffer(1, sampleRate * 4, length);
+        const data = buffer.getChannelData(0);
+        
+        for (let i = 0; i < length; i++) {
+            data[i] = (Math.random() * 2 - 1) * 0.5;
+        }
+        
+        return buffer;
+    }
+
+    playSound(type) {
+        if (!this.audioContext) return;
+        switch (type) {
+            case 'click': playSound('click'); break;
+            case 'thwip': playSound('thwip'); break;
+            case 'fracture': playSound('fracture'); break;
+            case 'shard': playSound('shard'); break;
+            case 'pulse': playSound('pulse'); break;
+            case 'graze': playSound('graze'); break;
+            default: this.playAmbient();
+        }
+    }
+
+    playAmbient() {
+        const osc = this.createOscillator();
+        const gain = this.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(55, this.audioContext.currentTime);
+        gain.gain.setValueAtTime(0.02, this.audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.audioContext.currentTime + 0.5);
+        osc.connect(gain);
+        gain.connect(this.audioContext.destination);
+        osc.start(this.audioContext.currentTime);
+        osc.stop(this.audioContext.currentTime + 0.5);
+    }
+
+    // Schedule a sound to play after a delay
+    scheduleSound(name, callback, delayMs) {
+        const source = this.generateClick();
+        setTimeout(() => {
+            this.schedules.set(delayMs, source);
+            source.onEnd = () => this.schedules.delete(delayMs);
+        }, delayMs);
+    }
+}
+
+export { AudioSystem };
+')]<|tool_call_end|><|tool_call_start|>[write(filePath='/resizer.js', content='// ============================================
+// Canvas Resizer - Device Pixel Ratio Support
+// ============================================\n\nconst Resizer = {\n    /**\n     * Resize canvases based on device pixel ratio and screen constraints.\n     * \n     * @param {HTMLCanvasElement} gameCanvas - The main game canvas\n     * @param {HTMLCanvasElement} hudCanvas - The HUD overlay canvas\n     */\n    resize(canvasId) {\n        const canvas = document.getElementById(canvasId);\n        if (!canvas) return;\n\n        const dpr = window.devicePixelRatio || 1;\n        const maxWidth = window.innerWidth - 40;\n        const maxHeight = window.innerHeight - 160;\n\n        // Calculate target size in logical pixels (CSS pixels)\n        const targetWidth = Math.min(maxWidth, 1400);\n        const targetHeight = Math.min(maxHeight, 900);\n\n        // Apply scaling factor considering DPR\n        const scaleFactor = Math.min(\n            targetWidth / canvas.width,\n            targetHeight / canvas.height,\n            dpr\n        );\n\n        // Clamp to reasonable maximums\n        const clampedScale = Math.min(scaleFactor, 2.5);\n\n        canvas.width = Math.floor(canvas.width * clampedScale);\n        canvas.height = Math.floor(canvas.height * clampedScale);\n\n        // Restore original unit values via CSS\n        const cssWidth = canvas.width;\n        const cssHeight = canvas.height;\n        canvas.style.width = `${cssWidth}px`;\n        canvas.style.height = `${cssHeight}px`;\n    }\n\n    /**\n     * Resize both game and HUD canvases simultaneously.\n     * Called when window is resized or page loads.\n     */\n    resizeAll() {\n        this.resize(\'game-canvas\');\n        this.resize(\'hud-canvas\');\n    }\n\n    /**\n     * Update canvas sizes based on current window dimensions.\n     * Should be called on window resize events.\n     */\n    update() {\n        const gameCanvas = document.getElementById(\'game-canvas\');\n        const hudCanvas = document.getElementById(\'hud-canvas\');\n        \n        if (!gameCanvas || !hudCanvas) return;\n\n        const dpr = window.devicePixelRatio || 1;\n        const maxWidth = window.innerWidth - 40;\n        const maxHeight = window.innerHeight - 160;\n\n        const targetWidth = Math.min(maxWidth, 1400);\n        const targetHeight = Math.min(maxHeight, 900);\n\n        const scaleFactor = Math.min(\n            targetWidth / gameCanvas.width,\n            targetHeight / gameCanvas.height,\n            dpr\n        );\n\n        const clampedScale = Math.min(scaleFactor, 2.5);\n\n        gameCanvas.width = Math.floor(gameCanvas.width * clampedScale);\n        gameCanvas.height = Math.floor(gameCanvas.height * clampedScale);\n        gameCanvas.style.width = `${gameCanvas.width}px`;\n        gameCanvas.style.height = `${gameCanvas.height}px`;\n\n        hudCanvas.width = Math.floor(hudCanvas.width * clampedScale);\n        hudCanvas.height = Math.floor(hudCanvas.height * clampedScale);\n        hudCanvas.style.width = `${hudCanvas.width}px`;\n        hudCanvas.style.height = `${hudCanvas.height}px`;\n    }\n};\n\n// Initialize on load\nwindow.addEventListener(\'load\', () => {\n    Resizer.update();\n});\n\n// Listen for window resize\nwindow.addEventListener(\'resize\', () => {\n    Resizer.update();\n});\n\nexport default Resizer;\n')]<|tool_call_end|>
