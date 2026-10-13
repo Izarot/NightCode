@@ -1,0 +1,78 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+
+Raw: We need to output ONLY a valid raw JSON object mapping filenames to their complete code contents. No markdown, no commentary. Must include all files referenced: index.html, game.js, maybe assets, etc. But we need to produce a JSON mapping filenames to code. The spec is huge; we need to produce concise code that satisfies features: responsive canvas, emoji favicon, vibrant palette, localStorage high score, sound effects via Web Audio API, speedrun timer top corner.
+
+Given constraints, we need to produce minimal but functional code. Likely we can produce a simple HTML file with canvas, JS that implements core loop, ECS lite maybe simplified, but we can keep it simple: single canvas, handle input, draw, timer, high score, sound.
+
+We need to ensure JSON is valid. Keys must be strings, values strings with proper escaping of newlines etc. We need to embed code as string with \n escapes. Must be raw JSON, no markdown.
+
+We need to include files: index.html, game.js, maybe style.css? But spec says HTML5 Canvas, so likely index.html contains canvas and script tag referencing game.js. We'll produce index.html and game.js.
+
+We need to embed emoji favicon: maybe use 🍔 or 🎮. Use <link rel="icon" href="data:image/svg+xml;base64,...">? Simpler: <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='80'>🍔</text></svg>"> but that's messy. Could use a data URI with base64 of an emoji image? Simpler: use <link rel="icon" href="data:image/svg+xml;utf8,<svg ...>🍔</svg>"> but need to escape quotes. Maybe easier: use <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIvPjwvc3ZnPg=="> but that's too complex.
+
+Simplify: use <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='80'>🍔</text></svg>"> but need to escape double quotes inside attribute. In JSON string, we need to escape double quotes. So we can write:
+
+"<link rel=\"icon\" href=\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='80'>🍔</text></svg>\""
+
+But the inner single quotes are okay, but need to escape double quotes inside the outer JSON string. Actually the outer JSON uses double quotes for key and value. Inside value we need to escape any double quotes. The href value contains double quotes? It contains none, only single quotes inside SVG. So fine.
+
+But the emoji character may need to be encoded as UTF-8; but we can embed directly as Unicode in the string; JSON allows Unicode characters directly (they must be escaped as \uXXXX or actual characters). Safer to use actual emoji character.
+
+Simplify: maybe just use <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='80'>🍔</text></svg>" . That includes double quotes inside attribute? Actually the attribute value is delimited by double quotes, and inside we have single quotes for SVG attributes, so no conflict. The emoji is inside the text node; it's a Unicode character, okay.
+
+Now responsive canvas: set canvas width/height based on devicePixelRatio. Use CSS to make it fill container. We'll set canvas style width:100%; height:100%; and then in JS set canvas.width = canvas.clientWidth * dpr, canvas.height = canvas.clientHeight * dpr, then scale context.
+
+Palette: define colors as hex strings.
+
+Sound effects: use Web Audio API to create simple oscillators for sizzle, ding, etc. For simplicity, we can create a function playSound(type) that creates an oscillator and gain.
+
+Speedrun timer: top corner display.
+
+High score: store in localStorage, load on start, update if new.
+
+We need to keep code concise but functional. Let's outline:
+
+index.html:
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stanchion</title>
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='80'>🍔</text></svg>">
+<style>
+body{margin:0;background:#003B46;color:#00FFE0;font-family:sans-serif;overflow:hidden;}
+#gameCanvas{display:block;width:100%;height:100%;}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script src="game.js"></script>
+</body>
+</html>
+
+Now game.js:
+
+We'll implement a simple loop using requestAnimationFrame, fixed timestep 1/60.
+
+Define constants: canvas, ctx, dpr, scale.
+
+Define colors: bgColor = '#003B46', counterColor = '#E8C58D', etc.
+
+Define player object: position (x,y) in tile units, lane (0-2), speed, stamina.
+
+Define input handling: keyDown/Up.
+
+Define simple order: maybe a burger recipe: ['BUN','PATTY','CHEESE','BUN'].
+
+Define timer for cooking: when at grill node, start cooking timer.
+
+Simplify: we can have a single order that the player must assemble and serve.
+
+But spec requires many features; but we can implement minimal.
+
+We need to store high score: let highScore = localStorage.getItem('highScore') || 0; update when earnings > highScore.
+
+Speedrun timer: count down from 5 minutes (300 seconds). Display top-left.
+
+Sound: create AudioContext,}

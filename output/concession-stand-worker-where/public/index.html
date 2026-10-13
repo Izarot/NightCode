@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROJECT: STANCHION</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22><text y=%220.9em%22 font-size=%2232%22>🍔</text></svg>" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0A1A1F; color: #00FFE0; font-family: 'VT323', monospace; overflow: hidden; }
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        canvas { image-rendering: pixelated; background: #003B46; box-shadow: 0 0 20px rgba(0, 255, 224, 0.3); }
+        .hud { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; padding: 10px; background: rgba(0, 59, 70, 0.7); border: 2px solid #00FFE0; border-radius: 4px; }
+        .hud div { display: flex; align-items: center; gap: 8px; }
+        .hud .timer { font-size: 24px; letter-spacing: -1px; }
+        .hud .earnings { font-size: 20px; }
+        .hud .strikes { font-size: 20px; }
+        .hud .stamina { width: 100px; height: 8px; background: #111; border: 1px solid #00FFE0; overflow: hidden; }
+        .hud .stamina div { height: 100%; background: linear-gradient(90deg, #00FFE0, #FF2E88); transition: width 0.1s; }
+        @font-face { font-family: 'VT323'; src: url('https://fonts.gstatic.com/s/vt323/v15/ATGKv0NQq6yfY1gGvQ6XwA.woff2') format('woff2'); }
+        @font-face { font-family: 'Press Start 2P'; src: url('https://fonts.gstatic.com/s/pressstart2p/v19/e3t4euO8T0S62o--M14yyA.woff2') format('woff2'); }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        <div class="hud">
+            <div class="timer">Shift: <span id="timer-text">05:00</span></div>
+            <div class="earnings">$<span id="earnings-text">0</span></div>
+            <div class="strikes">Strikes: <span id="strikes-text">0/3</span></div>
+            <div class="stamina"><div id="stamina-bar"></div></div>
+        </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
