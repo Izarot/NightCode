@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>BoxWorld</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:'Press Start 2P',cursive,sans-serif}
+    body{background:#1a1a2e;color:#eaeaea;min-height:100vh;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+    #gameContainer{position:relative;width:100%;max-width:960px;aspect-ratio:16/9;touch-action:none}
+    canvas{display:block;width:100%;height:100%;background:#0f0f1a;image-rendering:pixelated}
+    .hud{position:absolute;top:10px;left:10px;right:10px;display:flex;justify-content:space-between;align-items:center;pointer-events:none;z-index:10}
+    .hud div{background:rgba(0,0,0,0.7);padding:5px 10px;border-radius:4px;border:2px solid #ff6b35;font-size:12px}
+    .overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;opacity:0;pointer-events:none;transition:opacity 0.3s}
+    .overlay.visible{opacity:1;pointer-events:auto}
+    .overlay h2{color:#ff6b35;margin-bottom:10px;font-size:24px;text-shadow:2px 2px #000}
+    .overlay p{margin:5px 0;font-size:14px}
+    button{background:#ff6b35;border:none;color:#1a1a2e;padding:10px 20px;font-size:14px;border-radius:4px;cursor:pointer;font-family:inherit;font-weight:bold;transition:transform 0.1s}
+    button:active{transform:scale(0.95)}
+    .levelSelect{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:10px;margin-top:20px;max-width:400px}
+    .levelBtn{aspect-ratio:1;background:#16213e;border:2px solid #0f3460;color:#eaeaea;font-size:12px}
+    .levelBtn.locked{opacity:0.4;cursor:not-allowed}
+    .levelBtn.completed{border-color:#ff6b35}
+    @media (max-width:600px){.hud div{font-size:10px;padding:3px 6px}}
+  </style>
+</head>
+<body>
+  <div id="gameContainer">
+    <canvas id="canvas"></canvas>
+    <div class="hud">
+      <div id="levelInfo">Level 1</div>
+      <div id="timer">00:00.00</div>
+      <div id="bestTime">Best: --:--.--</div>
+    </div>
+    <div id="winOverlay" class="overlay">
+      <h2>Level Complete!</h2>
+      <p id="winTime">Time: 00:00.00</p>
+      <button onclick="nextLevel()">Next Level</button>
+      <button onclick="restartLevel()" style="margin-top:10px;background:#0f3460;color:#fff">Restart</button>
+    </div>
+    <div id="menuOverlay" class="overlay visible">
+      <h2>BoxWorld</h2>
+      <p>Push all boxes onto targets</p>
+      <p>Arrows/WASD to move, Touch to swipe</p>
+      <div class="levelSelect" id="levelSelect"></div>
+    </div>
+  </div>
+  <script>
+    // ===== CONFIG =====
+    const TILE = 32;
+    const COLORS = {
+      bg: '#0f0f1a',
+      wall: '#16213e',
+      wallEdge: '#0f3460',
+      floor: '#1a1a2e',
+      target: '#ff6b35',
+      targetGlow: '#ff9f1c',
+      box: '#e94560',
+      boxTop: '#ff6b6b',
+      player: '#00d9ff',
+      playerAccent: '#00ffff',
+      text: '#eaeaea',
+      hudBg: 'rgba(0,0,0,0.7)',
+      hudBorder: '#ff6b35'
+    };
+    const LEVELS = [
+      ["########","#P  B .#","#      #","########"],
+      ["##########","#P   #  B#","#    #   #","#  ##  . #","#      . #","##########"],
+      ["##########","#P  ##  B#","#  #    .#","#  #  #  #","#     # .#","##########"],
+      ["############","#P    ##   #","#  #  #  B #","#  #  #   .#","#     ##  .#","############"]
+    ];
+    // ===== STATE =====
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let currentLevel = 0;
+    let grid = [];
+    let player = {x:0,y:0};
+    let boxes = [];
+    let targets = [];
+    let walls = [];
+    let startTime = 0;
+    let elapsed = 0;
+    let running = false;
+    let won = false;
+    let touchStart = null;
+    const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    // ===== AUDIO =====
+    function beep(freq, dur, type='square', vol=0.1){
+      if(!audioCtx) return;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.value = vol;
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(); o.stop(audioCtx.currentTime + dur);
+    }
+    function playMove(){ beep(220, 0.05, 'sine', 0.05); }
+    function playPush(){ beep(150, 0.1, 'triangle', 0.1); }
+    function playWin(){ [440,550,660,880].forEach((f,i)=>setTimeout(()=>beep(f,0.15,'sine',0.1),i*100)); }
+    // ===== LEVEL LOADING =====
+    function loadLevel(idx){
+      currentLevel = idx;
+      const data = LEVELS[idx];
+      grid = data.map(row=>row.split(''));
+      player = {x:0,y:0};
+      boxes = []; targets = []; walls = [];
+      grid.forEach((row,y)=>row.forEach((cell,x)=>{
+        if(cell==='#') walls.push({x,y});
+        else if(cell==='P') player = {x,y};
+        else if(cell==='B') boxes.push({x,y});
+        else if(cell==='.') targets.push({x,y});
+      }));
+      startTime = performance.now();
+      elapsed = 0;
+      running = true;
+      won = false;
+      document.getElementById('levelInfo').textContent = `Level ${idx+1}`;
+      updateBestTimeDisplay();
+      document.getElementById('winOverlay').classList.remove('visible');
+    }
+    function updateBestTimeDisplay(){
+      const best = localStorage.getItem(`boxworld_best_${currentLevel}`);
+      document.getElementById('bestTime').textContent = best ? `Best: ${formatTime(parseFloat(best))}` : 'Best: --:--.--';
+    }
+    function formatTime(ms){
+      const m = Math.floor(ms/60000);
+      const s = Math.floor((ms%60000)/1000);
+      const cs = Math.floor((ms%1000)/10);
+      return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}.${cs.toString().padStart(2,'0')}`;
+    }
+    // ===== INPUT =====
+    window.addEventListener('keydown', e=>{
+      if(!running || won) return;
+      const dir = {ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0},
+                   KeyW:{x:0,y:-1},KeyS:{x:0,y:1},KeyA:{x:-1,y:0},KeyD:{x:1,y:0}}[e.code];
+      if(dir) attemptMove(dir.x, dir.y);
+    });
+    canvas.addEventListener('touchstart', e=>{ touchStart = {x:e.touches[0].clientX, y:e.touches[0].clientY}; }, {passive:true});
+    canvas.addEventListener('touchend', e=>{
+      if(!touchStart || !running || won) return;
+      const dx = e.changedTouches[0].clientX - touchStart.x;
+      const dy = e.changedTouches[0].clientY - touchStart.y;
+      if(Math.abs(dx)>Math.abs(dy)){
+        if(Math.abs(dx)>30) attemptMove(dx>0?1:-1, 0);
+      }else{
+        if(Math.abs(dy)>30) attemptMove(0, dy>0?1:-1);
+      }
+      touchStart = null;
+    }, {passive:true});
+    // ===== MOVEMENT LOGIC =====
+    function isWall(x,y){ return walls.some(w=>w.x===x && w.y===y); }
+    function isBox(x,y){ return boxes.find(b=>b.x===x && b.y===y); }
+    function isTarget(x,y){ return targets.some(t=>t.x===x && t.y===y); }
+    function attemptMove(dx,dy){
+      const nx = player.x+dx, ny = player.y+dy;
+      if(isWall(nx,ny)) return;
+      const box = isBox(nx,ny);
+      if(box){
+        const bx = box.x+dx, by = box.y+dy;
+        if(isWall(bx,by) || isBox(bx,by)) return;
+        box.x = bx; box.y = by;
+        playPush();
+      }else{
+        playMove();
+      }
+      player.x = nx; player.y = ny;
+      checkWin();
+    }
+    function checkWin(){
+      if(boxes.every(b=>isTarget(b.x,b.y)) && boxes.length===targets.length){
+        won = true;
+        running = false;
+        elapsed = performance.now() - startTime;
+        playWin();
+        const best = localStorage.getItem(`boxworld_best_${currentLevel}`);
+        if(!best || elapsed < parseFloat(best)){
+          localStorage.setItem(`boxworld_best_${currentLevel}`, elapsed.toString());
+        }
+        document.getElementById('winTime').textContent = `Time: ${formatTime(elapsed)}`;
+        document.getElementById('winOverlay').classList.add('visible');
+        buildLevelSelect();
+      }
+    }
+    // ===== RENDER =====
+    function resize(){
+      const container = document.getElementById('gameContainer');
+      const rect = container.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+    function draw(){
+      const w = grid[0].length, h = grid.length;
+      const scale = Math.min(canvas.width/w, canvas.height/h);
+      const offsetX = (canvas.width - w*scale)/2;
+      const offsetY = (canvas.height - h*scale)/2;
+      ctx.save();
+      ctx.translate(offsetX, offsetY);
+      ctx.scale(scale, scale);
+      // background
+      ctx.fillStyle = COLORS.bg;
+      ctx.fillRect(0,0,w*TILE,h*TILE);
+      // floor
+      ctx.fillStyle = COLORS.floor;
+      for(let y=0;y<h;y++) for(let x=0;x<w;x++) if(grid[y][x]!=='#') ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
+      // targets
+      targets.forEach(t=>{
+        ctx.fillStyle = COLORS.target;
+        ctx.beginPath();
+        ctx.arc((t.x+0.5)*TILE, (t.y+0.5)*TILE, TILE*0.35, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = COLORS.targetGlow;
+        ctx.beginPath();
+        ctx.arc((t.x+0.5)*TILE, (t.y+0.5)*TILE, TILE*0.15, 0, Math.PI*2);
+        ctx.fill();
+      });
+      // walls
+      walls.forEach(w=>{
+        ctx.fillStyle = COLORS.wall;
+        ctx.fillRect(w.x*TILE, w.y*TILE, TILE, TILE);
+        ctx.strokeStyle = COLORS.wallEdge;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(w.x*TILE+1, w.y*TILE+1, TILE-2, TILE-2);
+      });
+      // boxes
+      boxes.forEach(b=>{
+        const onTarget = isTarget(b.x,b.y);
+        ctx.fillStyle = onTarget ? COLORS.target : COLORS.box;
+        ctx.fillRect(b.x*TILE+2, b.y*TILE+2, TILE-4, TILE-4);
+        ctx.fillStyle = onTarget ? COLORS.targetGlow : COLORS.boxTop;
+        ctx.fillRect(b.x*TILE+4, b.y*TILE+4, TILE-8, TILE-8);
+      });
+      // player
+      ctx.fillStyle = COLORS.player;
+      ctx.beginPath();
+      ctx.arc((player.x+0.5)*TILE, (player.y+0.5)*TILE, TILE*0.35, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = COLORS.playerAccent;
+      ctx.beginPath();
+      ctx.arc((player.x+0.5)*TILE, (player.y+0.5)*TILE, TILE*0.15, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+    function loop(){
+      if(running && !won) elapsed = performance.now() - startTime;
+      document.getElementById('timer').textContent = formatTime(elapsed);
+      draw();
+      requestAnimationFrame(loop);
+    }
+    // ===== LEVEL SELECT =====
+    function buildLevelSelect(){
+      const container = document.getElementById('levelSelect');
+      container.innerHTML = '';
+      LEVELS.forEach((_,i)=>
+      {
+        const btn = document.createElement('button');
+        btn.className = 'levelBtn' + (i>currentLevel?' locked':'') + (localStorage.getItem(`boxworld_best_${i}`)?' completed':'');
+        btn.textContent = i+1;
+        btn.disabled = i>currentLevel;
+        btn.onclick = ()=>{ loadLevel(i); document.getElementById('menuOverlay').classList.remove('visible'); };
+        container.appendChild(btn);
+      });
+    }
+    function nextLevel(){ if(currentLevel+1<LEVELS.length) loadLevel(currentLevel+1); }
+    function restartLevel(){ loadLevel(currentLevel); }
+    function showMenu(){ document.getElementById('menuOverlay').classList.add('visible'); buildLevelSelect(); }
+    // ===== INIT =====
+    window.addEventListener('resize', resize);
+    resize();
+    buildLevelSelect();
+    loadLevel(0);
+    loop();
+  </script>
+</body>
+</html>
