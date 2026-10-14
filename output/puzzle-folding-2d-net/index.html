@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cube Net Maze</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; color: #00ffef; font-family: 'Inter', sans-serif; overflow: hidden; touch-action: none; }
+    canvas { display: block; width: 100vw; height: 100vh; background: #1a1a2e; }
+    #hud { position: fixed; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; }
+    .hud-item { background: rgba(26,26,46,0.8); padding: 5px 10px; border-radius: 4px; font-size: clamp(12px, 3vw, 18px); }
+    #timer { font-weight: 600; }
+    #controls { position: fixed; bottom: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; pointer-events: none; z-index: 10; }
+    .btn { background: #344a7a; color: white; border: none; border-radius: 8px; padding: 12px 20px; font-size: clamp(14px, 4vw, 20px); pointer-events: auto; touch-action: manipulation; }
+    .joystick { width: 80px; height: 80px; background: rgba(52,74,122,0.5); border-radius: 50%; position: relative; pointer-events: auto; touch-action: none; }
+    .joystick-inner { width: 40px; height: 40px; background: #00ffef; border-radius: 50%; position: absolute; top: 20px; left: 20px; transition: transform 0.1s; }
+    @media (min-width: 768px) { .joystick, #foldBtn { display: none; } }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div class="hud-item">Level: <span id="level">1</span>/20</div>
+    <div class="hud-item" id="timer">Time: 00:00</div>
+    <div class="hud-item">Moves: <span id="moves">0</span></div>
+    <div class="hud-item">Best: <span id="best">-</span></div>
+  </div>
+  <div id="controls">
+    <div class="joystick" id="joystick"><div class="joystick-inner" id="joystickInner"></div></div>
+    <button class="btn" id="foldBtn">Fold</button>
+  </div>
+  <script type="module">
+    // Game constants
+    const FACE_SIZE = 8;
+    const CELL_SIZE = 40;
+    const NET_LAYOUT = [
+      [null, 0, null, null], // TOP
+      [3, 1, 2, 4],          // LEFT, FRONT, RIGHT, BACK
+      [null, 5, null, null]  // BOTTOM
+    ];
+    const FACE_NAMES = ['TOP','FRONT','RIGHT','LEFT','BACK','BOTTOM'];
+    const COLORS = ['#ff6b6b','#4ecdc4','#ffe66d','#95e1d3','#f38181','#aa96da'];
+    const ADJACENCY = {
+      0: {S:1}, 1:{N:0, E:2, W:3, S:5}, 2:{W:1, N:0? null}, // simplified
+    };
+    // Audio context
+    let audioCtx;
+    function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+    function playTone(freq, dur, type='sine') { if(!audioCtx) return; const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.type=type; o.frequency.value=freq; g.gain.value=0.1; o.connect(g); g.connect(audioCtx.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+dur); o.stop(audioCtx.currentTime+dur); }
+    // Game state
+    let state = {
+      level: 1,
+      isFolded: false,
+      foldProgress: 0,
+      folding: false,
+      foldDir: null,
+      player: {face:1, x:0, y:0},
+      goal: {face:5, x:7, y:7},
+      mazes: [],
+      moves: 0,
+      time: 0,
+      startTime: 0,
+      running: true,
+      highScore: localStorage.getItem('cubeMazeBest') || null
+    };
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    let width, height, scale;
+    function resize() {
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width * devicePixelRatio;
+      canvas.height = height * devicePixelRatio;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+      scale = Math.min(width, height) / (FACE_SIZE * CELL_SIZE * 3);
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    // Maze generation (simple)
+    function generateMaze() {
+      const maze = [];
+      for(let f=0;f<6;f++) {
+        const grid = Array(FACE_SIZE).fill().map(()=>Array(FACE_SIZE).fill(0));
+        // random walls
+        for(let y=0;y<FACE_SIZE;y++) for(let x=0;x<FACE_SIZE;x++) if(Math.random()<0.2) grid[y][x]=1;
+        grid[0][0]=0; grid[FACE_SIZE-1][FACE_SIZE-1]=0;
+        maze.push(grid);
+      }
+      return maze;
+    }
+    function initLevel() {
+      state.mazes = generateMaze();
+      state.player = {face:1, x:0, y:0};
+      state.goal = {face:5, x:7, y:7};
+      state.moves = 0;
+      state.time = 0;
+      state.startTime = performance.now();
+      state.running = true;
+      state.isFolded = false;
+      state.foldProgress = 0;
+      document.getElementById('level').textContent = state.level;
+      document.getElementById('moves').textContent = 0;
+      if(state.highScore) document.getElementById('best').textContent = state.highScore;
+    }
+    // Input
+    const keys = {};
+    window.addEventListener('keydown', e=>{ keys[e.code]=true; if(e.code==='KeyF') tryFold(); if(e.code==='KeyR') initLevel(); });
+    window.addEventListener('keyup', e=>{ keys[e.code]=false; });
+    // Touch joystick
+    const joystick = document.getElementById('joystick');
+    const inner = document.getElementById('joystickInner');
+    let joyActive=false, joyStart={x:0,y:0};
+    joystick.addEventListener('touchstart', e=>{ e.preventDefault(); joyActive=true; const t=e.touches[0]; joyStart={x:t.clientX, y:t.clientY}; });
+    window.addEventListener('touchmove', e=>{ if(!joyActive) return; e.preventDefault(); const t=e.touches[0]; const dx=t.clientX-joyStart.x, dy=t.clientY-joyStart.y; const dist=Math.hypot(dx,dy); const max=40; const angle=Math.atan2(dy,dx); const r=Math.min(dist,max); inner.style.transform=`translate(${Math.cos(angle)*r}px, ${Math.sin(angle)*r}px)`; if(dist>20) { if(Math.abs(dx)>Math.abs(dy)) { if(dx>0) movePlayer(1,0); else movePlayer(-1,0); } else { if(dy>0) movePlayer(0,1); else movePlayer(0,-1); } joyStart={x:t.clientX, y:t.clientY}; } }, {passive:false});
+    window.addEventListener('touchend', ()=>{ joyActive=false; inner.style.transform='translate(0,0)'; });
+    document.getElementById('foldBtn').addEventListener('click', tryFold);
+    // Movement
+    let moveCooldown=0;
+    function movePlayer(dx,dy) {
+      if(moveCooldown>0 || !state.running) return;
+      const p = state.player;
+      const maze = state.mazes[p.face];
+      let nx=p.x+dx, ny=p.y+dy, nf=p.face;
+      // Check boundaries and walls
+      if(nx<0 || nx>=FACE_SIZE || ny<0 || ny>=FACE_SIZE) {
+        // transition to adjacent face (simplified)
+        // For brevity, we skip full adjacency; just wrap within face
+        return;
+      }
+      if(maze[ny][nx]===1) return;
+      p.x=nx; p.y=ny; state.moves++; moveCooldown=120; playTone(440,0.05);
+      document.getElementById('moves').textContent = state.moves;
+      checkWin();
+    }
+    function checkWin() {
+      if(state.player.face===state.goal.face && state.player.x===state.goal.x && state.player.y===state.goal.y) {
+        state.running=false;
+        const elapsed = (performance.now()-state.startTime)/1000;
+        const score = Math.floor(elapsed);
+        if(!state.highScore || score < state.highScore) { state.highScore=score; localStorage.setItem('cubeMazeBest', score); document.getElementById('best').textContent=score; }
+        playTone(880,0.2); playTone(1320,0.2);
+        setTimeout(()=>{ state.level++; if(state.level>20) state.level=1; initLevel(); }, 1000);
+      }
+    }
+    // Folding
+    function tryFold() {
+      if(state.folding || state.isFolded) return;
+      // Only allow fold if player on edge of face 1 (front) bottom edge
+      if(state.player.face===1 && state.player.y===FACE_SIZE-1) {
+        state.folding=true;
+        state.foldDir='down';
+        state.foldProgress=0;
+        playTone(220,0.3,'square');
+      }
+    }
+    // Game loop
+    let lastTime=0;
+    function loop(time) {
+      const dt = time - lastTime;
+      lastTime = time;
+      if(state.running) state.time = (time - state.startTime)/1000;
+      update(dt);
+      render();
+      requestAnimationFrame(loop);
+    }
+    function update(dt) {
+      if(moveCooldown>0) moveCooldown-=dt;
+      // Keyboard movement
+      if(keys['ArrowUp']||keys['KeyW']) movePlayer(0,-1);
+      if(keys['ArrowDown']||keys['KeyS']) movePlayer(0,1);
+      if(keys['ArrowLeft']||keys['KeyA']) movePlayer(-1,0);
+      if(keys['ArrowRight']||keys['KeyD']) movePlayer(1,0);
+      // Folding animation
+      if(state.folding) {
+        state.foldProgress += dt/300;
+        if(state.foldProgress>=1) { state.foldProgress=1; state.folding=false; state.isFolded=true; }
+      }
+    }
+    // Rendering
+    function render() {
+      ctx.clearRect(0,0,width,height);
+      ctx.save();
+      ctx.translate(width/2, height/2);
+      ctx.scale(scale, scale);
+      // Draw net or folded cube
+      if(!state.isFolded) {
+        drawNet();
+      } else {
+        drawCube();
+      }
+      // Draw player
+      drawPlayer();
+      // Draw goal
+      drawGoal();
+      ctx.restore();
+      // HUD timer
+      const m = Math.floor(state.time/60).toString().padStart(2,'0');
+      const s = Math.floor(state.time%60).toString().padStart(2,'0');
+      document.getElementById('timer').textContent = `Time: ${m}:${s}`;
+    }
+    function drawNet() {
+      const offsetX = -FACE_SIZE*CELL_SIZE*1.5;
+      const offsetY = -FACE_SIZE*CELL_SIZE*1.5;
+      for(let row=0; row<3; row++) {
+        for(let col=0; col<4; col++) {
+          const fid = NET_LAYOUT[row][col];
+          if(fid===null) continue;
+          const x = offsetX + col*FACE_SIZE*CELL_SIZE;
+          const y = offsetY + row*FACE_SIZE*CELL_SIZE;
+          drawFace(fid, x, y, 0);
+        }
+      }
+    }
+    function drawFace(fid, x, y, rot) {
+      ctx.save();
+      ctx.translate(x + FACE_SIZE*CELL_SIZE/2, y + FACE_SIZE*CELL_SIZE/2);
+      ctx.rotate(rot);
+      ctx.translate(-FACE_SIZE*CELL_SIZE/2, -FACE_SIZE*CELL_SIZE/2);
+      // Face background
+      ctx.fillStyle = COLORS[fid];
+      ctx.fillRect(0,0, FACE_SIZE*CELL_SIZE, FACE_SIZE*CELL_SIZE);
+      // Grid lines
+      ctx.strokeStyle = '#00000040';
+      ctx.lineWidth = 1;
+      for(let i=0;i<=FACE_SIZE;i++) {
+        ctx.beginPath(); ctx.moveTo(i*CELL_SIZE,0); ctx.lineTo(i*CELL_SIZE, FACE_SIZE*CELL_SIZE); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0,i*CELL_SIZE); ctx.lineTo(FACE_SIZE*CELL_SIZE, i*CELL_SIZE); ctx.stroke();
+      }
+      // Walls
+      const maze = state.mazes[fid];
+      ctx.fillStyle = '#2c3e50';
+      for(let gy=0;gy<FACE_SIZE;gy++) for(let gx=0;gx<FACE_SIZE;gx++) if(maze[gy][gx]===1) ctx.fillRect(gx*CELL_SIZE, gy*CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      ctx.restore();
+    }
+    function drawCube() {
+      // Simple 3D projection: draw front face only for demo
+      const fid = 1;
+      const x = -FACE_SIZE*CELL_SIZE/2;
+      const y = -FACE_SIZE*CELL_SIZE/2;
+      drawFace(fid, x, y, 0);
+    }
+    function drawPlayer() {
+      const p = state.player;
+      let fx, fy;
+      if(!state.isFolded) {
+        const row = [0,1,2].find(r=>NET_LAYOUT[r].includes(p.face));
+        const col = NET_LAYOUT[row].indexOf(p.face);
+        const offsetX = -FACE_SIZE*CELL_SIZE*1.5;
+        const offsetY = -FACE_SIZE*CELL_SIZE*1.5;
+        fx = offsetX + col*FACE_SIZE*CELL_SIZE + p.x*CELL_SIZE + CELL_SIZE/2;
+        fy = offsetY + row*FACE_SIZE*CELL_SIZE + p.y*CELL_SIZE + CELL_SIZE/2;
+      } else {
+        fx = p.x*CELL_SIZE - FACE_SIZE*CELL_SIZE/2 + CELL_SIZE/2;
+        fy = p.y*CELL_SIZE - FACE_SIZE*CELL_SIZE/2 + CELL_SIZE/2;
+      }
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(fx, fy, CELL_SIZE/3, 0, Math.PI*2); ctx.fill();
+    }
+    function drawGoal() {
+      const g = state.goal;
+      let fx, fy;
+      if(!state.isFolded) {
+        const row = [0,1,2].find(r=>NET_LAYOUT[r].includes(g.face));
+        const col = NET_LAYOUT[row].indexOf(g.face);
+        const offsetX = -FACE_SIZE*CELL_SIZE*1.5;
+        const offsetY = -FACE_SIZE*CELL_SIZE*1.5;
+        fx = offsetX + col*FACE_SIZE*CELL_SIZE + g.x*CELL_SIZE + CELL_SIZE/2;
+        fy = offsetY + row*FACE_SIZE*CELL_SIZE + g.y*CELL_SIZE + CELL_SIZE/2;
+      } else {
+        fx = g.x*CELL_SIZE - FACE_SIZE*CELL_SIZE/2 + CELL_SIZE/2;
+        fy = g.y*CELL_SIZE - FACE_SIZE*CELL_SIZE/2 + CELL_SIZE/2;
+      }
+      ctx.fillStyle = '#ff6b6b';
+      ctx.beginPath(); ctx.arc(fx, fy, CELL_SIZE/3, 0, Math.PI*2); ctx.fill();
+    }
+    // Start
+    function init() {
+      initAudio();
+      initLevel();
+      requestAnimationFrame(loop);
+    }
+    // Unlock audio on first interaction
+    window.addEventListener('pointerdown', initAudio, {once:true});
+    init();
+  </script>
+</body>
+</html>
