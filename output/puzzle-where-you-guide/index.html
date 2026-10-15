@@ -1,35 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Water Drop Maze</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='70' font-size='60'>💧</text></svg>" />
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', sans-serif; background: #0f2027; color: #e0f7fa; overflow: hidden; }
-    #gameContainer { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    canvas { width: 100%; height: 100%; background: #1a2a40; image-rendering: pixelated; }
-    .hud { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; padding: 5px 15px; font-size: 14px; z-index: 10; }
-    .hud div { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; }
-    #levelSelect { display: none; flex-wrap: wrap; gap: 10px; justify-content: center; padding: 20px; }
-    .levelBtn { padding: 10px 20px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; background: #00bcd4; color: #000; }
-    .levelBtn:hover { background: #00e5ff; }
-    #startBtn { padding: 15px 30px; font-size: 20px; border: none; border-radius: 8px; cursor: pointer; background: #ffeb3b; color: #000; margin-top: 20px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaf Drift</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='75' font-size='80' font-family='Arial' fill='%23ff6b35'%3E🍂%3C/text%3E%3C/svg%3E">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #1a2980, #26d0ce);
+            font-family: 'Comic Sans MS', 'Marker Felt', cursive;
+            overflow: hidden;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 4/3;
+        }
+        #gameCanvas { 
+            width: 100%;
+            height: 100%;
+            background: #87CEEB;
+            border: 3px solid #ff6b35;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        }
+        #hud { 
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            pointer-events: none;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+        }
+        #score, #timer, #tokens, #level { 
+            position: absolute;
+            font-size: 18px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        #score { left: 10px; top: 10px; }
+        #timer { top: 10px; left: 50%; transform: translateX(-50%); }
+        #tokens { top: 10px; right: 10px; display: flex; align-items: center; gap: 5px; }
+        #level { bottom: 10px; left: 10px; }
+        .token-icon { width: 24px; height: 24px; filter: drop-shadow(2px 2px 3px #000); }
+        .menu { 
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            z-index: 100;
+        }
+        .menu-btn { 
+            padding: 15px 40px;
+            font-size: 24px;
+            background: linear-gradient(45deg, #ff6b35, #d63031);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-family: 'Comic Sans MS', cursive;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .menu-btn:hover { 
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+            background: linear-gradient(45deg, #d63031, #ff6b35);
+        }
+        #highScore { 
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(255,255,255,0.9);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        @media (max-width: 600px) {
+            #score, #timer, #tokens, #level { font-size: 14px; }
+            .menu-btn { padding: 12px 30px; font-size: 20px; }
+        }
+    </style>
 </head>
 <body>
-  <div id="gameContainer">
-    <canvas id="gameCanvas"></canvas>
-    <div class="hud" id="hud">
-      <div>Level: <span id="levelDisplay">1</span></div>
-      <div>Time: <span id="timerDisplay">0.00</span>s</div>
-      <div>Size: <span id="sizeDisplay">100</span>%</div>
-      <div>High Score: <span id="highScoreDisplay">0</span></div>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="hud">
+            <div id="score">Score: 0</div>
+            <div id="timer">Time: 00:00</div>
+            <div id="tokens">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 50 50'%3E%3Ccircle cx='25' cy='25' r='20' fill='%23ffd700'/%3E%3C/svg%3E" class="token-icon">
+                <span>0/3</span>
+            </div>
+            <div id="level">Level: 1/50</div>
+            <div id="highScore">High Score: 0</div>
+        </div>
+        <div class="menu" id="mainMenu">
+            <h1 style="color: white; font-size: 48px; margin-bottom: 30px; text-shadow: 0 0 20px #ff6b35;">🍂 LEAF DRIFT 🍂</h1>
+            <button class="menu-btn" onclick="startGame()">Start Game</button>
+            <button class="menu-btn" onclick="showLevelSelect()">Level Select</button>
+            <button class="menu-btn" onclick="showSettings()">Settings</button>
+        </div>
+        <div class="menu" id="levelSelect" style="display: none;">
+            <h1 style="color: white; margin-bottom: 20px;">Level Select</h1>
+            <button class="menu-btn" onclick="backToMenu()">Back</button>
+        </div>
+        <div class="menu" id="settingsMenu" style="display: none;">
+            <h1 style="color: white; margin-bottom: 20px;">Settings</h1>
+            <button class="menu-btn" onclick="backToMenu()">Back</button>
+        </div>
     </div>
-    <div id="levelSelect"></div>
-    <button id="startBtn">Start Game</button>
-  </div>
-  <script src="src/main.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
