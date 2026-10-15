@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Chromatic Path</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }
+    body { background: #0d0d1a; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+    #gameCanvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); image-rendering: pixelated; image-rendering: crisp-edges; }
+    #uiOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+    .hud { position: absolute; color: #fff; font-size: 14px; text-shadow: 0 0 4px #000; }
+    #levelInfo { top: 16px; left: 16px; opacity: 0.8; }
+    #timer { top: 16px; right: 16px; font-family: monospace; font-size: 18px; font-weight: bold; color: #00ffcc; }
+    #paintMeter { top: 16px; right: 16px; transform: translateY(40px); width: 120px; height: 10px; background: rgba(0,0,0,0.5); border-radius: 5px; overflow: hidden; }
+    #paintMeterFill { height: 100%; width: 100%; background: linear-gradient(90deg, #4ecdc4, #45b7aa); transition: width 0.1s; }
+    #paintValue { position: absolute; right: -40px; top: -2px; font-size: 11px; color: #aaa; }
+    #colorSwatches { bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; }
+    .swatch { width: 32px; height: 32px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.15s, border-color 0.15s; box-shadow: 0 0 8px currentColor; }
+    .swatch.active { border-color: #fff; transform: scale(1.2); }
+    .swatch:hover { opacity: 1; }
+    #pauseMenu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(10,10,30,0.95); padding: 32px; border-radius: 12px; text-align: center; display: none; z-index: 100; pointer-events: auto; border: 1px solid #4ecdc4; }
+    #pauseMenu h2 { color: #4ecdc4; margin-bottom: 16px; }
+    #pauseMenu button { background: #4ecdc4; border: none; color: #0d0d1a; padding: 12px 24px; margin: 8px; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; }
+    #pauseMenu button:hover { background: #45b7aa; }
+    .hidden { display: none !important; }
+    @media (max-width: 768px) { .hud { font-size: 12px; } #colorSwatches { bottom: 8px; } .swatch { width: 28px; height: 28px; } }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="uiOverlay">
+    <div id="levelInfo" class="hud">LEVEL 1/5</div>
+    <div id="timer" class="hud">00:00.00</div>
+    <div id="paintMeter" class="hud"><div id="paintMeterFill"></div><span id="paintValue">100/100</span></div>
+    <div id="colorSwatches" class="hud">
+      <div class="swatch active" data-color="0" style="background:#4ecdc4" title="Normal (1)"></div>
+      <div class="swatch" data-color="1" style="background:#7eea7e" title="Sticky (2)"></div>
+      <div class="swatch" data-color="2" style="background:#ffb347" title="Bouncy (3)"></div>
+      <div class="swatch" data-color="3" style="background:#c77dff" title="Slippery (4)"></div>
+    </div>
+    <div id="pauseMenu">
+      <h2>PAUSED</h2>
+      <button id="resumeBtn">Resume</button><br>
+      <button id="restartBtn">Restart Level</button><br>
+      <button id="quitBtn">Main Menu</button>
+    </div>
+  </div>
+  <script>
+    // ===== CONFIG & CONSTANTS =====
+    const CONFIG = {
+      width: 1280, height: 720,
+      gravity: 1800, jumpVel: -520, maxFall: 450,
+      moveAccel: 800, moveDecel: 1200, airDecel: 900,
+      maxGroundSpeed: 200, maxAirSpeed: 120,
+      coyoteTime: 0.12, jumpBuffer: 0.1,
+      paintRange: 250, paintCooldown: 0.35, paintCost: 8, paintRegen: 4,
+      paintMaxWidth: 200, paintMaxHeight: 150,
+      colors: [
+        { name: 'Normal', bg: '#4ecdc4', fg: '#006666', friction: 1, accel: 1, speed: 1, bounce: 0 },
+        { name: 'Sticky', bg: '#7eea7e', fg: '#2d662d', friction: 1.5, accel: 1.3, speed: 0.9, bounce: 0 },
+        { name: 'Bouncy', bg: '#ffb347', fg: '#cc6600', friction: 1, accel: 1, speed: 1, bounce: 150 },
+        { name: 'Slippery', bg: '#c77dff', fg: '#6600cc', friction: 0.4, accel: 1, speed: 1.4, bounce: 0 }
+      ]
+    };
+    const PAINT_TYPES = { NORMAL: 0, STICKY: 1, BOUNCY: 2, SLIPPERY: 3 };
+    
+    // ===== AUDIO ENGINE =====
+    const AudioEngine = (() => {
+      let ctx = null;
+      const init = () => { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); };
+      const playTone = (freq, dur, type='sine', vol=0.1, start=0) => {
+        init(); if (ctx.state === 'suspended') ctx.resume();
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = type; o.frequency.value = freq;
+        g.gain.value = vol; g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+        o.connect(g).connect(ctx.destination);
+        o.start(ctx.currentTime + start); o.stop(ctx.currentTime + start + dur);
+      };
+      return {
+        jump: () => { playTone(330, 0.1, 'square', 0.08); playTone(440, 0.05, 'square', 0.05, 0.05); },
+        paint: () => { playTone(600, 0.08, 'sine', 0.1); playTone(800, 0.05, 'sine', 0.07, 0.03); },
+        land: () => playTone(180, 0.1, 'triangle', 0.1),
+        hurt: () => { playTone(200, 0.2, 'sawtooth', 0.1); playTone(150, 0.3, 'sawtooth', 0.08, 0.1); },
+        win: () => [523, 659, 784, 1047].forEach((f,i)=>playTone(f,0.2,'sine',0.1,i*0.1)),
+        switchColor: () => playTone(880, 0.05, 'sine', 0.05)
+      };
+    })();
+    
+    // ===== UTILITIES =====
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const rectsOverlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+    
+    // ===== INPUT HANDLER =====
+    const Input = (() => {
+      const keys = {}, mouse = { x: 0, y: 0, down: false };
+      const keyMap = { 'ArrowLeft': 'left', 'ArrowRight': 'right', 'KeyA': 'left', 'KeyD': 'right', 'Space': 'jump', 'Escape': 'pause' };
+      for (let i = 1; i <= 4; i++) keyMap['Digit' + i] = 'color' + i;
+      
+      window.addEventListener('keydown', e => { if (keyMap[e.code]) keys[keyMap[e.code]] = true; });
+      window.addEventListener('keyup', e => { if (keyMap[e.code]) keys[keyMap[e.code]] = false; });
+      window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+      window.addEventListener('mousedown', () => mouse.down = true);
+      window.addEventListener('mouseup', () => mouse.down = false);
+      window.addEventListener('touchstart', e => { e.preventDefault(); mouse.down = true; mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }, { passive: false });
+      window.addEventListener('touchmove', e => { e.preventDefault(); mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; }, { passive: false });
+      window.addEventListener('touchend', () => mouse.down = false);
+      
+      return {
+        get left() { return keys.left; },
+        get right() { return keys.right; },
+        get jump() { return keys.jump; },
+        get jumpPressed() { const p = keys.jump; keys.jump = false; return p; },
+        get pause() { const p = keys.pause; keys.pause = false; return p; },
+        getColor: () => { for (let i = 1; i <= 4; i++) if (keys['color' + i]) { keys['color' + i] = false; return i - 1; } return null; },
+        getMouse: () => ({ ...mouse }),
+        reset: () => { keys.jump = false; }
+      };
+    })();
+    
+    // ===== LEVEL DATA =====
+    const Levels = [
+      { // Level 1 - Tutorial
+        platforms: [
+          { x: 0, y: 600, w: 1280, h: 120, color: 0 },
+          { x: 300, y: 450, w: 200, h: 20, color: 0 },
+          { x: 600, y: 350, w: 200, h: 20, color: 0 },
+          { x: 900, y: 250, w: 200, h: 20, color: 0 },
+          { x: 1100, y: 100, w: 180, h: 100, color: 0, isExit: true }
+        ],
+        enemies: [],
+        spawn: { x: 100, y: 500 }
+      },
+      { // Level 2 - Vertical climb
+        platforms: [
+          { x: 0, y: 600, w: 1280, h: 120, color: 0 },
+          { x: 100, y: 480, w: 150, h: 20, color: 0 },
+          { x: 300, y: 380, w: 150, h: 20, color: 0 },
+          { x: 100, y: 280, w: 150, h: 20, color: 0 },
+          { x: 300, y: 180, w: 150, h: 20, color: 0 },
+          { x: 1100, y: 50, w: 180, h: 100, color: 0, isExit: true }
+        ],
+        enemies: [{ x: 200, y: 460, w: 30, h: 30, type: 'drone', patrol: { x1: 150, x2: 400 } }],
+        spawn: { x: 100, y: 500 }
+      },
+      { // Level 3 - Gap crossing
+        platforms: [
+          { x: 0, y: 600, w: 400, h: 120, color: 0 },
+          { x: 880, y: 600, w: 400, h: 120, color: 0 },
+          { x: 1100, y: 100, w: 180, h: 100, color: 0, isExit: true }
+        ],
+        enemies: [],
+        spawn: { x: 100, y: 500 }
+      },
+      { // Level 4 - Enemy gauntlet
+        platforms: [
+          { x: 0, y: 600, w: 1280, h: 120, color: 0 },
+          { x: 200, y: 450, w: 200, h: 20, color: 0 },
+          { x: 500, y: 350, w: 200, h: 20, color: 0 },
+          { x: 800, y: 250, w: 200, h: 20, color: 0 },
+          { x: 1100, y: 100, w: 180, h: 100, color: 0, isExit: true }
+        ],
+        enemies: [
+          { x: 250, y: 430, w: 30, h: 30, type: 'drone', patrol: { x1: 200, x2: 400 } },
+          { x: 550, y: 330, w: 30, h: 30, type: 'drone', patrol: { x1: 500, x2: 700 } },
+          { x: 850, y: 230, w: 30, h: 30, type: 'drone', patrol: { x1: 800, x2: 1000 } }
+        ],
+        spawn: { x: 100, y: 500 }
+      },
+      { // Level 5 - Final test
+        platforms: [
+          { x: 0, y: 600, w: 1280, h: 120, color: 0 },
+          { x: 150, y: 480, w: 100, h: 20, color: 0 },
+          { x: 400, y: 400, w: 100, h: 20, color: 0 },
+          { x: 650, y: 320, w: 100, h: 20, color: 0 },
+          { x: 900, y: 240, w: 100, h: 20, color: 0 },
+          { x: 1100, y: 100, w: 180, h: 100, color: 0, isExit: true }
+        ],
+        enemies: [
+          { x: 300, y: 570, w: 40, h: 30, type: 'guardian', patrol: { x1: 100, x2: 500 } }
+        ],
+        spawn: { x: 100, y: 500 }
+      }
+    ];
+    
+    // ===== GAME STATE =====
+    let canvas, ctx, scale = 1;
+    let currentLevel = 0, gameTime = 0, paused = false, gameWon = false;
+    let player, paintPlatforms = [], enemies = [], particles = [];
+    let paintMeter = 100, currentPaintType = 0, paintCooldown = 0;
+    let highScore = parseInt(localStorage.getItem('chromaticPathHighScore') || '0');
+    
+    // ===== PLAYER CLASS =====
+    class Player {
+      constructor(x, y) {
+        this.x = x; this.y = y; this.w = 32; this.h = 48;
+        this.vx = 0; this.vy = 0;
+        this.onGround = false; this.coyote = 0; this.jumpBuffer = 0;
+        this.color = 0; this.trail = [];
+      }
+      
+      update(dt, platforms) {
+        // Horizontal input
+        const dir = (Input.right ? 1 : 0) - (Input.left ? 1 : 0);
+        let accel = CONFIG.moveAccel, decel = CONFIG.moveDecel, maxSpeed = CONFIG.maxGroundSpeed;
+        
+        // Apply surface physics
+        if (this.onGround && this.surfaceType !== undefined) {
+          const surf = CONFIG.colors[this.surfaceType];
+          accel *= surf.accel; decel *= surf.friction; maxSpeed *= surf.speed;
+        } else if (!this.onGround) {
+          decel = CONFIG.airDecel; maxSpeed = CONFIG.maxAirSpeed;
+        }
+        
+        if (dir !== 0) {
+          this.vx += dir * accel * dt;
+          this.vx = clamp(this.vx, -maxSpeed, maxSpeed);
+        } else {
+          this.vx = lerp(this.vx, 0, decel * dt);
+        }
+        
+        // Jump buffer & coyote
+        if (Input.jumpPressed) this.jumpBuffer = CONFIG.jumpBuffer;
+        if (this.onGround) this.coyote = CONFIG.coyoteTime;
+        else this.coyote -= dt;
+        this.jumpBuffer -= dt;
+        
+        if (this.jumpBuffer > 0 && this.coyote > 0) {
+          this.vy = CONFIG.jumpVel;
+          this.onGround = false; this.coyote = 0; this.jumpBuffer = 0;
+          AudioEngine.jump();
+          // Paint jump boost
+          if (this.justPainted) { this.vy += -80; this.justPainted = false; }
+        }
+        
+        // Variable jump height
+        if (!Input.jump && this.vy < 0) this.vy *= 0.99;
+        
+        // Gravity
+        this.vy += CONFIG.gravity * dt;
+        this.vy = clamp(this.vy, -Infinity, CONFIG.maxFall);
+        
+        // Move X
+        this.x += this.vx * dt;
+        this.collideX(platforms);
+        
+        // Move Y
+        this.y += this.vy * dt;
+        this.onGround = false;
+        this.surfaceType = undefined;
+        this.collideY(platforms);
+        
+        // Trail
+        this.trail.unshift({ x: this.x + this.w/2, y: this.y + this.h, color: this.color, life: 0.4 });
+        if (this.trail.length > 20) this.trail.pop();
+        this.trail.forEach(t => t.life -= dt);
+        this.trail = this.trail.filter(t => t.life > 0);
+        
+        // Bounds
+        if (this.y > CONFIG.height + 100) this.respawn();
+      }
+      
+      collideX(platforms) {
+        for (const p of platforms) {
+          if (rectsOverlap(this, p)) {
+            if (this.vx > 0) this.x = p.x - this.w;
+            else if (this.vx < 0) this.x = p.x + p.w;
+            this.vx = 0;
+          }
+        }
+      }
+      
+      collideY(platforms) {
+        for (const p of platforms) {
+          if (rectsOverlap(this, p)) {
+            if (this.vy > 0) {
+              this.y = p.y - this.h;
+              this.vy = 0;
+              this.onGround = true;
+              this.surfaceType = p.paintType || p.color;
+              if (p.paintType === PAINT_TYPES.BOUNCY) {
+                this.vy = -CONFIG.colors[PAINT_TYPES.BOUNCY].bounce;
+                AudioEngine.land();
+              } else {
+                AudioEngine.land();
+              }
+            } else if (this.vy < 0) {
+              this.y = p.y + p.h;
+              this.vy = 0;
+            }
+          }
+        }
+      }
+      
+      respawn() {
+        const spawn = Levels[currentLevel].spawn;
+        this.x = spawn.x; this.y = spawn.y; this.vx = 0; this.vy = 0;
+        AudioEngine.hurt();
+        paintMeter = Math.max(0, paintMeter - 20);
+      }
+      
+      draw(ctx) {
+        // Trail
+        this.trail.forEach(t => {
+          ctx.globalAlpha = t.life / 0.4 * 0.5;
+          ctx.fillStyle = CONFIG.colors[t.color].bg;
+          ctx.fillRect(t.x - 2, t.y - 2, 4, 4);
+        });
+        ctx.globalAlpha = 1;
+        
+        // Body
+        ctx.fillStyle = CONFIG.colors[this.color].bg;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+        
+        // Eyes
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(this.x + 8, this.y + 12, 6, 6);
+        ctx.fillRect(this.x + 18, this.y + 12, 6, 6);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(this.x + 10, this.y + 14, 2, 2);
+        ctx.fillRect(this.x + 20, this.y + 14, 2, 2);
+      }
+    }
+    
+    // ===== PAINT SYSTEM =====
+    function tryPaint(mouseX, mouseY) {
+      if (paintCooldown > 0 || paintMeter < CONFIG.paintCost) return;
+      
+      // Convert screen to world
+      const rect = canvas.getBoundingClientRect();
+      const worldX = (mouseX - rect.left) / scale;
+      const worldY = (mouseY - rect.top) / scale;
+      
+      const dx = worldX - (player.x + player.w/2);
+      const dy = worldY - (player.y + player.h/2);
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      
+      if (dist > CONFIG.paintRange) return;
+      
+      // Create platform at mouse position
+      const angle = Math.atan2(dy, dx);
+      const len = Math.min(dist, CONFIG.paintRange);
+      const px = player.x + player.w/2 + Math.cos(angle) * len;
+      const py = player.y + player.h/2 + Math.sin(angle) * len;
+      
+      const pw = 80 + Math.random() * 80;
+      const ph = 20;
+      
+      paintPlatforms.push({
+        x: px - pw/2, y: py - ph/2,
+        w: pw, h: ph,
+        paintType: currentPaintType,
+        age: 0, maxAge: 30
+      });
+      
+      paintMeter -= CONFIG.paintCost;
+      paintCooldown = CONFIG.paintCooldown;
+      player.color = currentPaintType;
+      player.justPainted = true;
+      AudioEngine.paint();
+    }
+    
+    function updatePaint(dt) {
+      paintCooldown = Math.max(0, paintCooldown - dt);
+      paintMeter = Math.min(100, paintMeter + CONFIG.paintRegen * dt);
+      
+      paintPlatforms.forEach(p => p.age += dt);
+      paintPlatforms = paintPlatforms.filter(p => p.age < p.maxAge);
+    }
+    
+    function drawPaint(ctx) {
+      paintPlatforms.forEach(p => {
+        const c = CONFIG.colors[p.paintType];
+        const alpha = 1 - p.age / p.maxAge;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = c.bg;
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        ctx.strokeStyle = c.fg;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(p.x, p.y, p.w, p.h);
+        // Pattern
+        ctx.globalAlpha = alpha * 0.3;
+        for (let i = 0; i < p.w; i += 10) {
+          ctx.beginPath();
+          ctx.moveTo(p.x + i, p.y);
+          ctx.lineTo(p.x + i, p.y + p.h);
+          ctx.stroke();
+        }
+      });
+      ctx.globalAlpha = 1;
+    }
+    
+    // ===== ENEMIES =====
+    function initEnemies(levelData) {
+      enemies = levelData.enemies.map(e => ({
+        x: e.x, y: e.y, w: e.w, h: e.h,
+        type: e.type, dir: 1, speed: 80,
+        patrol: e.patrol, timer: 0
+      }));
+    }
+    
+    function updateEnemies(dt) {
+      enemies.forEach(e => {
+        if (e.type === 'drone') {
+          e.x += e.dir * e.speed * dt;
+          if (e.x <= e.patrol.x1 || e.x >= e.patrol.x2) e.dir *= -1;
+        } else if (e.type === 'guardian') {
+          e.timer += dt;
+          if (e.timer > 3) { e.timer = 0; e.dir *= -1; }
+          e.x += e.dir * e.speed * dt;
+        }
+        
+        // Collision with player
+        if (rectsOverlap(player, e)) {
+          player.respawn();
+        }
+      });
+    }
+    
+    function drawEnemies(ctx) {
+      enemies.forEach(e => {
+        ctx.fillStyle = e.type === 'guardian' ? '#ff4444' : '#ff8844';
+        ctx.fillRect(e.x, e.y, e.w, e.h);
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(e.x + 5, e.y + 5, 8, 8);
+        ctx.fillRect(e.x + e.w - 13, e.y + 5, 8, 8);
+      });
+    }
+    
+    // ===== PARTICLES =====
+    function addParticles(x, y, color, count) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 200,
+          vy: (Math.random() - 0.5) * 200 - 100,
+          life: 0.5 + Math.random() * 0.5,
+          color: CONFIG.colors[color].bg,
+          size: 2 + Math.random() * 3
+        });
+      }
+    }
+    
+    function updateParticles(dt) {
+      particles.forEach(p => {
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vy += 500 * dt;
+        p.life -= dt;
+      });
+      particles = particles.filter(p => p.life > 0);
+    }
+    
+    function drawParticles(ctx) {
+      particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+      });
+      ctx.globalAlpha = 1;
+    }
+    
+    // ===== LEVEL MANAGEMENT =====
+    function loadLevel(index) {
+      currentLevel = index;
+      const level = Levels[index];
+      player = new Player(level.spawn.x, level.spawn.y);
+      paintPlatforms = [];
+      initEnemies(level);
+      particles = [];
+      gameTime= 0; paintMeter = 100; currentPaintType = 0; paintCooldown = 0; gameWon = false; paused = false;
+      document.getElementById('levelInfo').textContent = `LEVEL ${index + 1}/5`;
+      updateSwatches();
+    }
+    
+    function updateSwatches() {
+      document.querySelectorAll('.swatch').forEach((s, i) => {
+        s.classList.toggle('active', i === currentPaintType);
+      });
+    }
+    
+    function checkExit() {
+      const level = Levels[currentLevel];
+      for (const p of level.platforms) {
+        if (p.isExit && rectsOverlap(player, p)) {
+          if (currentLevel < Levels.length - 1) {
+            AudioEngine.win();
+            loadLevel(currentLevel + 1);
+          } else {
+            gameWon = true;
+            AudioEngine.win();
+            const finalTime = gameTime;
+            if (finalTime < highScore || highScore === 0) {
+              highScore = Math.floor(finalTime * 100) / 100;
+              localStorage.setItem('chromaticPathHighScore', highScore.toString());
+            }
+            setTimeout(() => alert(`You won! Time: ${finalTime.toFixed(2)}s\nBest: ${highScore.toFixed(2)}s`), 500);
+          }
+          return;
+        }
+      }
+    }
+    
+    // ===== MAIN LOOP =====
+    function resize() {
+      const ratio = Math.min(window.innerWidth / CONFIG.width, window.innerHeight / CONFIG.height);
+      scale = ratio;
+      canvas.style.width = `${CONFIG.width * ratio}px`;
+      canvas.style.height = `${CONFIG.height * ratio}px`;
+    }
+    
+    let lastTime = 0;
+    function gameLoop(time) {
+      const dt = Math.min((time - lastTime) / 1000, 0.1);
+      lastTime = time;
+      
+      if (!paused && !gameWon) {
+        gameTime += dt;
+        
+        const level = Levels[currentLevel];
+        const allPlatforms = [...level.platforms, ...paintPlatforms];
+        
+        player.update(dt, allPlatforms);
+        updatePaint(dt);
+        updateEnemies(dt);
+        updateParticles(dt);
+        checkExit();
+        
+        // Color switching
+        const newColor = Input.getColor();
+        if (newColor !== null) {
+          currentPaintType = newColor;
+          updateSwatches();
+          AudioEngine.switchColor();
+        }
+        
+        // Paint on click
+        const mouse = Input.getMouse();
+        if (mouse.down) tryPaint(mouse.x, mouse.y);
+      }
+      
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+    
+    function draw() {
+      ctx.clearRect(0, 0, CONFIG.width, CONFIG.height);
+      
+      // Background
+      ctx.fillStyle = '#0d0d1a';
+      ctx.fillRect(0, 0, CONFIG.width, CONFIG.height);
+      
+      // Grid
+      ctx.strokeStyle = '#1a1a3a';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < CONFIG.width; x += 64) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CONFIG.height); ctx.stroke();
+      }
+      for (let y = 0; y < CONFIG.height; y += 64) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CONFIG.width, y); ctx.stroke();
+      }
+      
+      // Level platforms
+      Levels[currentLevel].platforms.forEach(p => {
+        const c = CONFIG.colors[p.color];
+        ctx.fillStyle = c.bg;
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        ctx.strokeStyle = c.fg;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(p.x, p.y, p.w, p.h);
+        if (p.isExit) {
+          ctx.fillStyle = '#ffd700';
+          ctx.font = 'bold 24px Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText('EXIT', p.x + p.w/2, p.y + p.h/2 + 8);
+        }
+      });
+      
+      // Paint platforms
+      drawPaint(ctx);
+      
+      // Enemies
+      drawEnemies(ctx);
+      
+      // Particles
+      drawParticles(ctx);
+      
+      // Player
+      player.draw(ctx);
+      
+      // Paint range indicator
+      if (!paused && !gameWon) {
+        const mouse = Input.getMouse();
+        const rect = canvas.getBoundingClientRect();
+        const wx = (mouse.x - rect.left) / scale;
+        const wy = (mouse.y - rect.top) / scale;
+        const dx = wx - (player.x + player.w/2);
+        const dy = wy - (player.y + player.h/2);
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        ctx.beginPath();
+        ctx.arc(player.x + player.w/2, player.y + player.h/2, CONFIG.paintRange, 0, Math.PI * 2);
+        ctx.strokeStyle = dist <= CONFIG.paintRange && paintMeter >= CONFIG.paintCost && paintCooldown <= 0 ? '#4ecdc4' : '#444';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([10, 10]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+    
+    // ===== UI EVENTS =====
+    document.querySelectorAll('.swatch').forEach(s => {
+      s.addEventListener('click', () => {
+        currentPaintType = parseInt(s.dataset.color);
+        updateSwatches();
+        AudioEngine.switchColor();
+      });
+    });
+    
+    document.getElementById('resumeBtn').addEventListener('click', () => {
+      paused = false;
+      document.getElementById('pauseMenu').classList.add('hidden');
+      Input.reset();
+    });
+    
+    document.getElementById('restartBtn').addEventListener('click', () => {
+      paused = false;
+      document.getElementById('pauseMenu').classList.add('hidden');
+      loadLevel(currentLevel);
+      Input.reset();
+    });
+    
+    document.getElementById('quitBtn').addEventListener('click', () => {
+      paused = false;
+      document.getElementById('pauseMenu').classList.add('hidden');
+      loadLevel(0);
+      Input.reset();
+    });
+    
+    window.addEventListener('resize', resize);
+    
+    // ===== INIT =====
+    canvas = document.getElementById('gameCanvas');
+    ctx = canvas.getContext('2d');
+    canvas.width = CONFIG.width;
+    canvas.height = CONFIG.height;
+    resize();
+    loadLevel(0);
+    requestAnimationFrame(gameLoop);
+    
+    // Update HUD
+    setInterval(() => {
+      document.getElementById('timer').textContent = 
+        `${Math.floor(gameTime / 60).toString().padStart(2, '0')}:${(gameTime % 60).toFixed(2).padStart(5, '0')}`;
+      document.getElementById('paintMeterFill').style.width = `${paintMeter}%`;
+      document.getElementById('paintValue').textContent = `${Math.floor(paintMeter)}/100`;
+    }, 50);
+  </script>
+</body>
+</html>
