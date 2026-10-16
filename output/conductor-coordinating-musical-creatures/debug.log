@@ -1,0 +1,401 @@
+JSON Decode Error: Invalid \escape: line 1 column 13809 (char 13808)
+
+Raw LLM Output that failed to parse:
+{"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\" />\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\" />\n  <title>SYNCOPATION</title>\n  <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='70' font-size='70'>&#9992;</text></svg>\" />\n  <style>\n    html, body { margin: 0; padding: 0; overflow: hidden; background: #000; height: 100%; }\n    canvas { display: block; width: 100vw; height: 100vh; touch-action: none; }\n  </style>\n</head>\n<body>\n  <canvas id=\"gameCanvas\"></canvas>\n  <script type=\"module\" src=\"game.js\"></script>\n</body>\n</html>", "game.js": "import { Engine } from './engine/core.js';\nimport { Renderer } from './engine/renderer.js';\nimport { AudioEngine } from './engine/audioEngine.js';\nimport { Conductor } from './systems/conductor.js';\nimport { EnsembleManager } from './systems/ensembleManager.js';\nimport { ScoreSystem } from './systems/scoreSystem.js';\nimport { BeatMap } from './data/beatMap.js';\nimport { HUD } from './ui/hud.js';\n\nconst canvas = document.getElementById('gameCanvas');\nconst engine = new Engine(canvas);\nconst renderer = new Renderer(canvas);\nconst audio = new AudioEngine();\nconst conductor = new Conductor(audio);\nconst ensemble = new EnsembleManager(renderer);\nconst score = new ScoreSystem();\nconst hud = new HUD(renderer);\nconst beatMap = new BeatMap();\n\n// Load beatmap data\nconst mapData = {\n  metadata: { title: \"Neon Nocturne\", artist: \"User\", bpm: 138, signature: [4,4], offset: 0.02 },\n  globalAutomation: [],\n  measures: [\n    {\n      index: 1,\n      cues: [\n        { beat: 1.0, type: \"PULSAR\", formation: \"Circle\", params: { count: 8, radius: 150, center: [640, 360] } },\n        { beat: 1.5, type: \"RESONATOR\", formation: \"Line\", params: { count: 4, start: [200, 360], end: [1080, 360] } },\n        { beat: 2.0, type: \"DRIFTER\", formation: \"Point\", params: { count: 1, pos: [640, 200], sustain: 4.0 } }\n      ]\n    }\n  ]\n};\n\nbeatMap.load(mapData);\naudio.setBPM(mapData.metadata.bpm);\naudio.setSignature(mapData.metadata.signature);\n\n// High Score Persistence\nlet highScore = localStorage.getItem('syncopation_highScore') || 0;\nlet currentScore = 0;\n\nfunction saveHighScore() {\n  if (currentScore > highScore) {\n    highScore = currentScore;\n    localStorage.setItem('syncopation_highScore', highScore);\n  }\n}\n\n// Speedrun Timer\nlet startTime = null;\nfunction getSpeedrunTime() {\n  return startTime ? (performance.now() - startTime) / 1000 : 0;\n}\n\nengine.init();\nengine.start((dt) => {\n  if (!startTime) startTime = performance.now();\n\n  audio.update(dt);\n  conductor.update(dt, engine.input);\n  ensemble.update(dt);\n  score.update(dt);\n  hud.update({ score: currentScore, highScore: Number(highScore), time: getSpeedrunTime(), bpm: audio.bpm });\n  renderer.render({ ensemble, hud, conductor, score });\n});\n\nwindow.addEventListener('blur', saveHighScore);\nwindow.addEventListener('beforeunload', saveHighScore);\n\n// Expose for debugging\nwindow.SYNCOPATION = { engine, renderer, audio, conductor, ensemble, score, hud, beatMap };", "engine/core.js": "export class Engine {\n  constructor(canvas) {\n    this.canvas = canvas;\n    this.ctx = canvas.getContext('2d');\n    this.running = false;\n    this.lastTime = 0;\n    this.accumulator = 0;\n    this.fixedStep = 1000 / 60;\n    this.input = {\n      mouseX: 0,\n      mouseY: 0,\n      mouseDown: false,\n      mouseVelocity: { x: 0, y: 0 },\n      touches: [],\n      gamepads: []\n    };\n    this._setupInput();\n    this._setupResize();\n  }\n\n  _setupInput() {\n    const rect = () => this.canvas.getBoundingClientRect();\n    this.canvas.addEventListener('pointermove', (e) => {\n      const r = rect();\n      this.input.mouseX = (e.clientX - r.left) * (this.canvas.width / r.width);\n      this.input.mouseY = (e.clientY - r.top) * (this.canvas.height / r.height);\n      this.input.mouseVelocity = { x: e.movementX, y: e.movementY };\n    });\n    this.canvas.addEventListener('pointerdown', () => { this.input.mouseDown = true; });\n    this.canvas.addEventListener('pointerup', () => { this.input.mouseDown = false; });\n    this.canvas.addEventListener('pointerleave', () => { this.input.mouseDown = false; });\n    this.canvas.addEventListener('touchstart', (e) => {\n      this.input.touches = Array.from(e.touches).map(t => {\n        const r = rect();\n        return {\n          id: t.identifier,\n          x: (t.clientX - r.left) * (this.canvas.width / r.width),\n          y: (t.clientY - r.top) * (this.canvas.height / r.height)\n        };\n      });\n      e.preventDefault();\n    }, { passive: false });\n    this.canvas.addEventListener('touchmove', (e) => {\n      this.input.touches = Array.from(e.touches).map(t => {\n        const r = rect();\n        return {\n          id: t.identifier,\n          x: (t.clientX - r.left) * (this.canvas.width / r.width),\n          y: (t.clientY - r.top) * (this.canvas.height / r.height)\n        };\n      });\n      e.preventDefault();\n    }, { passive: false });\n    this.canvas.addEventListener('touchend', (e) => {\n      this.input.touches = Array.from(e.touches).map(t => {\n        const r = rect();\n        return {\n          id: t.identifier,\n          x: (t.clientX - r.left) * (this.canvas.width / r.width),\n          y: (t.clientY - r.top) * (this.canvas.height / r.height)\n        };\n      });\n    });\n  }\n\n  _setupResize() {\n    const resize = () => {\n      const dpr = window.devicePixelRatio || 1;\n      const rect = this.canvas.getBoundingClientRect();\n      this.canvas.width = Math.round(rect.width * dpr);\n      this.canvas.height = Math.round(rect.height * dpr);\n      this.ctx.scale(dpr, dpr);\n      this.dpr = dpr;\n      this.resolution = { width: rect.width, height: rect.height };\n    };\n    window.addEventListener('resize', resize);\n    resize();\n  }\n\n  init() {\n    this.ctx.imageSmoothingEnabled = false;\n  }\n\n  start(callback) {\n    this.running = true;\n    const loop = (time) => {\n      if (!this.running) return;\n      const dt = time - this.lastTime;\n      this.lastTime = time;\n      this.accumulator += dt;\n      while (this.accumulator >= this.fixedStep) {\n        callback(this.fixedStep / 1000);\n        this.accumulator -= this.fixedStep;\n      }\n      requestAnimationFrame(loop);\n    };\n    requestAnimationFrame(loop);\n  }\n\n  stop() {\n    this.running = false;\n  }\n}\n", "engine/renderer.js": "export class Renderer {\n  constructor(canvas) {\n    this.canvas = canvas;\n    this.ctx = canvas.getContext('2d');\n    this.layers = {};\n    this.camera = { x: 0, y: 0, zoom: 1 };\n    this.dpr = window.devicePixelRatio || 1;\n    this._setupLayers();\n    this._setupResize();\n  }\n\n  _setupLayers() {\n    const names = ['background', 'grid', 'creatures', 'vfx', 'baton', 'ui', 'debug'];\n    for (const name of names) {\n      this.layers[name] = document.createElement('canvas');\n      this.layers[name].width = this.canvas.width;\n      this.layers[name].height = this.canvas.height;\n    }\n  }\n\n  _setupResize() {\n    window.addEventListener('resize', () => {\n      const rect = this.canvas.getBoundingClientRect();\n      this.canvas.width = Math.round(rect.width * this.dpr);\n      this.canvas.height = Math.round(rect.height * this.dpr);\n      for (const layer of Object.values(this.layers)) {\n        layer.width = this.canvas.width;\n        layer.height = this.canvas.height;\n      }\n    });\n  }\n\n  layer(name) {\n    return this.layers[name].getContext('2d');\n  }\n\n  clear(ctx, color = 'rgba(8, 8, 12, 1)') {\n    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);\n    ctx.fillStyle = color;\n    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);\n  }\n\n  render(scene) {\n    const mainCtx = this.ctx;\n    mainCtx.save();\n    mainCtx.scale(this.dpr, this.dpr);\n    mainCtx.translate(-this.camera.x, -this.camera.y);\n    mainCtx.scale(this.camera.zoom, this.camera.zoom);\n\n    // Background\n    this.clear(mainCtx);\n\n    // Grid/Staff\n    const gridCtx = this.layer('grid');\n    this.clear(gridCtx);\n    this._drawGrid(gridCtx);\n\n    // Creatures\n    const creatureCtx = this.layer('creatures');\n    this.clear(creatureCtx);\n    scene.ensemble.render(creatureCtx);\n\n    // VFX\n    const vfxCtx = this.layer('vfx');\n    this.clear(vfxCtx);\n    scene.ensemble.renderVFX(vfxCtx);\n\n    // Baton\n    const batonCtx = this.layer('baton');\n    this.clear(batonCtx);\n    scene.conductor.renderBaton(batonCtx);\n\n    // Composite layers\n    mainCtx.save();\n    mainCtx.scale(1 / this.dpr, 1 / this.dpr);\n    mainCtx.globalCompositeOperation = 'source-over';\n    mainCtx.drawImage(this.layers.grid, 0, 0);\n    mainCtx.drawImage(this.layers.creatures, 0, 0);\n    mainCtx.drawImage(this.layers.vfx, 0, 0);\n    mainCtx.drawImage(this.layers.baton, 0, 0);\n    mainCtx.restore();\n\n    // UI (screen space)\n    const uiCtx = this.layer('ui');\n    this.clear(uiCtx);\n    scene.hud.render(uiCtx);\n    mainCtx.save();\n    mainCtx.scale(1 / this.dpr, 1 / this.dpr);\n    mainCtx.drawImage(this.layers.ui, 0, 0);\n    mainCtx.restore();\n\n    mainCtx.restore();\n  }\n\n  _drawGrid(ctx) {\n    ctx.strokeStyle = 'rgba(224, 224, 224, 0.05)';\n    ctx.lineWidth = 1;\n    for (let x = 0; x < this.canvas.width; x += 40) {\n      ctx.beginPath();\n      ctx.moveTo(x, 0);\n      ctx.lineTo(x, this.canvas.height);\n      ctx.stroke();\n    }\n    for (let y = 0; y < this.canvas.height; y += 40) {\n      ctx.beginPath();\n      ctx.moveTo(0, y);\n      ctx.lineTo(this.canvas.width, y);\n      ctx.stroke();\n    }\n  }\n}\n", "engine/audioEngine.js": "export class AudioEngine {\n  constructor() {\n    this.ctx = null;\n    this.masterGain = null;\n    this.analyser = null;\n    this.bpm = 120;\n    this.signature = [4, 4];\n    this.beatDuration = 60 / this.bpm;\n    this.currentTime = 0;\n    this.beatTime = 0;\n    this.lookahead = 0.1;\n    this.schedulerInterval = null;\n    this.scheduledNotes = [];\n    this._init();\n  }\n\n  async _init() {\n    try {\n      this.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });\n      this.masterGain = this.ctx.createGain();\n      this.masterGain.gain.value = 0.8;\n      this.analyser = this.ctx.createAnalyser();\n      this.analyser.fftSize = 2048;\n      this.masterGain.connect(this.analyser);\n      this.analyser.connect(this.ctx.destination);\n      this._startScheduler();\n    } catch (e) {\n      console.warn('Web Audio API not supported:', e);\n    }\n  }\n\n  _startScheduler() {\n    this.schedulerInterval = setInterval(() => {\n      if (!this.ctx) return;\n      const now = this.ctx.currentTime;\n      const deadline = now + this.lookahead;\n      while (this.scheduledNotes.length > 0 && this.scheduledNotes[0].time < deadline) {\n        const note = this.scheduledNotes.shift();\n        this._playNote(note);\n      }\n    }, 25);\n  }\n\n  _playNote(note) {\n    if (!this.ctx) return;\n    const osc = this.ctx.createOscillator();\n    const gainNode = this.ctx.createGain();\n    osc.type = note.type || 'sine';\n    osc.frequency.value = note.frequency || 440;\n    gainNode.gain.value = note.volume || 0.3;\n    osc.connect(gainNode);\n    gainNode.connect(this.masterGain);\n    osc.start(note.time);\n    osc.stop(note.time + (note.duration || 0.1));\n  }\n\n  schedule(note, time) {\n    this.scheduledNotes.push({ ...note, time });\n    this.scheduledNotes.sort((a, b) => a.time - b.time);\n  }\n\n  setBPM(bpm) {\n    this.bpm = bpm;\n    this.beatDuration = 60 / bpm;\n  }\n\n  setSignature(sig) {\n    this.signature = sig;\n  }\n\n  getBeatTime() {\n    if (!this.ctx) return 0;\n    return (this.ctx.currentTime / this.beatDuration);\n  }\n\n  update(dt) {\n    this.currentTime += dt;\n    this.beatTime = this.currentTime / this.beatDuration;\n  }\n\n  getFrequencyForBeat(beat) {\n    const notes = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88, 523.25];\n    return notes[Math.floor(beat) % notes.length];\n  }\n}\n", "systems/conductor.js": "export class Conductor {\n  constructor(audioEngine) {\n    this.audio = audioEngine;\n    this.baton = {\n      x: 640,\n      y: 360,\n      vx: 0,\n      vy: 0,\n      angle: 0,\n      trail: []\n    };\n    this.gesture = null;\n    this.window = { perfect: 0.045, good: 0.090, miss: 0.150 };\n    this.bufferedInput = null;\n    this.accuracy = 1.0;\n    this.harmony = 0;\n    this.maxHarmony = 100;\n  }\n\n  update(dt, input) {\n    // Baton spring-damper physics\n    const targetX = input.mouseX || (input.touches[0]?.x || this.baton.x);\n    const targetY = input.mouseY || (input.touches[0]?.y || this.baton.y);\n    const stiffness = 120.0;\n    const damping = 14.0;\n    const ax = (targetX - this.baton.x) * stiffness - this.baton.vx * damping;\n    const ay = (targetY - this.baton.y) * stiffness - this.baton.vy * damping;\n    this.baton.vx += ax * dt;\n    this.baton.vy += ay * dt;\n    this.baton.x += this.baton.vx * dt;\n    this.baton.y += this.baton.vy * dt;\n\n    // Angle follows velocity\n    if (Math.hypot(this.baton.vx, this.baton.vy) > 0.1) {\n      const targetAngle = Math.atan2(this.baton.vy, this.baton.vx) - Math.PI / 2;\n      this.baton.angle = this._lerpAngle(this.baton.angle, targetAngle, 15.0 * dt);\n    }\n\n    // Trail\n    this.baton.trail.push({ x: this.baton.x, y: this.baton.y });\n    if (this.baton.trail.length > 12) this.baton.trail.shift();\n\n    // Gesture recognition\n    this._recognizeGesture(input);\n  }\n\n  _recognizeGesture(input) {\
+    const down = input.mouseDown || input.touches.length > 0;\
+    const velMag = Math.hypot(this.baton.vx, this.baton.vy);\
+    if (down && velMag > 5 && !this.gesture) {\
+      this.gesture = { type: 'DOWNBEAT', startTime: performance.now(), start: { x: this.baton.x, y: this.baton.y } };\
+    } else if (down && this.gesture && this.gesture.type === 'DOWNBEAT') {\
+      const elapsed = performance.now() - this.gesture.startTime;\
+      const displacement = Math.hypot(this.baton.x - this.gesture.start.x, this.baton.y - this.gesture.start.y);\
+      if (elapsed > 100 && displacement > 20) {\
+        this.gesture.type = 'SUSTAIN';\
+      } else if (velMag > 40) {\
+        this.gesture.type = 'CUE';\
+      } else if (input.touches.length > 1) {\
+        this.gesture.type = 'SWEEP';\
+      }\
+    } else if (!down && this.gesture) {\
+      this.gesture = null;\
+    }\
+  }\
+
+  _lerpAngle(a, b, t) {\
+    let diff = b - a;\
+    while (diff > Math.PI) diff -= 2 * Math.PI;\
+    while (diff < -Math.PI) diff += 2 * Math.PI;\
+    return a + diff * t;\
+  }\
+
+  renderBaton(ctx) {\
+    ctx.save();\
+    ctx.translate(this.baton.x, this.baton.y);\
+    ctx.rotate(this.baton.angle);\
+    ctx.fillStyle = '#FFD700';\
+    ctx.strokeStyle = '#FF69B4';\
+    ctx.lineWidth = 3;\
+    ctx.beginPath();\
+    ctx.ellipse(0, -15, 4, 20, 0, 0, Math.PI * 2);\
+    ctx.fill();\
+    ctx.stroke();\
+    ctx.beginPath();\
+    ctx.arc(0, -35, 6, 0, Math.PI * 2);\
+    ctx.fill();\
+    ctx.restore();\
+    this._renderTrail(ctx);\
+  }\
+
+  _renderTrail(ctx) {\
+    if (this.baton.trail.length < 2) return;\
+    ctx.save();\
+    ctx.lineCap = 'round';\
+    ctx.lineJoin = 'round';\
+    const gradient = ctx.createLinearGradient(\
+      this.baton.trail[0].x, this.baton.trail[0].y,\
+      this.baton.trail[this.baton.trail.length - 1].x, this.baton.trail[this.baton.trail.length - 1].y\
+    );\
+    gradient.addColorStop(0, 'rgba(255, 215, 0, 0.8)');\
+    gradient.addColorStop(1, 'rgba(255, 105, 178, 0)');\
+    ctx.strokeStyle = gradient;\
+    ctx.lineWidth = 6;\
+    ctx.beginPath();\
+    ctx.moveTo(this.baton.trail[0].x, this.baton.trail[0].y);\
+    for (let i = 1; i < this.baton.trail.length; i++) {\
+      ctx.lineTo(this.baton.trail[i].x, this.baton.trail[i].y);\
+    }\
+    ctx.stroke();\
+    ctx.restore();\
+  }\
+}\
+", "systems/ensembleManager.js": "import { Creature } from './creature.js';\
+\
+export class EnsembleManager {\
+  constructor(renderer) {\
+    this.renderer = renderer;\
+    this.creatures = [];\
+    this.pool = [];\
+    this.formations = new Map();\
+    this.harmonyWeb = [];\
+    this._initPool();\
+  }\
+\
+  _initPool() {\
+    for (let i = 0; i < 500; i++) {\
+      this.pool.push(new Creature());\
+    }\
+  }\
+\
+  spawn(type, formation, params = {}) {\
+    const creature = this.pool.pop() || new Creature();\
+    creature.init(type, formation, params);\
+    this.creatures.push(creature);\
+    return creature;\
+  }\
+\
+  update(dt) {\
+    for (const creature of this.creatures) {\
+      creature.update(dt);\
+    }\
+    // Remove dead creatures\
+    this.creatures = this.creatures.filter(c => {\
+      if (c.dead) {\
+        c.reset();\
+        this.pool.push(c);\
+        return false;\
+      }\
+      return true;\
+    });\
+    this._updateHarmonyWeb();\
+  }\
+\
+  _updateHarmonyWeb() {\
+    this.harmonyWeb = [];\
+    const resonators = this.creatures.filter(c => c.type === 'RESONATOR');\
+    for (let i = 0; i < resonators.length; i++) {\
+      for (let j = i + 1; j < resonators.length; j++) {\
+        const dist = Math.hypot(\
+          resonators[i].x - resonators[j].x,\
+          resonators[i].y - resonators[j].y\
+        );\
+        if (dist < 300) {\
+          this.harmonyWeb.push({ a: resonators[i], b: resonators[j], dist });\
+        }\
+      }\
+    }\
+  }\
+\
+  render(ctx) {\
+    for (const creature of this.creatures) {\
+      creature.render(ctx);\
+    }\
+    this._renderHarmonyWeb(ctx);\
+  }\
+\
+  _renderHarmonyWeb(ctx) {\
+    ctx.strokeStyle = 'rgba(147, 51, 234, 0.4)';\
+    ctx.lineWidth = 2;\
+    for (const link of this.harmonyWeb) {\
+      ctx.beginPath();\
+      ctx.moveTo(link.a.x, link.a.y);\
+      ctx.lineTo(link.b.x, link.b.y);\
+      ctx.stroke();\
+    }\
+  }\
+\
+  renderVFX(ctx) {\
+    for (const creature of this.creatures) {\
+      creature.renderVFX(ctx);\
+    }\
+  }\
+}\
+", "systems/creature.js": "export class Creature {\
+  constructor() {\
+    this.type = null;\
+    this.x = 0;\
+    this.y = 0;\
+    this.scale = 1;\
+    this.rotation = 0;\
+    this.life = 0;\
+    this.maxLife = 1;\
+    this.dead = false;\
+    this.color = '#FFFFFF';\
+    this.params = {};\
+    this.velocity = { x: 0, y: 0 };\
+    this.particles = [];\
+  }\
+\
+  init(type, formation, params = {}) {\
+    this.type = type;\
+    this.params = params;\
+    this.life = 0;\
+    this.dead = false;\
+    this.particles = [];\
+    this._setupFormation(formation, params);\
+  }\
+\
+  _setupFormation(formation, params) {\
+    switch (formation) {\
+      case 'Circle':\
+        this.x = params.center[0];\
+        this.y = params.center[1];\
+        break;\
+      case 'Line':\
+        this.x = params.start[0];\
+        this.y = params.start[1];\
+        break;\
+      case 'Point':\
+        this.x = params.pos[0];\
+        this.y = params.pos[1];\
+        break;\
+      default:\
+        this.x = 640;\
+        this.y = 360;\
+    }\
+    this.maxLife = params.sustain || 4.0;\
+    this._setColor();\
+  }\
+\
+  _setColor() {\
+    const colors = {\
+      PULSAR: '#FF007F',\
+      DRIFTER: '#00D1FF',\
+      ARPENT: '#FFD700',\
+      RESONATOR: '#9333FF',\
+      CHORIST: '#22C55E'\
+    };\
+    this.color = colors[this.type] || '#FFFFFF';\
+  }\
+\
+  update(dt) {\
+    this.life += dt;\
+    if (this.life >= this.maxLife) {\
+      this.dead = true;\
+    }\
+    switch (this.type) {\
+      case 'PULSAR':\
+        this.scale = 1 + (this.life / this.maxLife) * 2;\
+        break;\
+      case 'DRIFTER':\
+        this.scale = 0.8 + Math.sin(this.life * 3) * 0.2;\
+        break;\
+      case 'RESONATOR':\
+        this.scale = 1 + Math.sin(this.life * 2) * 0.1;\
+        break;\
+      case 'ARPENT':\
+        this.x += this.velocity.x * dt;\
+        this.y += this.velocity.y * dt;\
+        break;\
+      case 'CHORIST':\
+        this.x += (Math.random() - 0.5) * 2;\
+        this.y += (Math.random() - 0.5) * 2;\
+        break;\
+    }\
+  }\
+\
+  render(ctx) {\
+    ctx.save();\
+    ctx.translate(this.x, this.y);\
+    ctx.scale(this.scale, this.scale);\
+    ctx.fillStyle = this.color;\
+    ctx.strokeStyle = this.color;\
+    ctx.lineWidth = 2;\
+    switch (this.type) {\
+      case 'PULSAR':\
+        ctx.globalCompositeOperation = 'lighter';\
+        ctx.beginPath();\
+        ctx.moveTo(0, -10);\
+        for (let i = 0; i < 5; i++) {\
+          const angle = (i / 5) * Math.PI * 2;\
+          ctx.lineTo(Math.cos(angle) * 10, Math.sin(angle) * 10);\
+        }\
+        ctx.closePath();\
+        ctx.fill();\
+        ctx.stroke();\
+        ctx.globalCompositeOperation = 'source-over';\
+        break;\
+      case 'DRIFTER':\
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 20);\
+        grad.addColorStop(0, this.color);\
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');\
+        ctx.fillStyle = grad;\
+        ctx.beginPath();\
+        ctx.arc(0, 0, 20, 0, Math.PI * 2);\
+        ctx.fill();\
+        break;\
+      case 'RESONATOR':\
+        ctx.beginPath();\
+        ctx.arc(0, 0, 30, 0, Math.PI * 2);\
+        ctx.stroke();\
+        ctx.beginPath();\
+        ctx.arc(0, 0, 15, 0, Math.PI * 2);\
+        ctx.fill();\
+        break;\
+      case 'ARPENT':\
+        ctx.beginPath();\
+        ctx.moveTo(0, 0);\
+        ctx.lineTo(20, 0);\
+        ctx.stroke();\
+        break;\
+      case 'CHORIST':\
+        ctx.fillRect(-2, -2, 4, 4);\
+        break;\
+    }\
+    ctx.restore();\
+  }\
+\
+  renderVFX(ctx) {\
+    if (this.type === 'PULSAR' && this.life < 0.1) {\
+      ctx.fillStyle = this.color;\
+      ctx.globalAlpha = 0.6;\
+      for (let i = 0; i < 10; i++) {\
+        const angle = (i / 10) * Math.PI * 2;\
+        const dist = this.life * 100;\
+        ctx.fillRect(\
+          this.x + Math.cos(angle) * dist - 2,\
+          this.y + Math.sin(angle) * dist - 2,\
+          4, 4\
+        );\
+      }\
+      ctx.globalAlpha = 1;\
+    }\
+  }\
+\
+  reset() {\
+    this.type = null;\
+    this.x = 0;\
+    this.y = 0;\
+    this.scale = 1;\
+    this.life = 0;\
+    this.dead = false;\
+    this.particles = [];\
+  }\
+}\
+", "systems/scoreSystem.js": "export class ScoreSystem {\
+  constructor() {\
+    this.score = 0;\
+    this.combo = 0;\
+    this.maxCombo = 0;\
+    this.accuracy = 1.0;\
+    this.hits = { perfect: 0, good: 0, miss: 0 };\
+    this.rank = 'F';\
+    this.floatingScores = [];\
+  }\
+\
+  addHit(accuracy) {\
+    const points = { perfect: 1000, good: 500, miss: 0 };\
+    const accMap = { perfect: 1.0, good: 0.7, miss: 0.0 };\
+    this.score += points[accuracy] * (1 + this.combo * 0.01);\
+    this.hits[accuracy]++;\
+    if (accuracy === 'perfect') {\
+      this.combo++;\
+    } else if (accuracy === 'miss') {\
+      this.combo = 0;\
+    }\
+    this.maxCombo = Math.max(this.maxCombo, this.combo);\
+    this._updateAccuracy();\
+    this._updateRank();\
+    this._addFloatingScore(accuracy);\
+  }\
+\
+  _updateAccuracy() {\
+    const total = this.hits.perfect + this.hits.good + this.hits.miss;\
+    if (total === 0) {\
+      this.accuracy = 1.0;\
+      return;\
+    }\
+    const weighted = this.hits.perfect * 1.0 + this.hits.good * 0.7 + this.hits.miss * 0.0;\
+    this.accuracy = weighted / total;\
+  }\
+\
+  _updateRank() {\
+    if (this.accuracy >= 0.95) this.rank = 'S';\
+    else if (this.accuracy >= 0.90) this.rank = 'A';\
+    else if (this.accuracy >= 0.80) this.rank = 'B';\
+    else if (this.accuracy >= 0.70) this.rank = 'C';\
+    else this.rank = 'F';\
+  }\
+\
+  _addFloatingScore(type) {\
+    const colors = { perfect: '#FFD700', good: '#00D1FF', miss: '#FF007F' };\
+    this.floatingScores.push({\
+      text: type.toUpperCase(),\
+      x: 640,\
+      y: 360,\
+      life: 1.0,\
+      color: colors[type] || '#FFFFFF'\
+    });\
+  }\
+\
+  update(dt) {\
+    for (let i = this.floatingScores.length - 1; i >= 0; i--) {\
+      const fs = this.floatingScores[i];\
+      fs.y -= 50 * dt;\
+      fs.life -= dt;\
+      if (fs.life <= 0) {\
+        this.floatingScores.splice(i, 1);\
+      }\
+    }\
+  }\
+\
+  render(ctx) {\
+    ctx.font = 'bold 20px monospace';\
+    ctx.textAlign = 'center';\
+    for (const fs of this.floatingScores) {\
+      ctx.fillStyle = fs.color;\
+      ctx.globalAlpha = fs.life;\
+      ctx.fillText(fs.text, fs.x, fs.y);\
+    }\
+    ctx.globalAlpha = 1;\
+  }\
+\
+  getRank() {\
+    return this.rank;\
+  }\
+\
+  getScore() {\
+    return this.score;\
+  }\
+\
+  getCombo() {\
+    return this.com
