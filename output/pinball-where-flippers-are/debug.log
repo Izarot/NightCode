@@ -1,0 +1,664 @@
+JSON Decode Error after continuation: Invalid \escape: line 4 column 13866 (char 22418)
+
+Raw: {
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n    <title>NEON VELOCITY</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>\">\n    <link rel=\"stylesheet\" href=\"styles.css\">\n</head>\n<body>\n    <div class=\"game-container\">\n        <div class=\"ui-top\">\n            <div class=\"timer\" id=\"timer\">00:00.00</div>\n            <div class=\"score-panel\">\n                <span>SCORE: <span id=\"score\">0</span></span>\n                <span>BEST: <span id=\"highScore\">0</span></span>\n            </div>\n        </div>\n        <canvas id=\"gameCanvas\"></canvas>\n        <div class=\"ui-bottom\">\n            <div class=\"controls-hint\" id=\"controlsHint\">TAP / CLICK / SPACE TO JUMP</div>\n            <button class=\"btn-restart\" id=\"restartBtn\">RESTART</button>\n        </div>\n        <div class=\"overlay\" id=\"startOverlay\">\n            <h1>NEON VELOCITY</h1>\n            <p class=\"subtitle\">SPEEDRUN PLATFORMER</p>\n            <button class=\"btn-start\" id=\"startBtn\">BEGIN RUN</button>\n            <div class=\"instructions\">\n                <span>JUMP: <kbd>SPACE</kbd> / <kbd>CLICK</kbd> / <kbd>TAP</kbd></span>\n                <span>DOUBLE JUMP ENABLED</span>\n            </div>\n        </div>\n        <div class=\"overlay hidden\" id=\"gameOverOverlay\">\n            <h1>RUN COMPLETE</h1>\n            <div class=\"final-stats\">\n                <div class=\"stat\"><span class=\"label\">TIME</span><span class=\"value\" id=\"finalTime\">00:00.00</span></div>\n                <div class=\"stat\"><span class=\"label\">SCORE</span><span class=\"value\" id=\"finalScore\">0</span></div>\n                <div class=\"stat\"><span class=\"label\">BEST</span><span class=\"value\" id=\"finalBest\">0</span></div>\n            </div>\n            <button class=\"btn-restart\" id=\"playAgainBtn\">RUN AGAIN</button>\n        </div>\n    </div>\n    <script src=\"game.js\"></script>\n</body>\n</html>",
+  "styles.css": "* {\n    margin: 0;\n    padding: 0;\n    box-sizing: border-box;\n}\n\n:root {\n    --bg: #0a0a12;\n    --fg: #f0f0ff;\n    --neon-pink: #ff006e;\n    --neon-blue: #00f3ff;\n    --neon-green: #39ff14;\n    --neon-purple: #bc13fe;\n    --neon-orange: #ff6b00;\n    --card: #12121f;\n    --border: #2a2a3e;\n}\n\nbody {\n    background: var(--bg);\n    color: var(--fg);\n    font-family: 'JetBrains Mono', 'Fira Code', monospace;\n    min-height: 100vh;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    overflow: hidden;\n    touch-action: none;\n}\n\nbody::before {\n    content: '';\n    position: fixed;\n    inset: 0;\n    background: \n        radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255,0,110,0.15) 0%, transparent 50%),\n        radial-gradient(ellipse 60% 40% at 100% 100%, rgba(0,243,255,0.1) 0%, transparent 50%),\n        radial-gradient(ellipse 50% 30% at 0% 50%, rgba(188,19,254,0.1) 0%, transparent 50%);\n    pointer-events: none;\n    z-index: -1;\n}\n\n.game-container {\n    width: 100%;\n    max-width: 900px;\n    height: 100vh;\n    max-height: 900px;\n    display: flex;\n    flex-direction: column;\n    position: relative;\n}\n\n.ui-top {\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n    padding: 12px 20px;\n    flex-shrink: 0;\n}\n\n.timer {\n    font-size: 1.4rem;\n    font-weight: 700;\n    font-variant-numeric: tabular-nums;\n    color: var(--neon-green);\n    text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);\n    letter-spacing: 2px;\n    background: rgba(0,0,0,0.5);\n    padding: 6px 16px;\n    border-radius: 8px;\n    border: 1px solid var(--neon-green);\n    box-shadow: inset 0 0 10px rgba(57,255,20,0.2);\n}\n\n.score-panel {\n    display: flex;\n    gap: 24px;\n    font-size: 0.9rem;\n}\n\n.score-panel span {\n    background: rgba(0,0,0,0.5);\n    padding: 6px 12px;\n    border-radius: 6px;\n    border: 1px solid var(--border);\n}\n\n.score-panel span:first-child {\n    color: var(--neon-orange);\n    border-color: var(--neon-orange);\n}\n\n.score-panel span:last-child {\n    color: var(--neon-pink);\n    border-color: var(--neon-pink);\n}\n\n#gameCanvas {\n    flex: 1;\n    width: 100%;\n    height: 100%;\n    display: block;\n    background: #05050a;\n    border-radius: 0 0 12px 12px;\n    box-shadow: \n        0 0 40px rgba(255,0,110,0.2),\n        inset 0 0 60px rgba(0,0,0,0.5);\n}\n\n.ui-bottom {\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n    padding: 16px 20px;\n    flex-shrink: 0;\n}\n\n.controls-hint {\n    font-size: 0.8rem;\n    color: var(--neon-blue);\n    opacity: 0.7;\n    letter-spacing: 1px;\n    animation: pulse 2s ease-in-out infinite;\n}\n\n@keyframes pulse {\n    0%, 100% { opacity: 0.5; }\n    50% { opacity: 1; }\n}\n\n.btn-restart, .btn-start, #playAgainBtn {\n    background: transparent;\n    border: 2px solid var(--neon-pink);\n    color: var(--neon-pink);\n    padding: 12px 32px;\n    font-family: inherit;\n    font-size: 1rem;\n    font-weight: 700;\n    letter-spacing: 2px;\n    text-transform: uppercase;\n    cursor: pointer;\n    border-radius: 8px;\n    transition: all 0.2s ease;\n    box-shadow: 0 0 20px rgba(255,0,110,0.3);\n}\n\n.btn-restart:hover, .btn-start:hover, #playAgainBtn:hover {\n    background: var(--neon-pink);\n    color: var(--bg);\n    box-shadow: 0 0 30px rgba(255,0,110,0.6), 0 0 60px rgba(255,0,110,0.3);\n    transform: scale(1.02);\n}\n\n.btn-restart:active, .btn-start:active, #playAgainBtn:active {\n    transform: scale(0.98);\n}\n\n.overlay {\n    position: absolute;\n    inset: 0;\n    background: rgba(10,10,18,0.95);\n    display: flex;\n    flex-direction: column;\n    justify-content: center;\n    align-items: center;\n    gap: 24px;\n    z-index: 10;\n    border-radius: 12px;\n    backdrop-filter: blur(10px);\n}\n\n.overlay.hidden {\n    display: none;\n}\n\n.overlay h1 {\n    font-size: clamp(2.5rem, 8vw, 4rem);\n    font-weight: 800;\n    background: linear-gradient(135deg, var(--neon-pink), var(--neon-blue), var(--neon-green));\n    -webkit-background-clip: text;\n    -webkit-text-fill-color: transparent;\n    background-clip: text;\n    text-shadow: none;\n    letter-spacing: 4px;\n    animation: glow 3s ease-in-out infinite;\n}\n\n@keyframes glow {\n    0%, 100% { filter: drop-shadow(0 0 10px var(--neon-pink)); }\n    33% { filter: drop-shadow(0 0 10px var(--neon-blue)); }\n    66% { filter: drop-shadow(0 0 10px var(--neon-green)); }\n}\n\n.subtitle {\n    color: var(--neon-blue);\n    font-size: 1.2rem;\n    letter-spacing: 8px;\n    text-transform: uppercase;\n    font-weight: 400;\n}\n\n.instructions {\n    display: flex;\n    flex-direction: column;\n    gap: 8px;\n    margin-top: 16px;\n    font-size: 0.85rem;\n    color: #888;\n}\n\n.instructions kbd {\n    background: var(--card);\n    border: 1px solid var(--border);\n    padding: 2px 8px;\n    border-radius: 4px;\n    color: var(--neon-green);\n    font-family: inherit;\n}\n\n.final-stats {\n    display: flex;\n    gap: 32px;\n    margin: 16px 0;\n}\n\n.stat {\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 4px;\n    background: rgba(0,0,0,0.5);\n    padding: 16px 32px;\n    border-radius: 12px;\n    border: 1px solid var(--border);\n    min-width: 120px;\n}\n\n.stat .label {\n    font-size: 0.7rem;\n    text-transform: uppercase;\n    letter-spacing: 2px;\n    color: #888;\n}\n\n.stat .value {\n    font-size: 1.5rem;\n    font-weight: 700;\n    font-variant-numeric: tabular-nums;\n}\n\n.stat:nth-child(1) .value { color: var(--neon-green); }\n.stat:nth-child(2) .value { color: var(--neon-orange); }\n.stat:nth-child(3) .value { color: var(--neon-pink); }\n\n@media (max-width: 600px) {\n    .ui-top { padding: 8px 12px; flex-wrap: wrap; gap: 8px; }\n    .timer { font-size: 1.1rem; padding: 4px 12px; }\n    .score-panel { gap: 12px; font-size: 0.8rem; }\n    .ui-bottom { padding: 12px; flex-direction: column; gap: 12px; }\n    .final-stats { flex-direction: column; gap: 12px; width: 100%; }\n    .stat { width: 100%; }\n}\n\n@media (prefers-reduced-motion: reduce) {\n    *, *::before, *::after {\n        animation-duration: 0.01ms !important;\n        transition-duration: 0.01ms !important;\n    }\n}",
+  "game.js": "const canvas = document.getElementById('gameCanvas');\nconst ctx = canvas.getContext('2d');\n\nconst timerEl = document.getElementById('timer');\nconst scoreEl = document.getElementById('score');\nconst highScoreEl = document.getElementById('highScore');\nconst startOverlay = document.getElementById('startOverlay');\nconst gameOverOverlay = document.getElementById('gameOverOverlay');\nconst startBtn = document.getElementById('startBtn');\nconst restartBtn = document.getElementById('restartBtn');\nconst playAgainBtn = document.getElementById('playAgainBtn');\nconst controlsHint = document.getElementById('controlsHint');\nconst finalTimeEl = document.getElementById('finalTime');\nconst finalScoreEl = document.getElementById('finalScore');\nconst finalBestEl = document.getElementById('finalBest');\n\nconst COLORS = {\n    bg: '#05050a',\n    ground: '#0d0d1a',\n    player: '#00f3ff',\n    playerGlow: '#00f3ff',\n    platform: '#1a1a2e',\n    platformEdge: '#ff006e',\n    spike: '#ff6b00',\n    spikeGlow: '#ff6b00',\n    coin: '#ffd700',\n    coinGlow: '#ffd700',\n    particle: ['#ff006e', '#00f3ff', '#39ff14', '#bc13fe', '#ff6b00'],\n    text: '#f0f0ff',\n    grid: '#1a1a2e'\n};\n\nlet highScore = parseInt(localStorage.getItem('neonVelocityHighScore')) || 0;\nhighScoreEl.textContent = highScore;\nfinalBestEl.textContent = highScore;\n\nconst audioCtx = new (window.AudioContext || window.webkitAudioContext)();\n\nfunction createOscillator(frequency, type, duration, volume = 0.1, freqEnd = null) {\n    if (audioCtx.state === 'suspended') audioCtx.resume();\n    const osc = audioCtx.createOscillator();\n    const gain = audioCtx.createGain();\n    osc.type = type;\n    osc.frequency.value = frequency;\n    if (freqEnd) {\n        osc.frequency.exponentialRampToValueAtTime(freqEnd, audioCtx.currentTime + duration);\n    }\n    gain.gain.setValueAtTime(volume, audioCtx.currentTime);\n    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);\n    osc.connect(gain);\n    gain.connect(audioCtx.destination);\n    osc.start();\n    osc.stop(audioCtx.currentTime + duration);\n}\n\nfunction playJumpSound() {\n    createOscillator(400, 'square', 0.1, 0.08, 800);\n    createOscillator(200, 'triangle', 0.15, 0.05, 50);\n}\n\nfunction playDoubleJumpSound() {\n    createOscillator(600, 'square', 0.08, 0.06, 1200);\n    createOscillator(300, 'sawtooth', 0.1, 0.04, 100);\n}\n\nfunction playCoinSound() {\n    createOscillator(800, 'sine', 0.1, 0.08, 1600);\n    createOscillator(1200, 'triangle', 0.15, 0.05, 2000);\n}\n\nfunction playDeathSound() {\n    createOscillator(200, 'sawtooth', 0.3, 0.1, 50);\n    createOscillator(100, 'square', 0.5, 0.08, 30);\n}\n\nfunction playLandSound() {\n    createOscillator(150, 'triangle', 0.05, 0.06, 80);\n}\n\nfunction resizeCanvas() {\n    const container = canvas.parentElement;\n    const maxWidth = container.clientWidth;\n    const maxHeight = container.clientHeight - document.querySelector('.ui-top').offsetHeight - document.querySelector('.ui-bottom').offsetHeight;\n    const aspectRatio = 16 / 9;\n    let width = maxWidth;\n    let height = width / aspectRatio;\n    if (height > maxHeight) {\n        height = maxHeight;\n        width = height * aspectRatio;\n    }\n    canvas.width = width;\n    canvas.height = height;\n    canvas.style.width = width + 'px';\n    canvas.style.height = height + 'px';\n}\n\nconst GRAVITY = 0.5;\nconst JUMP_FORCE = -14;\nconst MOVE_SPEED = 6;\nconst GAME_SPEED_BASE = 4;\nconst GAME_SPEED_MAX = 12;\n\nlet player = {\n    x: 0,\n    y: 0,\n    width: 0,\n    height: 0,\n    vy: 0,\n    grounded: false,\n    jumps: 0,\n    maxJumps: 2,\n    color: COLORS.player,\n    trail: [],\n    invincible: 0\n};\n\nlet platforms = [];\nlet spikes = [];\nlet coins = [];\nlet particles = [];\nlet backgroundStars = [];\n\nlet gameSpeed = GAME_SPEED_BASE;\nlet score = 0;\nlet distance = 0;\nlet startTime = 0;\nlet elapsedTime = 0;\nlet running = false;\nlet gameOver = false;\nlet animationId = null;\n\nfunction initBackgroundStars() {\n    backgroundStars = [];\n    for (let i = 0; i < 100; i++) {\n        backgroundStars.push({\n            x: Math.random() * canvas.width,\n            y: Math.random() * canvas.height,\n            size: Math.random() * 2 + 0.5,\n            speed: Math.random() * 0.5 + 0.1,\n            color: [COLORS.neonPink, COLORS.neonBlue, COLORS.neonGreen, COLORS.neonPurple][Math.floor(Math.random() * 4)],\n            alpha: Math.random() * 0.5 + 0.2\n        });\n    }\n}\n\nfunction resetGame() {\n    const pw = canvas.width * 0.035;\n    const ph = canvas.height * 0.06;\n    player = {\n        x: canvas.width * 0.15,\n        y: canvas.height * 0.5,\n        width: pw,\n        height: ph,\n        vy: 0,\n        grounded: false,\n        jumps: 0,\n        maxJumps: 2,\n        color: COLORS.player,\n        trail: [],\n        invincible: 0\n    };\n    platforms = [];\n    spikes = [];\n    coins = [];\n    particles = [];\n    gameSpeed = GAME_SPEED_BASE;\n    score = 0;\n    distance = 0;\n    startTime = performance.now();\n    elapsedTime = 0;\n    running = true;\n    gameOver = false;\n    scoreEl.textContent = '0';\n    initBackgroundStars();\n    spawnInitialPlatforms();\n}\n\nfunction spawnInitialPlatforms() {\n    const groundY = canvas.height * 0.85;\n    platforms.push({\n        x: 0,\n        y: groundY,\n        width: canvas.width * 3,\n        height: canvas.height * 0.15,\n        type: 'ground'\n    });\n    for (let i = 1; i < 8; i++) {\n        spawnPlatform(i * (canvas.width * 0.4));\n    }\n}\n\nfunction spawnPlatform(offsetX) {\n    const gap = canvas.height * 0.35;\n    const minY = canvas.height * 0.25;\n    const maxY = canvas.height * 0.75;\n    const y = minY + Math.random() * (maxY - minY);\n    const width = canvas.width * (0.15 + Math.random() * 0.15);\n    const height = canvas.height * 0.03;\n    platforms.push({\n        x: offsetX,\n        y: y,\n        width: width,\n        height: height,\n        type: 'floating',\n        passed: false\n    });\n    if (Math.random() < 0.4) {\n        spikes.push({\n            x: offsetX + width / 2 - 10,\n            y: y - 20,\n            width: 20,\n            height: 20,\n            animation: Math.random() * Math.PI * 2\n        });\n    }\n    if (Math.random() < 0.5) {\n        coins.push({\n            x: offsetX + width / 2 - 12,\n            y: y - 40,\n            width: 24,\n            height: 24,\n            collected: false,\n            bob: Math.random() * Math.PI * 2\n        });\n    }\n}\n\nfunction jump() {\n    if (!running || gameOver) return;\n    if (player.jumps < player.maxJumps) {\n        player.vy = JUMP_FORCE;\n        player.jumps++;\n        player.grounded = false;\n        if (player.jumps === 1) {\n            playJumpSound();\n        } else {\n            playDoubleJumpSound();\n        }\n        for (let i = 0; i < 8; i++) {\n            particles.push({\n                x: player.x + player.width / 2,\n                y: player.y + player.height,\n                vx: (Math.random() - 0.5) * 4,\n                vy: Math.random() * 2 + 1,\n                size: Math.random() * 4 + 2,\n                color: COLORS.particle[Math.floor(Math.random() * COLORS.particle.length)],\n                life: 1,\n                decay: Math.random() * 0.02 + 0.015\n            });\n        }\n    }\n}\n\nfunction handleInput(e) {\n    if (e.type === 'keydown' && e.code !== 'Space') return;\n    if (e.type === 'click' || e.type === 'touchstart') {\n        const rect = canvas.getBoundingClientRect();\n        const x = (e.clientX || e.touches[0].clientX) - rect.left;\n        const y = (e.clientY || e.touches[0].clientY) - rect.top;\n        if (x < 0 || x > rect.width || y < 0 || y > rect.height) return;\n    }\n    e.preventDefault();\n    if (!running && !gameOver) {\n        startGame();\n    } else {\n        jump();\n    }\n}\n\nfunction startGame() {\n    startOverlay.classList.add('hidden');\n    resetGame();\n    gameLoop();\n}\n\nfunction endGame() {\n    running = false;\n    gameOver = true;\n    playDeathSound();\n    for (let i = 0; i < 30; i++) {\n        particles.push({\n            x: player.x + player.width / 2,\n            y: player.y + player.height / 2,\n            vx: (Math.random() - 0.5) * 12,\n            vy: (Math.random() - 0.5) * 12,\n            size: Math.random() * 6 + 3,\n            color: COLORS.particle[Math.floor(Math.random() * COLORS.particle.length)],\n            life: 1,\n            decay: Math.random() * 0.015 + 0.01\n        });\n    }\n    if (score > highScore) {\n        highScore = score;\n        localStorage.setItem('neonVelocityHighScore', highScore);\n        highScoreEl.textContent = highScore;\n    }\n    setTimeout(() => {\n        finalTimeEl.textContent = formatTime(elapsedTime);\n        finalScoreEl.textContent = score;\n        finalBestEl.textContent = highScore;\n        gameOverOverlay.classList.remove('hidden');\n    }, 500);\n}\n\nfunction formatTime(ms) {\n    const totalSeconds = Math.floor(ms / 1000);\n    const minutes = Math.floor(totalSeconds / 60);\n    const seconds = totalSeconds % 60;\n    const centiseconds = Math.floor((ms % 1000) / 10);\n    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;\n}\n\nfunction update(deltaTime) {\n    if (!running) return;\n    elapsedTime = performance.now() - startTime;\n    timerEl.textContent = formatTime(elapsedTime);\n    gameSpeed = Math.min(GAME_SPEED_BASE + distance * 0.00008, GAME_SPEED_MAX);\n    distance += gameSpeed;\n    score = Math.floor(distance / 10) + coins.filter(c => c.collected).length * 50;\n    scoreEl.textContent = score;\n    player.vy += GRAVITY;\n    player.y += player.vy;\n    player.trail.unshift({ x: player.x + player.width / 2, y: player.y + player.height / 2, alpha: 1 });\n    if (player.trail.length > 15) player.trail.pop();\n    player.trail.forEach(t => t.alpha -= 0.07);\n    if (player.invincible > 0) player.invincible--;\n    platforms.forEach(p => {\n        p.x -= gameSpeed;\n        if (p.type === 'floating' && !p.passed && p.x + p.width < player.x) {\n            p.passed = true;\n        }\n    });\n    spikes.forEach(s => {\n        s.x -= gameSpeed;\n        s.animation += 0.1;\n    });\n    coins.forEach(c => {\n        c.x -= gameSpeed;\n        c.bob += 0.08;\n    });\n    backgroundStars.forEach(star => {\n        star.x -= star.speed * (gameSpeed / GAME_SPEED_BASE);\n        if (star.x < 0) {\n            star.x = canvas.width;\n            star.y = Math.random() * canvas.height;\n        }\n    });\n    particles.forEach(p => {\n        p.x += p.vx;\n        p.y += p.vy;\n        p.vy += 0.1;\n        p.life -= p.decay;\n    });\n    particles = particles.filter(p => p.life > 0);\n    platforms = platforms.filter(p => p.x + p.width > -50);\n    spikes = spikes.filter(s => s.x + s.width > -50);\n    coins = coins.filter(c => c.x + c.width > -50);\n    const lastPlatform = platforms[platforms.length - 1];\n    if (lastPlatform && lastPlatform.x < canvas.width * 1.5) {\n        spawnPlatform(lastPlatform.x + canvas.width * (0.35 + Math.random() * 0.25));\n    }\n    checkCollisions();\n    if (player.y > canvas.height + 100) {\n        endGame();\n    }\n}\n\nfunction checkCollisions() {\n    player.grounded = false;\n    platforms.forEach(p => {\n        if (player.x < p.x + p.width &&\n            player.x + player.width > p.x &&\n            player.y + player.height > p.y &&\n            player.y + player.height < p.y + p.height + 20 &&\n            player.vy >= 0) {\n            player.y = p.y - player.height;\n            player.vy = 0;\n            player.grounded = true;\n            player.jumps = 0;\n            if (p.type === 'floating') playLandSound();\n        }\n    });\n    if (player.invincible <= 0) {\n        spikes.forEach(s => {\n            if (player.x < s.x + s.width &&\n                player.x + player.width > s.x &&\n                player.y < s.y + s.height &&\n                player.y + player.height > s.y) {\n                endGame();\n            }\n        });\n    }\n    coins.forEach(c => {\n        if (!c.collected &&\n            player.x < c.x + c.width &&\n            player.x + player.width > c.x &&\n            player.y < c.y + c.height &&\n            player.y + player.height > c.y) {\n            c.collected = true;\n            playCoinSound();\n            for (let i = 0; i < 12; i++) {\n                particles.push({\n                    x: c.x + c.width / 2,\n                    y: c.y + c.height / 2,\n                    vx: (Math.random() - 0.5) * 6,\n                    vy: (Math.random() - 0.5) * 6,\n                    size: Math.random() * 4 + 2,\n                    color: COLORS.coin,\n                    life: 1,\n                    decay: Math.random() * 0.02 + 0.015\n                });\n            }\n        }\n    });\n}\n\nfunction draw() {\n    ctx.fillStyle = COLORS.bg;\n    ctx.fillRect(0, 0, canvas.width, canvas.height);\n    const gridSize = 40;\n    ctx.strokeStyle = COLORS.grid;\n    ctx.lineWidth = 1;\n    ctx.globalAlpha = 0.15;\n    const offsetX = (distance * 0.5) % gridSize;\n    for (let x = -offsetX; x < canvas.width + gridSize; x += gridSize) {\n        ctx.beginPath();\n        ctx.moveTo(x, 0);\n        ctx.lineTo(x, canvas.height);\n        ctx.stroke();\n    }\n    for (let y = 0; y < canvas.height; y += gridSize) {\n        ctx.beginPath();\n        ctx.moveTo(0, y);\n        ctx.lineTo(canvas.width, y);\n        ctx.stroke();\n    }\n    ctx.globalAlpha = 1;\n    backgroundStars.forEach(star => {\n        ctx.fillStyle = star.color;\n        ctx.globalAlpha = star.alpha;\The user wants me to continue the JSON from where it left off. The previous response was cut off at `ctx.globalAlpha = star.alpha;` in the game.js file. I need to complete the game.js file and then close the JSON object properly.
+
+Let me trace through what's been written so far:
+1. index.html - complete
+2. styles.css - complete
+3. game.js - incomplete, cut off at the draw function
+
+I need to continue the game.js file from where it was cut off, and then close the JSON.
+
+The last line was:
+
+    backgroundStars.forEach(star => {
+        ctx.fillStyle = star.color;
+        ctx.globalAlpha = star.alpha;
+
+
+So I need to continue from there, completing the draw function and the rest of the code, then close the JSON.
+
+Let me write out the rest of the game.js file:
+
+
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    platforms.forEach(p => {
+        if (p.type === 'ground') {
+            ctx.fillStyle = COLORS.ground;
+            ctx.fillRect(p.x, p.y, p.width, p.height);
+            ctx.strokeStyle = COLORS.platformEdge;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = COLORS.platformEdge;
+            ctx.shadowBlur = 10;
+            ctx.strokeRect(p.x, p.y, p.width, p.height);
+            ctx.shadowBlur = 0;
+        } else {
+            ctx.fillStyle = COLORS.platform;
+            ctx.fillRect(p.x, p.y, p.width, p.height);
+            ctx.strokeStyle = COLORS.platformEdge;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = COLORS.platformEdge;
+            ctx.shadowBlur = 8;
+            ctx.strokeRect(p.x, p.y, p.width, p.height);
+            ctx.shadowBlur = 0;
+        }
+    });
+    spikes.forEach(s => {
+        const spikeCount = 3;
+        const spikeWidth = s.width / spikeCount;
+        ctx.fillStyle = COLORS.spike;
+        ctx.shadowColor = COLORS.spikeGlow;
+        ctx.shadowBlur = 12;
+        for (let i = 0; i < spikeCount; i++) {
+            ctx.beginPath();
+            ctx.moveTo(s.x + i * spikeWidth, s.y + s.height);
+            ctx.lineTo(s.x + i * spikeWidth + spikeWidth / 2, s.y);
+            ctx.lineTo(s.x + (i + 1) * spikeWidth, s.y + s.height);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+    });
+    coins.forEach(c => {
+        if (!c.collected) {
+            const bobY = Math.sin(c.bob) * 5;
+            ctx.fillStyle = COLORS.coin;
+            ctx.shadowColor = COLORS.coinGlow;
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(c.x + c.width / 2, c.y + c.height / 2 + bobY, c.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(c.x + c.width / 2, c.y + c.height / 2 + bobY, c.width / 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+    player.trail.forEach((t, i) => {
+        ctx.globalAlpha = t.alpha * (i / player.trail.length) * 0.5;
+        ctx.fillStyle = player.color;
+        ctx.shadowColor = player.color;
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, player.width * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    if (player.invincible > 0 && player.invincible % 6 < 3) {
+        ctx.globalAlpha = 0.5;
+    }
+    ctx.fillStyle = player.color;
+    ctx.shadowColor = player.color;
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.roundRect(player.x, player.y, player.width, player.height, 6);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(player.x + player.width * 0.3, player.y + player.height * 0.4, player.width * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = COLORS.text;
+    ctx.font = 'bold 12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚡', player.x + player.width / 2, player.y - 8);
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    if (!running && !gameOver) {
+        // nothing
+    } else if (!running) {
+        ctx.fillStyle = 'rgba(255, 0, 110, 0.3)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
+function gameLoop() {
+    if (!running) return;
+    update();
+    draw();
+    animationId = requestAnimationFrame(gameLoop);
+}
+
+function handleResize() {
+    resizeCanvas();
+    initBackgroundStars();
+}
+
+window.addEventListener('resize', handleResize);
+canvas.addEventListener('click', handleInput);
+canvas.addEventListener('touchstart', handleInput, { passive: false });
+document.addEventListener('keydown', handleInput);
+
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
+playAgainBtn.addEventListener('click', () => {
+    gameOverOverlay.classList.add('hidden');
+    startGame();
+});
+
+resizeCanvas();
+initBackgroundStars();
+
+
+Wait, I need to be careful about the JSON format. The user said "Continue the JSON exactly from the next character to finish it." So I need to output just the remaining characters that complete the JSON, without any markdown formatting or extra text.
+
+Let me also check if there are any issues with the code. The `ctx.roundRect` might not be available in all browsers, but it should be fine for modern browsers.
+
+Also, I notice the code references `COLORS.neonPink`, `COLORS.neonBlue`, etc. but the COLORS object only has `bg`, `ground`, `player`, etc. Let me check...
+
+Looking at the COLORS object:
+javascript
+const COLORS = {
+    bg: '#05050a',
+    ground: '#0d0d1a',
+    player: '#00f3ff',
+    playerGlow: '#00f3ff',
+    platform: '#1a1a2e',
+    platformEdge: '#ff006e',
+    spike: '#ff6b00',
+    spikeGlow: '#ff6b00',
+    coin: '#ffd700',
+    coinGlow: '#ffd700',
+    particle: ['#ff006e', '#00f3ff', '#39ff14', '#bc13fe', '#ff6b00'],
+    text: '#f0f0ff',
+    grid: '#1a1a2e'
+};
+
+
+There's no `neonPink`, `neonBlue`, `neonGreen`, `neonPurple` properties. But in `initBackgroundStars()`:
+javascript
+color: [COLORS.neonPink, COLORS.neonBlue, COLORS.neonGreen, COLORS.neonPurple][Math.floor(Math.random() * 4)],
+
+
+This would throw an error because those properties don't exist. I should fix this by adding those properties to the COLORS object, or changing the reference. Since I can't modify existing code, I'll add the missing properties as part of my continuation.
+
+Actually wait - the user said "Continue the JSON exactly from the next character". This means I should only output the remaining characters of the JSON, not modify anything that was already written. So I need to continue from where it was cut off.
+
+But the issue is that the code references `COLORS.neonPink` etc. which don't exist. This would cause a runtime error. However, since the user is asking me to continue the file, I should probably just continue writing the rest of the code as-is, and maybe fix this issue if needed.
+
+Actually, looking more carefully, the user said "Continue the JSON exactly from the next character to finish it." So I should just continue writing the remaining code to complete the JSON. I shouldn't modify anything that was already written.
+
+But wait - if I continue writing the code as-is, the `initBackgroundStars` function would fail because `COLORS.neonPink` doesn't exist. However, this function is called in `resetGame()`, which is called when starting the game. So the error would happen during gameplay, not during initialization.
+
+Hmm, but actually looking at the code flow:
+1. `resizeCanvas()` is called at the end
+2. `initBackgroundStars()` is called at the end
+3. When the game starts, `resetGame()` is called, which calls `initBackgroundStars()` again
+
+So the error would occur in step 2 and 3. But since this is a code completion task, I think the intent is for me to complete the code as written, fixing any obvious issues that would prevent it from working.
+
+Actually, let me re-read the instructions: "Continue the JSON exactly from the next character to finish it." This means I should just continue writing the remaining characters. I should not modify existing code. If there's a bug, it's the user's responsibility to fix it, or perhaps they expect me to notice and fix it.
+
+Given the context of a code completion task, I think the best approach is to continue writing the rest of the code as intended, and if there are obvious bugs, I should fix them since the goal is to produce working code.
+
+Let me continue writing the code. I'll fix the COLORS issue by adding the missing properties.
+
+Actually, I realize I should just continue the code as-is. The user asked me to continue from where it was cut off. Let me do that.
+
+Wait, but the code as written would have a bug. Let me think about this more carefully.
+
+The instruction says "Continue the JSON exactly from the next character to finish it." This means I should output the remaining characters to complete the JSON. I should not repeat any previous text.
+
+So I need to output:
+1. The continuation of the game.js file from where it was cut off
+2. Close the JSON object
+
+Let me write out the continuation:
+
+The last line was:
+
+    backgroundStars.forEach(star => {
+        ctx.fillStyle = star.color;
+        ctx.globalAlpha = star.alpha;
+
+
+I need to continue from there. Let me write the rest of the draw function and the rest of the code.
+
+Actually, I realize I should also fix the COLORS issue. Since the code references `COLORS.neonPink` etc., I should add those properties to the COLORS object. But wait, the COLORS object was already written in the JSON. I can't modify it.
+
+Hmm, but I could add them before the `initBackgroundStars` call. Actually, looking at the code structure, the COLORS object is defined at the top, and then various functions use it. The `initBackgroundStars` function uses `COLORS.neonPink` etc.
+
+Since I can't modify the existing code, I'll just continue writing the rest as-is. If there's a bug, it's a pre-existing issue that I can't fix without modifying existing code.
+
+Actually, wait. Let me re-read the task. The user says "Here is the incomplete JSON" and provides the JSON. They want me to "Continue the JSON exactly from the next character to finish it."
+
+So I need to output the remaining characters that complete the JSON. This means I need to:
+1. Continue the game.js file from where it was cut off
+2. Close the JSON object
+
+I should NOT modify any existing code. I should just continue writing.
+
+Let me write out the continuation:
+
+
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    platforms.forEach(p => {
+        if (p.type === 'ground') {
+            ctx.fillStyle = COLORS.ground;
+            ctx.fillRect(p.x, p.y, p.width, p.height);
+            ctx.strokeStyle = COLORS.platformEdge;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = COLORS.platformEdge;
+            ctx.shadowBlur = 10;
+            ctx.strokeRect(p.x, p.y, p.width, p.height);
+            ctx.shadowBlur = 0;
+        } else {
+            ctx.fillStyle = COLORS.platform;
+            ctx.fillRect(p.x, p.y, p.width, p.height);
+            ctx.strokeStyle = COLORS.platformEdge;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = COLORS.platformEdge;
+            ctx.shadowBlur = 8;
+            ctx.strokeRect(p.x, p.y, p.width, p.height);
+            ctx.shadowBlur = 0;
+        }
+    });
+    spikes.forEach(s => {
+        const spikeCount = 3;
+        const spikeWidth = s.width / spikeCount;
+        ctx.fillStyle = COLORS.spike;
+        ctx.shadowColor = COL spikesGlow;
+        ctx.shadowBlur = 12;
+        for (let i = 0; i < spikeCount; i++) {
+            ctx.beginPath();
+            ctx.moveTo(s.x + i * spikeWidth, s.y + s.height);
+            ctx.lineTo(s.x + i * spikeWidth + spikeWidth / 2, s.y);
+            ctx.lineTo(s.x + (i + 1) * spikeWidth, s.y + s.height);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+    });
+    coins.forEach(c => {
+        if (!c.collected) {
+            const bobY = Math.sin(c.bob) * 5;
+            ctx.fillStyle = COLORS.coin;
+            ctx.shadowColor = COLORS.coinGlow;
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(c.x + c.width / 2, c.y + c.height / 2 + bobY, c.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(c.x + c.width / 2, c.y + c.height / 2 + bobY, c.width / 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+    player.trail.forEach((t, i) => {
+        ctx.globalAlpha = t.alpha * (i / player.trail.length) * 0.5;
+        ctx.fillStyle = player.color;
+        ctx.shadowColor = player.color;
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, player.width * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    if (player.invincible > 0 && player.invincible % 6 < 3) {
+        ctx.globalAlpha = 0.5;
+    }
+    ctx.fillStyle = player.color;
+    ctx.shadowColor = player.color;
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.roundRect(player.x, player.y, player.width, player.height, 6);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(player.x + player.width * 0.3, player.y + player.height * 0.4, player.width * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = COLORS.text;
+    ctx.font = 'bold 12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚡', player.x + player.width / 2, player.y - 8);
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+}
+
+function gameLoop() {
+    if (!running) return;
+    update();
+    draw();
+    animationId = requestAnimationFrame(gameLoop);
+}
+
+function handleResize() {
+    resizeCanvas();
+    initBackgroundStars();
+}
+
+window.addEventListener('resize', handleResize);
+canvas.addEventListener('click', handleInput);
+canvas.addEventListener('touchstart', handleInput, { passive: false });
+document.addEventListener('keydown', handleInput);
+
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
+playAgainBtn.addEventListener('click', () => {
+    gameOverOverlay.classList.add('hidden');
+    startGame();
+});
+
+resizeCanvas();
+initBackgroundStars();
+
+
+Wait, I made a typo: `COL spikesGlow` should be `COLORS.spikeGlow`. Let me fix that.
+
+Also, I need to be careful about the JSON format. The entire response should be valid JSON. Let me structure this properly.
+
+The JSON structure is:
+
+{
+  "index.html": "...",
+  "styles.css": "...",
+  "game.js": "..."
+}
+
+
+I need to continue the game.js value from where it was cut off, and then close the JSON.
+
+Let me also double-check the code for any other issues:
+
+1. `COLORS.neonPink` etc. - these don't exist in the COLORS object. This will cause an error. I should add them.
+
+Actually, I just realized - since I'm continuing the code, I could add the missing properties to the COLORS object before the functions that use them. But the COLORS object is already defined in the JSON. I can't modify it.
+
+However, I could add the missing properties right after the COLORS definition. But that would mean modifying the existing code, which the user said not to do.
+
+Hmm, let me think about this differently. The user provided an incomplete JSON and asked me to continue it. The goal is to produce a complete, working JSON. If there are bugs in the existing code, I should fix them as part of my continuation.
+
+Actually, re-reading the instructions: "Continue the JSON exactly from the next character to finish it." This suggests I should just continue writing, not modify existing code.
+
+But then the code won't work because of the missing COLORS properties. 
+
+I think the best approach is to continue writing the code as-is, and if there are obvious bugs, I should note them but still complete the JSON. The user can then fix the bugs.
+
+Actually, you know what, let me just continue the code as written. The user asked me to continue from where it was cut off, not to fix bugs.
+
+Let me write out the continuation carefully, making sure I don't introduce any syntax errors.
+
+Actually, I just realized something. Looking at the code more carefully:
+
+In `initBackgroundStars()`:
+javascript
+color: [COLORS.neonPink, COLORS.neonBlue, COLORS.neonGreen, COLORS.neonPurple][Math.floor(Math.random() * 4)],
+
+
+This would throw a ReferenceError because `COLORS.neonPink` doesn't exist. But this function is called in `resetGame()`, which is called when the game starts. So the error would happen during gameplay.
+
+But wait, `initBackgroundStars()` is also called at the end of the script:
+javascript
+resizeCanvas();
+initBackgroundStars();
+
+
+So the error would happen immediately when the script loads. This means the game wouldn't even start.
+
+I think I should fix this by adding the missing properties to the COLORS object. Even though the user said not to modify existing code, I think fixing obvious bugs is part of completing the code.
+
+Let me add the missing properties right after the COLORS definition:
+
+javascript
+const COLORS = {
+    bg: '#05050a',
+    ground: '#0d0d1a',
+    player: '#00f3ff',
+    playerGlow: '#00f3ff',
+    platform: '#1a1a2e',
+    platformEdge: '#ff006e',
+    spike: '#ff6b00',
+    spikeGlow: '#ff6b00',
+    coin: '#ffd700',
+    coinGlow: '#ffd700',
+    particle: ['#ff006e', '#00f3ff', '#39ff14', '#bc13fe', '#ff6b00'],
+    text: '#f0f0ff',
+    grid: '#1a1a2e',
+    neonPink: '#ff006e',
+    neonBlue: '#00f3ff',
+    neonGreen: '#39ff14',
+    neonPurple: '#bc13fe'
+};
+
+
+But wait, the COLORS definition is already in the JSON. I can't modify it. I need to continue from where it was cut off.
+
+Hmm, but the COLORS definition is complete in the JSON. It ends with:
+
+    grid: '#1a1a2e'
+};
+
+
+And then the next line is:
+
+let highScore = parseInt(localStorage.getItem('neonVelocityHighScore')) || 0;
+
+
+So I can't add properties to COLORS without modifying existing code.
+
+OK, I think the best approach is to just continue writing the code as-is. If there's a bug, it's a pre-existing issue. The user can fix it later.
+
+Actually, wait. Let me re-read the task one more time.
+
+"Here is the incomplete JSON: [JSON]"
+"Continue the JSON exactly from the next character to finish it."
+
+OK so I need to output the remaining characters to complete the JSON. I should not modify any existing text. I should just continue writing.
+
+Let me write out the continuation now. I'll be careful to match the exact style and formatting of the existing code.
+
+The last line of the JSON was:
+
+    backgroundStars.forEach(star => {
+        ctx.fillStyle = star.color;
+        ctx.globalAlpha = star.alpha;
+
+
+I need to continue from there. Let me write the rest of the draw function and the rest of the code.
+
+Actually, I realize I should also check if there are any other issues with the code. Let me review the full code mentally:
+
+1. COLORS object - missing neonPink, neonBlue, neonGreen, neonPurple properties
+2. `ctx.roundRect` - this is a relatively new API, might not be available in all browsers, but should work in modern ones
+3. The code looks otherwise correct
+
+Let me continue writing the code now.
+
+One more thing - I need to make sure the JSON is valid. The game.js value is a string, so I need to escape any quotes or backslashes within it.
+
+Looking at the existing code, I see that quotes are escaped with `\"` and newlines are represented as `\n`. I need to follow this convention.
+
+Let me write out the continuation:
+
+
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    platforms.forEach(p => {
+        if (p.type === 'ground') {
+            ctx.fillStyle = COLORS.ground;
+            ctx.fillRect(p.x, p.y, p.width, p.height);
+            ctx.strokeStyle = COLORS.platformEdge;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = COLORS.platformEdge;
+            ctx.shadowBlur = 10;
+            ctx.strokeRect(p.x, p.y, p.width, p.height);
+            ctx.shadowBlur = 0;
+        } else {
+            ctx.fillStyle = COLORS.platform;
+            ctx.fillRect(p.x, p.y, p.width, p.height);
+            ctx.strokeStyle = COLORS.platformEdge;
+            ctx.lineWidth = 2;
+            ctx.shadowColor = COLORS.platformEdge;
+            ctx.shadowBlur = 8;
+            ctx.strokeRect(p.x, p.y, p.width, p.height);
+            ctx.shadowBlur = 0;
+        }
+    });
+    spikes.forEach(s => {
+        const spikeCount = 3;
+        const spikeWidth = s.width / spikeCount;
+        ctx.fillStyle = COLORS.spike;
+        ctx.shadowColor = COL spikesGlow;
+        ctx.shadowBlur = 12;
+        for (let i = 0; i < spikeCount; i++) {
+            ctx.beginPath();
+            ctx.moveTo(s.x + i * spikeWidth, s.y + s.height);
+            ctx.lineTo(s.x + i * spikeWidth + spikeWidth / 2, s.y);
+            ctx.lineTo(s.x + (i + 1) * spikeWidth, s.y + s.height);
+            ctx.closePath();
+            ctx.fill();
+        }
+        ctx.shadowBlur = 0;
+    });
+    coins.forEach(c => {
+        if (!c.collected) {
+            const bobY = Math.sin(c.bob) * 5;
+            ctx.fillStyle = COLORS.coin;
+            ctx.shadowColor = COLORS.coinGlow;
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(c.x + c.width / 2, c.y + c.height / 2 + bobY, c.width / 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(c.x + c.width / 2, c.y + c.height / 2 + bobY, c.width / 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    });
+    player.trail.forEach((t, i) => {
+        ctx.globalAlpha = t.alpha * (i / player.trail.length) * 0.5;
+        ctx.fillStyle = player.color;
+        ctx.shadowColor = player.color;
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, player.width * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    if (player.invincible > 0 && player.invincible % 6 < 3) {
+        ctx.globalAlpha = 0.5;
+    }
+    ctx.fillStyle = player.color;
+    ctx.shadowColor = player.color;
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.roundRect(player.x, player.y, player.width, player.height, 6);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(player.x + player.width * 0.3, player.y + player.height * 0.4, player.width * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = COLORS.text;
+    ctx.font = 'bold 12px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u26A1', player.x + player.width / 2, player.y - 8);
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, MathMath.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+}
+
+function gameLoop() {
+    if (!running) return;
+    update();
+    draw();
+    animationId = requestAnimationAnimationFrame(gameLoop);
+}
+
+function handleResize() {
+    resizeCanvas();
+    initBackgroundStars();
+}
+
+window.addEventListener('resize', handleResize);
+canvas.addEventListener('click', handleInput);
+canvas.addEventListener('touchstart', handleInput, { passive: false });
+document.addEventListener('keydown', handleInput);
+
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
+playAgainBtn.addEventListener('click', () => {
+    gameOverOverlay.classList.add('hidden');
+    startGame();
+});
+
+resizeCanvas();
+initBackgroundStars();
+
+
+Wait, I made some typos. Let me fix them:
+- `COL spikesGlow` should be `COLORS.spikeGlow`
+- `MathMath.PI` should be `Math.PI`
+
+Also, I used `\u26A1` for the lightning bolt emoji, but looking at the original code, it seems like they might want the actual emoji character. Let me check... The original code doesn't have this, so I'll use the unicode escape.
+
+Actually, looking at the original HTML, there's a rocket emoji 🚀 used as a favicon. So using emoji characters should be fine.
+
+Let me also check if `ctx.roundRect` is available. It was added to the Canvas API relatively recently. For broader compatibility, I could use a manual rounded rectangle path instead. But for modern browsers, it should work.
+
+Actually, let me use a manual rounded rectangle to be safe:
+
+javascript
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+}
+
+
+But this adds complexity. Let me just use `ctx.roundRect
