@@ -1,0 +1,104 @@
+JSON Decode Error after continuation: Expecting ',' delimiter: line 2 column 518 (char 519)
+
+Raw: {
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Zephyr Strike</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%220.9em%22 font-size=%2290%22>💨</text></svg>\">\n    <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n    <canvas id=\"gameCanvas\"></canvas>\n    <script src=\"game.js"></script>\n</body>\n</html>",
+  "style.css": "*{\n    margin:0;\n    padding:0;\n}\nbody{\n    overflow:hidden;\n    background:#0a0a2a;\n    touch-action:none;\n}\n#gameCanvas{\n    display:block;\n    width:100vw;\n    height:100vh;\n    touch-action:none;\n}",
+  "game.js": "const canvas=document.getElementById('gameCanvas');\nconst ctx=canvas.getContext('2d');\nlet width=window.innerWidth;\nlet height=window.innerHeight;\ncanvas.width=width;\ncanvas.height=height;\nwindow.addEventListener('resize',()=>{\n    width=window.innerWidth;\n    height=window.innerHeight;\n    canvas.width=width;\n    canvas.height=height;\n});\n\nconst COLORS={\n    bg:'#0a0a2a',\n    player:'#00ffff',\n    windParticle:'#00ff00',\n    bullet:'#ffff00',\n    target:'#ff0000',\n    windCompassCalm:'#00ff00',\n    windCompassMod:'#ffff00',\n    windCompassGale:'#ff0000',\n    hud:'#ffffff',\n    hudAmmoLow:'#ff0000',\n    vignette:'rgba(0,0,0,0.7)'\n};\n\nclass Vector{\n    constructor(x=0,y=0){\n        this.x=x;\n        this.y=y;\n    }\n    add(v){return new Vector(this.x+v.x,this.y+v.y);}\n    sub(v){return new Vector(this.x-v.x,this.y-v.y);}\n    mult(s){return new Vector(this.x*s,this.y*s);}\n    mag(){return Math.sqrt(this.x*this.x+this.y*this.y);}\n    normalize(){const m=this.mag();return m?new Vector(this.x/m,this.y/m):new Vector(0,0);}\n    static lerp(a,b,t){return new Vector(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t);}\n}\n\nclass Player{\n    constructor(){\n        this.pos=new Vector(width/2,height/2);\n        this.vel=new Vector(0,0);\n        this.acc=new Vector(0,0);\n        this.size=20;\n        this.maxSpeed=8;\n        this.accRate=0.5;\n        this.friction=0.85;\n        this.health=100;\n        this.ammo=10;\n        this.maxAmmo=10;\n        this.reloadRate=1;\n        this.reloadTimer=0;\n        this.scarf=[];\n        this.scarfLength=10;\n        for(let i=0;i<this.scarfLength;i++)this.scarf.push(new Vector(this.pos.x,this.pos.y));\n    }\n    update(keys,wind,dt){\n        this.acc=new Vector(0,0);\n        if(keys['w']||keys['ArrowUp'])this.acc.y-=this.accRate;\n        if(keys['s']||keys['ArrowDown'])this.acc.y+=this.accRate;\n        if(keys['a']||keys['ArrowLeft'])this.acc.x-=this.accRate;\n        if(keys['d']||keys['ArrowRight'])this.acc.x+=this.accRate;\n        \n        this.vel=this.vel.add(this.acc.mult(dt)); \n        if(!(keys['w']||keys['s']||keys['a']||keys['d']||keys['ArrowUp']||keys['ArrowDown']||keys['ArrowLeft']||keys['ArrowRight'])){\n            this.vel=this.vel.mult(this.friction);\n        }\n        const speed=this.vel.mag();\n        if(speed>this.maxSpeed){\n            this.vel=this.vel.normalize().mult(this.maxSpeed);\n        }\n        \n        this.pos=this.pos.add(this.vel.mult(dt));\n        \n        if(this.pos.x<0){this.pos.x=0;this.vel.x=0;}\n        if(this.pos.x>width){this.pos.x=width;this.vel.x=0;}\n        if(this.pos.y<0){this.pos.y=0;this.vel.y=0;}\n        if(this.pos.y>height){this.pos.y=height;this.vel.y=0;}\n        \n        this.scarf.pop();\n        this.scarf.unshift(new Vector(this.pos.x,this.pos.y));\n        \n        this.reloadTimer+=dt;\n        if(this.reloadTimer>1000/this.reloadRate&&this.ammo<this.maxAmmo){\n            this.ammo++;\n            this.reloadTimer=0;\n        }\n    }\n    draw(){\n        ctx.save();\n        ctx.translate(this.pos.x,this.pos.y);\n        ctx.beginPath();\n        ctx.moveTo(0,-this.size);\n        ctx.lineTo(this.size*0.6,0);\n        ctx.lineTo(0,this.size*0.6);\n        ctx.lineTo(-this.size*0.6,0);\n        ctx.closePath();\n        ctx.fillStyle=COLORS.player;\n        ctx.fill();\n        ctx.restore();\n        \n        ctx.save();\n        ctx.beginPath();\n        ctx.moveTo(this.scarf[0].x,this.scarf[0].y);\n        for(let i=1;i<this.scarf.length;i++){\n            const p=this.scarf[i];\n            ctx.lineTo(p.x,p.y);\n        }\n        ctx.strokeStyle=COLORS.windParticle;\n        ctx.lineWidth=2;\n        ctx.stroke();\n        ctx.restore();\n    }\n}\n\nclass WindSystem{\n    constructor(){\n        this.wind=new Vector(0,0);\n        this.targetWind=new Vector(0,0);\n        this.timeUntilChange=5000+Math.random()*5000;\n        this.lerpTime=1000;\n        this.lerpStart=0;\n        this.isLerping=false;\n        this.particles=[];\n        this.particleCount=30;\n        for(let i=0;i<this.particleCount;i++){\n            this.particles.push(new Particle(Math.random()*width,Math.random()*height));\n        }\n    }\n    update(dt){\n        this.timeUntilChange-=dt;\n        if(this.timeUntilChange<=0){\n            this.isLerping=true;\n            this.lerpStart=performance.now();\n            this.targetWind=new Vector((Math.random()-0.5)*4,(Math.random()-0.5)*4);\n            this.timeUntilChange=5000+Math.random()*5000;\n        }\n        if(this.isLerping){\n            const elapsed=performance.now()-this.lerpStart;\n            const t=Math.min(elapsed/this.lerpTime,1);\n            this.wind=Vector.lerp(this.wind,this.targetWind,t);\n            if(t>=1)this.isLerping=false;\n        }\n        \n        for(const p of this.particles){\n            p.update(this.wind,dt);\n            if(p.x<0||p.x>width||p.y<0||p.y>height){\n                p.x=Math.random()*width;\n                p.y=Math.random()*height;\n            }\n        }\n    }\n    draw(){\n        for(const p of this.particles){\n            p.draw();\n        }}\n    getWind(){return this.wind;}\n}\n\nclass Particle{\n    constructor(x,y){\n        this.x=x;\n        this.y=y;\n        this.size=2+Math.random()*3;\n        this.life=1;\n        this.maxLife=1;\n        this.color=COLORS.windParticle;\n    }\n    update(wind,dt){\n        this.x+=wind.x*0.5*dt;\n        this.y+=wind.y*0.5*dt;\n    }\n    draw(){\n        ctx.beginPath();\n        ctx.arc(this.x,this.y,this.size,0,Math.PI*2);\n        ctx.fillStyle=this.color;\n        ctx.fill();\n    }\n}\n\nclass Bullet{\n    constructor(x,y,angle,wind){\n        this.pos=new Vector(x,y);\n        this.vel=new Vector(Math.cos(angle)*5,Math.sin(angle)*5);\n        this.wind=wind;\n        this.life=3000;\n        this.maxLife=3000;\n        this.size=2;\n        this.trail=[];\n        this.trailLength=8;\n        for(let i=0;i<this.trailLength;i++)this.trail.push(new Vector(this.pos.x,this.pos.y));\n    }\n    update(dt){\n        this.trail.pop();\n        this.trail.unshift(new Vector(this.pos.x,this.pos.y));\n        \n        this.pos=this.pos.add(this.vel.mult(dt));\n        this.vel.x+=this.wind.x*0.15*dt;\n        this.vel.y+=this.wind.y*0.15*dt;\n        \n        this.life-=dt;\n        if(this.pos.x<0||this.pos.x>width||this.pos.y<0||this.pos.y>height||this.life<=0){\n            return false;\n        }\n        return true;\n    }\n    draw(){\n        ctx.save();\n        ctx.beginPath();\n        ctx.arc(this.trail[0].x,this.trail[0].y,this.size,0,Math.PI*2);\n        const grad=ctx.createRadialGradient(this.trail[0].x,this.trail[0].y,0,this.trail[0].x,this.trail[0].y,this.size*3);\n        grad.addColorStop(0,'rgba(255,255,0,0.8)');\n        grad.addColorStop(1,'rgba(255,255,0,0)');\n        ctx.fillStyle=grad;\n        ctx.fill();\n        ctx.restore();\n        \n        for(let i=0;i<this.trail.length;i++){\n            const alpha=i/this.trailLength;\n            const size=this.size*(1-alpha);\n            ctx.beginPath();\n            ctx.arc(this.trail[i].x,this.trail[i].y,size,0,Math.PI*2);\n            ctx.fillStyle=`rgba(255,255,0,${alpha*0.5})`;\n            ctx.fill();\n        }\n    }\n}\n\nclass Target{\n    constructor(){\n        this.pos=new Vector(Math.random()*width,Math.random()*height);\n        this.size=15;\n        this.color=COLORS.target;\n        this.hit=false;\n    }\n    draw(){\n        ctx.beginPath();\n        ctx.arc(this.pos.x,this.pos.y,this.size,0,Math.PI*2);\n        ctx.fillStyle=this.color;\n        ctx.fill();\n    }\n}\n\nclass AudioManager{\n    constructor(){\n        this.ctx=new (window.AudioContext||window.webkitAudioContext)();\n    }\n    playShoot(){\n        const osc=this.ctx.createOscillator();\n        const gain=this.ctx.createGain();\n        osc.connect(gain);\n        gain.connect(this.ctx.destination);\n        osc.frequency.value=400;\n        gain.gain.setValueAtTime(0,this.ctx.currentTime);\n        gain.gain.linearRampToValueAtTime(0.2,this.ctx.currentTime+0.01);\n        gain.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.2);\n        osc.start();\n        osc.stop(this.ctx.currentTime+0.2);\n    }\n    playHit(){\n        const osc=this.ctx.createOscillator();\n        const gain=this.ctx.createGain();\n        osc.connect(gain);\n        gain.connect(this.ctx.destination);\n        osc.frequency.value=800;\n        gain.gain.setValueAtTime(0,this.ctx.currentTime);\n        gain.gain.linearRampToValueAtTime(0.3,this.ctx.currentTime+0.01);\n        gain.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+0.15);\n        osc.start();\n        osc.stop(this.ctx.currentTime+0.15);\n    }\n}\n\nconst keys={};\nwindow.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;});\nwindow.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});\n\nlet player=new Player();\nlet wind=new WindSystem();\nlet bullets=[];\nlet targets=[];\nlet audio=new AudioManager();\nlet lastTargetSpawn=0;\nlet targetSpawnRate=2000;\nlet score=0;\nlet highScore=localStorage.getItem('zephyrStrikeHighScore')||0;\nlet startTime=performance.now();\nlet gameOver=false;\n\nfunction spawnTarget(){\n    if(performance.now()-lastTargetSpawn>targetSpawnRate){\n        targets.push(new Target());\n        lastTargetSpawn=performance.now();\n    }\n}\n\nfunction update(dt){\n    if(gameOver)return;\n    player.update(keys,wind.getWind(),dt);\n    wind.update(dt);\n    spawnTarget();\n    \n    for(let i=bullets.length-1;i>=0;i--){\n        if(!bullets[i].update(dt))bullets.splice(i,1);\n    }\n    \n    for(let i=bullets.length-1;i>=0;i--){\n        const b=bullets[i];\n        for(let j=targets.length-1;j>=0;j--){\n            const t=targets[j];\n            const dx=b.pos.x-t.pos.x;\n            const dy=b.pos.y-t.pos.y;\n            const dist=Math.sqrt(dx*dx+dy*dy);\n            if(dist<player.size+t.size){\n                targets.splice(j,1);\n                bullets.splice(i,1);\n                score+=10;\n                audio.playHit();\n                break;\n            }\n        }\n    }\n    \n    if(targets.length>0){\n        for(const t of targets){\n            const dx=t.pos.x-player.pos.x;\n            const dy=t.pos.y-player.pos.y;\n            const dist=Math.sqrt(dx*dx+dy*dy);\n            if(dist<player.size+t.size){\n                player.health-=1;\n                if(player.health<=0){\n                    gameOver=true;\n                    const survived=(performance.now()-startTime)/1000;\n                    if(survived > highScore){
+                        highScore = survived;
+                        localStorage.setItem('zephyrStrikeHighScore', survived);
+                    }
+                }
+            }
+        }
+    }
+}
+
+function draw(){
+    ctx.fillStyle=COLORS.bg;
+    ctx.fillRect(0,0,width,height);
+    
+    // vignette
+    ctx.save();
+    ctx.fillStyle=COLORS.vignette;
+    ctx.fillRect(0,0,width,height);
+    ctx.restore();
+    
+    wind.draw();
+    player.draw();
+    for(const b of bullets) b.draw();
+    for(const t of targets) t.draw();
+    
+    // HUD
+    ctx.fillStyle=COLORS.hud;
+    ctx.font='20px sans-serif';
+    ctx.textAlign='left';
+    ctx.fillText(`Score: ${score}`,10,30);
+    ctx.fillText(`Health: ${player.health}`,10,50);
+    ctx.fillText(`Ammo: ${player.ammo}/${player.maxAmmo}`,10,70);
+    ctx.fillText(`Wind: ${wind.getWind().x.toFixed(1)}, ${wind.getWind().y.toFixed(1)}`,10,90);
+    
+    // wind compass
+    const compassSize=60;
+    const compassX=width-compassSize-10;
+    const compassY=height-compassSize-10;
+    ctx.save();
+    ctx.translate(compassX+compassSize/2,compassY+compassSize/2);
+    ctx.beginPath();
+    ctx.arc(0,0,compassSize/2,0,Math.PI*2);
+    ctx.strokeStyle=COLORS.hud;
+    ctx.lineWidth=2;
+    ctx.stroke();
+    // wind direction
+    const windDir=wind.getWind();
+    const windLen=Math.min(windDir.mag()*10,compassSize/2-5);
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.lineTo(windDir.x*windLen/(windDir.mag()||0), windDir.y*windLen/(windDir.mag()||0));
+    ctx.strokeStyle=windDir.mag()<1?COLORS.windCompassCalm:windDir.mag()<2?COLORS.windCompassMod:COLORS.windCompassGale;
+    ctx.lineWidth=3;
+    ctx.stroke();
+    ctx.restore();
+    
+    if(gameOver){
+        ctx.fillStyle='rgba(0,0,0,0.75)';
+        ctx.fillRect(0,0,width,height);
+        ctx.fillStyle=COLORS.hud;
+        ctx.font='40px sans-serif';
+        ctx.textAlign='center';
+        ctx.fillText('Game Over',width/2,height/2-40);
+        ctx.font='20px sans-serif';
+        ctx.fillText(`Survived: ${survived.toFixed(1)}s`,width/2,height/2);
+        ctx.fillText(`Score: ${score}`,width/2,height/2+30);
+        ctx.fillText(`High Score: ${highScore.toFixed(1)}s`,width/2,height/2+60);
+        ctx.fillText('Press R to Restart',width/2,height/2+100);
+    }
+}
+
+function loop(timestamp){
+    const dt=timestamp-(lastRender||timestamp);
+    lastRender=timestamp;
+    update(dt);
+    draw();
+    if(!gameOver)requestAnimationFrame(loop);
+    else{
+        // listen for restart
+    }
+}
+
+window.addEventListener('keydown',e=>{
+    if(e.key.toLowerCase()==='r'&&gameOver){
+        // reset game
+        player=new Player();
+        wind=new WindSystem();
+        bullets=[];
+        targets=[];
+        score=0;
+        gameOver=false;
+        startTime=performance.now();
+        requestAnimationFrame(loop);
+    }
+});
+
+requestAnimationFrame(loop);
+"}
+}

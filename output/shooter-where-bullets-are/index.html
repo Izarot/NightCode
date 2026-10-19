@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zephyr Strike</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌀</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0a1a; color: #00ffcc; font-family: 'Orbitron', monospace; overflow: hidden; }
+        #game-container { position: relative; width: 100vw; height: 100vh; }
+        canvas { display: block; width: 100%; height: 100%; }
+        .hud { position: absolute; pointer-events: none; }
+        #timer { top: 10px; left: 10px; font-size: 1.5rem; color: #ffcc00; }
+        #high-score { top: 10px; right: 10px; font-size: 1rem; }
+        #ammo { bottom: 20px; left: 50%; transform: translateX(-50%); font-size: 1.2rem; }
+        #health { bottom: 20px; left: 20px; width: 200px; height: 20px; border: 2px solid #00ffcc; }
+        #health-bar { width: 100%; height: 100%; background: #00ffcc; transition: width 0.3s; }
+        #compass { top: 10px; left: 50%; transform: translateX(-50%); width: 80px; height: 80px; border: 2px solid #00ffcc; border-radius: 50%; }
+        #crosshair { position: absolute; width: 30px; height: 30px; border: 2px solid #ff0066; transform: translate(-50%, -50%); }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="timer" class="hud">00:00.00</div>
+        <div id="high-score" class="hud">HIGH: 0</div>
+        <div id="ammo" class="hud">AMMO: 30</div>
+        <div id="health" class="hud"><div id="health-bar"></div></div>
+        <div id="compass" class="hud"></div>
+        <div id="crosshair" class="hud"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const timerEl = document.getElementById('timer');
+        const highScoreEl = document.getElementById('high-score');
+        const ammoEl = document.getElementById('ammo');
+        const healthBar = document.getElementById('health-bar');
+        const compass = document.getElementById('compass');
+        const crosshair = document.getElementById('crosshair');
+
+        // Game State
+        let player = { x: 0, y: 0, vx: 0, vy: 0, speed: 0, angle: 0, health: 100, ammo: 30 };
+        let wind = { x: 0, y: 0, strength: 0, targetX: 0, targetY: 0, targetStrength: 0 };
+        let bullets = [];
+        let particles = [];
+        let obstacles = [];
+        let keys = {};
+        let mouse = { x: 0, y: 0 };
+        let lastTime = 0;
+        let startTime = 0;
+        let elapsed = 0;
+        let highScore = localStorage.getItem('zephyrHighScore') || 0;
+        let windTimer = 0;
+        let lastShot = 0;
+        let audioContext;
+
+        // Initialize
+        function init() {
+            resizeCanvas();
+            player.x = canvas.width / 2;
+            player.y = canvas.height / 2;
+            highScoreEl.textContent = `HIGH: ${highScore}`;
+            createObstacles();
+            updateWind();
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            gameLoop(0);
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function createObstacles() {
+            obstacles = [];
+            for (let i = 0; i < 5; i++) {
+                obstacles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: 30 + Math.random() * 40
+                });
+            }
+        }
+
+        function updateWind() {
+            wind.targetX = (Math.random() - 0.5) * 2;
+            wind.targetY = (Math.random() - 0.5) * 2;
+            wind.targetStrength = 0.5 + Math.random() * 1.5;
+            windTimer = 5000 + Math.random() * 5000;
+        }
+
+        function updatePhysics(dt) {
+            // Player movement
+            if (keys['w'] || keys['W'] || keys['ArrowUp']) {
+                player.vy -= 0.5;
+                player.speed = Math.min(8, Math.hypot(player.vx, player.vy));
+            }
+            if (keys['s'] || keys['S'] || keys['ArrowDown']) {
+                player.vy += 0.5;
+                player.speed = Math.min(8, Math.hypot(player.vx, player.vy));
+            }
+            if (keys['a'] || keys['A'] || keys['ArrowLeft']) {
+                player.vx -= 0.5;
+                player.speed = Math.min(8, Math.hypot(player.vx, player.vy));
+            }
+            if (keys['d'] || keys['D'] || keys['ArrowRight']) {
+                player.vx += 0.5;
+                player.speed = Math.min(8, Math.hypot(player.vx, player.vy));
+            }
+
+            // Friction
+            if (!keys['w'] && !keys['s'] && !keys['a'] && !keys['d']) {
+                player.vx *= 0.85;
+                player.vy *= 0.85;
+            }
+
+            // Update position
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // Boundary constraints
+            player.x = Math.max(20, Math.min(canvas.width - 20, player.x));
+            player.y = Math.max(20, Math.min(canvas.height - 20, player.y));
+
+            // Wind interpolation
+            wind.x += (wind.targetX - wind.x) * 0.02;
+            wind.y += (wind.targetY - wind.y) * 0.02;
+            wind.strength += (wind.targetStrength - wind.strength) * 0.02;
+
+            // Update bullets
+            bullets.forEach((bullet, i) => {
+                bullet.x += bullet.vx + wind.x * 0.15 * bullet.speed;
+                bullet.y += bullet.vy + wind.y * 0.15 * bullet.speed;
+                bullet.life--;
+                if (bullet.life <= 0 || bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    bullets.splice(i, 1);
+                }
+            });
+
+            // Update particles
+            particles.forEach((p, i) => {
+                p.x += p.vx + wind.x * p.speed;
+                p.y += p.vy + wind.y * p.speed;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            });
+
+            // Wind timer
+            windTimer -= dt;
+            if (windTimer <= 0) updateWind();
+
+            // Shooting
+            if (mouse.down && Date.now() - lastShot > 200) {
+                shoot();
+                lastShot = Date.now();
+            }
+        }
+
+        function shoot() {
+            const angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+            const speed = 10;
+            bullets.push({
+                x: player.x,
+                y: player.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 180, // 3 seconds at 60fps
+                speed: speed,
+                trail: []
+            });
+            player.ammo--;
+            ammoEl.textContent = `AMMO: ${player.ammo}`;
+            playSound('shoot');
+            if (player.ammo <= 0) setTimeout(() => player.ammo = 30, 2000);
+        }
+
+        function playSound(type) {
+            if (!audioContext) return;
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            if (type === 'shoot') {
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            } else if (type === 'hit') {
+                oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.1);
+                gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            }
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }
+
+        function render() {
+            // Clear with additive blending
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.fillStyle = 'rgba(10, 10, 26, 0.2)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw obstacles
+            ctx.globalCompositeOperation = 'lighter';
+            obstacles.forEach(obs => {
+                const gradient = ctx.createRadialGradient(obs.x, obs.y, 0, obs.x, obs.y, obs.radius);
+                gradient.addColorStop(0, 'rgba(255, 0, 102, 0.8)');
+                gradient.addColorStop(1, 'rgba(255, 0, 102, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(obs.x, obs.y, obs.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Draw wind particles
+            particles.forEach(p => {
+                ctx.fillStyle = `rgba(0, 255, 204, ${p.life/60})`;
+                ctx.fillRect(p.x, p.y, 3, 3);
+            });
+
+            // Spawn particles
+            if (Math.random() < 0.3) {
+                particles.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    vx: wind.x * 2,
+                    vy: wind.y * 2,
+                    life: 60,
+                    speed: 1 + wind.strength
+                });
+            }
+
+            // Draw player
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.rotate(player.vx !== 0 || player.vy !== 0 ? Math.atan2(player.vy, player.vx) : 0);
+            
+            // Player body (diamond shape)
+            ctx.fillStyle = '#00ffcc';
+            ctx.beginPath();
+            ctx.moveTo(15, 0);
+            ctx.lineTo(0, 10);
+            ctx.lineTo(-15, 0);
+            ctx.lineTo(0, -10);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Wind scarf
+            ctx.strokeStyle = '#ff0066';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(-10, 0);
+            ctx.quadraticCurveTo(-5, -5 * wind.strength, -15, -8 * wind.strength);
+            ctx.stroke();
+            ctx.restore();
+
+            // Draw bullets with trails
+            bullets.forEach(bullet => {
+                // Add trail segment
+                bullet.trail.push({x: bullet.x, y: bullet.y, life: bullet.life});
+                if (bullet.trail.length > 8) bullet.trail.shift();
+                
+                // Draw trail
+                ctx.globalCompositeOperation = 'lighter';
+                for (let i = 0; i < bullet.trail.length; i++) {
+                    const seg = bullet.trail[i];
+                    const alpha = (i / bullet.trail.length) * 0.5;
+                    const size = 4 * (i / bullet.trail.length);
+                    ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+                    ctx.beginPath();
+                    ctx.arc(seg.x, seg.y, size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Draw bullet glow
+                const gradient = ctx.createRadialGradient(bullet.x, bullet.y, 0, bullet.x, bullet.y, 8);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+                gradient.addColorStop(1, 'rgba(0, 255, 204, 0)');
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Update HUD
+            updateHUD();
+        }
+
+        function updateHUD() {
+            // Timer
+            const mins = Math.floor(elapsed / 60000).toString().padStart(2, '0');
+            const secs = Math.floor((elapsed % 60000) / 1000).toString().padStart(2, '0');
+            const ms = Math.floor((elapsed % 1000) / 10).toString().padStart(2, '0');
+            timerEl.textContent = `${mins}:${secs}.${ms}`;
+
+            // Compass
+            const angle = Math.atan2(wind.y, wind.x) * 180 / Math.PI;
+            compass.innerHTML = `<div style="position:absolute;top:50%;left:50%;width:2px;height:35px;background:#00ffcc;transform:translate(-50%,-50%) rotate(${angle}deg);"></div>`;
+            
+            // Health
+            healthBar.style.width = `${player.health}%`;
+
+            // Crosshair with wind offset
+            const offset = wind.strength * 30;
+            crosshair.style.left = `${mouse.x + Math.cos(Math.atan2(mouse.y - player.y, mouse.x - player.x)) * offset}px`;
+            crosshair.style.top = `${mouse.y + Math.sin(Math.atan2(mouse.y - player.y, mouse.x - player.x)) * offset}px`;
+        }
+
+        function gameLoop(timestamp) {
+            if (!startTime) startTime = timestamp;
+            elapsed = timestamp - startTime;
+            const dt = timestamp - lastTime;
+            lastTime = timestamp;
+
+            updatePhysics(dt);
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Event Listeners
+        window.addEventListener('keydown', e => keys[e.key] = true);
+        window.addEventListener('keyup', e => keys[e.key] = false);
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            mouse.x = e.clientX - rect.left;
+            mouse.y = e.clientY - rect.top;
+        });
+        canvas.addEventListener('mousedown', () => mouse.down = true);
+        canvas.addEventListener('mouseup', () => mouse.down = false);
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            createObstacles();
+        });
+
+        // Start game
+        init();
+    </script>
+</body>
+</html>
