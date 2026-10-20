@@ -1,20 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PhaseShift: Veil of Shadows</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='70' font-size='60'>👻</text></svg>">
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #0f0f2a; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
-canvas { display: block; max-width: 100vw; height: auto; margin: 0 auto; }
-.ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Bridge Builder</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌉</text></svg>">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<canvas id="gameCanvas"></canvas>
-<div class="ui-overlay"></div>
-<script src="game.js"></script>
+  <div id="loading" class="screen"><div class="spinner"></div><p>Loading...</p></div>
+  <canvas id="game"></canvas>
+  <div id="hud" class="hud">
+    <div class="hud-left">
+      <div class="bar health"><div class="fill"></div></div>
+      <div class="label">HP</div>
+    </div>
+    <div class="hud-center">
+      <div id="timer" class="timer">00:00.00</div>
+    </div>
+    <div class="hud-right">
+      <div class="bar bp"><div class="fill"></div></div>
+      <div class="label"><span id="bp-value">100</span>/100 BP</div>
+    </div>
+    <button id="build-btn" class="build-btn" aria-label="Build Bridge">🌉</button>
+    <div id="minimap" class="minimap"></div>
+  </div>
+  <div id="pause-menu" class="screen menu hidden">
+    <h2>Paused</h2>
+    <button data-action="resume">Resume</button>
+    <button data-action="restart">Restart</button>
+    <button data-action="settings">Settings</button>
+    <button data-action="quit">Quit</button>
+  </div>
+  <div id="settings-menu" class="screen menu hidden">
+    <h2>Settings</h2>
+    <label><input type="checkbox" id="sound-toggle" checked> Sound</label>
+    <label><input type="checkbox" id="subtitles-toggle"> Subtitles</label>
+    <label>Difficulty: <select id="difficulty"><option value="easy">Easy</option><option value="normal" selected>Normal</option><option value="hard">Hard</option></select></label>
+    <button data-action="back">Back</button>
+  </div>
+  <div id="game-over" class="screen menu hidden">
+    <h2>Game Over</h2>
+    <p>Time: <span id="final-time">00:00.00</span></p>
+    <p>High Score: <span id="high-score">00:00.00</span></p>
+    <button data-action="restart">Try Again</button>
+    <button data-action="menu">Main Menu</button>
+  </div>
+  <div id="level-complete" class="screen menu hidden">
+    <h2>Level Complete!</h2>
+    <p>Time: <span id="complete-time">00:00.00</span></p>
+    <button data-action="next">Next Level</button>
+    <button data-action="menu">Main Menu</button>
+  </div>
+  <script src="main.js"></script>
 </body>
 </html>
