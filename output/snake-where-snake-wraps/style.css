@@ -1,0 +1,123 @@
+:root {
+    --bg-color: #0a0a0a;
+    --snake-head: #00ff88;
+    --snake-body: #00cc66;
+    --food-color: #ff0055;
+    --ui-text: #ffffff;
+    --accent: #00ffff;
+    --panel-bg: rgba(10, 10, 10, 0.9);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: var(--bg-color);
+    color: var(--ui-text);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    touch-action: none;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.game-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    max-width: 800px;
+    max-height: 600px;
+    aspect-ratio: 4 / 3;
+}
+
+canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, #1a1a1a 0%, #0d0d0d 100%);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+    border-radius: 8px;
+}
+
+#hud {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+    pointer-events: none;
+    z-index: 10;
+    font-weight: bold;
+    font-size: 18px;
+    text-shadow: 0 0 5px rgba(0, 255, 136, 0.5);
+}
+
+#timer { color: var(--accent); }
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--panel-bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    border-radius: 8px;
+    width: 100%;
+    height: 100%;
+}
+
+.overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+h1 {
+    font-family: 'Orbitron', 'Courier New', monospace;
+    font-size: 48px;
+    color: #ffeb3b;
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px rgba(255, 235, 59, 0.5);
+}
+
+button {
+    background: var(--snake-head);
+    border: none;
+    color: #000;
+    padding: 12px 24px;
+    font-size: 20px;
+    font-weight: bold;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    min-width: 150px;
+}
+
+button:active {
+    transform: scale(0.95);
+}
+
+#highscore-badge {
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+@media (max-width: 480px) {
+    h1 { font-size: 32px; }
+    button { font-size: 16px; padding: 10px 20px; }
+    #hud { font-size: 14px; }
+}
