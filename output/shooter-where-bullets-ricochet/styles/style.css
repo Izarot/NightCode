@@ -1,0 +1,136 @@
+/* Vibrant neon-retro palette */
+:root {
+  --bg-gradient-start: #0f0c29;
+  --bg-gradient-end: #302b63;
+  --player-color: #00f0ff;
+  --enemy-color: #ff2a6d;
+  --bullet-color: #ffff00;
+  --wall-color: #4444ff;
+  --breakable-wall-color: #8a2be2;
+  --hud-bg: rgba(15, 12, 41, 0.7);
+  --text-color: #ffffff;
+  --accent-color: #00ff88;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Courier New', monospace;
+  background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+  color: var(--text-color);
+}
+
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+#hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+}
+
+#score, #timer, #highScore {
+  font-size: 1.2em;
+  color: var(--text-color);
+  text-shadow: 0 0 8px var(--accent-color);
+}
+
+#healthBarContainer, #heatBarContainer {
+  width: 200px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--accent-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#healthBar, #heatBar {
+  height: 100%;
+  width: 100%;
+  transition: width 0.2s ease;
+}
+
+#healthBar {
+  background: linear-gradient(90, #00ff00, #ffff00, #ff0000);
+}
+
+#heatBar {
+  background: linear-gradient(90, #00f0ff, #ff00ff);
+}
+
+#pauseBtn {
+  padding: 6px 12px;
+  background: var(--accent-color);
+  color: var(--bg-gradient-start);
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#touchControls {
+  position: absolute;
+  bottom: 20px;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+#joystick, #fireBtn {
+  pointer-events: auto;
+}
+
+#joystick {
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  touch-action: none;
+}
+
+#fireBtn {
+  width: 70px;
+  height: 70px;
+  background: var(--enemy-color);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.5em;
+  touch-action: none;
+  cursor: pointer;
+}
+
+@media (min-width: 768px) {
+  #touchControls {
+    display: none;
+  }
+}
