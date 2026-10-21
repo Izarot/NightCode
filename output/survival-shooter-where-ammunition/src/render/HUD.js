@@ -1,0 +1,10 @@
+export class HUD {
+  constructor(ctx){ this.ctx=ctx; }
+  render(player,gm){ this.drawHealth(player,gm); this.drawAmmo(player,gm); this.drawWave(gm); this.drawScore(gm); this.drawTimer(gm); this.drawVignette(); }
+  drawHealth(player,gm){ const hp=gm.ecs.getComponent(player,'Health'); if(!hp)return; const barW=120,barH=12; const x=16,y=16; this.ctx.fillStyle='#333'; this.ctx.fillRect(x,y,barW,barH); const segW=barW/hp.max; for(let i=0;i<hp.max;i++){ this.ctx.fillStyle=i<hp.hp?'#ff0055':'#222'; this.ctx.fillRect(x+i*segW,y,segW-1,barH); } }
+  drawAmmo(player,gm){ const w=gm.ecs.getComponent(player,'Weapon'); if(!w)return; const weapon=gm.constructor.CONFIG?w:gm; const max=gm.ecs.getComponent(player,'Weapon').max; const ratio=w.mag/max; const cx=gm.canvas.width-60,cy=gm.canvas.height-60,r=24; this.ctx.beginPath(); this.ctx.arc(cx,cy,r,0,Math.PI*2); this.ctx.strokeStyle='#444'; this.ctx.lineWidth=4; this.ctx.stroke(); const startAngle=-Math.PI/2,endAngle=startAngle+ratio*Math.PI*2; this.ctx.beginPath(); this.ctx.arc(cx,cy,r,startAngle,endAngle); this.ctx.strokeStyle='#ffaa00'; this.ctx.lineWidth=4; this.ctx.stroke(); }
+  drawWave(gm){ const barW=200,barH=6; const x=(gm.canvas.width-barW)/2,y=16; this.ctx.fillStyle='#333'; this.ctx.fillRect(x,y,barW,barH); const ratio=gm.waveProgress||0; this.ctx.fillStyle='#00f0ff'; this.ctx.fillRect(x,y,barW*ratio,barH); }
+  drawScore(gm){ this.ctx.fillStyle='#ffaa00'; this.ctx.font='16px sans-serif'; this.ctx.fillText('CELLS: '+gm.score,16,gm.canvas.height-16); }
+  drawTimer(gm){ this.ctx.fillStyle='#00f0ff'; this.ctx.font='16px sans-serif'; this.ctx.fillText('TIME: '+(gm.speedrunTime||0).toFixed(2)+'s',gm.canvas.width/2-40,16); }
+  drawVignette(){ const grad=this.ctx.createRadialGradient(this.ctx.canvas.width/2,this.ctx.canvas.height/2,0,this.ctx.canvas.width/2,this.ctx.canvas.height/2,this.ctx.canvas.width/2); grad.addColorStop(0,'rgba(0,0,0,0)'); grad.addColorStop(1,'rgba(0,0,0,0.6)'); this.ctx.fillStyle=grad; this.ctx.fillRect(0,0,this.ctx.canvas.width,this.ctx.canvas.height); }
+}
