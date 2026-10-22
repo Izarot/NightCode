@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>Cube-Tic-Tac-Toe</title>
+<link rel='icon' href='data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❌</text></svg>'>
+<style>
+:root { --bg: #0f0f23; --x: #00f5d4; --o: #ff6b6b; --face: #1a1a40; --text: #ffffff; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: monospace; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+#game-container { width: 100%; max-width: 640px; padding: 10px; }
+canvas { width: 100%; height: auto; display: block; background: #222; border: 2px solid var(--x); border-radius: 10px; }
+.hud { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.timer { font-size: 24px; color: var(--o); }
+.score { font-size: 18px; }
+</style>
+</head>
+<body>
+<div id='game-container'>
+<canvas id='game' width='640' height='480'></canvas>
+<div class='hud'>
+<div>Turn: <span id='turn'>X</span></div>
+<div class='timer'>Time: <span id='timer'>00:00</span></div>
+<div>Score: <span id='score'>X: 0 | O: 0</span></div>
+</div>
+</div>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const turnEl = document.getElementById('turn');
+const timerEl = document.getElementById('timer');
+const scoreEl = document.getElementById('score');
+let player = 'X';
+let p1Wins = 0;
+let p2Wins = 0;
+let highScores = [];
+let startTime = Date.now();
+let highScore = localStorage.getItem('cubeTicTacToeHighScore') || 0;
+function saveHighScore() { localStorage.setItem('cubeTicTacToeHighScore', highScore); }
+function loadHighScore() { const saved = localStorage.getItem('cubeTicTacToeHighScore'); if (saved) highScore = parseInt(saved); }
+loadHighScore();
+function playTone(freq) {
+  const audio = new AudioContext();
+  const oscillator = audio.createOscillator();
+  const gain = audio.createGain();
+  oscillator.connect(gain);
+  gain.connect(audio.destination);
+  oscillator.frequency.value = freq;
+  oscillator.type = 'sine';
+  gain.gain.value = 0.1;
+  oscillator.start();
+  oscillator.stop(audio.currentTime + 0.1);
+}
+function updateTimer() {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+  const secs = (elapsed % 60).toString().padStart(2, '0');
+  timerEl.textContent = mins + ':' + secs;
+}
+setInterval(updateTimer, 1000);
+function draw() {
+  ctx.fillStyle = '#222';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#00f5d4';
+  ctx.font = '30px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('X', canvas.width / 2, canvas.height / 2);
+  ctx.fillStyle = '#ff6b6b';
+  ctx.font = '30px monospace';
+  ctx.fillText('O', canvas.width / 2, canvas.height / 2);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+}
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
