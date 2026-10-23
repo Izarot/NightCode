@@ -1,0 +1,75 @@
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background:#05060f;
+  font-family:'Orbitron',sans-serif;
+  overflow:hidden;
+  height:100vh; width:100vw;
+  display:flex; align-items:center; justify-content:center;
+}
+#game-wrap {
+  position:relative;
+  width:min(100vw, calc(100vh * 0.7));
+  height:min(100vh, calc(100vw / 0.7));
+  max-width:900px; max-height:630px;
+  aspect-ratio:10/7;
+  background:#05060f;
+  box-shadow:0 0 40px rgba(0,255,255,.15), inset 0 0 60px rgba(120,0,255,.08);
+}
+#game { display:block; width:100%; height:100%; image-rendering:pixelated; }
+#hud { position:absolute; inset:0; pointer-events:none; font-family:'OrMono',monospace; }
+#score-box { position:absolute; top:10px; left:14px; color:#0ff; text-shadow:0 0 8px #0ff; font-size:18px; letter-spacing:2px; }
+#score-box .label { font-size:10px; opacity:.6; display:block; }
+#wave-box { position:absolute; top:10px; left:50%; transform:translateX(-50%); text-align:center; color:#f0f; text-shadow:0 0 8px #a0f; font-size:14px; }
+#wave-box .label { font-size:9px; opacity:.6; display:block; }
+#wave-bar { width:120px; height:4px; background:rgba(255,0,255,.2); margin-top:3px; border:1px solid #f0f; }
+#wave-bar i { display:block; height:100%; background:linear-gradient(90deg,#f0f,#0ff); width:0%; transition:width .3s; }
+#threat-box { position:absolute; top:10px; right:14px; color:#ff0; text-shadow:0 0 8px #ff0; font-size:14px; }
+#threat-box .label { font-size:9px; opacity:.6; display:block; }
+#health-bar { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); width:200px; height:8px; background:rgba(255,0,255,.15); border:1px solid #f0f; }
+#health-fill { display:block; height:100%; width:100%; background:linear-gradient(90deg,#0ff,#f0f); transition:width .2s; }
+#timer { position:absolute; top:42px; left:50%; transform:translateX(-50%); color:#0ff; text-shadow:0 0 6px #0ff; font-size:12px; }
+#pause-overlay, #start-screen {
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+  background:rgba(5,6,15,.85); backdrop-filter:blur(3px);
+  color:#0ff; text-align:center; z-index:5;
+}
+#pause-overlay h1, #start-screen h1 { font-weight:900; font-size:26px; letter-spacing:4px; text-shadow:0 0 12px #0ff; }
+#pause-overlay p, #start-screen p { font-size:12px; opacity:.7; }
+#pause-overlay button, #start-screen button {
+  font-family:'Orbitron'; font-size:14px; padding:10px 24px; cursor:pointer;
+  background:transparent; color:#0ff; border:2px solid #0ff; text-shadow:0 0 8px #0ff;
+  transition:all .15s; letter-spacing:2px;
+}
+#pause-overlay button:hover, #start-screen button:hover { background:#0ff; color:#05060f; box-shadow:0 0 16px #0ff; }
+.hidden { display:none !important; }
+@media (max-width:600px) {
+  #game-wrap { width:100vw; height:100vh; aspect-ratio:auto; max-width:none; max-height:none; }
+  #score-box { font-size:14px; }
+  #health-bar { width:150px; }
+}</style>
+</head>
+<body>
+<div id="game-wrap">
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div id="score-box"><span class="label">SCORE</span><span id="score">0</span></div>
+    <div id="wave-box"><span class="label">WAVE</span><span id="wave">1</span><div id="wave-bar"><i id="wave-fill"></i></div></div>
+    <div id="threat-box"><span class="label">THREAT</span><span id="threat">0</span></div>
+  </div>
+  <div id="health-bar"><i id="health-fill"></i></div>
+  <div id="timer">00:00</div>
+  <div id="pause-overlay" class="hidden">
+    <h1>PAUSED</h1>
+    <button id="resume-btn">RESUSE</button>
+    <button id="restart-btn">RESTART</button>
+  </div>
+  <div id="start-screen">
+    <h1>SPLINTER COMMAND</h1>
+    <p>Arrow keys / WASD to move · Space / Click to shoot</p>
+    <button id="start-btn">LAUNCH</button>
+    <p id="best-score">BEST: 0</p>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
