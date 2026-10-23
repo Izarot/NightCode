@@ -1,0 +1,14 @@
+import{init,update,render,handleInput,handleCommit,handlePing,startTimer,stopTimer}from'./game.js';
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+let lastTime=0;
+let accumulator=0;
+const FIXED_DT=1000/60;
+function resize(){canvas.width=canvas.clientWidth*window.devicePixelRatio;canvas.height=canvas.clientHeight*window.devicePixelRatio;ctx.scale(window.devicePixelRatio,window.devicePixelRatio);}window.addEventListener('resize',resize);resize();
+init(ctx);
+let timerId;
+function loop(timestamp){const delta=timestamp-lastTime;lastTime=timestamp;accumulator+=delta;while(accumulator>=FIXED_DT){update(FIXED_DT);accumulator-=FIXED_DT;}render(ctx);timerId=requestAnimationFrame(loop);}requestAnimationFrame(loop);
+handleInput(canvas);
+handleCommit(()=>{stopTimer();alert('Game Over! Final Cycle: '+window.GAME_STATE?.cycle);location.reload();});
+handlePing();document.getElementById('extract').addEventListener('click',()=>{stopTimer();alert('EXTRACTION COMPLETE! Time: '+window.GAME_TIMER.toFixed(2)+'s');location.reload();});
+startTimer();
