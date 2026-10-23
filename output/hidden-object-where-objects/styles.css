@@ -1,0 +1,28 @@
+:root {
+  --bg: #0b0f19;
+  --panel: rgba(15, 23, 42, 0.75);
+  --accent: #00f2ff;
+  --accent2: #70ffea;
+  --accent3: #c084fc;
+  --text: #e2e8f0;
+  --border: rgba(255,255,255,0.15);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; overflow: hidden; touch-action: none; }
+#gameCanvas { display: block; width: 100vw; height: 100vh; background: #05070a; }
+#ui-layer { position: absolute; inset: 0; pointer-events: none; padding: 16px; display: flex; flex-direction: column; }
+#hud { pointer-events: auto; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: auto; background: var(--panel); padding: 12px 20px; border-radius: 16px; border: 1px solid var(--border); backdrop-filter: blur(8px); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+#hud div { font-weight: 700; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+#timer-display { color: var(--accent); font-size: 1.2rem; }
+#score-display { color: var(--accent3); font-size: 1rem; }
+#obj-display { color: var(--accent2); font-size: 1rem; }
+#action-bar { pointer-events: auto; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; background: var(--panel); padding: 10px 16px; border-radius: 50px; border: 1px solid var(--border); backdrop-filter: blur(8px); }
+button { background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; transition: transform 0.1s, background 0.2s; }
+button:active { transform: scale(0.95); background: rgba(255,255,255,0.15); }
+#toast { pointer-events: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: #fff; padding: 12px 24px; border-radius: 8px; border: 1px solid var(--accent); opacity: 0; transition: opacity 0.3s; }
+#toast.show { opacity: 1; }
+@media (max-width: 600px) {
+  #hud { flex-direction: column; align-items: stretch; gap: 8px; }
+  #action-bar { width: 90%; justify-content: center; }
+  button { flex: 1; text-align: center; padding: 12px; font-size: 1rem; }
+}
