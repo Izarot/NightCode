@@ -1,0 +1,1 @@
+import { safety } from '../core/safety/index'; export function startGame() { if (!safety.validate()) { return false; } window.__gameStarted = true; return true; }

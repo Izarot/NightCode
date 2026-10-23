@@ -1,0 +1,1 @@
+export const safety = { consent: false, emergencyStop: false, validate: function () { return !this.emergencyStop; }, setConsent: function (v) { this.consent = v; }, emergency: function () { this.emergencyStop = true; } };

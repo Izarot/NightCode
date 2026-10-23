@@ -1,0 +1,1 @@
+export function beep() { try { const ctx = new AudioContext(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value = 440; g.gain.value = 0.1; o.start(); o.stop(ctx.currentTime + 0.1); } catch (e) {} }

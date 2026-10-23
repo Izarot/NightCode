@@ -1,0 +1,1 @@
+export function getHigh() { return Number(localStorage.getItem('neon_high') || 0); } export function setHigh(v) { localStorage.setItem('neon_high', String(v)); }
