@@ -1,0 +1,1118 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+
+Raw: The user wants a complete HTML5 Canvas game called "Cosmic Rails". I need to output a single JSON object mapping filenames to their complete code contents. The filenames should be index.html, style.css, and game.js.
+
+Let me plan the implementation:
+
+1. **index.html** - HTML structure with canvas, favicon emoji, and links to CSS/JS
+2. **style.css** - Styling for the page, responsive canvas, UI elements
+3. **game.js** - All game logic: player movement, rail generation, AI cars, physics, rendering, HUD, mini-map, particles, sound effects via Web Audio API, high score in LocalStorage, speedrun timer
+
+Let me think about the architecture carefully:
+
+- Fixed timestep 60 FPS update loop
+- Camera follows player
+- Player input: WASD/arrows for movement, Space for boost
+- Velocity model: acceleration + friction
+- Rail generation at rear wheels, 8s lifespan, 400px max length, 12px width
+- Rail decay: 15% per second alpha loss
+- Drafting: if front wheel touches tail of another car's rail, reduce friction 30%, increase acceleration slightly
+- Collision with asteroids: elastic bounce, restitution 0.6, destroys rail at impact
+- Win condition: 3 laps crossing start/finish line
+- Visual: deep space bg (#05050f), neon cyan rails (#00f0ff), magenta player (#ff00aa), amber AI (#ffaa00), white stars
+- Parallax starfield 3 layers, nebula clouds
+- Particles: exhaust, trail emitter, explosion
+- Car rendering: Path2D sleek polygons, rotating wheels
+- HUD: lap counter top-left, speedometer top-right, rail integrity bar bottom-center, boost meter bottom-right, mini-map center-bottom, crosshair center
+- Sound effects via Web Audio API
+- High score in LocalStorage
+- Speedrun timer in top corner
+
+Let me write this all out. This is a big task but I'll be thorough.
+
+Let me structure game.js:
+
+```javascript
+// Constants
+const CANVAS_WIDTH = ...; // responsive
+const CANVAS_HEIGHT = ...;
+const FPS = 60;
+const FRAME_TIME = 1000 / 60;
+
+// Game state
+let canvas, ctx;
+let player, aiCars, rails, asteroids, particles;
+let camera = {x, y};
+let keys = {};
+let highScore = 0;
+let speedrunTime = 0;
+let lastTime = 0;
+let accumulator = 0;
+
+// Input handling
+window.addEventListener('keydown', e => keys[e.code] = true);
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+// Classes
+class Vector2 { ... }
+class Player { ... }
+class AICar { ... }
+class Rail { ... }
+class Asteroid { ... }
+class Particle { ... }
+
+// Game loop
+function gameLoop(timestamp) {
+  ...
+}
+```
+
+Let me write the full code now. I'll make it comprehensive and working.
+
+For the lap system: I need a start/finish line. Since it's an infinite void, I'll create a circular track conceptually but make it open. Actually, for laps to work, I need a defined track. Let me create a large circular/oval track area where the start/finish line is. Actually, given the infinite void concept, let me make a circular arena where laps are counted by crossing the finish line.
+
+Let me design: The world has a circular track of radius ~800px centered at origin. The start/finish line is at angle 0 (right side). Player starts there. Crossing it in the correct direction counts as a lap. Need 3 laps.
+
+Actually, to keep it simpler and more arcade, let me make a circular track. The finish line is a circle arc. When player crosses it going counterclockwise (or clockwise), increment lap.
+
+Let me think about the track. Center at (0,0), radius R=900. Finish line is the circle at angle 0 (positive x axis). Player starts near angle 0. Each time player crosses the finish line going in the proper direction, lap++. When lap reaches 3, win.
+
+For direction check: track angular velocity. If moving counterclockwise (decreasing angle in standard math, but canvas y is down so...). Let me just compute angle from center and detect crossing.
+
+Let me define angle = atan2(player.y - center.y, player.x - center.x). Track previous angle. Detect when angle wraps from +PI to -PI or similar. Actually simpler: detect crossing of the ray at angle 0.
+
+Hmm, let me use a different approach. Place the finish line as a vertical line segment at x = R (the rightmost point of the circle). Player crosses it when their x passes R going leftward (moving counterclockwise means moving left across x=R). Actually let me just check: was player on one side (x < R) and now on other side (x > R)? That detects crossing the vertical line at x=R. But that could trigger multiple times if player goes around. That's fine actually — each time they cross x=R going leftward, that's a lap. But going rightward would also cross... no, if they go around the circle they cross x=R twice per lap (once going left, once going right). So I need direction.
+
+Let me track the sign of (player.x - R) and detect transitions. Going counterclockwise (standard math, CCW), the player moves from angle 0 increasing to PI then to -PI... in canvas coords with y down, CCW visually is... ugh.
+
+Let me simplify: I'll just count crossings of the finish line segment and require the player to be moving in the racing direction. I'll compute angular velocity sign.
+
+Actually, let me make it robust: 
+- Compute angle θ = atan2(dy, dx) where dy = p.y - cy, dx = p.x - cx.
+- Track previous θ.
+- Detect wrap: if prevθ > π and currθ <= π, or prevθ < -π and currθ >= -π → crossed.
+- Determine direction by sign of angular velocity (dθ/dt). If positive, going one way; if negative, other way.
+- Only count if direction matches target direction (say, increasing θ, i.e., counterclockwise in standard math = clockwise visually in canvas? no).
+
+This is getting complicated. Let me just pick: target direction is clockwise in screen space (which is decreasing angle in canvas coords since y is down... wait).
+
+Canvas: x right, y down. atan2(y, x). For a point at top (y negative), atan2 gives -PI/2. For bottom (y positive), +PI/2. Going clockwise on screen (top→right→bottom→left) corresponds to angle going from -PI/2 → 0 → PI/2 → PI → -PI. So angle increases. So clockwise on screen = increasing angle. Good, so target direction = increasing angle = clockwise on screen.
+
+So: count crossings where angle wraps from +π region to -π region (i.e., prevθ > π*0.75 and currθ < -π*0.75 roughly, or more precisely detecting the jump). And require angular velocity positive (increasing). Each valid crossing = +1 lap.
+
+Wait, wrapping detection: when angle goes from just below π to just above -π (i.e., passes through the -π/+π boundary going downward... hmm). Let me think: angle increases continuously from -π to π. When it passes π, it wraps to -π. So prevθ ≈ π (like 3.0), currθ ≈ -3.0. That's the wrap. Direction is positive (increasing). Count it.
+
+But also could wrap the other way if going CCW. We only count positive direction. Good.
+
+Edge case: at exactly start, angle ≈ 0. Fine.
+
+Let me set up: R = 900, center (0,0). Start position at (R, 0) slightly inside, like (R-50, 0). Actually place at (R, 0).
+
+Lap counting: when crossing detected with positive angular velocity, lap++. When lap > 3, win. Actually "first to complete 3 laps" — so when lap reaches 3, they've completed 3 laps. Win when lap == 3 (after completing). Let me say lap starts at 0, display "LAP X / 3", when lap becomes 3 → win. Actually display "LAP 1/3" initially, after first crossing lap=1, etc. Win when lap==3.
+
+Hmm, but typically you start on lap 1. After crossing finish line once, you're on lap 2. After 3 crossings, you've done 3 laps. So win when lap == 3. Display shows current lap. On final lap (lap 3), change color to gold.
+
+OK let me write the code. This will be long. Let me be careful and complete.
+
+Let me write each file.
+
+### index.html
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Cosmic Rails</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="game-container">
+  <canvas id="game"></canvas>
+  <div id="hud">
+    <div id="lap-counter">LAP 1/3</div>
+    <div id="speedometer">...</div>
+    <div id="rail-bar">...</div>
+    <div id="boost-meter">...</div>
+    <canvas id="minimap"></canvas>
+  </div>
+  <div id="crosshair"></div>
+  <div id="timer">00:00.0</div>
+  <div id="start-screen">...</div>
+  <div id="win-screen">...</div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
+```
+
+I'll build the HUD dynamically in JS or put placeholder divs. Let me put the structure and update via JS. Actually, to keep it clean, I'll have the HUD elements in HTML and update text/styles via JS.
+
+Let me make the canvas fill the container and be responsive. The HUD overlays on top.
+
+### style.css
+
+Make body black, center the game-container, canvas fills it, HUD absolute positioned, etc. Responsive: canvas width/height set to container size, and handle resize.
+
+### game.js
+
+Full implementation.
+
+Let me write it all out now. I'll aim for correctness and completeness.
+
+Let me detail the physics:
+
+Player:
+- pos Vector2, vel Vector2
+- angle (heading)
+- boost meter 0..1
+- lap, lapTimer stuff
+- wheels positions computed from pos + rotated offsets
+
+Movement:
+- forward thrust along heading: accel vector = (cos(angle), sin(angle)) * thrust * boostMult
+- base thrust 600 px/s²
+- boost multiplier 1.5x when space held, capped max vel 1400
+- friction: multiply velocity by 0.985 per frame (but that's per frame at 60fps; better apply as velocity *= pow(0.985, dt*60) or just multiply by 0.985 each frame since fixed timestep). Since fixed 60fps, multiplying by 0.985 each frame is fine. But to be safe with dt, use factor = Math.pow(0.985, dt*60).
+- lateral grip: if wheels on rail, grip factor 0.85 applied to lateral component.
+
+Let me implement grip: decompose velocity into forward and lateral relative to heading. Apply friction to lateral. If on rail, lateral *= 0.85 (more grip). Actually the spec says grip factor increases from 0.985 to 0.85. So when on rail, lateral sliding reduced. Let me apply lateral friction: lateralVel *= 0.85 when on rail, else lateralVel *= 0.985.
+
+Drafting: if front wheel touches tail of another car's rail → reduce base friction by 30% (so lateral friction becomes 0.985*0.7=0.69?), increase acceleration slightly. Let me implement: if drafting, lateralGripFactor = 0.69 (0.985*0.7), accelMult = 1.1.
+
+Hmm, "reduces base friction by 30%" — friction coefficient. Let me interpret as lateral grip reduced to 0.985*0.7 = 0.69. And acceleration +10%.
+
+Rail generation: at rear wheels, spawn rail segments. Max length 400px per frame of travel before fading — meaning each rail segment can be up to 400px long. Width 12px. Lifespan 8s, fade starts at 5s. Alpha decays 15%/sec.
+
+So a rail is a series of connected segments (polyline) behind the car. Each segment length up to 400px. Actually "Max Length: 400px per frame of travel before fading" — I think each rail segment is max 400px. Let me spawn a new segment every frame at the rear wheel, each up to 400px long in the direction opposite to heading... no, in the direction of travel (behind). Actually rails trail behind. Let me spawn segments behind the car extending backward.
+
+Simpler: maintain a list of rail points. Each frame, add a point at rear wheel position (offset backward by wheel radius). Connect consecutive points. Cap total length: if adding would exceed 400px per segment, split. Actually let me just add points and cap each segment between consecutive points at 400px.
+
+Let me store rails as arrays of points [{x,y},...]. Each frame push new point at rear wheel. Then trim: while last two points distance > 400, remove last point. Render as glowing line.
+
+Lifespan: each rail has age. Fade alpha = max(0, 1 - age/8), and fade faster after 5s: alpha = max(0, 1 - age/8) but multiplied by (age>5 ? (age-5)/3 : 1)... spec: "visual fade starts at 5 seconds". So alpha = clamp((1 - age/8) * (age>5 ? (age-5)/3 : 1), 0, 1)? At age 5: (1-5/8)=0.375, times 1 = 0.375. At age 8: (1-1)=0. At age 6: 0.375*(1/3)=0.125. Hmm that fades fast after 5s. Actually maybe simpler: alpha = max(0, 1 - age/8) and additionally reduce after 5s: alpha *= max(0, (age-5)/3). That gives faster fade. Let me do that.
+
+Collision with asteroids: circles. Elastic bounce restitution 0.6. On collision, destroy rail at impact point (remove rail points near impact), spawn explosion particles.
+
+Asteroids: static circles placed around the track. Some obstacles. Maybe spawn periodically or fixed set. Let me place a fixed set around the track radius, plus some random ones. Keep them away from start line mostly.
+
+AI cars: follow rails / drive around track. Simple AI: steer toward target point ahead on the track, accelerate. They leave rails too. Drafting applies to them as well (front wheel touches their rail). Let me make 2 AI cars.
+
+Win condition: 3 laps. First to complete wins. Show win screen with time and high score.
+
+Speedrun timer: counts up from 0, displayed mm:ss.cs. Persist high score in localStorage.
+
+Sound effects via Web Audio API: engine hum (oscillator), boost whoosh, explosion noise, lap complete chime. Let me implement simple sounds.
+
+Mini-map: 150x150 overlay, draw player white dot, AI dots, rails thin cyan lines. Update every 10 frames.
+
+Crosshair: animated reticle center, scales up at high velocity.
+
+Let me now write everything. I'll write the code carefully.
+
+Let me consider the responsive canvas. I'll set canvas.width/height to window inner size (or container size) and handle resize. The game world is unbounded but camera follows player. The HUD overlays.
+
+Actually for crispness, set canvas backing store to devicePixelRatio. Let me handle: on resize, canvas.width = innerWidth * dpr, canvas.height = innerHeight * dpr, ctx.scale(dpr, dpr). And CSS width/height = innerWidth/innerHeight.
+
+But the spec says "canvas responsive so it scales to fit mobile phone screens". So CSS makes it fill viewport. Good.
+
+Let me write the code now. I'll be thorough.
+
+Let me write game.js fully:
+
+```javascript
+(() => {
+'use strict';
+
+// ---------- Constants ----------
+const FIXED_DT = 1000 / 60;
+const MAX_SPEED = 1400;
+const THRUST = 600;
+const FRICTION = 0.985;
+const RAIL_LIFESPAN = 8;
+const RAIL_FADE_START = 5;
+const RAIL_MAX_LEN = 400;
+const RAIL_WIDTH = 12;
+const RAIL_ALPHA_DECAY = 0.15; // per second
+const LAPS_TO_WIN = 3;
+const TRACK_RADIUS = 900;
+
+// Colors
+const C_BG = '#05050f';
+const C_RAIL = '#00f0ff';
+const C_PLAYER = '#ff00aa';
+const C_AI = '#ffaa00';
+const C_STAR = '#ffffff';
+const C_NEBULA = 'rgba(80,40,120,0.15)';
+
+// ---------- Canvas setup ----------
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const minimapCanvas = document.getElementById('minimap');
+const mmCtx = minimapCanvas.getContext('2d');
+
+let W = 0, H = 0, dpr = 1;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = Math.floor(W * dpr);
+  canvas.height = Math.floor(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  // minimap fixed size
+  minimapCanvas.width = 150 * dpr;
+  minimapCanvas.height = 150 * dpr;
+  minimapCanvas.style.width = '150px';
+  minimapCanvas.style.height = '150px';
+  mmCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---------- Input ----------
+const keys = {};
+const keyMap = {
+  ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+  KeyW:'up', KeyS:'down', KeyA:'left', KeyD:'right',
+  Space:'boost'
+};
+window.addEventListener('keydown', e => {
+  if (keyMap[e.code]) { keys[keyMap[e.code]] = true; e.preventDefault(); }
+});
+window.addEventListener('keyup', e => {
+  if (keyMap[e.code]) { keys[keyMap[e.code]] = false; e.preventDefault(); }
+});
+
+// ---------- Audio ----------
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function playTone(freq, dur, type='sine', vol=0.2) {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.value = vol;
+  o.connect(g); g.connect(audioCtx.destination);
+  const t = audioCtx.currentTime;
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.start(t); o.stop(t + dur);
+}
+function playNoise(dur, vol=0.3) {
+  if (!audioCtx) return;
+  const bufferSize = audioCtx.sampleRate * dur;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1)*Math.pow(1-i/bufferSize,2);
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  const g = audioCtx.createGain();
+  g.gain.value = vol;
+  src.connect(g); g.connect(audioCtx.destination);
+  src.start();
+}
+function sfxBoost() { playTone(220, 0.15, 'sawtooth', 0.15); }
+function sfxExplosion() { playNoise(0.4, 0.4); playTone(80, 0.4, 'square', 0.2); }
+function sfxLap() { playTone(660, 0.1, 'triangle', 0.2); setTimeout(()=>playTone(880,0.15,'triangle',0.2),100); }
+function sfxWin() { [523,659,784,1046].forEach((f,i)=>setTimeout(()=>playTone(f,0.2,'triangle',0.25), i*120)); }
+
+// ---------- Utility ----------
+function v(x,y){return {x,y};}
+function vadd(a,b){return {x:a.x+b.x, y:a.y+b.y};}
+function vsub(a,b){return {x:a.x-b.x, y:a.y-b.y};}
+function vmul(a,s){return {x:a.x*s, y:a.y*s};}
+function vlen(a){return Math.hypot(a.x,a.y);}
+function vnorm(a){const l=vlen(a)||1;return {x:a.x/l,y:a.y/l};}
+function vdot(a,b){return a.x*b.x+a.y*b.y;}
+function vperp(a){return {x:-a.y,y:a.x};}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function lerp(a,b,t){return a+(b-a)*t;}
+
+// ---------- Starfield ----------
+const starLayers = [];
+for (let l=0;l<3;l++){
+  const stars=[];
+  const count = 80+l*40;
+  for(let i=0;i<count;i++){
+    stars.push({x:(Math.random()-0.5)*4000, y:(Math.random()-0.5)*4000, r:0.5+Math.random()*1.5+l*0.3, tw:Math.random()*Math.PI*2});
+  }
+  starLayers.push({stars, speed:0.3+l*0.4, parallax:0.05+l*0.05});
+}
+const nebulae = [];
+for(let i=0;i<6;i++){
+  nebulae.push({x:(Math.random()-0.5)*2000, y:(Math.random()-0.5)*2000, r:200+Math.random()*300, c:`rgba(${Math.floor(120+Math.random()*80)},${Math.floor(40+Math.random()*60)},${Math.floor(140+Math.random()*80)},0.12)`});
+}
+
+// ---------- Entities ----------
+class Rail {
+  constructor(){ this.points=[]; this.age=0; this.dead=false; }
+  addPoint(p){
+    this.points.push(p);
+    // trim segments longer than max
+    while(this.points.length>=2){
+      const a=this.points[this.points.length-2], b=this.points[this.points.length-1];
+      if(vlen(vsub(b,a))>RAIL_MAX_LEN){ this.points.pop(); }
+      else break;
+    }
+  }
+  update(dt){ this.age+=dt; }
+  alpha(){
+    const a = 1 - this.age/RAIL_LIFESPAN;
+    if(this.age>RAIL_FADE_START) return Math.max(0, a)*( (this.age-RAIL_FADE_START)/3 );
+    return Math.max(0,a);
+  }
+  render(ctx){
+    if(this.points.length<2) return;
+    const al = this.alpha();
+    if(al<=0.01) return;
+    ctx.save();
+    ctx.strokeStyle = `rgba(0,240,255,${al})`;
+    ctx.lineWidth = RAIL_WIDTH;
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.shadowColor='#00f0ff'; ctx.shadowBlur=12;
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x,this.points[0].y);
+    for(let i=1;i<this.points.length;i++) ctx.lineTo(this.points[i].x,this.points[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+class Particle {
+  constructor(x,y,vx,vy,life,color,size){
+    this.x=x;this.y=y;this.vx=vx;this.vy=vy;this.life=life;this.maxLife=life;this.color=color;this.size=size;
+  }
+  update(dt){ this.x+=this.vx*dt; this.y+=this.vy*dt; this.vx*=0.96; this.vy*=0.96; this.life-=dt; }
+  dead(){ return this.life<=0; }
+  render(ctx){
+    const a=clamp(this.life/this.maxLife,0,1);
+    ctx.globalAlpha=a;
+    ctx.fillStyle=this.color;
+    ctx.fillRect(this.x-this.size/2,this.y-this.size/2,this.size,this.size);
+    ctx.globalAlpha=1;
+  }
+}
+
+class Asteroid {
+  constructor(x,y,r){ this.x=x;this.y=y;this.r=r; this.rot=Math.random()*Math.PI*2; this.spin=Math.random()*2-1; }
+  update(dt){ this.rot+=this.spin*dt; }
+  render(ctx){
+    ctx.save();
+    ctx.translate(this.x,this.y); ctx.rotate(this.rot);
+    ctx.fillStyle='#2a2a40';
+    ctx.strokeStyle='#555577'; ctx.lineWidth=2;
+    ctx.beginPath();
+    const verts=8;
+    for(let i=0;i<verts;i++){
+      const ang=i/verts*Math.PI*2;
+      const rr=this.r*(0.8+Math.sin(i*1.7)*0.2);
+      const px=Math.cos(ang)*rr, py=Math.sin(ang)*rr;
+      if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+class Car {
+  constructor(x,y,angle,color,isPlayer){
+    this.pos=v(x,y); this.vel=v(0,0); this.angle=angle;
+    this.color=color; this.isPlayer=isPlayer;
+    this.boost=1; this.boostMeter=1;
+    this.lateralGrip=FRICTION; // current lateral friction factor
+    this.drafting=false;
+    this.wheels=[];
+    this.wheelAngle=0;
+    this.lap=0;
+    this.finished=false;
+    this.finishTime=0;
+    this.radius=18; // collision radius
+  }
+  getWheelPositions(){
+    const cos=Math.cos(this.angle), sin=Math.sin(this.angle);
+    const back=v(cos*-1, sin*-1); // rear
+    const fwd=v(cos, sin);
+    const wR=10, wL=10;
+    return {
+      rearL: vadd(this.pos, vmul(back, -wR)),
+      rearR: vadd(this.pos, vmul(back, -wR)),
+      frontL: vadd(this.pos, vmul(fwd, wR)),
+      frontR: vadd(this.pos, vmul(fwd, wR)),
+    };
+  }
+  update(dt, input, rails, asteroids, draftingBonus){
+    // steering
+    let steer=0;
+    if(input.left) steer-=1;
+    if(input.right) steer+=1;
+    const steerRate=6; // rad/s
+    this.angle += steer*steerRate*dt;
+
+    // thrust
+    let thrustMul=1;
+    if(input.boost && this.boostMeter>0){
+      thrustMul=1.5;
+      this.boostMeter=Math.max(0, this.boostMeter-dt*0.33); // depletes
+      if(Math.random()<0.3) sfxBoost();
+    } else {
+      this.boostMeter=Math.min(1, this.boostMeter+dt*0.33); // refills over 3s
+    }
+    const cos=Math.cos(this.angle), sin=Math.sin(this.angle);
+    const fwd=v(cos,sin);
+    const lateral=vperp(fwd); // perpendicular
+    // forward component
+    const forwardSpeed=vdot(this.vel,fwd);
+    const lateralSpeed=vdot(this.vel,lateral);
+    // apply thrust
+    const accel=v(fwd.x*THRUST*thrustMul, fwd.y*THRUST*thrustMul);
+    this.vel.x+=accel.x*dt; this.vel.y+=accel.y*dt;
+    // friction
+    const fric=this.lateralGrip;
+    this.vel.x*=Math.pow(fric, dt*60);
+    this.vel.y*=Math.pow(fric, dt*60);
+    // clamp speed
+    const sp=vlen(this.vel);
+    if(sp>MAX_SPEED){ this.vel=vmul(this.vel, MAX_SPEED/sp); }
+    // recompute forward/lateral after friction
+    const fwd2=v(cos,sin), lat2=vperp(fwd2);
+    const fs2=vdot(this.vel,fwd2), ls2=vdot(this.vel,lat2);
+    // rebuild velocity: keep lateral, adjust forward
+    // Actually we want to preserve lateral and damp forward too? Spec: friction applied to velocity vector.
+    // Let's just damp whole vector by fric, then re-project.
+    // Simpler: damp whole vector.
+    // Already damped. Fine.
+    // steering affects angle; recompute components fresh
+    // (we already used old angle for friction; acceptable)
+
+    // boost flame particles
+    if(input.boost && sp>50){
+      for(let i=0;i<2;i++){
+        const off=v(-cos*12 + (Math.random()-0.5)*6, -sin*12 + (Math.random()-0.5)*6);
+        particles.push(new Particle(this.pos.x+off.x, this.pos.y+The user wants me to complete the JSON output. I need to continue writing the game.js code from where it was cut off. Let me continue the implementation carefully.
+
+I need to finish:
+1. The Car class update method (continuing from where it cut off)
+2. Rail generation logic
+3. Collision detection
+4. AI car logic
+5. Lap counting
+6. Rendering
+7. Game loop
+8. HUD updates
+9. Win condition handling
+
+Let me write the rest of the code and then wrap it all in a JSON object with the three filenames.
+
+Let me carefully construct the complete JSON. I'll write out all three files completely.
+
+Let me think about what was cut off and continue exactly from there. The cut-off point was in the Car class update method, specifically the boost flame particles section. I need to continue that and finish the entire game.js, then provide the JSON.
+
+Actually, I need to be careful - the user said "Continue EXACTLY from the next character. DO NOT repeat ANY previous text. DO NOT use markdown. Just output the remaining characters to complete the JSON."
+
+So I should just output the remaining characters of the JSON. But I also need to include index.html and style.css which were presumably already provided or I need to include them too. Looking at the conversation, it seems like only game.js was being written and got cut off. But the user wants a complete JSON mapping all three filenames.
+
+Wait, re-reading: "The user wants a complete HTML5 Canvas game called 'Cosmic Rails'. I need to output a single JSON object mapping filenames to their complete code contents."
+
+So I need to output ALL THREE files. But the previous response only had game.js partially written. I need to complete game.js AND include index.html and style.css.
+
+Hmm, but the instruction says "Continue EXACTLY from the next character" - this implies I'm continuing the previous JSON. But the previous JSON was incomplete/cut off. Let me just output the complete JSON with all three files.
+
+Actually, looking more carefully, the previous message seems to have been the start of writing game.js but it was cut off mid-code. The user is now asking me to continue. But I think the cleanest approach is to just output the complete final JSON with all three files since the previous attempt was incomplete.
+
+Let me write out all three files completely and produce the JSON.
+
+Let me plan the full game.js carefully:
+
+1. Setup canvas, resize handler
+2. Input handling
+3. Audio system
+4. Utility functions
+5. Starfield and nebulae
+6. Rail class
+7. Particle class
+8. Asteroid class
+9. Car class (with update, render, wheel positions)
+10. Game state variables
+11. Lap tracking
+12. Collision detection
+13. AI logic
+14. Rendering (background, track, rails, asteroids, cars, particles, HUD)
+15. Mini-map rendering
+16. Game loop
+17. Start screen / win screen handling
+18. High score management
+
+Let me write this all out now. This is going to be a large file.
+
+For the lap system: I'll track the player's angle relative to center. When they cross the start line going in the correct direction, increment lap counter. Need 3 laps to win.
+
+For drafting: check if front wheels are near the tail of another car's rail. If so, reduce friction and increase acceleration.
+
+For rail generation: each frame, add points at rear wheels. Max length 400px per segment. Width 12px. Lifespan 8 seconds, fade starts at 5s, alpha decays 15%/sec.
+
+For collision with asteroids: elastic bounce, restitution 0.6. Destroy rail at impact point.
+
+Let me write the complete code now.
+
+Actually, I realize I should just output the complete JSON object with all three files. Let me do that carefully.
+
+Let me write out the full game.js:
+
+javascript
+(() => {
+'use strict';
+
+// ===== Constants =====
+const FIXED_DT = 1000 / 60;
+const MAX_SPEED = 1400;
+const THRUST = 600;
+const FRICTION = 0.985;
+const RAIL_LIFESPAN = 8;
+const RAIL_FADE_START = 5;
+const RAIL_MAX_LEN = 400;
+const RAIL_WIDTH = 12;
+const LAPS_TO_WIN = 3;
+const TRACK_RADIUS = 900;
+
+// Colors
+const C_BG = '#05050f';
+const C_RAIL = '#00f0ff';
+const C_PLAYER = '#ff00aa';
+const C_AI = '#ffaa00';
+const C_STAR = '#ffffff';
+const C_NEBULA = 'rgba(80,40,120,0.15)';
+
+// ===== Canvas Setup =====
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const minimapCanvas = document.getElementById('minimap');
+const mmCtx = minimapCanvas.getContext('2d');
+
+let W = 0, H = 0, dpr = 1;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = Math.floor(W * dpr);
+  canvas.height = Math.floor(H * dpr);
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  minimapCanvas.width = 150 * dpr;
+  minimapCanvas.height = 150 * dpr;
+  minimapCanvas.style.width = '150px';
+  minimapCanvas.style.height = '150px';
+  mmCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ===== Input =====
+const keys = {};
+const keyMap = {
+  ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+  KeyW:'up', KeyS:'down', KeyA:'left', KeyD:'right',
+  Space:'boost'
+};
+window.addEventListener('keydown', e => {
+  if (keyMap[e.code]) { keys[keyMap[e.code]] = true; e.preventDefault(); }
+});
+window.addEventListener('keyup', e => {
+  if (keyMap[e.code]) { keys[keyMap[e.code]] = false; e.preventDefault(); }
+});
+
+// ===== Audio =====
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function playTone(freq, dur, type='sine', vol=0.2) {
+  if (!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.value = vol;
+  o.connect(g); g.connect(audioCtx.destination);
+  const t = audioCtx.currentTime;
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.start(t); o.stop(t + dur);
+}
+function playNoise(dur, vol=0.3) {
+  if (!audioCtx) return;
+  const bufferSize = audioCtx.sampleRate * dur;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i=0;i<bufferSize;i++) data[i] = (Math.random()*2-1)*Math.pow(1-i/bufferSize,2);
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  const g = audioCtx.createGain();
+  g.gain.value = vol;
+  src.connect(g); g.connect(audioCtx.destination);
+  src.start();
+}
+function sfxBoost() { playTone(220, 0.15, 'sawtooth', 0.15); }
+function sfxExplosion() { playNoise(0.4, 0.4); playTone(80, 0.4, 'square', 0.2); }
+function sfxLap() { playTone(660, 0.1, 'triangle', 0.2); setTimeout(()=>playTone(880,0.15,'triangle',0.2),100); }
+function sfxWin() { [523,659,784,1046].forEach((f,i)=>setTimeout(()=>playTone(f,0.2,'triangle',0.25), i*120)); }
+
+// ===== Utilities =====
+function v(x,y){return {x,y};}
+function vadd(a,b){return {x:a.x+b.x, y:a.y+b.y};}
+function vsub(a,b){return {x:a.x-b.x, y:a.y-b.y};}
+function vmul(a,s){return {x:a.x*s, y:a.y*s};}
+function vlen(a){return Math.hypot(a.x,a.y);}
+function vnorm(a){const l=vlen(a)||1;return {x:a.x/l,y:a.y/l};}
+function vdot(a,b){return a.x*b.x+a.y*b.y;}
+function vperp(a){return {x:-a.y,y:a.x};}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function lerp(a,b,t){return a+(b-a)*t;}
+
+// ===== Starfield & Nebulae =====
+const starLayers = [];
+for (let l=0;l<3;l++){
+  const stars=[];
+  const count = 80+l*40;
+  for(let i=0;i<count;i++){
+    stars.push({x:(Math.random()-0.5)*4000, y:(Math.random()-0.5)*4000, r:0.5+Math.random()*1.5+l*0.3, tw:Math.random()*Math.PI*2});
+  }
+  starLayers.push({stars, speed:0.3+l*0.4, parallax:0.05+l*0.05});
+}
+const nebulae = [];
+for(let i=0;i<6;i++){
+  nebulae.push({x:(Math.random()-0.5)*2000, y:(Math.random()-0.5)*2000, r:200+Math.random()*300, c:`rgba(${Math.floor(120+Math.random()*80)},${Math.floor(40+Math.random()*60)},${Math.floor(140+Math.random()*80)},0.12)`});
+}
+
+// ===== Entities =====
+class Rail {
+  constructor(){ this.points=[]; this.age=0; this.dead=false; }
+  addPoint(p){
+    this.points.push(p);
+    while(this.points.length>=2){
+      const a=this.points[this.points.length-2], b=this.points[this.points.length-1];
+      if(vlen(vsub(b,a))>RAIL_MAX_LEN){ this.points.pop(); }
+      else break;
+    }
+  }
+  update(dt){ this.age+=dt; }
+  alpha(){
+    const a = 1 - this.age/RAIL_LIFESPAN;
+    if(this.age>RAIL_FADE_START) return Math.max(0, a)*( (this.age-RAIL_FADE_START)/3 );
+    return Math.max(0,a);
+  }
+  render(ctx){
+    if(this.points.length<2) return;
+    const al = this.alpha();
+    if(al<=0.01) return;
+    ctx.save();
+    ctx.strokeStyle = `rgba(0,240,255,${al})`;
+    ctx.lineWidth = RAIL_WIDTH;
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.shadowColor='#00f0ff'; ctx.shadowBlur=12;
+    ctx.beginPath();
+    ctx.moveTo(this.points[0].x,this.points[0].y);
+    for(let i=1;i<this.points.length;i++) ctx.lineTo(this.points[i].x,this.points[i].y);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+class Particle {
+  constructor(x,y,vx,vy,life,color,size){
+    this.x=x;this.y=y;this.vx=vx;this.vy=vy;this.life=life;this.maxLife=life;this.color=color;this.size=size;
+  }
+  update(dt){ this.x+=this.vx*dt; this.y+=this.vy*dt; this.vx*=0.96; this.vy*=0.96; this.life-=dt; }
+  dead(){ return this.life<=0; }
+  render(ctx){
+    const a=clamp(this.life/this.maxLife,0,1);
+    ctx.globalAlpha=a;
+    ctx.fillStyle=this.color;
+    ctx.fillRect(this.x-this.size/2,this.y-this.size/2,this.size,this.size);
+    ctx.globalAlpha=1;
+  }
+}
+
+class Asteroid {
+  constructor(x,y,r){ this.x=x;this.y=y;this.r=r; this.rot=Math.random()*Math.PI*2; this.spin=Math.random()*2-1; }
+  update(dt){ this.rot+=this.spin*dt; }
+  render(ctx){
+    ctx.save();
+    ctx.translate(this.x,this.y); ctx.rotate(this.rot);
+    ctx.fillStyle='#2a2a40';
+    ctx.strokeStyle='#555577'; ctx.lineWidth=2;
+    ctx.beginPath();
+    const verts=8;
+    for(let i=0;i<verts;i++){
+      const ang=i/verts*Math.PI*2;
+      const rr=this.r*(0.8+Math.sin(i*1.7)*0.2);
+      const px=Math.cos(ang)*rr, py=Math.sin(ang)*rr;
+      if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+class Car {
+  constructor(x,y,angle,color,isPlayer){
+    this.pos=v(x,y); this.vel=v(0,0); this.angle=angle;
+    this.color=color; this.isPlayer=isPlayer;
+    this.boostMeter=1;
+    this.lap=0;
+    this.finished=false;
+    this.finishTime=0;
+    this.radius=18;
+    this.wheels=[];
+    this.wheelAngle=0;
+  }
+  getWheelPositions(){
+    const cos=Math.cos(this.angle), sin=Math.sin(this.angle);
+    const back=v(cos*-1, sin*-1);
+    const fwd=v(cos, sin);
+    const wR=10, wL=10;
+    return {
+      rearL: vadd(this.pos, vmul(back, -wR)),
+      rearR: vadd(this.pos, vmul(back, -wR)),
+      frontL: vadd(this.pos, vmul(fwd, wR)),
+      frontR: vadd(this.pos, vmul(fwd, wR)),
+    };
+  }
+  update(dt, input, rails, asteroids, draftingBonus){
+    // steering
+    let steer=0;
+    if(input.left) steer-=1;
+    if(input.right) steer+=1;
+    const steerRate=6;
+    this.angle += steer*steerRate*dt;
+
+    // thrust
+    let thrustMul=1;
+    if(input.boost && this.boostMeter>0){
+      thrustMul=1.5;
+      this.boostMeter=Math.max(0, this.boostMeter-dt*0.33);
+      if(Math.random()<0.3) sfxBoost();
+    } else {
+      this.boostMeter=Math.min(1, this.boostMeter+dt*0.33);
+    }
+    const cos=Math.cos(this.angle), sin=Math.sin(this.angle);
+    const fwd=v(cos,sin);
+    const lateral=vperp(fwd);
+    const forwardSpeed=vdot(this.vel,fwd);
+    const lateralSpeed=vdot(this.vel,lateral);
+    const accel=v(fwd.x*THRUST*thrustMul, fwd.y*THRUST*thrustMul);
+    this.vel.x+=accel.x*dt; this.vel.y+=accel.y*dt;
+    // friction
+    const fric=this.lateralGrip;
+    this.vel.x*=Math.pow(fric, dt*60);
+    this.vel.y*=Math.pow(fric, dt*60);
+    // clamp speed
+    const sp=vlen(this.vel);
+    if(sp>MAX_SPEED){ this.vel=vmul(this.vel, MAX_SPEED/sp); }
+    // boost flame particles
+    if(input.boost && sp>50){
+      for(let i=0;i<2;i++){
+        const off=v(-cos*12 + (Math.random()-0.5)*6, -sin*12 + (Math.random()-0.5)*6);
+        particles.push(new Particle(this.pos.x+off.x, this.pos.y+off.y,
+          -cos*100+(Math.random()-0.5)*50, -sin*100+(Math.random()-0.5)*50,
+          0.3, '#ffaa00', 3));
+      }
+    }
+    // wheel spin
+    this.wheelAngle += sp*dt*0.05;
+    // exhaust trail
+    if(sp>30 && Math.random()<0.3){
+      const ex=v(-cos*8, -sin*8);
+      particles.push(new Particle(this.pos.x+ex.x, this.pos.y+ex.y,
+        -cos*40+(Math.random()-0.5)*30, -sin*40+(Math.random()-0.5)*30,
+        0.5, 'rgba(100,100,120,0.6)', 2));
+    }
+  }
+  render(ctx){
+    const cos=Math.cos(this.angle), sin=Math.sin(this.angle);
+    ctx.save();
+    ctx.translate(this.pos.x, this.pos.y);
+    ctx.rotate(this.angle);
+    // body
+    ctx.fillStyle=this.color;
+    ctx.strokeStyle='#ffffff';
+    ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.moveTo(16,0);
+    ctx.lineTo(8,-10);
+    ctx.lineTo(-12,-10);
+    ctx.lineTo(-16,0);
+    ctx.lineTo(-12,10);
+    ctx.lineTo(8,10);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // cockpit
+    ctx.fillStyle='rgba(255,255,255,0.6)';
+    ctx.beginPath();
+    ctx.ellipse(2,0,5,4,0,0,Math.PI*2);
+    ctx.fill();
+    // wheels
+    ctx.fillStyle='#111118';
+    ctx.strokeStyle='#444466';
+    ctx.lineWidth=1;
+    const wR=10, wL=10;
+    [-wR, wR].forEach(wx=>{
+      [-wL, wL].forEach(wy=>{
+        ctx.fillRect(wx-1, wy-5, 2, 10);
+      });
+    });
+    ctx.restore();
+  }
+}
+
+// ===== Game State =====
+let player, aiCars, rails, asteroids, particles;
+let camera = {x:0, y:0};
+let highScore = 0;
+let speedrunTime = 0;
+let lastTime = 0;
+let accumulator = 0;
+let gameState = 'menu'; // menu, playing, win
+let startLineAngle = 0; // angle of start/finish line
+let prevPlayerAngle = 0;
+let frameCount = 0;
+
+// Load high score
+try { highScore = parseInt(localStorage.getItem('cosmicRailsHighScore'))||0; } catch(e){}
+
+// Init
+function initGame(){
+  player = new Car(TRACK_RADIUS, 0, 0, C_PLAYER, true);
+  aiCars = [
+    new Car(TRACK_RADIUS-60, -40, 0, C_AI, false),
+    new Car(TRACK_RADIUS-60, 40, 0, C_AI, false),
+  ];
+  rails = [];
+  asteroids = [];
+  particles = [];
+  speedrunTime = 0;
+  prevPlayerAngle = 0;
+  frameCount = 0;
+  // create asteroids around track
+  for(let i=0;i<12;i++){
+    const ang = (i/12)*Math.PI*2 + Math.PI/2;
+    const r = TRACK_RADIUS + 120 + Math.random()*200;
+    asteroids.push(new Asteroid(Math.cos(ang)*r, Math.sin(ang)*r, 25+Math.random()*20));
+  }
+  gameState='playing';
+  lastTime = performance.now();
+  accumulator = 0;
+}
+
+// ===== Drafting detection =====
+function checkDrafting(car, otherCars){
+  car.drafting=false;
+  const wheels = car.getWheelPositions();
+  for(const other of otherCars){
+    if(other===car) continue;
+    // check if front wheels near tail of other's rail
+    for(const wp of [wheels.frontL, wheels.frontR]){
+      for(const rail of other.railTailPoints){
+        // tail point is last point of rail
+        const dx=wp.x-rail.tailX, dy=wp.y-rail.tailY;
+        if(dx*dx+dy*dy < 25*25){ // within 5px
+          car.drafting=true;
+          car.lateralGrip = FRICTION*0.7; // reduce friction by 30%
+          car.thrustBonus = 1.1; // increase acceleration slightly
+          break;
+        }
+      }
+      if(car.drafting) break;
+    }
+    if(car.drafting) break;
+  }
+  if(!car.drafting){
+    car.lateralGrip = FRICTION;
+    car.thrustBonus = 1.0;
+  }
+}
+
+
+Hmm wait, I'm referencing `other.railTailPoints` but Car doesn't have that property. Let me restructure. Instead of storing rail info on the car, I'll pass the rails array to the drafting check.
+
+Let me rethink the drafting logic. The spec says: "If the front wheel touches the tail of another car's rail, reduce base friction by 30%, increase acceleration slightly."
+
+So I need to check if the front wheel position is near the tail (last point) of another car's generated rail. The rails are stored in the global `rails` array. Each rail has points. The tail is the last point.
+
+But multiple cars generate rails, so I need to find which rail belongs to which car. Let me tag each rail with its owner car index.
+
+Let me restructure:
+- `rails` array, each rail has `owner` (car index) and `points`.
+- For drafting: for each other car, find their rails, check if front wheel near tail point.
+
+Actually, simpler: store a reference to the car on each rail. Let me add `owner` to Rail.
+
+Let me rewrite:
+
+javascript
+class Rail {
+  constructor(owner){ this.owner=owner; this.points=[]; this.age=0; this.dead=false; }
+  ...
+}
+
+
+And when generating rails, pass the owner.
+
+For drafting check:
+javascript
+function checkDrafting(car, otherCars){
+  car.drafting=false;
+  car.lateralGrip=FRICTION;
+  car.thrustBonus=1.0;
+  const wheels=car.getWheelPositions();
+  for(const other of otherCars){
+    if(other===car) continue;
+    for(const rail of rails){
+      if(rail.owner!==other) continue;
+      const tail=rail.points[rail.points.length-1];
+      const dx=wheels.frontL.x-tail.x, dy=wheels.frontL.y-tail.y;
+      if(dx*dx+dy*dy < 64){ // 8px
+        car.drafting=true;
+        car.lateralGrip=FRICTION*0.7;
+        car.thrustBonus=1.1;
+        break;
+      }
+    }
+    if(car.drafting) break;
+  }
+}
+
+
+OK let me also handle the thrust bonus application in the Car.update. Currently I compute accel with thrustMul=1.5 for boost. I should apply thrustBonus too.
+
+Let me modify the thrust section:
+javascript
+const accel=v(fwd.x*THRUST*thrustMul*car.thrustBonus, fwd.y*THRUST*thrustMul*car.thrustBonus);
+
+
+Now for rail generation: each frame, for each car, add points at rear wheels.
+
+javascript
+function generateRails(cars){
+  for(const car of cars){
+    const wheels=car.getWheelPositions();
+    for(const wp of [wheels.rearL, wheels.rearR]){
+      rails.push(new Rail(car === player ? 0 : 1));
+      // Actually need to track which car owns which rail
+    }
+  }
+}
+
+
+Hmm, this is getting messy with indices. Let me use a simpler approach: store the car reference directly on the rail.
+
+javascript
+class Rail {
+  constructor(ownerCar){ this.owner=ownerCar; this.points=[]; this.age=0; this.dead=false; }
+}
+
+
+And in generation:
+javascript
+function generateRails(cars){
+  for(const car of cars){
+    const wheels=car.getWheelPositions();
+    for(const wp of [wheels.rearL, wheels.rearR]){
+      const rail=new Rail(car);
+      rail.addPoint(wp);
+      rails.push(rail);
+    }
+  }
+}
+
+
+But this creates a lot of rails every frame. That's fine for performance with the alpha decay.
+
+Actually, creating new Rail objects every frame for every car might be heavy. Let me instead maintain a pool or just accept it. With 3 cars at 60fps, that's 18 rails/frame, ~1080/sec. Each rail lives 8 seconds max = ~8640 rails alive. That's a lot of objects. Let me optimize by reusing rails or limiting.
+
+Alternative: only add a new rail segment every few frames, and reuse old rails. Or limit total rails. Let me cap rails at some number and reuse.
+
+Actually, let me simplify: instead of creating new Rail objects, I'll manage a single array and push/trim. But different cars need separate rails. Let me just cap the total number of rails and remove old ones.
+
+Let me do: keep rails array, cap at 2000 rails. When exceeding, remove oldest. Each frame, for each car, try to add a point to an existing rail owned by that car, or create a new one if none exists.
+
+This is getting complex. Let me just create new rails each frame but cap total at 1500 and trim oldest. JavaScript GC will handle it. For a demo game this should be fine.
+
+Actually, let me be smarter: only generate a new rail point every 3 frames per car, and reuse. Let me track per-car rail generation cooldown.
+
+Hmm, let me just go with the simple approach and cap rails. Here's my plan:
+
+javascript
+function generateRails(cars){
+  for(const car of cars){
+    if(!car.generateCooldown) car.generateCooldown = 0;
+    car.generateCooldown -= 1;
+    if(car.generateCooldown > 0) continue;
+    car.generateCooldown = 2; // every 2 frames
+    const wheels=car.getWheelPositions();
+    for(const wp of [wheels.rearL, wheels.rearR]){
+      const rail=new Rail(car);
+      rail.addPoint(wp);
+      rails.push(rail);
+    }
+  }
+  // cap rails
+  while(rails.length > 1500){
+    rails.shift();
+  }
+}
+
+
+Wait, but `shift()` on every frame is O(n). Better to use a ring buffer or just accept it. With 1500 cap and shifting occasionally, it's fine.
+
+Actually, let me not shift every time. Let me just cap by removing from front when over limit, but do it rarely. Or use a different approach.
+
+You know what, let me just keep it simple. Create rails, cap at 2000, and when over, remove oldest. The shift operation happens only when over cap, which is rare enough.
+
+Let me move on. Now for the lap counting:
+
+javascript
+function updateLaps(car){
+  const dx=car.pos.x, dy=car.pos.y;
+  const distFromCenter=Math.hypot(dx,dy);
+  const angle=Math.atan2(dy,dx);
+  // detect crossing start line (angle near 0, going counterclockwise = increasing angle in canvas coords? )
+  // In canvas coords (y down), going counterclockwise visually means angle decreases.
+  // Let's say we want to go counterclockwise visually = angle decreasing.
+  // Detect wrap from angle near PI to near -PI (decreasing) or vice versa.
+  // Track previous angle.
+  if(car===player){
+    // detect crossing
+    // crossing happens when angle wraps from ~PI to ~-PI (going CCW visually = decreasing angle)
+    // or from ~-PI to ~PI (going CW visually = increasing angle)
+    // We want CCW (decreasing angle): prev > PI*0.75 && curr <= -PI*0.75
+    // Actually let's just detect any crossing and check direction.
+    if(prevPlayerAngle > Math.PI*0.75 && angle <= -Math.PI*0.75){
+      // crossed going one way
+      // determine direction by angular velocity
+      const dAngle = angle - prevPlayerAngle;
+      // if dAngle < 0, going CCW (decreasing) -> valid lap
+      // if dAngle > 0, going CW (increasing) -> invalid
+      if(dAngle < 0){
+        car.lap++;
+        if(car.lap >= LAPS_TO_WIN){
+          car.finished=true;
+          car.finishTime=speedrunTime;
+          if(speedrunTime > highScore){
+            highScore=speedrunTime;
+            try{ localStorage.setItem('cosmicRailsHighScore', String(highScore)); }catch(e){}
+          }
+          sfxWin();
+          gameState='win';
+        } else {
+          sfxLap();
+        }
+      }
+    }
+    prevPlayerAngle=angle;
+  }
