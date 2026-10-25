@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Emotional Resonance: Tetris</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧩</text></svg>">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{background:#0B0F19;min-height:100vh;display:flex;justify-content:center;align-items:center;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;overflow:hidden}
+    #game-container{position:relative;width:100%;max-width:360px;aspect-ratio:9/16;background:#0B0F19}
+    canvas{display:block;width:100%;height:100%}
+    #ui-overlay{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:12px}
+    .panel{background:rgba(15,23,42,0.7);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:10px;color:#fff;font-size:11px;backdrop-filter:blur(8px);pointer-events:auto}
+    .panel h3{font-size:10px;text-transform:uppercase;letter-spacing:1px;opacity:0.6;margin-bottom:6px}
+    .value{font-size:22px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+    .next-row{display:flex;gap:8px;justify-content:center;margin-top:8px}
+    .next-box{width:64px;height:64px;background:rgba(0,0,0,0.3);border-radius:8px;display:flex;align-items:center;justify-content:center}
+    .meter-wrap{height:16px;background:rgba(0,0,0,0.4);border-radius:8px;overflow:hidden;margin-top:6px}
+    .meter-bar{height:100%;width:0%;transition:width 0.3s,background 0.3s;border-radius:8px}
+    .meter-label{font-size:9px;text-align:center;margin-top:4px;text-transform:uppercase;letter-spacing:1px}
+    .btn{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:transform .1s,background .1s}
+    .btn:active{transform:scale(0.95)}
+    .btn:hover{background:rgba(255,255,255,0.2)}
+    .controls{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+    .ctrl-btn{aspect-ratio:1;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:10px;color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center}
+    .ctrl-btn:active{background:rgba(255,255,255,0.3);transform:scale(0.95)}
+    .hidden{display:none!important}
+    #start-screen,#pause-screen,#gameover-screen{position:absolute;inset:0;background:rgba(11,15,25,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;z-index:10;backdrop-filter:blur(4px)}
+    #start-screen h1,#pause-screen h1,#gameover-screen h1{font-size:28px;letter-spacing:2px;background:linear-gradient(90deg,#FACC15,#EF4444,#A855F7,#3B82F6);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .emotion-swatches{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+    .swatch{width:28px;height:28px;border-radius:6px;box-shadow:0 0 12px currentColor}
+    #gameover-stats{display:flex;flex-direction:column;gap:8px;text-align:center}
+    .stat-row{display:flex;justify-content:space-between;width:200px;font-size:13px}
+    .stat-label{opacity:0.7}
+    .stat-value{font-weight:700}
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="canvas"></canvas>
+    <div id="ui-overlay">
+      <div style="display:flex;justify-content:space-between">
+        <div class="panel" style="flex:1"><h3>Score</h3><div class="value" id="score">0</div></div>
+        <div class="panel" style="flex:1;text-align:center"><h3>Level</h3><div class="value" id="level">1</div></div>
+        <div class="panel" style="flex:1"><h3>Lines</h3><div class="value" id="lines">0</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <div class="panel" style="flex:1"><h3>Next</h3><div class="next-row" id="next-preview"></div></div>
+        <div class="panel" style="flex:1"><h3>Hold</h3><div class="next-row" id="hold-preview"></div></div>
+        <div class="panel" style="flex:1"><h3>Pressure</h3><div class="meter-wrap"><div class="meter-bar" id="pressure-bar"></div></div><div class="meter-label" id="pressure-label">0%</div></div>
+      </div>
+      <div class="controls" id="touch-controls">
+        <button class="ctrl-btn" data-action="left">◀</button>
+        <button class="ctrl-btn" data-action="down">▼</button>
+        <button class="ctrl-btn" data-action="right">▶</button>
+        <button class="ctrl-btn" data-action="rotate">↻</button>
+        <button class="ctrl-btn" data-action="hard">⤓</button>
+        <button class="ctrl-btn" data-action="hold">H</button>
+      </div>
+    </div>
+    <div id="start-screen"><h1>EMOTIONAL RESONANCE</h1><div class="emotion-swatches" id="swatches"></div><button class="btn" id="start-btn">PRESS ANY KEY</button></div>
+    <div id="pause-screen" class="hidden"><h1>PAUSED</h1><button class="btn" id="resume-btn">RESUME</button></div>
+    <div id="gameover-screen" class="hidden"><h1>GAME OVER</h1><div id="gameover-stats"></div><button class="btn" id="retry-btn">TRY AGAIN</button></div>
+  </div>
+  <script src="audio.js"></script>
+  <script src="emotion.js"></script>
+  <script src="piece.js"></script>
+  <script src="grid.js"></script>
+  <script src="renderer.js"></script>
+  <script src="ui.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
