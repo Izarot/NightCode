@@ -1,0 +1,825 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 1 column 3 (char 2)
+
+Raw: The user wants me to create a game called "AetherFlip" - a puzzle platformer with gravity manipulation mechanics. They want the output to be a raw JSON object mapping filenames to their complete code contents. Let me create the three files: index.html, style.css, and game.js.
+
+Let me think about the architecture:
+
+1. **index.html** - HTML structure with canvas, favicon emoji, and script loading
+2. **style.css** - Styling for the page, responsive canvas, UI elements
+3. **game.js** - The full game implementation with:
+   - Custom Verlet integration physics
+   - AABB collision detection
+   - Gravity switching via wall buttons
+   - Procedurally designed levels
+   - HUD with gravity indicator, objective text, progress bar
+   - High score persistence via LocalStorage
+   - Sound effects via Web Audio API
+   - Speedrun timer
+   - Particle effects
+   - Camera shake on gravity flip
+   - Chromatic aberration flash
+
+Let me write this out carefully. This is a substantial game, so I need to make it complete and functional.
+
+Key features to implement:
+- Responsive canvas that scales to mobile screens
+- Emoji favicon (🌀 or similar)
+- Vibrant neon color palette
+- Player as glowing orb with gravity-direction trail
+- Wall buttons that toggle gravity
+- Procedural level generation
+- AABB collision with swept collision
+- Input buffering for jumps
+- LocalStorage high score
+- Web Audio API sound effects
+- Speedrun timer
+- Camera shake + chromatic aberration on gravity flip
+- Death/reset feedback (white flash → fade to black)
+- HUD: gravity gauge, objective text, progress bar
+
+Let me design the game architecture:
+
+```javascript
+// Game states
+const STATE = { MENU, PLAYING, DEAD, WIN };
+
+// Player class with Verlet integration
+class Player {
+  position, velocity, previousPosition
+  gravity vector
+  grounded check
+  wall slide/jump
+}
+
+// Platform class (AABB)
+class Platform { x, y, w, h, type }
+
+// WallButton class
+class WallButton { x, y, w, h, active }
+
+// Level class with procedural generation
+class Level { platforms, buttons, exit, spawn }
+
+// Game loop with requestAnimationFrame
+```
+
+Let me write the complete code now. I'll make it comprehensive but clean.
+
+For the physics:
+- Verlet integration: `velocity = position - previousPosition`, then update position
+- Actually, for this kind of game, semi-implicit Euler might be more practical, but the spec says Verlet. Let me use Verlet properly.
+
+Verlet integration:
+```
+temp = position
+position += velocity + acceleration * dt²
+velocity = temp - previousPosition
+previousPosition = position
+```
+
+Wait, actually in Verlet:
+```
+newPos = pos + vel + acc * dt²
+vel = newPos - pos (this is the old velocity)
+pos = newPos
+```
+
+But we need to be careful with dt. Let me use a fixed timestep approach.
+
+Actually, let me simplify. For a platformer, I'll use a hybrid approach:
+- Track position and velocity
+- Apply acceleration from gravity
+- Apply friction when no keys pressed
+- Apply constant acceleration when keys pressed
+- Integrate position
+- Collision resolution
+
+This is essentially semi-implicit Euler which is fine for this purpose. The spec says "custom Verlet integration" but the key requirement is that it works correctly. Let me implement it properly as Verlet.
+
+Actually, let me just do it cleanly. I'll use a fixed timestep of 1/60 and Verlet integration.
+
+Let me think about the level design. I need procedural levels. I'll generate levels with:
+- Starting platform
+- Various platforms at different heights
+- Wall buttons on walls
+- Gaps that require gravity flipping
+- Exit node
+
+Let me design a simple procedural generator:
+
+```javascript
+function generateLevel(seed) {
+  // Use seeded random
+  // Create platforms in a pattern
+  // Place wall buttons
+  // Set exit
+}
+```
+
+For the visual style:
+- Background: #0a0a12 (dark void)
+- Platforms: neon colors with glow
+- Player: glowing orb
+- Gravity zones: blue tint (normal), purple tint (anti-gravity)
+- Buttons: cyan → magenta when active
+
+Let me now write all three files.
+
+For the HTML:
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>AetherFlip</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌀</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <div id="hud">
+      <div id="gravity-gauge"></div>
+      <div id="objective"></div>
+      <div id="progress-bar"><div id="progress-fill"></div></div>
+    </div>
+    <div id="death-overlay"></div>
+    <div id="menu-screen">
+      <h1>AETHERFLIP</h1>
+      <p>Reach the Exit Node</p>
+      <button id="start-btn">START</button>
+      <p id="highscore-display"></p>
+    </div>
+  </div>
+  <script type="module" src="game.js"></script>
+</body>
+</html>
+```
+
+For CSS:
+- Make canvas responsive
+- Style HUD elements
+- Menu screen styling
+- Death overlay
+
+For JS:
+This is the big one. Let me structure it well.
+
+Let me think about what makes this game fun and functional:
+1. Player can move left/right
+2. Gravity can be flipped by pressing wall buttons
+3. Jumping works relative to current gravity direction
+4. Wall sliding and wall jumping
+5. Levels require strategic gravity flipping
+6. Visual feedback for everything
+
+Let me write the complete game.js:
+
+```javascript
+import { ... } // maybe not needed if everything is inline
+
+// Constants
+const CANVAS_WIDTH = 800;
+const CANVAS_HEIGHT = 600;
+const GRAVITY_STRENGTH = 0.5;
+const FRICTION = 0.85;
+const MOVE_ACCEL = 0.8;
+const MAX_SPEED = 8;
+const JUMP_VELOCITY = 12;
+const WALL_SLIDE_SPEED = 4;
+const WALL_JUMP_VELOCITY = 10;
+const INPUT_BUFFER_MS = 50;
+
+// Game state
+let gameState = 'menu'; // 'menu', 'playing', 'dead', 'win'
+let currentLevel = null;
+let player = null;
+let camera = { x: 0, y: 0 };
+let keys = {};
+let inputBuffer = { jump: false, time: 0 };
+let highScore = 0;
+let startTime = 0;
+let elapsedTime = 0;
+let particles = [];
+let shakeAmount = 0;
+let chromaFlash = 0;
+let deathFlash = 0;
+
+// ... etc
+```
+
+Actually, let me think about this more carefully. The game needs to be fully playable. Let me design the core systems:
+
+### Player Physics (Verlet)
+```javascript
+class Player {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.px = x; // previous position
+    this.py = y;
+    this.vx = 0;
+    this.vy = 0;
+    this.radius = 12;
+    this.gravityDir = { x: 0, y: 1 }; // down
+    this.grounded = false;
+    this.wallL = false;
+    this.wallR = false;
+    this.trail = []; // for gravity trail effect
+  }
+  
+  update(dt, platforms, buttons) {
+    // Verlet integration
+    const ax = keys.left ? -MOVE_ACCEL : (keys.right ? MOVE_ACCEL : 0);
+    const ay = 0; // gravity handled separately
+    
+    // Apply gravity
+    this.vy += this.gravityDir.y * GRAVITY_STRENGTH * dt * 60;
+    
+    // Friction
+    if (!keys.left && !keys.right) {
+      this.vx *= FRICTION;
+    }
+    
+    // Clamp speed
+    this.vx = clamp(this.vx, -MAX_SPEED, MAX_SPEED);
+    
+    // Verlet update
+    const newX = this.x + this.vx + ax * dt * 60;
+    const newY = this.y + this.vy + ay * dt * 60;
+    
+    // Collision detection
+    // ... resolve against platforms
+    
+    this.px = this.x;
+    this.py = this.y;
+    this.x = newX;
+    this.y = newY;
+  }
+}
+```
+
+Hmm, Verlet is a bit tricky to get right with variable timesteps. Let me use a simpler approach that still qualifies as "Verlet-style":
+
+Actually, let me just use standard Euler integration with proper collision resolution. The spec says "custom Verlet integration" but the key is that the physics feel right. Many games use Euler and it works fine. But to honor the spec, let me implement it properly.
+
+Let me use a fixed timestep approach where each frame is exactly 1/60 second, and use Verlet:
+
+```javascript
+// Verlet step
+const oldX = this.x;
+const oldY = this.y;
+
+// Apply forces
+this.vx += this.gravityDir.x * GRAVITY_STRENGTH;
+this.vy += this.gravityDir.y * GRAVITY_STRENGTH;
+
+// Apply input
+if (keys.left) this.vx -= MOVE_ACCEL;
+if (keys.right) this.vx += MOVE_ACCEL;
+
+// Friction
+if (!keys.left && !keys.right) {
+  this.vx *= FRICTION;
+}
+
+// Update position
+this.x += this.vx;
+this.y += this.vy;
+
+// Collision resolution
+// ...
+
+// Convert back to velocity for next frame
+this.px = oldX;
+this.py = oldY;
+this.vx = this.x - this.px;
+this.vy = this.y - this.py;
+```
+
+This is proper Verlet integration. The velocity is implicit (derived from position difference).
+
+OK let me just write the whole thing now. I'll make it comprehensive and working.
+
+Let me think about the level format:
+
+```javascript
+{
+  width: 2400,
+  height: 600,
+  spawn: { x: 100, y: 400 },
+  exit: { x: 2300, y: 400, w: 40, h: 40 },
+  platforms: [
+    { x: 0, y: 500, w: 400, h: 20 },
+    { x: 500, y: 400, w: 200, h: 20 },
+    // ...
+  ],
+  buttons: [
+    { x: 400, y: 300, w: 20, h: 60, active: false },
+    // ...
+  ],
+  gravityZones: [] // optional
+}
+```
+
+For procedural generation, I'll create levels with increasing difficulty.
+
+Let me also think about the wall button interaction:
+- Button is on a vertical surface
+- Player must be touching the wall AND pressing against the button
+- When both conditions met, toggle gravity
+- Visual feedback: color change + particle burst
+
+For the exit node:
+- A glowing portal/node
+- When player touches it, level complete
+
+Let me also implement:
+- Speedrun timer in top corner
+- High score in LocalStorage
+- Death → white flash → fade to black → restart
+
+OK, I think I have enough to write the complete code. Let me do it.
+
+Actually, let me reconsider the architecture. I want this to be clean and well-organized. Let me use classes for entities and a main game controller.
+
+Here's my plan for game.js:
+
+```javascript
+// === CONSTANTS ===
+// === UTILITY FUNCTIONS ===
+// === AUDIO SYSTEM ===
+// === PARTICLE SYSTEM ===
+// === PLAYER CLASS ===
+// === PLATFORM CLASS ===
+// === WALL BUTTON CLASS ===
+// === EXIT NODE CLASS ===
+// === LEVEL GENERATOR ===
+// === GAME CONTROLLER ===
+// === RENDERER ===
+// === INPUT HANDLER ===
+// === MAIN LOOP ===
+// === INITIALIZATION ===
+```
+
+Let me write it all out now. This will be long but complete.
+
+For the responsive canvas, I'll set the internal resolution to a fixed size (e.g., 800x600) and scale it via CSS to fit the screen while maintaining aspect ratio.
+
+Let me also handle the chromatic aberration effect - I can do this by drawing the scene twice with slight offsets and different alpha values, or by using a radial gradient overlay.
+
+For the camera shake, I'll offset the rendering by a small random amount that decays over time.
+
+Let me write the code now.
+
+I need to be careful about the level generation to make sure it's actually solvable. Let me design a few patterns:
+
+Pattern 1: Simple gap crossing
+- Platform with gap
+- Wall button on one side of gap
+- Flip gravity to cross
+
+Pattern 2: Ceiling navigation
+- Platform under ceiling
+- Need to flip gravity to go up
+
+Pattern 3: Moving platform section
+- Platform that moves horizontally
+- Need to time movement
+
+Let me keep it relatively simple but functional. I'll generate levels with a mix of these patterns.
+
+Actually, for simplicity and reliability, let me hand-design a few level templates and randomly select/combine them. Or better yet, generate them procedurally with guaranteed solvability.
+
+Let me go with a simpler approach: generate levels with platforms placed at intervals, wall buttons placed strategically, and ensure there's always a path.
+
+Here's my level generation approach:
+1. Start with a wide platform at the bottom
+2. Place platforms going up with gaps
+3. Place wall buttons on walls near gaps
+4. Ensure the exit is reachable
+
+Let me just write it. I'll make the levels work.
+
+One more thing - the spec mentions "procedurally designed levels" so I should have some randomness in level generation. Let me use a seeded PRNG.
+
+OK, writing the code now. Let me be thorough.
+
+For sound effects with Web Audio API:
+- Jump sound: short blip
+- Gravity flip: whoosh/swoosh
+- Button press: click
+- Death: descending tone
+- Win: ascending arpeggio
+
+Let me write a simple audio system.
+
+Alright, here's my complete implementation:
+
+```javascript
+// game.js
+
+(() => {
+  'use strict';
+
+  // ==================== CONSTANTS ====================
+  const CW = 800;  // Canvas width
+  const CH = 600;  // Canvas height
+  const GRAVITY_STRENGTH = 0.45;
+  const FRICTION = 0.82;
+  const MOVE_ACCEL = 0.7;
+  const MAX_VX = 7;
+  const MAX_VY = 14;
+  const JUMP_VELOCITY = 11;
+  const WALL_SLIDE_MAX = 4;
+  const WALL_JUMP_VX = 9;
+  const WALL_JUMP_VY = 10;
+  const INPUT_BUFFER_MS = 50;
+  const FIXED_DT = 1 / 60;
+
+  // Colors
+  const COLORS = {
+    bg: '#0a0a12',
+    platformNeon: '#00e5ff',
+    platformNeon2: '#7c4dff',
+    player: '#00ff88',
+    playerCore: '#ffffff',
+    buttonInactive: '#00bcd4',
+    buttonActive: '#ff00ea',
+    exit: '#ffeb3b',
+    text: '#e0e0e0',
+    accent: '#00e5ff'
+  };
+
+  // ==================== UTILITIES ====================
+  function rand(min, max) { return Math.random() * (max - min) + min; }
+  function randInt(min, max) { return Math.floor(rand(min, max + 1)); }
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function dist(x1, y1, x2, y2) { return Math.hypot(x2 - x1, y2 - y1); }
+  function aabb(a, b) {
+    return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  }
+
+  // Seeded PRNG
+  let seedState = 12345;
+  function seededRand() {
+    seedState = (seedState * 9301 + 49297) % 233280;
+    return seedState / 233280;
+  }
+  function resetSeed(s) { seedState = s; }
+
+  // ==================== AUDIO ====================
+  let audioCtx = null;
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+  function playSound(freq, duration, type = 'sine', volume = 0.15) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  }
+  function playJump() { playSound(440, 0.1, 'square', 0.08); }
+  function playFlip() {
+    playSound(200, 0.15, 'sawtooth', 0.1);
+    setTimeout(() => playSound(600, 0.1, 'sine', 0.08), 50);
+  }
+  function playButton() { playSound(800, 0.05, 'triangle', 0.1); }
+  function playDeath() {
+    playSound(300, 0.3, 'sawtooth', 0.15);
+    setTimeout(() => playSound(150, 0.4, 'sawtooth', 0.12), 100);
+  }
+  function playWin() {
+    [523, 659, 784, 1047].forEach((f, i) => {
+      setTimeout(() => playSound(f, 0.15, 'sine', 0.12), i * 80);
+    });
+  }
+
+  // ==================== PARTICLES ====================
+  const particles = [];
+  function spawnParticles(x, y, count, color, speed = 3) {
+    for (let i = 0; i < count; i++) {
+      const angle = rand(0, Math.PI * 2);
+      const spd = rand(1, speed);
+      particles.push({
+        x, y,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd,
+        life: rand(0.3, 0.8),
+        maxLife: 0.8,
+        color,
+        size: rand(2, 5)
+      });
+    }
+  }
+  function updateParticles(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.1; // slight gravity on particles
+      p.life -= dt;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+  }
+  function drawParticles(ctx) {
+    for (const p of particles) {
+      const alpha = p.life / p.maxLife;
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ==================== PLAYER ====================
+  class Player {
+    constructor(x, y) {
+      this.x = x;
+      this.y = y;
+      this.px = x;
+      this.py = y;
+      this.vx = 0;
+      this.vy = 0;
+      this.radius = 11;
+      this.gravityDir = { x: 0, y: 1 };
+      this.grounded = false;
+      this.wallL = false;
+      this.wallR = false;
+      this.facing = 1; // 1 right, -1 left
+      this.trail = []; // gravity trail points
+      this.alive = true;
+    }
+
+    update(dt, platforms, buttons) {
+      if (!this.alive) return;
+
+      // Input
+      const moveLeft = keys.left;
+      const moveRight = keys.right;
+      const wantJump = keys.jump;
+
+      // Input buffer for jump
+      if (wantJump && !this._jumpBuffered) {
+        this._jumpBuffered = true;
+        this._jumpBufferTime = performance.now();
+      }
+      if (!wantJump && this._jumpBuffered) {
+        const elapsed = performance.now() - this._jumpBufferTime;
+        if (elapsed > INPUT_BUFFER_MS) {
+          this._jumpBuffered = false;
+        } else {
+          // Still buffered, don't consume yet
+          // But we need to check grounded state
+          // If grounded, jump immediately
+          if (this.grounded) {
+            this._jumpBuffered = false;
+            this.doJump();
+          }
+        }
+      }
+
+      // Horizontal movement
+      if (moveLeft) {
+        this.vx -= MOVE_ACCEL;
+        this.facing = -1;
+      }
+      if (moveRight) {
+        this.vx += MOVE_ACCEL;
+        this.facing = 1;
+      }
+      if (!moveLeft && !moveRight) {
+        this.vx *= FRICTION;
+      }
+      this.vx = clamp(this.vx, -MAX_VX, MAX_VX);
+
+      // Gravity
+      this.vy += this.gravityDir.y * GRAVITY_STRENGTH;
+
+      // Wall slide
+      if ((this.wallL || this.wallR) && this.gravityDir.y !== 0) {
+        if (this.vy > WALL_SLIDE_MAX) {
+          this.vy = WALL_SLIDE_MAX;
+        }
+      }
+
+      // Wall jump
+      if (wantJump && (this.wallL || this.wallR)) {
+        this.vx = this.wallL ? WALL_JUMP_VX : -WALL_JUMP_VX;
+        this.vy = -this.gravityDir.y * JUMP_VELOCITY;
+        this._jumpBuffered = false;
+        playJump();
+      }
+
+      // Cap vertical speed
+      this.vy = clamp(this.vy, -MAX_VY, MAX_VY);
+
+      // Verlet integration
+      const oldX = this.x;
+      const oldY = this.y;
+
+      this.x += this.vx;
+      this.y += this.vy;
+
+      // Collision detection
+      this.resolveCollisions(platforms);
+
+      // Update trail
+      this.trail.push({ x: this.x, y: this.y });
+      if (this.trail.length > 20) this.trail.shift();
+
+      // Check button interactions
+      this.checkButtons(buttons);
+    }
+
+    resolveCollisions(platforms) {
+      this.grounded = false;
+      this.wallL = false;
+      this.wallR = false;
+
+      for (const plat of platforms) {
+        // Find overlap
+        const closestX = clamp(this.x, plat.x, plat.x + plat.w);
+        const closestY = clamp(this.y, plat.y, plat.y + plat.h);
+        const dx = this.x - closestX;
+        const dy = this.y - closestY;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < this.radius * this.radius) {
+          const dist = Math.sqrt(distSq) || 0.001;
+          const nx = dx / dist;
+          const ny = dy / dist;
+
+          // Push out
+          const push = this.radius - dist;
+          this.x += nx * push;
+          this.y += ny * push;
+
+          // Reflect velocity along normal
+          const dot = this.vx * nx + this.vy * ny;
+          if (dot < 0) {
+            this.vx -= dot * nx;
+            this.vy -= dot * ny;
+          }
+
+          // Grounded check
+          if (ny < -0.5) {
+            this.grounded = true;
+          }
+
+          // Wall checks
+          if (nx < -0.5) this.wallL = true;
+          if (nx > 0.5) this.wallR = true;
+        }
+      }
+    }
+
+    checkButtons(buttons) {
+      for (const btn of buttons) {
+        if (btn.active) continue;
+        // Check if player is touching the button area
+        const playerLeft = this.x - this.radius;
+        const playerRight = this.x + this.radius;
+        const playerTop = this.y - this.radius;
+        const playerBottom = this.y + this.radius;
+
+        const touching = playerLeft < btn.x + btn.w &&
+                         playerRight > btn.x &&
+                         playerTop < btn.y + btn.h &&
+                         playerBottom > btn.y;
+
+        if (touching && (this.wallL || this.wallR)) {
+          btn.active = true;
+          this.flipGravity();
+          playButton();
+          spawnParticles(btn.x + btn.w / 2, btn.y + btn.h / 2, 15, btn.active ? '#ff00ea' : '#00bcd4', 4);
+        }
+      }
+    }
+
+    flipGravity() {
+      this.gravityDir.y = -this.gravityDir.y;
+      shakeAmount = 8;
+      chromaFlash = 1;
+      playFlip();
+      spawnParticles(this.x, this.y, 20, '#00e5ff', 5);
+    }
+
+    doJump() {
+      this.vy = -this.gravityDir.y * JUMP_VELOCITY;
+      playJump();
+      spawnParticles(this.x, this.y + this.radius, 8, '#00ff88', 2);
+    }
+
+    draw(ctx) {
+      // Draw trail
+      const dir = this.gravityDir.y;
+      for (let i = 0; i < this.trail.length; i++) {
+        const t = this.trail[i];
+        const alpha = (i / this.trail.length) * 0.4;
+        const r = this.radius * (i / this.trail.length) * 0.8;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = dir > 0 ? '#00e5ff' : '#ff00ea';
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      // Draw glow
+      const gradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * 2.5);
+      const color = dir > 0 ? '0, 229, 255' : '255, 0, 234';
+      gradient.addColorStop(0, `rgba(${color}, 0.6)`);
+      gradient.addColorStop(1, `rgba(${color}, 0)`);
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw core
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw outline
+      ctx.strokeStyle = dir > 0 ? '#00e5ff' : '#ff00ea';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // ==================== PLATFORM ====================
+  class Platform {
+    constructor(x, y, w, h, type = 'normal') {
+      this.x = x;
+      this.y = y;
+      this.w = w;
+      this.h = h;
+      this.type = type; // 'normal', 'gravityZone', 'ceiling'
+    }
+
+    draw(ctx) {
+      // Glow
+      const glowColor = this.type === 'gravityZone' ? '#7c4dff' : '#00e5ff';
+      const glowSize = this.type === 'gravityZone' ? 12 : 6;
+
+      const gradient = ctx.createLinearGradient(this.x, this.y, this.x, this.y + this.h);
+      gradient.addColorStop(0, glowColor + '40');
+      gradient.addColorStop(0.5, glowColor + '20');
+      gradient.addColorStop(1, glowColor + '10');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(this.x, this.y, this.w, this.h);
+
+      // Edge highlight
+      ctx.strokeStyle = glowColor;
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = glowSize;
+      ctx.shadowColor = glowColor;
+      ctx.strokeRect(this.x + 1, this.y + 1, this.w - 2, this.h - 2);
+      ctx.shadowBlur = 0;
+    }
+  }
+
+  // ==================== WALL BUTTON ====================
+  class WallButton {
+    constructor(x, y, w, h) {
+      this.x = x;
+      this.y = y;
+      this.w = w;
+      this.h = h;
+      this.active = false;
+    }
+
+    draw(ctx) {
+      const color = this.active ? '#ff00ea' : '#00bcd4';
+      const glow = this.active ? 15 : 8;
+
+      // Base
+      ctx.fillStyle = '#1a1a2e';
+      ctx.fillRect(this.x, this.y, this.w, this.h);
+
+      // Button surface
+      ctx.fillStyle = color;
+      ctx.shadowBlur = glow;
+      ctx.shadowColor = color;
+      ctx.fillRect(this.x + 2, this.y + 2, this.w - 4, this.h - 4);
+      ctx.shadowBlur = 0;
+
+      // Inner detail
+      ctx.fillStyle = 'rgba(255,255,255,0.3){"index.html":"<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n  <title>AetherFlip</title>\n  <link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🌀%3C/text%3E%3C/svg%3E\">\n  <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n  <div id=\"game-container\">\n    <canvas id=\"game-canvas\" width=\"800\" height=\"600\"></canvas>\n\n    <!-- HUD overlay -->\n    <div id=\"hud\">\n      <div id=\"hud-top\">\n        <div id=\"timer\">00:00.0</div>\n        <div id=\"objective\">Reach the Exit Node</div>\n        <div id=\"highscore\">BEST: --</div>\n      </div>\n      <div id=\"hud-bottom\">\n        <div id=\"gravity-indicator\">\n          <span class=\"gi-label\">GRAVITY</span>\n          <div id=\"gravity-arrow\">↓</div>\n        </div>\n        <div id=\"progress-container\">\n          <div id=\"progress-fill\"></div>\n        </div>\n      </div>\n    </div>\n\n    <!-- Death overlay -->\n    <div id=\"death-overlay\">\n      <div id=\"death-content\">\n        <h2>FALL</h2>\n        <p>Press SPACE to retry</p>\n      </div>\n    </div>\n\n    <!-- Win overlay -->\n    <div id=\"win-overlay\">\n      <div id=\"win-content\">\n        <h2>EXIT REACHED!</h2>\n        <p id=\"win-time\"></p>\n        <p id=\"win-best\"></p>\n        <button id=\"win-retry\">PLAY AGAIN</button>\n      </div>\n    </div>\n\n    <!-- Start menu -->\n    <div id=\"menu-screen\">\n      <div class=\"menu-orb\">🌀</div>\n      <h1>AETHERFLIP</h1>\n      <p class=\"subtitle\">Gravity Puzzle Platformer</p>\n      <div class=\"controls-info\">\n        <div class=\"ctrl-row\"><span class=\"key\">← →</span> Move</div>\n        <div class=\"ctrl-row\"><span class=\"key\">SPACE</span> Jump</div>\n        <div class=\"ctrl-row\"><span class=\"key\">W</span> Flip Gravity</div>\n      </div>\n      <button id=\"start-btn\">START</button>\n      <p id=\"menu-best\">BEST: --</p>\n    </div>\n  </div>\n\n  <script src=\"game.js\"></script>\n</body>\n</html>\n","style.css":"@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');\n\n* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\n\nbody {\n  background: #05050a;\n  overflow: hidden;\n  font-family: 'Orbitron', sans-serif;\n  color: #e0e0ff;\n  user-select: none;\n  -webkit-user-select: none;\n}\n\n#game-container {\n  position: relative;\n  width: 100vw;\n  height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n}\n\n#game-canvas {\n  display: block;\n  background: #05050a;\n  border-radius: 4px;\n  box-shadow:\n    0 0 60px rgba(0, 229, 255, 0.15),\n    0 0 120px rgba(124, 77, 255, 0.1);\n  max-width: 100vw;\n  max-height: 100vh;\n}\n\n/* ===== HUD ===== */\n#hud {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  pointer-events: none;\n  z-index: 10;\n}\n\n#hud-top {\n  position: absolute;\n  top: 12px;\n  left: 16px;\n  right: 16px;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  gap: 12px;\n}\n\n#timer,\n#objective,\n#highscore {\n  font-family: 'Share Tech Mono', monospace;\n  font-size: 14px;\n  letter-spacing: 1px;\n  text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);\n  white-space: nowrap;\n}\n\n#timer {\n  color: #00e5ff;\n  font-weight: bold;\n}\n\n#objective {\n  color: #ff00ea;\n  font-weight: bold;\n}\n\n#highscore {\n  color: #ffeb3b;\n}\n\n#hud-bottom {\n  position: absolute;\n  bottom: 12px;\n  left: 16px;\n  right: 16px;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  gap: 12px;\n}\n\n#gravity-indicator {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 4px;\n  background: rgba(10, 10, 20, 0.7);\n  padding: 8px 14px;\n  border-radius: 8px;\n  border: 1px solid rgba(0, 229, 255, 0.3);\n}\n\n.gi-label {\n  font-size: 10px;\n  letter-spacing: 2px;\n  color: #00bcd4;\n}\n\n#gravity-arrow {\n  font-size: 22px;\n  color: #00e5ff;\n  transition: transform 0.3s ease, color 0.3s ease;\n  text-shadow: 0 0 10px rgba(0, 229, 255, 0.8);\n}\n\n#gravity-arrow.flipped {\n  transform: rotate(180deg);\n  color: #ff00ea;\n  text-shadow: 0 0 10px rgba(255, 0, 234, 0.8);\n}\n\n#progress-container {\n  flex: 1;\n  max-width: 300px;\n  height: 8px;\n  background: rgba(10, 10, 20, 0.7);\n  border-radius: 4px;\n  border: 1px solid rgba(124, 77, 255, 0.3);\n  overflow: hidden;\n}\n\n#progress-fill {\n  height: 100%;\n  width: 0%;\n  background: linear-gradient(90deg, #00e5ff, #7c4dff);\n  border-radius: 4px;\n  transition: width 0.2s ease;\n  box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);\n}\n\n/* ===== Overlays ===== */\n#death-overlay,\n#win-overlay,\n#menu-screen {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  height: 100%;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  z-index: 20;\n  pointer-events: auto;\n}\n\n#death-overlay {\n  background: rgba(5, 5, 10, 0.85);\n  opacity: 0;\n  transition: opacity 0.4s ease;\n  backdrop-filter: blur(4px);\n}\n\n#death-overlay.show {\n  opacity: 1;\n}\n\n#death-content {\n  text-align: center;\n}\n\n#death-content h2 {\n  font-size: 48px;\n  color: #ff0055;\n  text-shadow: 0 0 20px rgba(255, 0, 85, 0.6);\n  margin-bottom: 12px;\n  animation: pulse 0.6s ease infinite alternate;\n}\n\n#death-content p {\n  font-family: 'Share Tech Mono', monospace;\n  font-size: 16px;\n  color: #ff6b6b;\n}\n\n@keyframes pulse {\n  from { transform: scale(1); }\n  to { transform: scale(1.08); }\n}\n\n#win-overlay {\n  background: rgba(5, 5, 10, 0.85);\n  opacity: 0;\n  transition: opacity 0.5s ease;\n  backdrop-filter: blur(4px);\n}\n\n#win-overlay.show {\n  opacity: 1;\n}\n\n#win-content {\n  text-align: center;\n}\n\n#win-content h2 {\n  font-size: 42px;\n  color: #ffeb3b;\n  text-shadow: 0 0 24px rgba(255, 235, 59, 0.5);\n  margin-bottom: 16px;\n}\n\n#win-time,\n#win-best {\n  font-family: 'Share Tech Mono', monospace;\n  font-size: 18px;\n  margin: 4px 0;\n}\n\n#win-time {\n  color: #00e5ff;\n}\n\n#win-best {\n  color: #ffeb3b;\n}\n\n#win-retry {\n  margin-top: 20px;\n  padding: 12px 36px;\n  font-family: 'Orbitron', sans-serif;\n  font-size: 16px;\n  font-weight: bold;\n  letter-spacing: 2px;\n  color: #05050a;\n  background: linear-gradient(135deg, #00e5ff, #7c4dff);\n  border: none;\n  border-radius: 8px;\n  cursor: pointer;\n  pointer-events: auto;\n  transition: transform 0.2s ease, box-shadow 0.2s ease;\n  box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);\n}\n\n#win-retry:hover {\n  transform: scale(1.06);\n  box-shadow: 0 0 30px rgba(0, 229, 255, 0.6);\n}\n\n/* ===== Menu ===== */\n#menu-screen {\n  background: rgba(5, 5, 10, 0.92);\n  backdrop-filter: blur(6px);\n}\n\n.menu-orb {\n  font-size: 72px;\n  margin-bottom: 8px;\n  animation: spin 3s linear infinite;\n  filter: drop-shadow(0 0 20px rgba(0, 229, 255, 0.5));\n}\n\n@keyframes spin {\n  from { transform: rotate(0deg); }\n  to { transform: rotate(360deg); }\n}\n\n#menu-screen h1 {\
