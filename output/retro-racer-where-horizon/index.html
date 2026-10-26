@@ -1,0 +1,55 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Vertical Horizon Racer</title><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%220.9em%22 font-size=%2290%22%3E🏎️%3C/text%3E%3C/svg%3E"><style>*{margin:0;padding:0;box-sizing:border-box}body{overflow:hidden;background:#0a0a0f;font-family:sans-serif}canvas{display:block}#hud{position:fixed;top:10px;left:10px;color:#00FFC8}#timer{position:fixed;top:10px;right:10px;color:#FF6B6B}#speedo{position:fixed;bottom:20px;left:20px;width:120px;height:120px;background:rgba(0,255,200,0.1);border:2px solid #00FFC8;border-radius:60px;display:flex;align-items:center;justify-content:center;color:#00FFC8;font-size:24px;backdrop-filter:blur(5px)}</style></head><body><div id="hud">0m</div><div id="timer">0:00</div><div id="speedo">0</div><canvas id="c"></canvas><script>
+const c=document.getElementById('c');
+const ctx=c.getContext('2d');
+const pc=document.getElementById('speedo');
+const tc=document.getElementById('timer');
+const hc=document.getElementById('hud');
+let WW, WH;
+function resize(){WW=window.innerWidth;WH=window.innerHeight;c.width=WW;c.height=WH;}
+resize();window.addEventListener('resize',resize);
+
+const S={base:200,max:400,min:100,steer:180,drift:0.85,penalty:0.75,dur:2,cooldown:5,mult:2};
+let state={speed:S.base,steer:0,boost:false,cooldown:0,dist:0,hs:parseInt(localStorage.getItem('VHRHigh')||'0'),start:Date.now()},
+keys={},touched={};
+
+const ctx2=new (window.AudioContext||window.webkitAudioContext)();
+function s(f,d,t='square'){const o=ctx2.createOscillator();const g=ctx2.createGain();o.type=t;o.frequency.value=f;o.connect(g);g.connect(ctx2.destination);o.start();g.gain.exponentialRampToValueAtTime(0.01,ctx2.currentTime+d);o.stop(ctx2.currentTime+d)};
+
+document.addEventListener('keydown',e=>keys[e.key]=true);
+document.addEventListener('keyup',e=>keys[e.key]=false);
+document.addEventListener('touchstart',e=>touched.start=true);
+document.addEventListener('touchmove',e=>e.preventDefault());
+document.addEventListener('touchend',()=>touched.start=false);
+
+let lt=0;
+requestAnimationFrame(function loop(t){
+  const dt=(t-lt)/1000;lt=t;
+  if(keys['ArrowLeft']||keys['a']) state.steer=Math.min(state.steer+S.steer*dt,1);
+  if(keys['ArrowRight']||keys['d']) state.steer=Math.max(state.steer-S.steer*dt,-1);
+  if(!keys['ArrowLeft']&&!keys['ArrowRight']&&!keys['a']&&!keys['d'])
+    state.steer=Math.sign(state.steer)?Math.max(-1,Math.min(1,state.steer-S.drift*dt)):0;
+  if(Math.abs(state.steer)>0.75) state.speed*=S.penalty;
+  if(keys['Shift']||keys['Space']||touched.start){
+    if(!state.boost&&state.cooldown<=0){state.boost=true;state.cooldown=S.cooldown;s(220,1);}
+  }
+  if(state.boost){state.speed=S.base*S.mult;state.cooldown-=dt;if(state.cooldown<=0)state.boost=false;}
+  else {state.speed=Math.max(S.min,state.speed-50*dt);}
+  state.speed=Math.min(S.max,state.speed+20*dt);
+  state.dist+=state.speed*dt*60;
+  hc.textContent=`${Math.floor(state.dist)}m`;
+  const secs=((Date.now()-state.start)/1000|0);const m=secs/60|0;const s=secs%60;tc.textContent=`${m}:${s<10?'0':''}${s}`;
+  ctx.fillStyle='#0a0a0f';ctx.fillRect(0,0,WW,WH);
+  ctx.save();
+  const px=WW/2+state.steer*WW*0.3;
+  ctx.strokeStyle='#1a1a24';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(px-80,0);ctx.lineTo(px-80,WH);ctx.moveTo(px+80,0);ctx.lineTo(px+80,WH);ctx.stroke();
+  ctx.fillStyle='#00FFC8';ctx.fillRect(px-16,WH-64,32,64);
+  if(state.boost){ctx.fillStyle='rgba(255,255,0,0.3)';ctx.fillRect(px-20,WH-80,40,20);}
+  ctx.restore();
+  requestAnimationFrame(loop);
+});
+
+canvas.addEventListener('touchstart',e=>{touched.start=true;touched.x=e.touches[0].x});
+canvas.addEventListener('touchmove',e=>e.preventDefault());
+canvas.addEventListener('touchend',()=>touched.start=false);
+window.addEventListener('resize',resize);
+</script></body></html>
