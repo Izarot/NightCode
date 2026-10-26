@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1'>
+<title>Angle Breakout</title>
+<link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🏓</text></svg>'> 
+<style>
+body{margin:0;background:#0a0a12;overflow:hidden}
+canvas{display:block;width:100vw;height:100vh;margin:0 auto}
+</style>
+</head>
+<body>
+<canvas id='game'></canvas>
+<script>
+const canvas=document.getElementById('game');
+const ctx=canvas.getContext('2d');
+canvas.width=800; canvas.height=600;
+const C={bg:'#0a0a12',cyan:'#00f3ff',magenta:'#ff0055',lime:'#ccff00',white:'#ffffff'};
+let score=0, highScore=0, lives=3, state='menu', speed=5, vx=0, vy=0, level=1;
+let paddle={x:375,y:550,w:100,h:14};
+let ball={x:400,y:550,r:8};
+const audio=new (window.AudioContext||window.webkitAudioContext)();
+function beep(f=440,d=0.05,t='square',v=0.05){const o=audio.createOscillator();const g=audio.createGain();o.type=t;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+d);}
+function loop(){requestAnimationFrame(loop);const dt=0.016;ctx.fillStyle=C.bg;ctx.fillRect(0,0,800,600);ctx.fillStyle=C.cyan;ctx.beginPath();ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);ctx.fill();ctx.fillStyle=C.magenta;ctx.fillRect(paddle.x,paddle.y,paddle.w,paddle.h);ctx.fillStyle=C.lime;ctx.fillRect(0,50,800,10);ctx.fillStyle=C.white;ctx.font='20px Orbitron';ctx.textAlign='left';ctx.fillText('Score '+score,10,30);ctx.textAlign='right';ctx.fillText('High '+highScore,790,30);ctx.textAlign='center';ctx.fillText('Level '+level,400,30);ctx.font='16px Rajdhani';ctx.fillStyle=C.cyan;ctx.fillText('Speedrun',770,590);}
+loop();
+</script>
+</body>
+</html>
