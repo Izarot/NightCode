@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 Color Cascade</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><text y=\"-.7em\" font-size=\"90\">🎨</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        #gameContainer { 
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
+        #ui { 
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+        #timer { 
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #2d3748;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        #score { 
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #2d3748;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        #highScore { 
+            background: rgba(255,255,255,0.9);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 16px;
+            color: #805ad5;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        #gameCanvas { 
+            background: #f7fafc;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+        #gameOver { 
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 20;
+            display: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        #gameOver h2 { 
+            color: #e53e3e;
+            margin-bottom: 20px;
+            font-size: 36px;
+        }
+        #gameOver .emoji { 
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        #gameOver p { 
+            color: #4a5568;
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        #gameOver button { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #gameOver button:hover { 
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        @media (max-width: 480px) {
+            #ui {
+                flex-direction: column;
+                gap: 10px;
+            }
+            #timer, #score, #highScore {
+                padding: 8px 15px;
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="ui">
+            <div id="timer">⏱️ 00:00</div>
+            <div id="score">Score: 0</div>
+            <div id="highScore">🏆 HS: 0</div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div id="gameOver">
+            <div class="emoji">💥</div>
+            <h2>Game Over!</h2>
+            <p>Your score: <span id="finalScore">0</span></p>
+            <p>High Score: <span id="finalHighScore">0</span></p>
+            <button onclick="restartGame()">Play Again! 🎉</button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
