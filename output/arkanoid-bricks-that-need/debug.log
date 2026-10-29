@@ -1,0 +1,709 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 1 column 43 (char 42)
+
+Raw: The user wants a complete HTML5 Canvas game called "NEON ANGLE" based on a detailed specification. I need to create a full project with:
+- index.html (entry point)
+- style.css (styling, responsive canvas, emoji favicon)
+- js/main.js (game loop)
+- js/game.js (state machine)
+- js/entities/Ball.js, Paddle.js, Brick.js
+- js/systems/Physics.js, Collision.js
+- js/ui/HUD.js, PauseMenu.js
+
+Key features:
+1. Responsive canvas scaling for mobile
+2. Emoji favicon
+3. Vibrant neon color palette
+4. LocalStorage high score persistence
+5. Web Audio API sound effects
+6. Speedrun timer
+7. Angle-based damage system
+8. Momentum-based paddle physics
+9. Particle system
+10. Neon trail effects
+
+Let me build this out completely. I'll make it all work together. Let me think about the structure carefully.
+
+I need to output ONLY valid raw JSON mapping filenames to their complete code contents. No markdown formatting. So like:
+{"index.html": "...", "style.css": "...", ...}
+
+Let me write each file completely.
+
+Let me plan the files:
+
+1. `index.html` - HTML structure with canvas, overlays, emoji favicon in head
+2. `style.css` - responsive styling, neon fonts, HUD positioning
+3. `js/main.js` - game loop entry point, state management glue
+4. `js/game.js` - state machine (MENU, PLAYING, PAUSED, GAME_OVER, LEVEL_COMPLETE)
+5. `js/entities/Ball.js` - Ball class with trail, spin
+6. `js/entities/Paddle.js` - Paddle with acceleration/friction model
+7. `js/entities/Brick.js` - Brick with HP, damage by angle
+8. `js/systems/Physics.js` - physics helpers, substepping
+9. `js/systems/Collision.js` - circle-rect collision, angle calculation
+10. `js/ui/HUD.js` - score, lives, level, angle indicator
+11. `js/ui/PauseMenu.js` - pause modal
+12. `js/audio.js` - Web Audio API sound effects
+
+Let me write these out carefully and completely.
+
+Let me start writing the code.
+
+### index.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NEON ANGLE</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="game-container">
+  <canvas id="game-canvas"></canvas>
+  <div id="hud">
+    <div id="score-display">SCORE 0</div>
+    <div id="lives-display"></div>
+    <div id="level-display">LEVEL 1</div>
+    <div id="timer-display">TIME 0.00</div>
+    <div id="angle-indicator"><canvas id="angle-gauge" width="120" height="120"></canvas></div>
+  </div>
+  <div id="pause-menu" class="overlay hidden">
+    <div class="modal">
+      <h1>PAUSED</h1>
+      <button class="btn" data-action="resume">RESUME</button>
+      <button class="btn" data-action="restart">RESTART</button>
+      <button class="btn" data-action="menu">MAIN MENU</button>
+    </div>
+  </div>
+  <div id="start-screen" class="overlay">
+    <div class="modal">
+      <h1>NEON ANGLE</h1>
+      <p class="subtitle">Aim precise. Strike devastating.</p>
+      <button class="btn btn-primary" data-action="start">PRESS TO START</button>
+      <p class="hint">Arrows/WASD to move · Space to launch</p>
+    </div>
+  </div>
+  <div id="game-over-screen" class="overlay hidden">
+    <div class="modal">
+      <h1>GAME OVER</h1>
+      <p id="final-score">SCORE 0</p>
+      <p id="best-score">BEST 0</p>
+      <button class="btn btn-primary" data-action="restart">PLAY AGAIN</button>
+      <button class="btn" data-action="menu">MAIN MENU</button>
+    </div>
+  </div>
+  <div id="level-complete-screen" class="overlay hidden">
+    <div class="modal">
+      <h1>LEVEL CLEAR</h1>
+      <p id="level-time">TIME 0.00</p>
+      <button class="btn btn-primary" data-action="next">NEXT LEVEL</button>
+    </div>
+  </div>
+</div>
+<script src="js/audio.js"></script>
+<script src="js/entities/Ball.js"></script>
+<script src="js/entities/Paddle.js"></script>
+<script src="js/entities/Brick.js"></script>
+<script src="js/systems/Physics.js"></script>
+<script src="js/systems/Collision.js"></script>
+<script src="js/ui/HUD.js"></script>
+<script src="js/ui/PauseMenu.js"></script>
+<script src="js/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
+```
+
+### style.css
+Neon styling, responsive canvas, HUD positioning.
+
+### js/audio.js
+Web Audio API sound effects.
+
+### js/entities/Ball.js
+Ball with trail, spin.
+
+### js/entities/Paddle.js
+Momentum-based paddle.
+
+### js/entities/Brick.js
+Brick with HP, angle-based damage.
+
+### js/systems/Physics.js
+Physics helpers, substepping.
+
+### js/systems/Collision.js
+Circle-rect collision, angle calculation.
+
+### js/ui/HUD.js
+HUD drawing.
+
+### js/ui/PauseMenu.js
+Pause menu controller.
+
+### js/game.js
+State machine.
+
+### js/main.js
+Game loop.
+
+Let me write all of these out completely now. I'll be thorough.
+
+For the angle-based damage system:
+- Calculate dot product between ball velocity and brick surface normal
+- Deviation = angle between them
+- Direct center hit (deviation ~0): damage 1
+- Angled hit (<45°): damage 1
+- Devastating angle (>45°): damage 2 or 3 based on brick tier
+
+Actually let me re-read:
+- Direct Center Hit: Damage = 1
+- Angled Hit (Deviation < 45°): Damage = 1
+- Devastating Angle (Deviation > 45°): Damage = 2 or 3 (depending on brick tier)
+
+So deviation is the angle between ball velocity and brick normal. When deviation is small (ball going roughly along normal), it's a direct hit. When deviation is large, it's devastating.
+
+Wait, that's a bit odd. If the ball hits the exact center, the normal is perpendicular to the surface, so if the ball velocity is along the normal, deviation is 0. That makes sense.
+
+If the ball hits at an angle, the deviation from the normal increases. So deviation > 45° means devastating.
+
+Damage mapping:
+- deviation <= some threshold (direct): 1
+- deviation < 45°: 1
+- deviation >= 45°: 2 or 3 based on tier
+
+Let me implement this.
+
+For the dot product:
+dot = v · n
+cos(deviation) = dot (if both normalized)
+deviation = acos(dot)
+
+Damage:
+- if deviation < 15°: 1 (direct)
+- else if deviation < 45°: 1 (angled)
+- else: tier-based (2 or 3)
+
+Actually, let me simplify:
+- deviation < 20°: damage 1
+- 20° <= deviation < 45°: damage 1
+- deviation >= 45°: damage = tier (2 or 3)
+
+Hmm, but the spec says "Direct Center Hit: Damage = 1" and "Angled Hit (Deviation < 45°): Damage = 1". So both are 1. Only devastating angles give more.
+
+Let me code it as:
+```
+const deviation = Math.acos(Math.min(1, Math.max(-1, dot))) * (180 / Math.PI);
+let damage;
+if (deviation < 45) {
+    damage = 1;
+} else {
+    damage = brick.tier >= 3 ? 3 : 2; // or based on tier
+}
+```
+
+Actually, let me make it cleaner. The brick has a tier (HP). Higher tier = harder. The damage dealt depends on angle:
+- deviation < 45°: damage = 1
+- deviation >= 45°: damage = min(brick.tier, 3) ... hmm
+
+Wait, the spec says "Damage = 2 or 3 (depending on brick tier)". So higher tier bricks get more damage from devastating angles. Let me do:
+- deviation < 45°: damage = 1
+- deviation >= 45°: damage = brick.tier (capped at 3, since max HP is 5 but max damage bonus is 3)
+
+Actually, let me just make damage = min(brick.tier, 3) for devastating angles. Or maybe damage scales with tier. Let me keep it simple:
+- deviation < 45°: damage = 1
+- deviation >= 45°: damage = 2 + (brick.tier - 2) if tier >= 2, else 2... 
+
+Hmm, let me just do:
+- deviation < 45°: damage = 1
+- deviation >= 45°: damage = Math.min(3, brick.tier)
+
+That gives 2 or 3 damage for devastating hits depending on tier. Good enough.
+
+Now let me write everything.
+
+For the angle indicator gauge - it shows the current ball trajectory as a line extending from the paddle. This is the "aim indicator".
+
+Let me also implement the speedrun timer in the top corner.
+
+Let me write the complete code now.
+
+I'll make sure each file is complete and self-contained where possible, with proper module patterns (using global namespace since we're using script tags, not modules).
+
+Let me write it all out.
+
+Actually, I should use ES6 classes that attach to window or just rely on script load order. Since we're using regular script tags (not modules), classes will be available globally after load. I'll use a global namespace pattern.
+
+Let me write each file:
+
+#### js/audio.js
+```javascript
+const AudioFX = {
+    ctx: null,
+    masterGain: null,
+    enabled: true,
+    init() {
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.masterGain = this.ctx.createGain();
+            this.masterGain.gain.value = 0.3;
+            this.masterGain.connect(this.ctx.destination);
+        } catch (e) {
+            this.enabled = false;
+        }
+    },
+    resume() {
+        if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    },
+    playTone(freq, duration, type = 'square', volume = 0.3) {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    },
+    hit() { this.playTone(220, 0.08, 'square', 0.2); },
+    hitHard() { this.playTone(140, 0.15, 'sawtooth', 0.25); },
+    destroy() { this.playTone(80, 0.2, 'sawtooth', 0.3); },
+    launch() { this.playTone(440, 0.1, 'triangle', 0.2); },
+    wall() { this.playTone(330, 0.05, 'sine', 0.15); },
+    bonus() { this.playTone(880, 0.15, 'triangle', 0.25); },
+    loseLife() { this.playTone(110, 0.4, 'sawtooth', 0.3); },
+    levelClear() {
+        this.playTone(523, 0.15, 'triangle', 0.25);
+        setTimeout(() => this.playTone(659, 0.15, 'triangle', 0.25), 150);
+        setTimeout(() => this.playTone(784, 0.3, 'triangle', 0.25), 300);
+    }
+};
+```
+
+#### js/entities/Ball.js
+```javascript
+class Ball {
+    constructor(x, y, radius) {
+        this.pos = { x, y };
+        this.vel = { x: 0, y: 0 };
+        this.radius = radius;
+        this.trail = [];
+        this.maxTrail = 12;
+        this.spin = 0;
+        this.active = false;
+    }
+    launch(angleDeg, power) {
+        const angle = angleDeg * Math.PI / 180;
+        this.vel.x = Math.cos(angle) * power;
+        this.vel.y = Math.sin(angle) * power;
+        this.spin = this.vel.x * 0.02;
+        this.active = true;
+    }
+    update(dt) {
+        if (!this.active) return;
+        // Substep movement
+        const speed = Math.hypot(this.vel.x, this.vel.y);
+        const steps = Math.max(1, Math.ceil(speed * dt / (this.radius * 0.5)));
+        const sdt = dt / steps;
+        for (let i = 0; i < steps; i++) {
+            this.pos.x += this.vel.x * sdt;
+            this.pos.y += this.vel.y * sdt;
+        }
+        // Trail
+        this.trail.push({ x: this.pos.x, y: this.pos.y });
+        if (this.trail.length > this.maxTrail) this.trail.shift();
+        // Spin affects trajectory slightly
+        this.spin *= 0.98;
+    }
+    draw(ctx) {
+        // Trail
+        for (let i = 0; i < this.trail.length; i++) {
+            const t = this.trail[i];
+            const alpha = (i / this.trail.length) * 0.5;
+            ctx.fillStyle = `rgba(0, 243, 255, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, this.radius * (i / this.trail.length), 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // Glow
+        const grad = ctx.createRadialGradient(this.pos.x, this.pos.y, 0, this.pos.x, this.pos.y, this.radius * 2);
+        grad.addColorStop(0, 'rgba(0, 243, 255, 1)');
+        grad.addColorStop(0.5, 'rgba(0, 243, 255, 0.5)');
+        grad.addColorStop(1, 'rgba(0, 243, 255, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, this.radius * 2, 0, Math.PI * 2);
+        ctx.fill();
+        // Core
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+```
+
+#### js/entities/Paddle.js
+```javascript
+class Paddle {
+    constructor(x, y, width, height) {
+        this.pos = { x, y };
+        this.width = width;
+        this.height = height;
+        this.accel = 1200; // px/s^2
+        this.friction = 0.85;
+        this.vx = 0;
+        this.vy = 0;
+        this.vMax = 500;
+        this.pulse = 0;
+    }
+    update(dt, input, bounds) {
+        let ax = 0;
+        if (input.left) ax -= this.accel;
+        if (input.right) ax += this.accel;
+        this.vx += ax * dt;
+        // Friction
+        this.vx *= Math.pow(this.friction, dt * 60);
+        // Clamp
+        this.vx = Math.max(-this.vMax, Math.min(this.vMax, this.vx));
+        this.pos.x += this.vx * dt;
+        // Boundary constraints
+        if (this.pos.x < this.width / 2) {
+            this.pos.x = this.width / 2;
+            this.vx *= -0.5;
+        }
+        if (this.pos.x > bounds.w - this.width / 2) {
+            this.pos.x = bounds.w - this.width / 2;
+            this.vx *= -0.5;
+        }
+        this.pulse += dt * 4;
+    }
+    draw(ctx) {
+        const w = this.width, h = this.height;
+        const x = this.pos.x, y = this.pos.y;
+        const glow = 0.5 + Math.sin(this.pulse) * 0.2;
+        // Glow
+        ctx.shadowColor = '#00f3ff';
+        ctx.shadowBlur = 20 * glow;
+        // Body gradient
+        const grad = ctx.createLinearGradient(x - w/2, y, x + w/2, y);
+        grad.addColorStop(0, 'rgba(0, 243, 255, 0.3)');
+        grad.addColorStop(0.5, 'rgba(0, 243, 255, 0.9)');
+        grad.addColorStop(1, 'rgba(0, 243, 255, 0.3)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.moveTo(x - w/2, y);
+        ctx.lineTo(x + w/2, y);
+        ctx.lineTo(x + w/2 * 0.7, y - h);
+        ctx.lineTo(x - w/2 * 0.7, y - h);
+        ctx.closePath();
+        ctx.fill();
+        // Stroke
+        ctx.strokeStyle = '#00f3ff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+    }
+}
+```
+
+#### js/entities/Brick.js
+```javascript
+class Brick {
+    constructor(x, y, w, h, hp, tier, color) {
+        this.pos = { x, y };
+        this.w = w;
+        this.h = h;
+        this.hp = hp;
+        this.maxHp = hp;
+        this.tier = tier;
+        this.color = color;
+        this.alive = true;
+        this.flashTimer = 0;
+    }
+    get centerX() { return this.pos.x + this.w / 2; }
+    get centerY() { return this.pos.y + this.h / 2; }
+    get normalX() { return 0; } // Will be set on collision
+    get normalY() { return -1; }
+    takeDamage(amount) {
+        this.hp -= amount;
+        this.flashTimer = 0.15;
+        if (this.hp <= 0) {
+            this.alive = false;
+        }
+    }
+    update(dt) {
+        if (this.flashTimer > 0) this.flashTimer -= dt;
+    }
+    draw(ctx) {
+        if (!this.alive) return;
+        const alpha = this.flashTimer > 0 ? 1 : 0.85;
+        const strokeAlpha = this.flashTimer > 0 ? 1 : 0.9;
+        // Gradient fill
+        const grad = ctx.createLinearGradient(this.pos.x, this.pos.y, this.pos.x, this.pos.y + this.h);
+        grad.addColorStop(0, this.color.top);
+        grad.addColorStop(1, this.color.bottom);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = grad;
+        ctx.fillRect(this.pos.x, this.pos.y, this.w, this.h);
+        // Stroke
+        ctx.globalAlpha = strokeAlpha;
+        ctx.strokeStyle = this.color.stroke;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(this.pos.x, this.pos.y, this.w, this.h);
+        // HP indicator
+        if (this.hp < this.maxHp) {
+            ctx.globalAlpha = 0.6;
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px Courier New';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(this.hp, this.centerX, this.centerY);
+        }
+        ctx.globalAlpha = 1;
+    }
+}
+```
+
+#### js/systems/Physics.js
+```javascript
+const Physics = {
+    clamp(val, min, max) {
+        return Math.max(min, Math.min(max, val));
+    },
+    lerp(a, b, t) {
+        return a + (b - a) * t;
+    },
+    normalize(x, y) {
+        const len = Math.hypot(x, y);
+        if (len === 0) return { x: 0, y: 0 };
+        return { x: x / len, y: y / len };
+    },
+    substep(pos, vel, dt, steps) {
+        const sdt = dt / steps;
+        for (let i = 0; i < steps; i++) {
+            pos.x += vel.x * sdt;
+            pos.y += vel.y * sdt;
+        }
+    }
+};
+```
+
+#### js/systems/Collision.js
+```javascript
+const Collision = {
+    circleRect(cx, cy, cr, rx, ry, rw, rh) {
+        const closestX = Math.max(rx, Math.min(cx, rx + rw));
+        const closestY = Math.max(ry, Math.min(cy, ry + rh));
+        const dx = cx - closestX;
+        const dy = cy - closestY;
+        const distSq = dx * dx + dy * dy;
+        if (distSq < cr * cr) {
+            const dist = Math.sqrt(distSq) || 0.001;
+            return {
+                hit: true,
+                nx: dx / dist,
+                ny: dy / dist,
+                penetration: cr - dist,
+                closestX, closestY
+            };
+        }
+        return { hit: false };
+    },
+    resolveBallBrick(ball, brick) {
+        const result = this.circleRect(
+            ball.pos.x, ball.pos.y, ball.radius,
+            brick.pos.x, brick.pos.y, brick.w, brick.h
+        );
+        if (!result.hit) return null;
+        // Determine which side was hit for reflection
+        // Use closest point to determine normal direction
+        const cx = result.closestX;
+        const cy = result.closestY;
+        const bx = brick.pos.x;
+        const by = brick.pos.y;
+        // Normal points from brick to ball
+        let nx = ball.pos.x - cx;
+        let ny = ball.pos.y - cy;
+        const nlen = Math.hypot(nx, ny) || 1;
+        nx /= nlen;
+        ny /= nlen;
+        // Reflection
+        const dot = ball.vel.x * nx + ball.vel.y * ny;
+        ball.vel.x -= 2 * dot * nx;
+        ball.vel.y -= 2 * dot * ny;
+        // Apply restitution
+        ball.vel.x *= 0.8;
+        ball.vel.y *= 0.8;
+        // Push ball out
+        ball.pos.x = cx + nx * ball.radius;
+        ball.pos.y = cy + ny * ball.radius;
+        // Compute deviation angle
+        const cosDev = Math.max(-1, Math.min(1, ball.vel.x * nx + ball.vel.y * ny));
+        // Wait, after reflection the velocity changed. Need original velocity for deviation calc.
+        // Let me compute deviation before reflection.
+        return {
+            hit: true,
+            nx, ny,
+            deviation: Math.acos(Math.max(-1, Math.min(1, ball.vel.x * nx + ball.vel.y * ny))) * 180 / Math.PI,
+            damage: this.computeDamage(brick, nx, ny)
+        };
+    },
+    computeDamage(brick, nx, ny) {
+        // dot product of ball velocity (original) and normal
+        // We need original velocity here. Let me pass it.
+        return 1;
+    }
+};
+```
+
+Hmm, I need to fix the deviation calculation. The deviation should be computed using the original ball velocity before reflection. Let me restructure.
+
+Actually, let me reconsider. The normal vector points from the brick surface toward the ball. The deviation is the angle between the ball's incoming velocity and the normal. So:
+
+dot = ball.vel.x * nx + ball.vel.y * ny (using original velocity)
+deviation = acos(dot) in degrees
+
+But after reflection, the velocity changes. So I should compute deviation before applying the reflection.
+
+Let me rewrite:
+
+```javascript
+resolveBallBrick(ball, brick) {
+    const result = this.circleRect(
+        ball.pos.x, ball.pos.y, ball.radius,
+        brick.pos.x, brick.pos.y, brick.w, brick.h
+    );
+    if (!result.hit) return null;
+    
+    // Compute normal (from brick surface to ball)
+    const cx = result.closestX;
+    const cy = result.closestY;
+    let nx = ball.pos.x - cx;
+    let ny = ball.pos.y - cy;
+    const nlen = Math.hypot(nx, ny) || 1;
+    nx /= nlen;
+    ny /= nlen;
+    
+    // Deviation angle (using original velocity)
+    const dot = ball.vel.x * nx + ball.vel.y * ny;
+    const deviation = Math.acos(Math.max(-1, Math.min(1, dot))) * 180 / Math.PI;
+    
+    // Damage based on deviation
+    let damage;
+    if (deviation < 45) {
+        damage = 1;
+    } else {
+        damage = Math.min(3, brick.tier);
+    }
+    
+    // Reflection
+    const reflectDot = ball.vel.x * nx + ball.vel.y * ny;
+    ball.vel.x -= 2 * reflectDot * nx;
+    ball.vel.y -= 2 * reflectDot * ny;
+    // Restitution
+    ball.vel.x *= 0.8;
+    ball.vel.y *= 0.8;
+    // Push out
+    ball.pos.x = cx + nx * ball.radius;
+    ball.pos.y = cy + ny * ball.radius;
+    
+    return { hit: true, nx, ny, deviation, damage };
+}
+```
+
+Good. Now the Brick needs to know its surface normal for the angle calculation. Actually, the Collision module computes the normal dynamically based on where the ball hit. That's fine.
+
+But wait - the spec says "Calculate the dot product between the ball's velocity vector and the brick's surface normal." The brick's surface normal depends on which face was hit. For a rectangle, the normal could be +x, -x, +y, or -y depending on which side was struck. The circle-rect collision gives us the closest point, and the normal from brick to ball tells us which side.
+
+Actually, my approach computes the normal as pointing from the closest point on the rect to the ball center. This naturally gives the correct outward normal for whichever face was hit. Good.
+
+#### js/ui/HUD.js
+This draws the HUD elements. But actually, I'm using HTML/CSS overlays for the HUD. Let me reconsider.
+
+The spec says: "Minimalist, borderless interface that floats above the gameplay canvas using HTML/CSS overlays or crisp Canvas-drawn text."
+
+I'll use a mix - HTML elements for score/lives/level/timer (positioned absolutely), and a canvas for the angle gauge. Actually, let me draw most things on canvas for consistency, but use HTML for the pause menu and start screen.
+
+Hmm, let me simplify. I'll draw the HUD on the main canvas (score, lives, level, timer, angle gauge) and use HTML overlays only for menus (start, pause, game over, level complete). This is cleaner.
+
+Actually, the spec mentions HTML/CSS overlays OR canvas text. Let me do canvas-drawn HUD for the in-game elements (score, lives, level, timer, angle gauge) and HTML overlays for menus. This keeps everything in one rendering pipeline.
+
+Let me rewrite HUD to draw on canvas.
+
+Actually, let me keep it simpler and more robust. I'll have the HUD drawn on canvas. Let me create a HUD object that draws all the in-game UI.
+
+#### js/ui/PauseMenu.js
+Manages the pause overlay HTML.
+
+Let me now write the game.js state machine and main.js.
+
+Let me think about the overall game flow:
+
+States: MENU, PLAYING, PAUSED, GAME_OVER, LEVEL_COMPLETE
+
+Game object holds:
+- state
+- score
+- lives
+- level
+- timer
+- bricks array
+- ball
+- paddle
+- particles
+- input
+
+Methods:
+- init()
+- startGame()
+- restart()
+- nextLevel()
+- update(dt)
+- render()
+- handleInput()
+
+Let me write game.js:
+
+```javascript
+class Game {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.state = 'MENU';
+        this.score = 0;
+        this.lives = 3;
+        this.level = 1;
+        this.timer = 0;
+        this.bricks = [];
+        this.particles = [];
+        this.ball = null;
+        this.paddle = null;
+        this.input = { left: false, right: false };
+        this.lastTime = 0;
+        this.highScore = parseInt(localStorage.getItem('neonAngleHighScore') || '0', 10);
+        this.setupCanvas();
+        this.setupInput();
+        this.setupUI();
+    }
+    
+    setupCanvas() {
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+    }
+    
+    {"index.html":"<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n<title>NEON ANGLE</title>\n<link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎯</text></svg>\">\n<link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n<div id=\"game-container\">\n  <canvas id=\"game-canvas\"></canvas>\n  <div id=\"hud\">\n    <div id=\"score-display\">SCORE 0</div>\n    <div id=\"lives-display\"></div>\n    <div id=\"level-display\">LEVEL 1</div>\n    <div id=\"timer-display\">TIME 0.00</div>\n    <div id=\"angle-indicator\"><canvas id=\"angle-gauge\" width=\"140\" height=\"140\"></canvas></div>\n  </div>\n  <div id=\"pause-menu\" class=\"overlay hidden\">\n    <div class=\"modal\">\n      <h1>PAUSED</h1>\n      <button class=\"btn\" data-action=\"resume\">RESUME</button>\n      <button class=\"btn\" data-action=\"restart\">RESTART</button>\n      <button class=\"btn\" data-action=\"menu\">MAIN MENU</button>\n    </div>\n  </div>\n  <div id=\"start-screen\" class=\"overlay\">\n    <div class=\"modal\">\n      <h1>NEON ANGLE</h1>\n      <p class=\"subtitle\">Aim precise. Strike devastating.</p>\n      <button class=\"btn btn-primary\" data-action=\"start\">PRESS TO START</button>\n      <p class=\"hint\">Arrows / WASD to move · Space to launch</p>\n    </div>\n  </div>\n  <div id=\"game-over-screen\" class=\"overlay hidden\">\n    <div class=\"modal\">\n      <h1>GAME OVER</h1>\n      <p id=\"final-score\">SCORE 0</p>\n      <p id=\"best-score\">BEST 0</p>\n      <button class=\"btn btn-primary\" data-action=\"restart\">PLAY AGAIN</button>\n      <button class=\"btn\" data-action=\"menu\">MAIN MENU</button>\n    </div>\n  </div>\n  <div id=\"level-complete-screen\" class=\"overlay hidden\">\n    <div class=\"modal\">\n      <h1>LEVEL CLEAR</h1>\n      <p id=\"level-time\">TIME 0.00</p>\n      <button class=\"btn btn-primary\" data-action=\"next\">NEXT LEVEL</button>\n    </div>\n  </div>\n</div>\n<script src=\"js/audio.js\"></script>\n<script src=\"js/entities/Ball.js\"></script>\n<script src=\"js/entities/Paddle.js\"></script>\n<script src=\"js/entities/Brick.js\"></script>\n<script src=\"js/systems/Physics.js\"></script>\n<script src=\"js/systems/Collision.js\"></script>\n<script src=\"js/ui/HUD.js\"></script>\n<script src=\"js/ui/PauseMenu.js\"></script>\n<script src=\"js/game.js\"></script>\n<script src=\"js/main.js\"></script>\n</body>\n</html>",
+"style.css":"* { margin: 0; padding: 0; box-sizing: border-box; }\nhtml, body { width: 100%; height: 100%; overflow: hidden; background: #050510; font-family: 'Courier New', monospace; }\n#game-container {\n  position: relative;\n  width: 100vw;\n  height: 100vh;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n}\n#game-canvas {\n  display: block;\n  background: #050510;\n  image-rendering: crisp-edges;\n  touch-action: none;\n}\n#hud {\n  position: absolute;\n  top: 0;\n  left: 0;\n  width: 100%;\n  pointer-events: none;\n  z-index: 10;\n  padding: 8px 12px;\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n  gap: 12px;\n}\n#score-display, #level-display, #timer-display {\n  font-size: 16px;\n  font-weight: bold;\n  color: #00f3ff;\n  text-shadow: 0 0 8px rgba(0, 243, 255, 0.7);\n  letter-spacing: 1px;\n  white-space: nowrap;\n}\n#lives-display {\n  font-size: 16px;\n  color: #ff00e5;\n  text-shadow: 0 0 8px rgba(255, 0, 229, 0.7);\n  letter-spacing: 1px;\n}\n#angle-indicator {\n  position: relative;\n  width: 140px;\n  height: 140px;\n  align-self: center;\n  margin-top: -60px;\n}\n#angle-gauge {\n  position: absolute;\n  top: 0;\n  left: 50%;\n  transform: translateX(-50%);\n  border-radius: 50%;\n  border: 2px solid rgba(0, 243, 255, 0.4);\n  background: rgba(0, 243, 255, 0.05);\n}\n.overlay {\n  position: absolute;\n  inset: 0;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  background: rgba(5, 5, 16, 0.85);\n  backdrop-filter: blur(4px);\n  z-index: 20;\n}\n.overlay.hidden { display: none; }\n.modal {\n  text-align: center;\n  padding: 40px 50px;\n  border: 2px solid rgba(0, 243, 255, 0.5);\n  border-radius: 16px;\n  background: rgba(10, 10, 30, 0.9);\n  box-shadow: 0 0 40px rgba(0, 243, 255, 0.2), inset 0 0 30px rgba(0, 243, 255, 0.05);\n  max-width: 90vw;\n}\n.modal h1 {\n  font-size: 42px;\n  color: #00f3ff;\n  text-shadow: 0 0 20px rgba(0, 243, 255, 0.8), 0 0 40px rgba(0, 243, 255, 0.4);\n  letter-spacing: 3px;\n  margin-bottom: 12px;\n}\n.subtitle {\n  color: #ff00e5;\n  font-size: 16px;\n  margin-bottom: 24px;\n  text-shadow: 0 0 10px rgba(255, 0, 229, 0.6);\n}\n.hint {\n  color: rgba(255, 255, 255, 0.4);\n  font-size: 12px;\n  margin-top: 20px;\n}\n.btn {\n  display: inline-block;\n  padding: 12px 32px;\n  margin: 8px;\n  font-size: 16px;\n  font-weight: bold;\n  font-family: 'Courier New', monospace;\n  color: #00f3ff;\n  background: transparent;\n  border: 2px solid #00f3ff;\n  border-radius: 8px;\n  cursor: pointer;\n  letter-spacing: 2px;\n  transition: all 0.2s ease;\n  text-transform: uppercase;\n}\n.btn:hover {\n  background: rgba(0, 243, 255, 0.15);\n  box-shadow: 0 0 20px rgba(0, 243, 255, 0.5);\n  transform: scale(1.05);\n}\n.btn-primary {\n  color: #ffffff;\n  border-color: #00f3ff;\n  font-size: 18px;\n  padding: 14px 40px;\n}\n.btn-primary:hover {\n  background: rgba(0, 243, 255, 0.3);\n  box-shadow: 0 0 30px rgba(0, 243, 255, 0.7);\n}\n@media (max-width: 600px) {\n  .modal h1 { font-size: 30px; }\n  .modal { padding: 30px 30px; }\n  #score-display, #level-display, #timer-display { font-size: 13px; }\n  #angle-indicator { width: 100px; height: 100px; }\n  #angle-gauge { width: 100px; height: 100px; }\n}",
+"js/audio.js":"const AudioFX = {\n  ctx: null,\n  masterGain: null,\n  enabled: true,\n  init() {\n    try {\n      this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n      this.masterGain = this.ctx.createGain();\n      this.masterGain.gain.value = 0.25;\n      this.masterGain.connect(this.ctx.destination);\n    } catch (e) {\n      this.enabled = false;\n    }\n  },\n  resume() {\n    if (this.ctx && this.ctx.state === 'suspended') {\n      this.ctx.resume();\n    }\n  },\n  playTone(freq, duration, type, volume) {\n    type = type || 'square';\n    volume = volume || 0.3;\n    if (!this.enabled || !this.ctx) return;\n    const osc = this.ctx.createOscillator();\n    const gain = this.ctx.createGain();\n    osc.type = type;\n    osc.frequency.value = freq;\n    gain.gain.setValueAtTime(volume, this.ctx.currentTime);\n    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);\n    osc.connect(gain);\n    gain.connect(this.masterGain);\n    osc.start();\n    osc.stop(this.ctx.currentTime + duration);\n  },\n  hit() { this.playTone(220, 0.06, 'square', 0.15); },\n  hitHard() { this.playTone(140, 0.12, 'sawtooth', 0.2); },\n  destroy() { this.playTone(80, 0.18, 'sawtooth', 0.25); },\n  launch() { this.playTone(440, 0.08, 'triangle', 0.15); },\n  wall() { this.playTone(330, 0.04, 'sine', 0.1); },\n  bonus() { this.playTone(880, 0.1, 'triangle', 0.2); },\n  loseLife() { this.playTone(110, 0.35, 'sawtooth', 0.25); },\n  levelClear() {\n    this.playTone(523, 0.12, 'triangle', 0.2);\n    setTimeout(() => this.playTone(659, 0.12, 'triangle', 0.2), 120);\n    setTimeout(() => this.playTone(784, 0.25, 'triangle', 0.2), 240);\n  },\n  gameOver() {\n    this.playTone(220, 0.2, 'sawtooth', 0.2);\n    setTimeout(() => this.playTone(165, 0.3, 'sawtooth', 0.2), 200);\n    setTimeout(() => this.playTone(110, 0.5, 'sawtooth', 0.2), 450);\n  }\n};",
+"js/entities/Ball.js":"class Ball {\n  constructor(x, y, radius) {\n    this.pos = { x: x, y: y };\n    this.vel = { x: 0, y: 0 };\n    this.radius = radius;\n    this.trail = [];\n    this.maxTrail = 14;\n    this.spin = 0;\n    this.active = false;\n    this.glowPhase = 0;\n  }\n  launch(angleDeg, power) {\n    const angle = angleDeg * Math.PI / 180;\n    this.vel.x = Math.cos(angle) * power;\n    this.vel.y = Math.sin(angle) * power;\n    this.spin = this.vel.x * 0.01;\n    this.active = true;\n  }\n  update(dt) {\n    if (!this.active) return;\n    this.glowPhase += dt * 8;\n    const speed = Math.hypot(this.vel.x, this.vel.y);\n    const steps = Math.max(1, Math.ceil(speed * dt / (this.radius * 0.4)));\n    const sdt = dt / steps;\n    for (let i = 0; i < steps; i++) {\n      this.pos.x += this.vel.x * sdt;\n      this.pos.y += this.vel.y * sdt;\n    }\n    this.trail.push({ x: this.pos.x, y: this.pos.y });\n    if (this.trail.length > this.maxTrail) this.trail.shift();\n    this.spin *= 0.97;\n  }\n  draw(ctx) {\n    // Trail\n    for (let i = 0; i < this.trail.length; i++) {\n      const t = this.trail[i];\n      const ratio = i / this.trail.length;\n      const alpha = ratio * 0.5;\n      ctx.fillStyle = 'rgba(0, 243, 255, ' + alpha + ')';\n      ctx.beginPath();\n      ctx.arc(t.x, t.y, this.radius * ratio * 0.9, 0, Math.PI * 2);\n      ctx.fill();\n    }\n    // Glow\n    const glowSize = this.radius * (1.5 + Math.sin(this.glowPhase) * 0.15);\n    const grad = ctx.createRadialGradient(this.pos.x, this.pos.y, 0, this.pos.x, this.pos.y, glowSize);\n    grad.addColorStop(0, 'rgba(0, 243, 255, 1)');\n    grad.addColorStop(0.4, 'rgba(0, 243, 255, 0.4)');\n    grad.addColorStop(1, 'rgba(0, 243, 255, 0)');\n    ctx.fillStyle = grad;\n    ctx.beginPath();\n    ctx.arc(this.pos.x, this.pos.y, glowSize, 0, Math.PI * 2);\n    ctx.fill();\n    // Core\n    ctx.fillStyle = '#ffffff';\n    ctx.beginPath();\n    ctx.arc(this.pos.x, this.pos.y, this.radius, 0, Math.PI * 2);\n    ctx.fill();\n  }\n}",
+"js/entities/Paddle.js":"class Paddle {\n  constructor(x, y, width, height) {\n    this.pos = { x: x, y: y };\n    this.width = width;\n    this.height = height;\n    this.accel = 1400;\n    this.friction = 0.82;\n    this.vx = 0;\n    this.vMax = 520;\n    this.pulse = 0;\n    this.glowIntensity = 0;\n  }\n  update(dt, input, bounds) {\n    let ax = 0;\n    if (input.left) ax -= this.accel;\n    if (input.right) ax += this.accel;\n    this.vx += ax * dt;\n    this.vx *= Math.pow(this.friction, dt * 60);\n    this.vx = Math.max(-this.vMax, Math.min(this.vMax, this.vx));\n    this.pos.x += this.vx * dt;\n    if (this.pos.x < this.width / 2) {\n      this.pos.x = this.width / 2;\n      this.vx *= -0.5;\n    }\n    if (this.pos.x > bounds.w - this.width / 2) {\n      this.pos.x = bounds.w - this.width / 2;\n      this.vx *= -0.5;\n    }\n    this.pulse += dt * 5;\n    this.glowIntensity = 0.5 + Math.sin(this.pulse) * 0.2;\n  }\n  draw(ctx) {\n    const w = this.width, h = this.height;\n    const x = this.pos.x, y = this.pos.y;\n    ctx.save();\n    ctx.shadowColor = '#00f3ff';\n    ctx.shadowBlur = 20 * this.glowIntensity;\n    const grad = ctx.createLinearGradient(x - w / 2, y, x + w / 2, y);\n    grad.addColorStop(0, 'rgba(0, 243, 255, 0.2)');\n    grad.addColorStop(0.5, 'rgba(0, 243, 255, 0.95)');\n    grad.addColorStop(1, 'rgba(0, 243, 255, 0.2)');\n    ctx.fillStyle = grad;\n    ctx.beginPath();\n    ctx.moveTo(x - w / 2, y);\n    ctx.lineTo(x + w / 2, y);\n    ctx.lineTo(x + w / 2 * 0.65, y - h);\n    ctx.lineTo(x - w / 2 * 0.65, y - h);\n    ctx.closePath();\n    ctx.fill();\n    ctx.strokeStyle = '#00f3ff';\n    ctx.lineWidth = 2;\n    ctx.stroke();\n    ctx.restore();\n  }\n}",
+"js/entities/Brick.js":"class Brick {\n  constructor(x, y, w, h, hp, tier, color) {\n    this.pos = { x: x, y: y };\n    this.w = w;\n    this.h = h;\n    this.hp = hp;\n    this.maxHp = hp;\n    this.tier = tier;\n    this.color = color;\n    this.alive = true;\n    this.flashTimer = 0;\n    this.shakeTimer = 0;\n  }\n  get centerX() { return this.pos.x + this.w / 2; }\n  get centerY() { return this.pos.y + this.h / 2; }\n  takeDamage(amount) {\n    this.hp -= amount;\n    this.flashTimer = 0.12;\n    this.shakeTimer = 0.1;\n    if (this.hp <= 0) this.alive = false;\n  }\n  update(dt) {\n    if (this.flashTimer > 0) this.flashTimer -= dt;\n    if (this.shakeTimer > 0) this.shakeTimer -= dt;\n  }\n  draw(ctx) {\n    if (!this.alive) return;\n    const shakeX = this.shakeTimer > 0 ? (Math.random() - 0.5) * 3 : 0;\n    const shakeY = this.shakeTimer > 0 ? (Math.random() - 0.5) * 3 : 0;\n    const x = this.pos.x + shakeX, y = this.pos.y + shakeY;\n    const alpha = this.flashTimer > 0 ? 1 : 0.88;\n    const strokeAlpha = this.flashTimer > 0 ? 1 : 0.9;\n    const grad = ctx.createLinearGradient(x, y, x, y + this.h);\n    grad.addColorStop(0, this.color.top);\n    grad.addColorStop(1, this.color.bottom);\n    ctx.globalAlpha = alpha;\n    ctx.fillStyle = grad;\n    ctx.fillRect(x, y, this.w, this.h);\n    ctx.globalAlpha = strokeAlpha;\n    ctx.strokeStyle = this.color.stroke;\n    ctx.lineWidth = 2;\n    ctx.strokeRect(x, y, this.w, this.h);\n    if (this.hp < this.maxHp) {\n      ctx.globalAlpha = 0.7;\n      ctx.fillStyle = '#ffffff';\n      ctx.font = 'bold 13px Courier New';\n      ctx.textAlign = 'center';\n      ctx.textBaseline = 'middle';\n      ctx.fillText(this.hp, this.centerX, this.centerY);\n    }\n    ctx.globalAlpha = 1;\n  }\n}",
+"js/systems/Physics.js":"const Physics = {\n  clamp(val, min, max) {\n    return Math.max(min, Math.min(max, val));\n  },\n  lerp(a, b, t) {\n    return a + (b - a) * t;\n  },\n  normalize(x, y) {\n    const len = Math.hypot(x, y);\n    if (len === 0) return { x: 0, y: 0 };\n    return { x: x / len, y: y / len };\n  },\n  substep(pos, vel, dt, steps) {\n    const sdt = dt / steps;\n    for (let i = 0; i < steps; i++) {\n      pos.x += vel.x * sdt;\n      pos.y += vel.y * sdt;\n    }\n  }\n};",
+"js/systems/Collision.js":"const Collision = {\n  circleRect(cx, cy, cr, rx, ry, rw, rh) {\n    const closestX = Math.max(rx, Math.min(cx, rx + rw));\n    const closestY = Math.max(ry, Math.min(cy, ry + rh));\n    const dx = cx - closestX;\n    const dy = cy - closestY;\n    const distSq = dx * dx + dy * dy;\n    if (distSq < cr * cr) {\n      const dist = Math.sqrt(distSq) || 0.001;\n      return {\n        hit: true,\n        nx: dx / dist,\n        ny: dy / dist,\n        penetration: cr - dist,\n        closestX: closestX,\n        closestY: closestY\n      };\n    }\n    return { hit: false };\n  },\n  resolveBallBrick(ball, brick) {\n    const result = this.circleRect(\n      ball.pos.x, ball.pos.y, ball.radius,\n      brick.pos.x, brick.pos.y, brick.w, brick.h\n    );\n    if (!result.hit) return null;\n    const cx = result.closestX;\n    const cy = result.closestY;\n    let nx = ball.pos.x - cx;\n    let ny = ball.pos.y - cy;\n    const nlen = Math.hypot(nx, ny) || 1;\n    nx /= nlen;\n    ny /= nlen;\n    const dot = ball.vel.x * nx + ball.vel.y * ny;\n    const deviation = Math.acos(Math.max(-1, Math.min(1, dot))) * 180 / Math.PI;\n    let damage;\n    if (deviation < 45) {\n      damage = 1;\n    } else {\n      damage = Math.min(3, brick.tier);\n    }\n    const reflectDot = ball.vel.x * nx + ball.vel.y * ny;\n    ball.vel.x -= 2 * reflectDot * nx;\n    ball.vel.y -= 2 * reflectDot * ny;\n    ball.vel.x *= 0.82;\n    ball.vel.y *= 0.82;\n    ball.pos.x = cx + nx * ball.radius;\n    ball.pos.y = cy + ny * ball.radius;\n    return { hit: true, nx: nx, ny: ny, deviation: deviation, damage: damage };\n  },\n  resolveWall(ball, bounds) {\n    let hit = false;\n    let nx = 0, ny = 0;\n    if (ball.pos.x - ball.radius < 0) {\n      nx = 1; ny = 0;\n      ball.pos.x = ball.radius;\n      hit = true;\n    } else if (ball.pos.x + ball.radius > bounds.w) {\n      nx = -1; ny = 0;\n      ball.pos.x = bounds.w - ball.radius;\n      hit = true;\n    }\n    if (ball.pos.y - ball.radius < 0) {\n      nx = 0; ny = 1;\n      ball.pos.y = ball.radius;\n      hit = true;\n    } else if (ball.pos.y + ball.radius > bounds.h) {\n      nx = 0; ny = -1;\n      ball.pos.y = bounds.h - ball.radius;\n      hit = true;\n    }\n    if (hit) {\n      const reflectDot = ball.vel.x * nx + ball.vel.y * ny;\n      ball.vel.x -= 2 * reflectDot * nx;\n      ball.vel.y -= 2 * reflectDot * ny;\n      ball.vel.x *= 0.9;\n      ball.vel.y *= 0.9;\n      return { hit: true, nx: nx, ny: ny };\n    }\n    return { hit: false };\n  }\n};",
+"js/ui/HUD.js":"class HUD {\n  constructor(canvas, gaugeCanvas) {\n    this.canvas = canvas;\n    this.ctx = canvas.getContext('2d');\n    this.gaugeCanvas = gaugeCanvas;\n    this.gctx = gaugeCanvas.getContext('2d');\n    this.score = 0;\n    this.lives = 3;\n    this.level = 1;\n    this.timer = 0;\n    this.angle = 0;\n    this.particles = [];\n  }\n  setScore(s) { this.score = s; }\n  setLives(l) { this.lives = l; }\n  setLevel(l) { this.level = l; }\n  setTimer(t) { this.timer = t; }\n  setAngle(a) { this.angle = a; }\n  addParticle(p) { this.particles.push(p); }\n  updateParticles(dt) {\n    for (let i = this.particles.length - 1; i >= 0; i--) {\n      const p = this.particles[i];\n      p.life -= dt;\n      p.x += p.vx * dt;\n      p.y += p.vy * dt;\n      p.vy += 200 * dt;\n      if (p.life <= 0) this.particles.splice(i, 1);\n    }\n  }\n  draw(ctx, paddle) {\n    ctx.save();\n    // Score\n    ctx.font = 'bold 18px Courier New';\n    ctx.textAlign = 'left';\n    ctx.textBaseline = 'top';\n    ctx.fillStyle = '#00f3ff';\n    ctx.shadowColor = 'rgba(0, 243, 255, 0.8)';\n    ctx.shadowBlur = 10;\n    ctx.fillText('SCORE ' + this.score, 12, 10);\n    // Level\n    ctx.fillStyle = '#00f3ff';\n    ctx.fillText('LEVEL ' + this.level, 12, 32);\n    // Timer\n    ctx.fillStyle = '#ff00e5';\n    ctx.fillText('TIME ' + this.timer.toFixed(2), 12, 54);\n    // Lives\n    ctx.textAlign = 'right';\n    ctx.fillStyle = '#ff00e5';\n    ctx.fillText('LIVES', this.canvas.width - 12, 10);\n    for (let i = 0; i < this.lives; i++) {\n      ctx.font = '20px serif';\n      ctx.fillText('♥', this.canvas.width - 12 - i * 24, 30);\n    }\n    // Angle gauge\n    this.drawGauge(paddle);\n    // Particles\n    for (const p of this.particles) {\n      const alpha = p.life / p.maxLife;\n      ctx.globalAlpha = alpha;\n      ctx.fillStyle = p.color;\n      ctx.beginPath();\n      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);\n      ctx.fill();\n    }\n    ctx.globalAlpha = 1;\n    ctx.restore();\n  }\n  drawGauge(paddle) {\n    const g = this.gctx;\n    const w = this.gaugeCanvas.width;\n    const h = this.gaugeCanvas.height;\n    const cx = w / 2, cy = h / 2;\n    g.clearRect(0, 0, w, h);\n    // Background ring\n    g.strokeStyle = 'rgba(0, 243, 255, 0.2)';\n    g.
