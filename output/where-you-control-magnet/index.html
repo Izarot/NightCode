@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Magnetic Mayhem</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧲</text></svg>">
+    <style>
+        body { margin: 0; padding: 0; background: #1a1a2e; color: #eee; font-family: 'Arial', sans-serif; overflow: hidden; }
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        canvas { background: #16213e; border: 2px solid #0f3460; border-radius: 8px; box-shadow: 0 0 20px rgba(0, 150, 255, 0.3); }
+        .hud { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; z-index: 10; }
+        .score, .timer, .power { background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 5px; font-size: 18px; }
+        .power-bar { width: 200px; height: 20px; background: #333; border-radius: 10px; overflow: hidden; margin-top: 5px; }
+        .power-fill { height: 100%; width: 100%; background: linear-gradient(to right, #00ff00, #ff0000); transition: width 0.3s; }
+        .menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
+        .menu h1 { color: #00b4ff; font-size: 3em; margin-bottom: 20px; text-shadow: 0 0 10px #00b4ff; }
+        .menu button { background: #0f3460; color: #eee; border: 2px solid #00b4ff; padding: 15px 30px; font-size: 1.2em; border-radius: 8px; cursor: pointer; margin: 10px; }
+        .menu button:hover { background: #00b4ff; color: #000; }
+        @media (max-width: 600px) {
+            .menu h1 { font-size: 2em; }
+            .menu button { font-size: 1em; padding: 10px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="hud">
+            <div class="score">Score: <span id="score">0</span></div>
+            <div class="timer">Time: <span id="timer">60</span>s</div>
+            <div class="power">
+                Power: <span id="powerPercent">100%</span>
+                <div class="power-bar"><div id="powerFill" class="power-fill"></div></div>
+            </div>
+        </div>
+        <div class="menu" id="startMenu">
+            <h1>Magnetic Mayhem</h1>
+            <p>Use WASD or Arrows to move. Collect metal objects!</p>
+            <button id="startBtn">Start Game</button>
+            <button id="pauseBtn">Pause</button>
+        </div>
+    </div>
+    <script src="src/game.js"></script>
+</body>
+</html>

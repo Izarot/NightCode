@@ -1,0 +1,283 @@
+JSON Decode Error after continuation: Invalid control character at: line 3 column 17321 (char 22339)
+
+Raw: {
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n    <title>Magnetic Mayhem</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧲</text></svg>\">\n    <style>\n        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: none; }\n        body { background: #1a1a2e; overflow: hidden; font-family: 'Segoe UI', sans-serif; }\n        #gameCanvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 100vw; max-height: 100vh; }\n        #uiOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }\n        .hud { position: absolute; color: #e0e0e0; text-shadow: 0 0 5px #000, 0 0 10px #0ff; pointer-events: auto; }\n        #score { top: 15px; left: 15px; font-size: 1.5rem; font-weight: bold; }\n        #timer { top: 15px; right: 15px; font-size: 1.5rem; font-weight: bold; font-variant-numeric: tabular-nums; }\n        #speedrunTimer { top: 55px; right: 15px; font-size: 1rem; color: #ffd700; text-shadow: 0 0 5px #ff8c00; }\n        #powerBarContainer { bottom: 15px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 300px; height: 12px; background: rgba(0,0,0,0.7); border-radius: 6px; border: 2px solid #444; overflow: hidden; }\n        #powerBar { height: 100%; width: 100%; background: linear-gradient(90deg, #00ff88, #00ccff, #ff00ff); border-radius: 4px; transition: width 0.2s; }\n        #powerText { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 0.8rem; color: #aaa; }\n        #levelIndicator { top: 15px; left: 50%; transform: translateX(-50%); font-size: 1.2rem; color: #00ffff; text-shadow: 0 0 10px #00ffff; }\n        #comboDisplay { top: 55px; left: 15px; font-size: 1rem; color: #ff6b6b; text-shadow: 0 0 5px #ff0000; opacity: 0; transition: opacity 0.3s; }\n        #comboDisplay.visible { opacity: 1; }\n        .menu { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(10,10,30,0.95); padding: 2rem; border-radius: 15px; border: 2px solid #00ffff; text-align: center; min-width: 300px; box-shadow: 0 0 30px #00ffff88; }\n        .menu h1 { color: #00ffff; margin-bottom: 1rem; text-shadow: 0 0 10px #00ffff; font-size: 2rem; }\n        .menu p { color: #ccc; margin-bottom: 1.5rem; line-height: 1.6; }\n        .menu button { background: linear-gradient(45deg, #00ccff, #00ff88); border: none; color: #000; padding: 0.8rem 2rem; font-size: 1.1rem; font-weight: bold; border-radius: 25px; cursor: pointer; margin: 0.5rem; transition: transform 0.1s, box-shadow 0.1s; }\n        .menu button:active { transform: scale(0.95); }\n        .menu button:hover { box-shadow: 0 0 15px #00ff88; }\n        .hidden { display: none !important; }\n        @media (max-width: 600px) { .hud { font-size: 0.9rem; } #score, #timer { font-size: 1.2rem; } .menu { padding: 1.5rem; min-width: 90vw; } }\n    </style>\n</head>\n<body>\n    <canvas id=\"gameCanvas\"></canvas>\n    <div id=\"uiOverlay\">\n        <div id=\"score\" class=\"hud\">SCORE: 0</div>\n        <div id=\"timer\" class=\"hud\">60.0</div>\n        <div id=\"speedrunTimer\" class=\"hud\">BEST: --:--.--</div>\n        <div id=\"levelIndicator\" class=\"hud\">LEVEL 1</div>\n        <div id=\"comboDisplay\" class=\"hud\">COMBO x1.0</div>\n        <div id=\"powerBarContainer\" class=\"hud\">\n            <div id=\"powerBar\"></div>\n            <div id=\"powerText\">MAGNET POWER: 100%</div>\n        </div>\n        <div id=\"startMenu\" class=\"menu\">\n            <h1>🧲 MAGNETIC MAYHEM</h1>\n            <p>Use WASD/Arrows or Mouse/Touch to move the magnet.<br>Attract metal objects to score points.<br>Collect Power Cores (💎) to boost your magnet!<br>Survive 60 seconds per level.</p>\n            <button id=\"startBtn\">START GAME</button>\n        </div>\n        <div id=\"pauseMenu\" class=\"menu hidden\">\n            <h1>⏸ PAUSED</h1>\n            <button id=\"resumeBtn\">RESUME</button><br>\n            <button id=\"restartBtn\">RESTART</button><br>\n            <button id=\"quitBtn\">QUIT</button>\n        </div>\n        <div id=\"gameOverMenu\" class=\"menu hidden\">\n            <h1>💥 GAME OVER</h1>\n            <p id=\"finalScore\">Score: 0</p>\n            <p id=\"highScore\">Best: 0</p>\n            <button id=\"retryBtn\">TRY AGAIN</button><br>\n            <button id=\"menuBtn\">MAIN MENU</button>\n        </div>\n        <div id=\"levelCompleteMenu\" class=\"menu hidden\">\n            <h1>✨ LEVEL COMPLETE!</h1>\n            <p id=\"levelScore\">Score: 0</p>\n            <p id=\"timeBonus\">Time Bonus: +0</p>\n            <button id=\"nextLevelBtn\">NEXT LEVEL</button>\n        </div>\n    </div>\n    <script src=\"game.js\"></script>\n</body>\n</html>",
+  "game.js": "// Magnetic Mayhem - Physics Puzzle/Platformer\n// Single-file implementation with custom physics, Web Audio, LocalStorage\n\nconst canvas = document.getElementById('gameCanvas');\nconst ctx = canvas.getContext('2d');\n\n// --- Configuration & Constants ---\nconst CONFIG = {\n    baseMagnetPower: 100,\n    maxMagnetPower: 200,\n    powerIncreaseInterval: 5000, // ms\n    powerIncreaseAmount: 10, // %\n    powerCoreBoost: 300, // temporary %\n    powerCoreDuration: 5000, // ms\n    baseAttractionRange: 150,\n    extendedAttractionRange: 200,\n    maxSpeed: 8,\n    acceleration: 0.5,\n    friction: 0.9,\n    levelTime: 60000, // ms\n    objectTypes: {\n        scrap: { baseScore: 1, mass: 1, radius: 6, color: '#888', glow: '#aaa', name: 'SCRAP' },\n        heavy: { baseScore: 3, mass: 3, radius: 12, color: '#555', glow: '#777', name: 'HEAVY' },\n        core: { baseScore: 5, mass: 2, radius: 10, color: '#0ff', glow: '#0ff', name: 'CORE', pulse: true },\n        plate: { baseScore: 10, mass: 5, radius: 15, color: '#ff0', glow: '#ff0', name: 'PLATE', requiresContact: true }\n    },\n    colors: {\n        bg: '#1a1a2e',\n        magnetCore: '#00ffff',\n        magnetCasing: '#444',\n        magnetGlow: '#00ffff',\n        attractionRing: 'rgba(0,255,255,0.15)',\n        particleColors: ['#0ff', '#0f0', '#ff0', '#f0f', '#fff']\n    }\n};\n\n// --- Game State ---\nlet gameState = 'menu'; // menu, playing, paused, gameover, levelcomplete\nlet score = 0;\nlet highScore = parseInt(localStorage.getItem('magneticMayhemHighScore')) || 0;\nlet bestTime = parseFloat(localStorage.getItem('magneticMayhemBestTime')) || null;\nlet level = 1;\nlet levelStartTime = 0;\nlet timeRemaining = CONFIG.levelTime;\nlet magnetPower = CONFIG.baseMagnetPower;\nlet powerCoreActive = false;\nlet powerCoreEndTime = 0;\nlet lastPowerIncrease = 0;\nlet comboCount = 0;\nlet comboTimer = 0;\nlet comboMultiplier = 1.0;\nlet objects = [];\nlet particles = [];\nlet hazards = [];\nlet magnet = { x: 0, y: 0, vx: 0, vy: 0, radius: 20 };\nlet input = { left: false, right: false, up: false, down: false, mouseX: 0, mouseY: 0, useMouse: false };\nlet screenShake = 0;\n\n// --- Audio Context ---\nconst audioCtx = new (window.AudioContext || window.webkitAudioContext)();\nfunction playTone(freq, duration, type='sine', volume=0.1, freqEnd=null) {\n    if (audioCtx.state === 'suspended') audioCtx.resume();\n    const osc = audioCtx.createOscillator();\n    const gain = audioCtx.createGain();\n    osc.connect(gain); gain.connect(audioCtx.destination);\n    osc.type = type;\n    if (freqEnd) {\n        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);\n        osc.frequency.exponentialRampToValueAtTime(freqEnd, audioCtx.currentTime + duration);\n    } else {\n        osc.frequency.value = freq;\n    }\n    gain.gain.setValueAtTime(volume, audioCtx.currentTime);\n    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);\n    osc.start(); osc.stop(audioCtx.currentTime + duration);\n}\nfunction playCollectSound(type) {\n    const cfg = CONFIG.objectTypes[type];\n    if (type === 'core') { playTone(440, 0.1, 'sine', 0.15, 880); playTone(880, 0.2, 'triangle', 0.1, 1760); }\n    else if (type === 'plate') { playTone(200, 0.15, 'square', 0.2, 50); playTone(600, 0.1, 'sine', 0.1); }\n    else if (type === 'heavy') { playTone(150, 0.2, 'triangle', 0.15, 80); }\n    else { playTone(300, 0.1, 'sine', 0.1, 600); }\n}\nfunction playPowerUpSound() { playTone(220, 0.3, 'sawtooth', 0.2, 880); playTone(440, 0.5, 'sine', 0.15, 1320); }\nfunction playHazardSound() { playTone(100, 0.5, 'square', 0.2, 50); }\nfunction playLevelCompleteSound() { [523, 659, 784, 1047].forEach((f, i) => playTone(f, 0.15, 'sine', 0.15, f*1.5)); }\n\n// --- Canvas Sizing ---\nfunction resizeCanvas() {\n    const ratio = Math.min(window.innerWidth / 800, window.innerHeight / 600);\n    canvas.width = 800 * ratio;\n    canvas.height = 600 * ratio;\n    canvas.style.width = `${800 * ratio}px`;\n    canvas.style.height = `${600 * ratio}px`;\n    magnet.x = canvas.width / 2;\n    magnet.y = canvas.height / 2;\n}\nwindow.addEventListener('resize', resizeCanvas);\nresizeCanvas();\n\n// --- Input Handling ---\nwindow.addEventListener('keydown', e => {\n    if (e.key === 'Escape') togglePause();\n    if (gameState !== 'playing') return;\n    switch(e.key.toLowerCase()) {\n        case 'w': case 'arrowup': input.up = true; break;\n        case 's': case 'arrowdown': input.down = true; break;\n        case 'a': case 'arrowleft': input.left = true; break;\n        case 'd': case 'arrowright': input.right = true; break;\n    }\n    input.useMouse = false;\n});\nwindow.addEventListener('keyup', e => {\n    switch(e.key.toLowerCase()) {\n        case 'w': case 'arrowup': input.up = false; break;\n        case 's': case 'arrowdown': input.down = false; break;\n        case 'a': case 'arrowleft': input.left = false; break;\n        case 'd': case 'arrowright': input.right = false; break;\n    }\n});\ncanvas.addEventListener('mousemove', e => {\n    const rect = canvas.getBoundingClientRect();\n    input.mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);\n    input.mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);\n    input.useMouse = true;\n});\ncanvas.addEventListener('touchmove', e => {\n    e.preventDefault();\n    const rect = canvas.getBoundingClientRect();\n    const touch = e.touches[0];\n    input.mouseX = (touch.clientX - rect.left) * (canvas.width / rect.width);\n    input.mouseY = (touch.clientY - rect.top) * (canvas.height / rect.height);\n    input.useMouse = true;\n}, { passive: false });\n\n// --- UI Buttons ---\ndocument.getElementById('startBtn').onclick = startGame;\ndocument.getElementById('resumeBtn').onclick = togglePause;\ndocument.getElementById('restartBtn').onclick = () => { togglePause(); startGame(); };\ndocument.getElementById('quitBtn').onclick = () => { togglePause(); gameState = 'menu'; showMenu('startMenu'); };\ndocument.getElementById('retryBtn').onclick = startGame;\ndocument.getElementById('menuBtn').onclick = () => { gameState = 'menu'; showMenu('startMenu'); };\ndocument.getElementById('nextLevelBtn').onclick = nextLevel;\n\nfunction showMenu(id) {\n    ['startMenu','pauseMenu','gameOverMenu','levelCompleteMenu'].forEach(m => document.getElementById(m).classList.add('hidden'));\n    document.getElementById(id).classList.remove('hidden');\n}\nfunction togglePause() {\n    if (gameState === 'playing') { gameState = 'paused'; showMenu('pauseMenu'); }\n    else if (gameState === 'paused') { gameState = 'playing'; showMenu(''); levelStartTime += Date.now() - pauseTime; }\n}\nlet pauseTime = 0;\n\n// --- Game Initialization ---\nfunction startGame() {\n    gameState = 'playing';\n    showMenu('');\n    score = 0;\n    level = 1;\n    magnetPower = CONFIG.baseMagnetPower;\n    powerCoreActive = false;\n    comboCount = 0;\n    comboMultiplier = 1.0;\n    objects = [];\n    particles = [];\n    hazards = [];\n    magnet.x = canvas.width / 2;\n    magnet.y = canvas.height / 2;\n    magnet.vx = magnet.vy = 0;\n    initLevel();\n    levelStartTime = Date.now();\n    lastPowerIncrease = Date.now();\n    requestAnimationFrame(gameLoop);\n}\nfunction nextLevel() {\n    level++;\n    magnetPower = Math.min(CONFIG.baseMagnetPower + (level-1)*20, CONFIG.maxMagnetPower);\n    powerCoreActive = false;\n    objects = [];\n    particles = [];\n    hazards = [];\n    magnet.x = canvas.width / 2;\n    magnet.y = canvas.height / 2;\n    magnet.vx = magnet.vy = 0;\n    initLevel();\n    levelStartTime = Date.now();\n    lastPowerIncrease = Date.now();\n    gameState = 'playing';\n    showMenu('');\n}\nfunction initLevel() {\n    timeRemaining = CONFIG.levelTime;\n    const objCount = 10 + level * 3;\n    for (let i = 0; i < objCount; i++) spawnObject();\n    if (level >= 2) spawnHazards();\n}\nfunction spawnObject() {\n    const types = ['scrap','scrap','scrap','heavy','heavy','core','plate'];\n    const type = types[Math.floor(Math.random() * types.length)];\n    const cfg = CONFIG.objectTypes[type];\n    let x, y, safe = false;\n    while (!safe) {\n        x = Math.random() * (canvas.width - 100) + 50;\n        y = Math.random() * (canvas.height - 100) + 50;\n        const dx = x - magnet.x, dy = y - magnet.y;\n        if (Math.sqrt(dx*dx + dy*dy) > 200) safe = true;\n    }\n    objects.push({\n        x, y, vx: 0, vy: 0,\n        type, ...cfg,\n        angle: Math.random() * Math.PI * 2,\n        spin: (Math.random() - 0.5) * 0.1,\n        collected: false,\n        pulsePhase: Math.random() * Math.PI * 2\n    });\n}\nfunction spawnHazards() {\n    if (level >= 3) {\n        for (let i = 0; i < 2; i++) {\n            hazards.push({\n                x: Math.random() * canvas.width,\n                y: Math.random() * canvas.height,\n                radius: 80 + Math.random() * 40,\n                type: 'electromagnet',\n                active: true,\n                timer: 0\n            });\n        }\n    }\n    if (level >= 4) {\n        hazards.push({\n            x: canvas.width / 2,\n            y: canvas.height / 2,\n            radius: 150,\n            type: 'gravityWell',\n            strength: 0.3\n        });\n    }\n}\n\n// --- Core Physics ---\nfunction updateMagnet(dt) {\n    let ax = 0, ay = 0;\n    if (input.useMouse) {\n        const dx = input.mouseX - magnet.x;\n        const dy = input.mouseY - magnet.y;\n        const dist = Math.sqrt(dx*dx + dy*dy);\n        if (dist > 5) { ax = (dx/dist) * CONFIG.acceleration * 2; ay = (dy/dist) * CONFIG.acceleration * 2; }\n    } else {\n        if (input.left) ax -= CONFIG.acceleration;\n        if (input.right) ax += CONFIG.acceleration;\n        if (input.up) ay -= CONFIG.acceleration;\n        if (input.down) ay += CONFIG.acceleration;\n    }\n    magnet.vx += ax; magnet.vy += ay;\n    magnet.vx *= CONFIG.friction; magnet.vy *= CONFIG.friction;\n    const speed = Math.sqrt(magnet.vx*magnet.vx + magnet.vy*magnet.vy);\n    if (speed > CONFIG.maxSpeed) { magnet.vx = (magnet.vx/speed)*CONFIG.maxSpeed; magnet.vy = (magnet.vy/speed)*CONFIG.maxSpeed; }\n    magnet.x += magnet.vx; magnet.y += magnet.vy;\n    // Clamp to canvas\n    magnet.x = Math.max(magnet.radius, Math.min(canvas.width - magnet.radius, magnet.x));\n    magnet.y = Math.max(magnet.radius, Math.min(canvas.height - magnet.radius, magnet.y));\n}\n\nfunction updateObjects(dt) {\n    const range = magnetPower > 150 ? CONFIG.extendedAttractionRange : CONFIG.baseAttractionRange;\n    const effectivePower = magnetPower * (powerCoreActive ? 3 : 1) / 100;\n    \n    objects.forEach(obj => {\n        if (obj.collected) return;\n        \n        const dx = magnet.x - obj.x;\n        const dy = magnet.y - obj.y;\n        const distSq = dx*dx + dy*dy;\n        const dist = Math.sqrt(distSq);\n        \n        // Attraction force\n        if (dist < range && !(obj.requiresContact && dist > magnet.radius + obj.radius)) {\n            const force = (effectivePower * obj.mass) / (distSq + 1);\n            const fx = (dx/dist) * force * 0.05;\n            const fy = (dy/dist) * force * 0.05;\n            obj.vx += fx; obj.vy += fy;\n            // Shudder effect\n            obj.shudder = Math.min(5, force * 0.5);\n        }\n        \n        // Gravity well hazard\n        hazards.filter(h => h.type === 'gravityWell').forEach(h => {\n            const hdx = h.x - obj.x, hdy = h.y - obj.y;\n            const hdist = Math.sqrt(hdx*hdx + hdy*hdy);\n            if (hdist < h.radius) {\n                const f = h.strength * (1 - hdist/h.radius);\n                obj.vx += (hdx/hdist) * f; obj.vy += (hdy/hdist) * f;\n            }\n        });\n        \n        // Physics integration\n        obj.vx *= 0.95; obj.vy *= 0.95; // air resistance\n        obj.x += obj.vx; obj.y += obj.vy;\n        obj.angle += obj.spin;\n        obj.pulsePhase += 0.1;\n        \n        // Wall collisions\n        if (obj.x < obj.radius) { obj.x = obj.radius; obj.vx *= -0.7; }\n        if (obj.x > canvas.width - obj.radius) { obj.x = canvas.width - obj.radius; obj.vx *= -0.7; }\n        if (obj.y < obj.radius) { obj.y = obj.radius; obj.vy *= -0.7; }\n        if (obj.y > canvas.height - obj.radius) { obj.y = canvas.height - obj.radius; obj.vy *= -0.7; }\n        \n        // Collection check\n        if (dist < magnet.radius + obj.radius) {\n            collectObject(obj);\n        }\n        \n        // Electromagnet hazard repulsion\n        hazards.filter(h => h.type === 'electromagnet' && h.active).forEach(h => {\n            const hdx = obj.x - h.x, hdy = obj.y - h.y;\n            const hdist = Math.sqrt(hdx*hdx + hdy*hdy);\n            if (hdist < h.radius) {\n                const f = 2 * (1 - hdist/h.radius);\n                obj.vx += (hdx/hdist) * f; obj.vy += (hdy/hdist) * f;\n            }\n        });\n    });\n    \n    // Remove collected\n    objects = objects.filter(o => !o.collected);\n}\n\nfunction collectObject(obj) {\n    obj.collected = true;\n    const points = Math.floor(obj.baseScore * comboMultiplier);\n    score += points;\n    playCollectSound(obj.type);\n    \n    // Combo system\n    comboCount++;\n    comboTimer = 2000;\n    if (comboCount % 3 === 0) {\n        comboMultiplier = Math.min(3, comboMultiplier + 0.1);\n        showCombo();\n    }\n    \n    // Power core effect\n    if (obj.type === 'core') {\n        activatePowerCore();\n    }\n    \n    // Particles\n    for (let i = 0; i < 15; i++) {\n        particles.push({\n            x: obj.x, y: obj.y,\n            vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,\n            life: 1, decay: 0.02 + Math.random()*0.03,\n            color: CONFIG.colors.particleColors[Math.floor(Math.random()*CONFIG.colors.particleColors.length)],\n            size: 2 + Math.random()*4\n        });\n    }\n    screenShake = 3;\n    updateHUD();\n}\n\nfunction activatePowerCore() {\n    powerCoreActive = true;\n    powerCoreEndTime = Date.now() + CONFIG.powerCoreDuration;\n    magnetPower = CONFIG.powerCoreBoost;\n    playPowerUpSound();\n    for (let i = 0; i < 30; i++) {\n        particles.push({\n            x: magnet.x, y: magnet.y,\n            vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15,\n            life: 1, decay: 0.01,\n            color: '#0ff', size: 3 + Math.random()*5\n        });\n    }\n}\n\nfunction updateHazards(dt) {\n    hazards.forEach(h => {\n        if (h.type === 'electromagnet') {\n            h.timer += dt;\n            if (h.timer > 3000) { h.active = !h.active; h.timer = 0; }\n            // Repel magnet\n            if (h.active) {\n                const dx = magnet.x - h.x, dy = magnet.y - h.y;\n                const dist = Math.sqrt(dx*dx + dy*dy);\n                if (dist < h.radius && dist > 1) {\n                    const force = 5 * (1 - dist/h.radius);\n                    magnet.vx += (dx/dist) * force;\n                    magnet.vy += (dy/dist) * force;\n                }\n            }\n        }\n    });\n    \n    // Check power core expiry\n    if (powerCoreActive && Date.now() > powerCoreEndTime) {\n        powerCoreActive = false;\n        magnetPower = Math.min(magnetPower, CONFIG.maxMagnetPower);\n    }\n}\n\nfunction updateParticles(dt) {\n    particles.forEach(p => {\n        p.x += p.vx; p.y += p.vy;\n        p.vy += 0.2; // gravity\n        p.life -= p.decay;\n        p.size *= 0.98;\n    });\n    particles = particles.filter(p => p.life > 0);\n}\n\nfunction updateCombo(dt) {\n    if (comboTimer > 0) {\n        comboTimer -= dt;\n        if (comboTimer <= 0) {\n            comboCount = 0;\n            comboMultiplier = 1.0;\n            document.getElementById('comboDisplay').classList.remove('visible');\n        }\n    }\n}\nfunction showCombo() {\n    const el = document.getElementById('comboDisplay');\n    el.textContent = `COMBO x${comboMultiplier.toFixed(1)}`;\n    el.classList.add('visible');\n}\n\nfunction updatePower() {\n    const now = Date.now();\n    if (now - lastPowerIncrease > CONFIG.powerIncreaseInterval && !powerCoreActive) {\n        magnetPower = Math.min(magnetPower + CONFIG.powerIncreaseAmount, CONFIG.maxMagnetPower);\n        lastPowerIncrease = now;\n    }\n}\n\nfunction updateTimer() {\n    timeRemaining = Math.max(0, CONFIG.levelTime - (Date.now() - levelStartTime));\n    if (timeRemaining <= 0 && gameState === 'playing') {\n        endLevel(false);\n    }\n}\n\nfunction endLevel(completed) {\n    gameState = completed ? 'levelcomplete' : 'gameover';\n    const timeBonus = completed ? Math.floor(timeRemaining / 1000) * 50 : 0;\n    score += timeBonus;\n    \n    if (score > highScore) {\n        highScore = score;\n        localStorage.setItem('magneticMayhemHighScore', highScore);\n    }\n    const levelTimeSec = (Date.now() - levelStartTime) / 1000;\n    if (completed && (bestTime === null || levelTimeSec < bestTime)) {\n        bestTime = levelTimeSec;\n        localStorage.setItem('magneticMayhemBestTime', bestTime);\n    }\n    \n    if (completed) {\n        playLevelCompleteSound();\n        document.getElementById('levelScore').textContent = `Score: ${score - timeBonus}`;\n        document.getElementById('timeBonus').textContent = `Time Bonus: +${timeBonus}`;
+        document.getElementById('nextLevelBtn').textContent = level >= 10 ? 'VICTORY!' : 'NEXT LEVEL';
+        showMenu('levelCompleteMenu');
+    } else {
+        document.getElementById('finalScore').textContent = `Score: ${score}`;
+        document.getElementById('highScore').textContent = `Best: ${highScore}`;
+        showMenu('gameOverMenu');
+    }
+    updateHUD();
+}
+
+function updateHUD() {
+    document.getElementById('score').textContent = `SCORE: ${score}`;
+    document.getElementById('timer').textContent = `${(timeRemaining / 1000).toFixed(1)}`;
+    document.getElementById('levelIndicator').textContent = `LEVEL ${level}`;
+    const powerPct = Math.round((magnetPower / CONFIG.maxMagnetPower) * 100);
+    document.getElementById('powerBar').style.width = `${powerPct}%`;
+    document.getElementById('powerText').textContent = `MAGNET POWER: ${powerPct}%`;
+    if (bestTime !== null) {
+        const m = Math.floor(bestTime / 60);
+        const s = (bestTime % 60).toFixed(2).padStart(5, '0');
+        document.getElementById('speedrunTimer').textContent = `BEST: ${m}:${s}`;
+    }
+}
+
+// --- Rendering ---
+function render() {
+    ctx.save();
+    if (screenShake > 0) {
+        ctx.translate((Math.random() - 0.5) * screenShake * 2, (Math.random() - 0.5) * screenShake * 2);
+        screenShake *= 0.9;
+        if (screenShake < 0.5) screenShake = 0;
+    }
+
+    // Background
+    ctx.fillStyle = CONFIG.colors.bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Grid
+    ctx.strokeStyle = 'rgba(0,255,255,0.03)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 50) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 50) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+
+    // Attraction range ring
+    if (gameState === 'playing') {
+        const range = magnetPower > 150 ? CONFIG.extendedAttractionRange : CONFIG.baseAttractionRange;
+        const gradient = ctx.createRadialGradient(magnet.x, magnet.y, 0, magnet.x, magnet.y, range);
+        gradient.addColorStop(0, 'rgba(0,255,255,0.08)');
+        gradient.addColorStop(1, 'rgba(0,255,255,0)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(magnet.x, magnet.y, range, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Hazards
+    hazards.forEach(h => {
+        if (h.type === 'electromagnet') {
+            ctx.strokeStyle = h.active ? '#ff0044' : '#ff004444';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([10, 5]);
+            ctx.beginPath();
+            ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            // Center
+            ctx.fillStyle = h.active ? '#ff0044' : '#440011';
+            ctx.beginPath();
+            ctx.arc(h.x, h.y, 15, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (h.type === 'gravityWell') {
+            const grad = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.radius);
+            grad.addColorStop(0, 'rgba(255,0,255,0.15)');
+            grad.addColorStop(1, 'rgba(255,0,255,0)');
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#ff00ff88';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    });
+
+    // Objects
+    objects.forEach(obj => {
+        if (obj.collected) return;
+        ctx.save();
+        ctx.translate(obj.x, obj.y);
+        ctx.rotate(obj.angle);
+
+        // Shudder
+        if (obj.shudder > 0) {
+            ctx.translate((Math.random() - 0.5) * obj.shudder, (Math.random() - 0.5) * obj.shudder);
+            obj.shudder *= 0.8;
+        }
+
+        // Pulse for cores
+        if (obj.pulse) {
+            const pulse = Math.sin(obj.pulsePhase) * 0.15 + 1;
+            ctx.scale(pulse, pulse);
+        }
+
+        // Glow
+        ctx.shadowColor = obj.glow;
+        ctx.shadowBlur = 10;
+
+        // Shape based on type
+        if (obj.type === 'scrap') {
+            // Irregular polygon
+            ctx.fillStyle = obj.color;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const r = obj.radius * (0.7 + Math.sin(i * 2 + obj.angle * 3) * 0.3);
+                const a = (i / 6) * Math.PI * 2;
+                if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+                else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+            }
+            ctx.closePath();
+            ctx.fill();
+        } else if (obj.type === 'heavy') {
+            // Hexagon
+            ctx.fillStyle = obj.color;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                const a = (i / 6) * Math.PI * 2;
+                if (i === 0) ctx.moveTo(Math.cos(a) * obj.radius, Math.sin(a) * obj.radius);
+                else ctx.lineTo(Math.cos(a) * obj.radius, Math.sin(a) * obj.radius);
+            }
+            ctx.closePath();
+            ctx.fill();
+            // Inner detail
+            ctx.fillStyle = '#333';
+            ctx.beginPath();
+            ctx.arc(0, 0, obj.radius * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (obj.type === 'core') {
+            // Diamond
+            ctx.fillStyle = obj.color;
+            ctx.beginPath();
+            ctx.moveTo(0, -obj.radius);
+            ctx.lineTo(obj.radius, 0);
+            ctx.lineTo(0, obj.radius);
+            ctx.lineTo(-obj.radius, 0);
+            ctx.closePath();
+            ctx.fill();
+            // Inner glow
+            ctx.fillStyle = '#fff';
+            ctx.globalAlpha = 0.5;
+            ctx.beginPath();
+            ctx.moveTo(0, -obj.radius * 0.5);
+            ctx.lineTo(obj.radius * 0.5, 0);
+            ctx.lineTo(0, obj.radius * 0.5);
+            ctx.lineTo(-obj.radius * 0.5, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.globalAlpha = 1;
+        } else if (obj.type === 'plate') {
+            // Rectangle with rounded corners
+            ctx.fillStyle = obj.color;
+            const w = obj.radius * 1.5, h = obj.radius * 0.8;
+            ctx.beginPath();
+            ctx.roundRect(-w/2, -h/2, w, h, 5);
+            ctx.fill();
+            // Bolt holes
+            ctx.fillStyle = '#aa0';
+            [-w/3, w/3].forEach(x => {
+                ctx.beginPath();
+                ctx.arc(x, 0, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        ctx.shadowBlur = 0;
+        ctx.restore();
+    });
+
+    // Particles
+    particles.forEach(p => {
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    // Magnet
+    ctx.save();
+    ctx.translate(magnet.x, magnet.y);
+
+    // Power core aura
+    if (powerCoreActive) {
+        const pulse = Math.sin(Date.now() * 0.01) * 0.2 + 1;
+        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, magnet.radius * 3 * pulse);
+        grad.addColorStop(0, 'rgba(0,255,255,0.3)');
+        grad.addColorStop(1, 'rgba(0,255,255,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, magnet.radius * 3 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Casing
+    ctx.fillStyle = CONFIG.colors.magnetCasing;
+    ctx.beginPath();
+    ctx.arc(0, 0, magnet.radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Core
+    const coreGrad = ctx.createRadialGradient(-3, -3, 0, 0, 0, magnet.radius - 4);
+    coreGrad.addColorStop(0, '#fff');
+    coreGrad.addColorStop(0.5, CONFIG.colors.magnetCore);
+    coreGrad.addColorStop(1, '#0088ff');
+    ctx.fillStyle = coreGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, magnet.radius - 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Poles
+    ctx.fillStyle = '#ff0000';
+    ctx.beginPath();
+    ctx.arc(-magnet.radius * 0.4, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0000ff';
+    ctx.beginPath();
+    ctx.arc(magnet.radius * 0.4, 0, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glow
+    ctx.shadowColor = CONFIG.colors.magnetGlow;
+    ctx.shadowBlur = 20;
+    ctx.strokeStyle = CONFIG.colors.magnetGlow;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, magnet.radius - 2, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.restore();
+
+    ctx.restore(); // screen shake
+}
+
+// --- Game Loop ---
+function gameLoop(timestamp) {
+    if (gameState !== 'playing') {
+        render();
+        requestAnimationFrame(gameLoop);
+        return;
+    }
+
+    const dt = 16.67; // fixed timestep ~60fps
+
+    updateMagnet(dt);
+    updateObjects(dt);
+    updateHazards(dt);
+    updateParticles(dt);
+    updateCombo(dt);
+    updatePower();
+    updateTimer();
+
+    render();
+    requestAnimationFrame(gameLoop);
+}
+
+// Start loop
+requestAnimationFrame(gameLoop);\n}\n</script>\n</body>\n</html>",
+  "style.css": ""
+}
