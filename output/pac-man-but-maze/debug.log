@@ -1,0 +1,650 @@
+JSON Decode Error after continuation: Invalid control character at: line 4 column 14102 (char 20613)
+
+Raw: 
+```json
+{
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n    <title>Pac-Man: The Breathing Labyrinth</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🟡</text></svg>\">\n    <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n    <div id=\"game-container\">\n        <canvas id=\"gameCanvas\"></canvas>\n        <div id=\"hud\">\n            <div class=\"hud-top\">\n                <div class=\"score\">Score: <span id=\"score\">0</span></div>\n                <div class=\"lives\">Lives: <span id=\"lives\">3</span></div>\n                <div class=\"timer\">Time: <span id=\"timer\">30</span>s</div>\n            </div>\n            <div class=\"hud-bottom\">\n                <div class=\"power-indicator\" id=\"power-indicator\">\n                    <div class=\"power-bar\" id=\"power-bar\"></div>\n                    <span id=\"power-text\">Power Mode</span>\n                </div>\n                <div class=\"instructions\">Arrow Keys / Touch to Move | Collect Pellets | Avoid Walls</div>\n            </div>\n        </div>\n        <div id=\"start-screen\" class=\"overlay\">\n            <h1>Pac-Man: The Breathing Labyrinth</h1>\n            <p>Navigate the pulsing maze before time runs out!</p>\n            <button id=\"start-btn\">START GAME</button>\n            <div id=\"high-scores\"></div>\n        </div>\n        <div id=\"game-over-screen\" class=\"overlay hidden\">\n            <h1 id=\"game-over-title\">GAME OVER</h1>\n            <p>Final Score: <span id=\"final-score\">0</span></p>\n            <button id=\"restart-btn\">PLAY AGAIN</button>\n        </div>\n    </div>\n    <script src=\"game.js\"></script>\n</body>\n</html>",
+  "style.css": "* { margin: 0; padding: 0; box-sizing: border-box; }\n\nbody {\n    font-family: 'Courier New', monospace;\n    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);\n    color: #fff;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    min-height: 100vh;\n    overflow: hidden;\n}\n\n#game-container {\n    position: relative;\n    width: 800px;\n    max-width: 100vw;\n    aspect-ratio: 4/3;\n}\n\n#gameCanvas {\n    width: 100%;\n    height: 100%;\n    background: #0f0f1e;\n    border: 3px solid #e94560;\n    border-radius: 10px;\n    box-shadow: 0 0 30px rgba(233, 69, 96, 0.5);\n    image-rendering: pixelated;\n    touch-action: none;\n}\n\n#hud {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    pointer-events: none;\n    padding: 15px;\n    display: flex;\n    flex-direction: column;\n    gap: 10px;\n}\n\n.hud-top,\n.hud-bottom {\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n    gap: 20px;\n}\n\n.hud-bottom {\n    margin-top: auto;\n    margin-bottom: 10px;\n}\n\n.score,\n.lives,\n.timer {\n    background: rgba(0, 0, 0, 0.7);\n    padding: 8px 15px;\n    border-radius: 5px;\n    border: 2px solid #ffd700;\n    font-weight: bold;\n    font-size: 18px;\n    color: #ffd700;\n    text-shadow: 0 0 5px rgba(255, 215, 0, 0.7);\n}\n\n.power-indicator {\n    background: rgba(0, 0, 0, 0.7);\n    padding: 8px 15px;\n    border-radius: 5px;\n    border: 2px solid #00bfff;\n    display: flex;\n    align-items: center;\n    gap: 10px;\n    opacity: 0.3;\n    transition: opacity 0.3s;\n}\n\n.power-indicator.active {\n    opacity: 1;\n    animation: powerPulse 0.5s infinite alternate;\n}\n\n@keyframes powerPulse {\n    from { box-shadow: 0 0 10px #00bfff; }\n    to { box-shadow: 0 0 20px #00bfff, 0 0 30px #00bfff; }\n}\n\n.power-bar {\n    width: 100px;\n    height: 12px;\n    background: #2a2a4a;\n    border-radius: 6px;\n    overflow: hidden;\n}\n\n.power-bar::after {\n    content: '';\n    display: block;\n    height: 100%;\n    background: linear-gradient(90deg, #00bfff, #1e90ff);\n    width: var(--power-percent, 0%);\n    transition: width 0.1s;\n}\n\n#power-text {\n    font-size: 14px;\n    color: #00bfff;\n    font-weight: bold;\n}\n\n.instructions {\n    background: rgba(0, 0, 0, 0.5);\n    padding: 5px 10px;\n    border-radius: 5px;\n    font-size: 14px;\n    color: #aaa;\n}\n\n.overlay {\n    position: absolute;\n    top: 0;\n    left: 0;\n    width: 100%;\n    height: 100%;\n    background: rgba(0, 0, 0, 0.85);\n    display: flex;\n    flex-direction: column;\n    justify-content: center;\n    align-items: center;\n    gap: 20px;\n    z-index: 10;\n}\n\n.hidden {\n    display: none !important;\n}\n\nh1 {\n    font-size: 48px;\n    color: #ffd700;\n    text-shadow: 0 0 20px rgba(255, 215, 0, 0.7);\n    margin-bottom: 10px;\n}\n\np {\n    font-size: 20px;\n    color: #aaa;\n    text-align: center;\n    max-width: 400px;\n}\n\nbutton {\n    background: linear-gradient(135deg, #e94560, #0f3460);\n    color: white;\n    border: none;\n    padding: 15px 40px;\n    font-size: 20px;\n    font-weight: bold;\n    border-radius: 8px;\n    cursor: pointer;\n    transition: transform 0.2s, box-shadow 0.2s;\n    font-family: inherit;\n}\n\nbutton:hover {\n    transform: scale(1.05);\n    box-shadow: 0 0 20px rgba(233, 69, 96, 0.7);\n}\n\nbutton:active {\n    transform: scale(0.98);\n}\n\n#high-scores {\n    background: rgba(0, 0, 0, 0.5);\n    padding: 15px;\n    border-radius: 8px;\n    max-width: 300px;\n    width: 100%;\n}\n\n#high-scores h3 {\n    color: #ffd700;\n    margin-bottom: 10px;\n}\n\n#high-scores ul {\n    list-style: none;\n    padding: 0;\n}\n\n#high-scores li {\n    padding: 5px 0;\n    border-bottom: 1px solid #333;\n    display: flex;\n    justify-content: space-between;\n}\n\n#high-scores li:last-child {\n    border-bottom: none;\n}\n\n/* Responsive adjustments */\n@media (max-width: 768px) {\n    #game-container {\n        width: 95vw;\n        height: 71.25vw;\n    }\n    \n    h1 { font-size: 32px; }\n    .score, .lives, .timer { font-size: 14px; padding: 5px 10px; }\n    .instructions { font-size: 12px; }\n    button { padding: 12px 30px; font-size: 16px; }\n}\n\n@media (max-width: 480px) {\n    #game-container {\n        width: 100vw;\n        height: 75vw;\n    }\n    \n    h1 { font-size: 24px; }\n    .score, .lives, .timer { font-size: 12px; padding: 3px 8px; }\n    .instructions { display: none; }\n    button { padding: 10px 20px; font-size: 14px; }\n}\n",
+  "game.js": "// Pac-Man: The Breathing Labyrinth\n// Core Game Implementation\n\nconst TILE_SIZE = 20;\nconst MAZE_COLS = 20;\nconst MAZE_ROWS = 20;\nconst CANVAS_WIDTH = MAZE_COLS * TILE_SIZE;\nconst CANVAS_HEIGHT = MAZE_ROWS * TILE_SIZE;\nconst PLAYER_SPEED = 200; // pixels per second\nconst GHOST_BASE_SPEED = 80;\nconst POWER_DURATION = 5000; // milliseconds\nconst GAME_TIME = 30; // seconds\nconst MAX_LIVES = 3;\n\n// Color palette\nconst COLORS = {\n    wall: '#2B2B2B',\n    wallGlow: '#4A4A4A',\n    floor: '#D4C4B3',\n    floorGrid: '#C4B4A3',\n    pellet: '#FFD700',\n    pelletGlow: '#FFEC8B',\n    pacman: '#FFD700',\n    pacmanOutline: '#000000',\n    ghostPink: '#FF69B4',\n    ghostBlue: '#00BFFF',\n    ghostGreen: '#32CD32',\n    ghostRed: '#FF4500',\n    exit: '#FFD700',\n    exitGlow: '#FFEC8B',\n    trap: '#8B0000',\n    particle: '#FFD700'\n};\n\n// Game state\nconst gameState = {\n    running: false,\n    score: 0,\n    lives: MAX_LIVES,\n    timeLeft: GAME_TIME,\n    powerMode: false,\n    powerTimer: 0,\n    phase: 'expand',\n    breathPhase: 0,\n    breathPhaseTime: 0,\n    highScores: [],\n    screenShake: 0,\n    flashAlpha: 0\n};\n\n// Canvas setup\nconst canvas = document.getElementById('gameCanvas');\nconst ctx = canvas.getContext('2d');\ncanvas.width = CANVAS_WIDTH;\ncanvas.height = CANVAS_HEIGHT;\n\n// Responsive scaling\nfunction resizeCanvas() {\n    const container = document.getElementById('game-container');\n    const maxWidth = Math.min(window.innerWidth * 0.95, 800);\n    const maxHeight = window.innerHeight * 0.9;\n    \n    const aspectRatio = CANVAS_WIDTH / CANVAS_HEIGHT;\n    let width = maxWidth;\n    let height = width / aspectRatio;\n    \n    if (height > maxHeight) {\n        height = maxHeight;\n        width = height * aspectRatio;\n    }\n    \n    canvas.style.width = `${width}px`;\n    canvas.style.height = `${height}px`;\n}\nresizeCanvas();\nwindow.addEventListener('resize', resizeCanvas);\n\n// Input handling\nconst input = {\n    keys: new Set(),\n    touchStartX: null,\n    touchStartY: null,\n    touchEndX: null,\n    touchEndY: null\n};\n\ndocument.addEventListener('keydown', (e) => {\n    input.keys.add(e.code);\n    e.preventDefault();\n});\n\ndocument.addEventListener('keyup', (e) => {\n    input.keys.delete(e.code);\n});\n\n// Touch controls\ncanvas.addEventListener('touchstart', (e) => {\n    e.preventDefault();\n    const touch = e.touches[0];\n    input.touchStartX = touch.clientX;\n    input.touchStartY = touch.clientY;\n    input.touchEndX = touch.clientX;\n    input.touchEndY = touch.clientY;\n}, { passive: false });\n\ncanvas.addEventListener('touchmove', (e) => {\n    e.preventDefault();\n    const touch = e.touches[0];\n    input.touchEndX = touch.clientX;\n    input.touchEndY = touch.clientY;\n}, { passive: false });\n\ncanvas.addEventListener('touchend', (e) => {\n    e.preventDefault();\n    if (input.touchStartX !== null && input.touchEndX !== null) {\n        const dx = input.touchEndX - input.touchStartX;\n        const dy = input.touchEndY - input.touchStartY;\n        const absDx = Math.abs(dx);\n        const absDy = Math.abs(dy);\n        \n        if (Math.max(absDx, absDy) > 20) {\n            if (absDx > absDy) {\n                input.keys.add(dx > 0 ? 'ArrowRight' : 'ArrowLeft');\n            } else {\n                input.keys.add(dy > 0 ? 'ArrowDown' : 'ArrowUp');\n            }\n        }\n    }\n    input.touchStartX = null;\n    input.touchStartY = null;\n    input.touchEndX = null;\n    input.touchEndY = null;\n}, { passive: false });\n\n// Utility functions\nfunction getKeyVector() {\n    let dx = 0, dy = 0;\n    \n    if (input.keys.has('ArrowUp') || input.keys.has('KeyW')) dy -= 1;\n    if (input.keys.has('ArrowDown') || input.keys.has('KeyS')) dy += 1;\n    if (input.keys.has('ArrowLeft') || input.keys.has('KeyA')) dx -= 1;\n    if (input.keys.has('ArrowRight') || input.keys.has('KeyD')) dx += 1;\n    \n    return { x: dx, y: dy };\n}\n\nfunction distance(x1, y1, x2, y2) {\n    return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);\n}\n\nfunction lerp(a, b, t) {\n    return a + (b - a) * t;\n}\n\n// Audio system\nlet audioContext = null;\nlet soundEnabled = true;\n\nfunction initAudio() {\n    if (!audioContext) {\n        audioContext = new (window.AudioContext || window.webkitAudioContext)();\n    }\n}\n\nfunction playSound(type, frequency = 440, duration = 0.1, volume = 0.3) {\n    if (!soundEnabled || !audioContext) return;\n    \n    const oscillator = audioContext.createOscillator();\n    const gainNode = audioContext.createGain();\n    \n    oscillator.connect(gainNode);\n    gainNode.connect(audioContext.destination);\n    \n    switch(type) {\n        case 'pellet':\n            oscillator.frequency.value = frequency;\n            oscillator.type = 'square';\n            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);\n            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);\n            break;\n        case 'eat':\n            oscillator.frequency.value = frequency;\n            oscillator.type = 'triangle';\n            gainNode.gain.setValueAtTime(volume * 0.7, audioContext.currentTime);\n            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration * 0.5);\n            break;\n        case 'death':\n            oscillator.frequency.value = frequency;\n            oscillator.type = 'sawtooth';\n            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);\n            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);\n            break;\n        case 'win':\n            oscillator.frequency.value = frequency;\n            oscillator.type = 'square';\n            gainNode.gain.setValueAtTime(volume * 0.8, audioContext.currentTime);\n            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration * 2);\n            break;\n        case 'power':\n            oscillator.frequency.value = frequency;\n            oscillator.type = 'sine';\n            gainNode.gain.setValueAtTime(volume * 1.2, audioContext.currentTime);\n            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);\n            break;\n        case 'breath':\n            oscillator.frequency.value = frequency;\n            oscillator.type = 'sine';\n            gainNode.gain.setValueAtTime(volume * 0.5, audioContext.currentTime);\n            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration * 0.3);\n            break;\n    }\n    \n    oscillator.start();\n    oscillator.stop(audioContext.currentTime + duration);\n}\n\n// High score management\nfunction loadHighScores() {\n    try {\n        const saved = localStorage.getItem('pacmanBreathingHighScores');\n        gameState.highScores = saved ? JSON.parse(saved) : [];\n    } catch (e) {\n        gameState.highScores = [];\n    }\n}\n\nfunction saveHighScore(score) {\n    gameState.highScores.push({ score, date: new Date().toLocaleDateString() });\n    gameState.highScores.sort((a, b) => b.score - a.score);\n    gameState.highScores = gameState.highScores.slice(0, 10);\n    localStorage.setItem('pacmanBreathingHighScores', JSON.stringify(gameState.highScores));\n    updateHighScoreDisplay();\n}\n\nfunction updateHighScoreDisplay() {\n    const container = document.getElementById('high-scores');\n    if (!container) return;\n    \n    let html = '<h3>HIGH SCORES</h3><ul>';\n    gameState.highScores.forEach((entry, index) => {\n        html += `<li><span>${index + 1}. ${entry.score}</span><span>${entry.date}</span></li>`;\n    });\n    html += '</ul>';\n    container.innerHTML = html;\n}\n\n// Maze generation\nclass BreathingMaze {\n    constructor() {\n        this.grid = this.generateMaze();\n        this.breathPhase = 0; // 0=expand, 1=contract, 2=pulse\n        this.breathPhaseTime = 0;\n        this.phaseDuration = 6; // seconds per phase\n        this.phaseSpeed = 2.0; // tiles per second\n        this.phaseProgress = 0;\n    }\n    \n    generateMaze() {\n        const grid = Array.from({ length: MAZE_ROWS }, () => Array(MAZE_COLS).fill(1));\n        \n        // Border walls\n        for (let i = 0; i < MAZE_COLS; i++) {\n            grid[0][i] = 1;\n            grid[MAZE_ROWS - 1][i] = 1;\n        }\n        for (let i = 0; i < MAZE_ROWS; i++) {\n            grid[i][0] = 1;\n            grid[i][MAZE_COLS - 1] = 1;\n        }\n        \n        // Create some internal walls\n        const wallPositions = [\n            [3, 3], [3, 4], [3, 5], [3, 6], [3, 7],\n            [10, 3], [10, 4], [10, 5], [10, 6], [10, 7],\n            [16, 3], [16, 4], [16, 5], [16, 6], [16, 7],\n            [5, 10], [6, 10], [7, 10], [8, 10], [9, 10],\n            [12, 10], [13, 10], [14, 10], [15, 10],\n            [5, 16], [6, 16], [7, 16], [8, 16], [9, 16],\n            [12, 16], [13, 16], [14, 16], [15, 16],\n            [3, 13], [4, 13], [5, 13], [6, 13], [7, 13],\n            [10, 13], [11, 13], [12, 13], [13, 13], [14, 13],\n            [16, 13], [17, 13], [18, 13],\n            [3, 16], [4, 16], [5, 16], [6, 16], [7, 16],\n            [10, 16], [11, 16], [12, 16], [13, 16], [14, 16],\n            [16, 16], [17, 16], [18, 16]\n        ];\n        \n        wallPositions.forEach(([col, row]) => {\n            grid[row][col] = 1;\n        });\n        \n        // Create some openings\n        [[3, 3], [3, 5], [10, 3], [10, 5], [16, 3], [16, 5]]\n            .forEach(([col, row]) => grid[row][col] = 0);\n        \n        [[5, 10], [7, 10], [12, 10], [14, 10]]\n            .forEach(([col, row]) => grid[row][col] = 0);\n        \n        [[5, 16], [7, 16], [12, 16], [14, 16]]\n            .forEach(([col, row]) => grid[row][col] = 0);\n        \n        [[3, 13], [10, 13], [13, 13], [16, 13]]\n            .forEach(([col, row]) => grid[row][col] = 0);\n        \n        // Exit at bottom right\n        grid[MAZE_ROWS - 1][MAZE_COLS - 1] = 0;\n        grid[MAZE_ROWS - 2][MAZE_COLS - 2] = 0;\n        grid[MAZE_ROWS - 2][MAZE_COLS - 1] = 0;\n        \n        return grid;\n    }\n    \n    update(deltaTime) {\n        this.breathPhaseTime += deltaTime;\n        this.phaseProgress = this.breathPhaseTime / this.phaseDuration;\n        \n        if (this.breathPhaseTime >= this.phaseDuration) {\n            this.breathPhase = (this.breathPhase + 1) % 3;\n            this.breathPhaseTime = 0;\n            this.phaseProgress = 0;\n            \n            // Trigger phase change effects\n            if (this.breathPhase === 1) {\n                playSound('breath', 200, 0.5, 0.4);\n                gameState.screenShake = 5;\n            } else if (this.breathPhase === 2) {\n                playSound('breath', 300, 0.3, 0.5);\n                gameState.flashAlpha = 0.3;\n            }\n        }\n    }\n    \n    getWallColor() {\n        const glowIntensity = Math.sin(this.phaseProgress * Math.PI) * 0.5 + 0.5;\n        \n        switch(this.breathPhase) {\n            case 0: // Expansion\n                return `rgb(${43 + glowIntensity * 20}, ${43 + glowIntensity * 20}, ${43 + glowIntensity * 20})`;\n            case 1: // Contraction\n                return `rgb(${43 - glowIntensity * 10}, ${43 - glowIntensity * 10}, ${43 - glowIntensity * 10})`;\n            case 2: // Pulse\n                return `rgb(${43 + glowIntensity * 30}, ${43 + glowIntensity * 30}, ${43 + glowIntensity * 30})`;\n            default:\n                return COLORS.wall;\n        }\n    }\n    \n    isWall(col, row) {\n        if (col < 0 || col >= MAZE_COLS || row < 0 || row >= MAZE_ROWS) {\n            return true;\n        }\n        return this.grid[row][col] === 1;\n    }\n    \n    isExit(col, row) {\n        return col === MAZE_COLS - 1 && row === MAZE_ROWS - 1;\n    }\n}\n\n// Entity classes\nclass Entity {\n    constructor(x, y) {\n        this.x = x;\n        this.y = y;\n        this.vx = 0;\n        this.vy = 0;\n        this.radius = TILE_SIZE * 0.4;\n    }\n    \n    collidesWithWall(maze) {\n        const left = this.x - this.radius;\n        const right = this.x + this.radius;\n        const top = this.y - this.radius;\n        const bottom = this.y + this.radius;\n        \n        const colLeft = Math.floor(left / TILE_SIZE);\n        const colRight = Math.floor(right / TILE_SIZE);\n        const rowTop = Math.floor(top / TILE_SIZE);\n        const rowBottom = Math.floor(bottom / TILE_SIZE);\n        \n        for (let row = rowTop; row <= rowBottom; row++) {\n            for (let col = colLeft; col <= colRight; col++) {\n                if (maze.isWall(col, row)) {\n                    return true;\n                }\n            }\n        }\n        return false;\n    }\n    \n    move(maze, speed) {\n        const newX = this.x + this.vx * (speed / PLAYER_SPEED);\n        const newY = this.y + this.vy * (speed / PLAYER_SPEED);\n        \n        // Try X movement\n        this.x = newX;\n        if (this.collidesWithWall(maze)) {\n            this.x -= this.vx * (speed / PLAYER_SPEED);\n        }\n        \n        // Try Y movement\n        this.y = newY;\n        if (this.collidesWithWall(maze)) {\n            this.y -= this.vy * (speed / PLAYER_SPEED);\n        }\n    }\n}\n\nclass Player extends Entity {\n    constructor(x, y) {\n        super(x, y);\n        this.mouthOpen = 0;\n        this.targetDir = null;\n        this.eating = false;\n    }\n    \n    update(maze, deltaTime) {\n        // Get input direction\n        const dir = getKeyVector();\n        const speed = gameState.powerMode ? PLAYER_SPEED * 1.2 : PLAYWe need to continue the JSON. The user provided a JSON object with three files: index.html, style.css, game.js. The game.js is incomplete; we need to continue it from where it left off. The JSON is cut off at the end of game.js. We must output the remaining characters to complete the JSON, starting exactly from the next character after the last shown text. The last shown text is:
+
+
+        const speed = gameState.powerMode ? PLAYER_SPEED * 1.2 : PLAY
+
+
+So we need to continue writing the rest of game.js, and then close the JSON. The entire response should be valid JSON with those three keys and their values. We must not repeat any previous text. Just output the remaining characters to complete the JSON. So we need to produce the continuation of game.js (the rest of the file) and then the closing braces and commas.
+
+We need to infer what the rest of game.js should be. This is a Pac-Man style game with breathing maze, ghosts, etc. The code so far sets up constants, canvas, input, audio, high scores, maze generation, entity classes, player class update method. It likely continues with ghost classes, pellet collection, game loop, rendering, etc. We need to write plausible code that continues from that point. Since this is a code completion task, we should produce a complete, functional game.js that fits the existing code. We can write the rest of the file.
+
+We need to be careful about JSON formatting: the values are strings, so we must escape quotes and newlines properly. The provided JSON uses \n for newlines inside strings. We need to continue that style. So we will write the remaining lines as a string with escaped newlines.
+
+Let's plan the rest of game.js:
+
+After the Player class update, likely there are Ghost classes, Pellet class, Power Pellet class, Game loop, rendering functions, start/restart logic, etc. We can write a reasonable implementation.
+
+We need to ensure the code is syntactically correct and consistent with the existing parts. Let's examine what's already defined:
+
+- Constants defined.
+- gameState object.
+- Canvas setup, resize.
+- Input handling (keys, touch).
+- Utility functions.
+- Audio system.
+- High score management.
+- BreathingMaze class.
+- Entity base class.
+- Player class extends Entity, has mouthOpen, targetDir, eating.
+
+The Player.update method currently only gets input direction and speed. Likely it also handles movement, mouth animation, etc. But the snippet ends at `const speed = gameState.powerMode ? PLAYER_SPEED * 1.2 : PLAY`. So we need to complete that line and add the rest of the update method. Probably:
+
+
+const speed = gameState.powerMode ? PLAYER_SPEED * 1.2 : PLAYER_SPEED;
+this.vx = dir.x * speed / 1000; // assuming deltaTime in seconds? Actually speed is pixels per second, so vx = dir.x * speed * deltaTime? Wait, the move method takes speed parameter. In Entity.move, they pass speed and compute newX = this.x + this.vx * (speed / PLAYER_SPEED). That seems odd: vx is velocity per frame? Actually they set this.vx = dir.x * speed / 1000? Let's think.
+
+In Entity.move(maze, speed), they do:
+const newX = this.x + this.vx * (speed / PLAYER_SPEED);
+That suggests vx is in some unit relative to PLAYER_SPEED. If we set this.vx = dir.x * (speed / PLAYER_SPEED), then newX = this.x + dir.x * (speed / PLAYER_SPEED) * (speed / PLAYER_SPEED) = this.x + dir.x * (speed^2 / PLAYER_SPEED). That doesn't make sense. Actually maybe they intend vx to be a fraction of speed per frame? Let's look at typical Pac-Man implementations: often they compute dx = dir.x * speed * deltaTime, then move. Here they have move(maze, speed) where speed is pixels per second, and they multiply by (speed / PLAYER_SPEED) which is weird. Possibly a bug. But we can adapt.
+
+Given the existing code, we can continue by completing the update method:
+
+
+const speed = gameState.powerMode ? PLAYER_SPEED * 1.2 : PLAYER_SPEED;
+this.vx = dir.x * (speed / PLAYER_SPEED);
+this.vy = dir.y * (speed / PLAYER_SPEED);
+this.mouthOpen = Math.sin(Date.now() / 100) * 0.5 + 0.5; // animate mouth
+this.eating = false;
+// maybe handle targetDir if no input
+if (dir.x === 0 && dir.y === 0) {
+    // pick nearest pellet or ghost direction
+}
+this.move(maze, speed);
+
+
+But we need to see what else. Also need to handle collision with walls, pellet collection, etc. But the Player class may later have methods for collecting pellets. However, the game loop likely handles pellet collection separately. So we can keep Player simple.
+
+Then we need Ghost class, Pellet class, PowerPellet class, Game class, etc.
+
+Let's write a complete game.js that continues logically. We'll include:
+
+- Ghost class with AI.
+- Pellet class.
+- PowerPellet class.
+- Game class that manages everything: update, render, etc.
+- Start/restart functions.
+- Main loop using requestAnimationFrame.
+
+We must ensure all referenced elements exist: #gameCanvas, #hud, #score, #lives, #timer, #power-indicator, #start-screen, #game-over-screen, #final-score, #high-scores, #restart-btn, #start-btn.
+
+We'll write the rest of the file accordingly.
+
+Let's draft the continuation:
+
+After Player.update, we might have:
+
+
+// Ghost class
+class Ghost extends Entity {
+    constructor(x, y, color) {
+        super(x, y);
+        this.color = color;
+        this.speed = GHOST_BASE_SPEED;
+        this.targetDir = null;
+        this.state = 'chase'; // chase, scatter, frightened, return home
+        this.frightened = false;
+        this.frightenedTimer = 0;
+        this.homeX = x;
+        this.homeY = y;
+        this.scatterTarget = null;
+        this.scatterTimer = 0;
+    }
+    
+    update(maze, deltaTime, player) {
+        // AI logic
+        // ...
+    }
+}
+
+
+But we need to implement AI. Could be simple: random direction changes, or chase player. Since it's a breathing maze, ghosts might be affected by phase? Not needed.
+
+We also need Pellet class:
+
+
+class Pellet {
+    constructor(col, row) {
+        this.col = col;
+        this.row = row;
+        this.eaten = false;
+    }
+    
+    get x() { return this.col * TILE_SIZE + TILE_SIZE/2; }
+    get y() { return this.row * TILE_SIZE + TILE_SIZE/2; }
+}
+
+
+PowerPellet similar but larger.
+
+Game class:
+
+
+class Game {
+    constructor() {
+        this.player = new Player(CANVAS_WIDTH/2, CANVAS_HEIGHT/2);
+        this.ghosts = [];
+        this.pellets = [];
+        this.powerPellets = [];
+        this.maze = new BreathingMaze();
+        this.initGhosts();
+        this.initPellets();
+        this.lastTime = 0;
+        this.gameOver = false;
+        this.win = false;
+    }
+    
+    initGhosts() {
+        const ghostColors = [COLORS.ghostPink, COLORS.ghostBlue, COLORS.ghostGreen, COLORS.ghostRed];
+        for (let i = 0; i < 4; i++) {
+            const x = ...; const y = ...;
+            this.ghosts.push(new Ghost(x, y, ghostColors[i]));
+        }
+    }
+    
+    initPellets() {
+        // fill pellets based on maze grid
+    }
+    
+    update(deltaTime) {
+        if (!gameState.running) return;
+        this.maze.update(deltaTime);
+        this.player.update(this.maze, deltaTime);
+        this.ghosts.forEach(g => g.update(this.maze, deltaTime, this.player));
+        // check collisions
+        // collect pellets
+        // power mode timer
+        // time left
+        // win/lose conditions
+    }
+    
+    render() {
+        ctx.clearRect(0,0,CANVAS_WIDTH,CANVAS_HEIGHT);
+        this.drawMaze();
+        this.drawPellets();
+        this.drawPowerPellets();
+        this.drawPlayer();
+        this.drawGhosts();
+        // effects
+    }
+    
+    loop(timestamp) {
+        const deltaTime = (timestamp - this.lastTime) / 1000;
+        this.lastTime = timestamp;
+        if (!this.gameOver) {
+            this.update(deltaTime);
+        }
+        this.render();
+        requestAnimationFrame(this.loop.bind(this));
+    }
+}
+
+
+But we need to integrate with existing code: The existing code already has a global gameState, and likely a main loop started on button click. We can write the rest of game.js to define these classes and functions, and then call startGame() on button click.
+
+We also need to handle high scores display, restart, etc.
+
+Given the complexity, we can write a fairly complete implementation. However, we must be mindful of token limits. The continuation will be long, but we can keep it concise while still being functional.
+
+Let's write the continuation step by step.
+
+First, complete the Player.update method:
+
+
+const speed = gameState.powerMode ? PLAYER_SPEED * 1.2 : PLAYER_SPEED;
+this.vx = dir.x * (speed / PLAYER_SPEED);
+this.vy = dir.y * (speed / PLAYER_SPEED);
+this.mouthOpen = Math.sin(Date.now() / 150) * 0.5 + 0.5;
+this.eating = false;
+if (dir.x === 0 && dir.y === 0) {
+    // auto-aim at nearest pellet
+    // ...
+}
+this.move(maze, speed);
+
+
+But we need to consider that move expects speed parameter. In Entity.move, they use speed / PLAYER_SPEED factor. That seems like a bug, but we can keep it as is. Actually, looking at Entity.move:
+
+
+move(maze, speed) {
+    const newX = this.x + this.vx * (speed / PLAYER_SPEED);
+    ...
+}
+
+
+If we set this.vx = dir.x * (speed / PLAYER_SPEED), then newX = this.x + dir.x * (speed / PLAYER_SPEED) * (speed / PLAYER_SPEED) = this.x + dir.x * (speed^2 / PLAYER_SPEED^2). That would be too small. So likely the intended logic is different. Maybe they meant this.vx = dir.x * speed, and then move uses this.vx * deltaTime? But they don't pass deltaTime. Hmm.
+
+Maybe the move method is called with speed and internally multiplies by deltaTime? Actually they don't. Let's re-examine: In Entity.move, they compute newX = this.x + this.vx * (speed / PLAYER_SPEED). This suggests that this.vx is a unitless direction (like -1,0,1) and speed is pixels per second, so multiplying by (speed / PLAYER_SPEED) gives pixels per frame? But PLAYER_SPEED is 200, so speed/PLAYER_SPEED is 1 when speed=200. So newX = this.x + this.vx * 1. That means each move adds vx (which is direction * 1) to position. That would mean the entity moves one tile per move call. But move is called once per frame? Actually they call move(maze, speed) each frame, and speed is constant (200 or 240). So each frame they move by vx (which is direction * 1) meaning they move one tile per frame? That would be too fast (60 tiles per second). So clearly the code is flawed. But since we are continuing, we can fix it by adjusting the move method or the way we call it. However, we cannot change existing code because it's part of the JSON. We must continue from that point, so we can assume the existing code works as intended? Possibly the move method is correct if we interpret differently: maybe this.vx is set to dir.x * (speed / PLAYER_SPEED) and then move uses this.vx * (speed / PLAYER_SPEED) again? That would be double. Let's read carefully:
+
+In Entity.move:
+
+const newX = this.x + this.vx * (speed / PLAYER_SPEED);
+
+If this.vx = dir.x * (speed / PLAYER_SPEED), then newX = this.x + dir.x * (speed / PLAYER_SPEED) * (speed / PLAYER_SPEED) = this.x + dir.x * (speed^2 / PLAYER_SPEED^2). For speed=200, PLAYER_SPEED=200, that's dir.x * 1. So newX = this.x + dir.x. That means each move adds 1 pixel per direction? Actually dir.x is -1,0,1, so adding 1 pixel per frame. That's 60 pixels per second, which is too slow for 200 px/s. So maybe they intend this.vx to be just dir.x, and the factor (speed / PLAYER_SPEED) is used to scale? Wait, if this.vx = dir.x, then newX = this.x + dir.x * (speed / PLAYER_SPEED). For speed=200, that's dir.x * 1, so same. So either way, it's moving 1 pixel per frame. That's not right.
+
+Perhaps the move method is supposed to be called with deltaTime, but they omitted it. Actually, typical pattern: this.x += this.vx * speed * deltaTime. Here they have speed / PLAYER_SPEED, which is dimensionless. So maybe they intend this.vx to be in units of "tiles per frame"? Not sure.
+
+Given the ambiguity, we can adjust the move method in our continuation? But we cannot change existing code because it's part of the JSON string. However, we are allowed to add more code after the incomplete part. We could modify the move method by redefining it? But that would overwrite the existing definition. Since the existing definition is part of the JSON, we cannot change it. But we can add a new definition that overrides it? In JavaScript, later definitions override earlier ones if they are in the same scope. Since we are writing the entire file, we can place our code after the existing code, and if we redefine move, it will replace the previous one. That's acceptable because we are completing the file. The existing code is just a snippet; we can add our own definitions that override or supplement.
+
+Thus, we can fix the movement logic by redefining the move method or by changing how we call it. To keep things simple, we can adjust the Player.update to compute movement correctly and call a different move method. But we need to ensure consistency.
+
+Alternatively, we can assume the existing code works as intended and just continue. Since this is a code completion task, we should produce a working game. I'll write a corrected version of the movement logic.
+
+Let's design:
+
+In Player.update:
+
+
+const dir = getKeyVector();
+const speed = gameState.powerMode ? PLAYER_SPEED * 1.2 : PLAYER_SPEED;
+this.vx = dir.x * speed;
+this.vy = dir.y * speed;
+this.mouthOpen = Math.sin(Date.now() / 150) * 0.5 + 0.5;
+this.eating = false;
+if (dir.x === 0 && dir.y === 0) {
+    // auto-aim
+    // find nearest pellet
+    // set targetDir
+}
+this.move(maze, deltaTime);
+
+
+And redefine Entity.move to accept deltaTime:
+
+
+move(maze, deltaTime) {
+    const newX = this.x + this.vx * deltaTime;
+    const newY = this.y + this.vy * deltaTime;
+    // try X
+    this.x = newX;
+    if (this.collidesWithWall(maze)) {
+        this.x -= this.vx * deltaTime;
+    }
+    // try Y
+    this.y = newY;
+    if (this.collidesWithWall(maze)) {
+        this.y -= this.vy * deltaTime;
+    }
+}
+
+
+But we must not break existing code that calls move(maze, speed). However, we can change the call in Player.update to call move(maze, deltaTime) instead. And we can redefine move to take deltaTime. That will work.
+
+We also need to adjust Ghost.update similarly.
+
+Let's proceed with that approach.
+
+Now, we need to write the rest of the file. We'll include:
+
+- Ghost class with AI.
+- Pellet class.
+- PowerPellet class.
+- Game class.
+- Helper functions for drawing.
+- Event listeners for buttons.
+- Start/restart functions.
+- Main loop.
+
+We'll keep it reasonably compact.
+
+Let's write the continuation string. We'll start right after the incomplete line.
+
+The incomplete line ends with `const speed = gameState.powerMode ? PLAYER_SPEED * 1.2 : PLAY`. So we continue with a newline and then the rest.
+
+We'll produce the entire game.js content as a string. We need to escape quotes and backslashes. Since we are writing inside a JSON string, we must escape double quotes and newlines. The existing code uses `\"` for quotes inside strings. We'll follow that pattern.
+
+Let's draft the continuation:
+
+
+const speed = gameState.powerMode ? PLAYER_SPEED * 1.2 : PLAYER_SPEED;
+this.vx = dir.x * speed;
+this.vy = dir.y * speed;
+this.mouthOpen = Math.sin(Date.now() / 150) * 0.5 + 0.5;
+this.eating = false;
+if (dir.x === 0 && dir.y === 0) {
+    // Auto-aim at nearest pellet
+    let nearestPellet = null;
+    let minDist = Infinity;
+    for (const pellet of pellets) {
+        if (pellet.eaten) continue;
+        const dist = distance(this.x, this.y, pellet.x, pellet.y);
+        if (dist < minDist) {
+            minDist = dist;
+            nearestPellet = pellet;
+        }
+    }
+    if (nearestPellet) {
+        const dx = nearestPellet.x - this.x;
+        const dy = nearestPellet.y - this.y;
+        const len = Math.sqrt(dx*dx + dy*dy);
+        if (len > 0) {
+            this.vx = (dx / len) * speed;
+            this.vy = (dy / len) * speed;
+        }
+    }
+}
+this.move(maze, deltaTime);
+
+
+But we need to reference pellets array. We haven't defined it yet. We can define pellets globally or within Game. Since we are still in Player class, we can reference a global pellets array that will be defined later. That's okay as long as we define it before use. We'll define pellets in Game constructor and assign to a global variable. Or we can define pellets inside Player.update by accessing a global variable. We'll create a global `pellets` array.
+
+Similarly, we need to handle eating pellets: after moving, check collisions with pellets. But that can be done in Game.update.
+
+So we'll keep Player.update focused on movement.
+
+Now, after Player class, we need to define Ghost class.
+
+Let's write Ghost class:
+
+
+class Ghost extends Entity {
+    constructor(x, y, color) {
+        super(x, y);
+        this.color = color;
+        this.speed = GHOST_BASE_SPEED;
+        this.state = 'chase';
+        this.frightened = false;
+        this.frightenedTimer = 0;
+        this.homeX = x;
+        this.homeY = y;
+        this.scatterTarget = null;
+        this.scatterTimer = 0;
+        this.changeDirTimer = 0;
+    }
+    
+    update(maze, deltaTime, player) {
+        if (this.frightened) {
+            this.frightenedTimer -= deltaTime;
+            if (this.frightenedTimer <= 0) {
+                this.frightened = false;
+            }
+            // Move randomly
+            this.vx = (Math.random() - 0.5) * this.speed;
+            this.vy = (Math.random() - 0.5) * this.speed;
+        } else {
+            // Simple AI: chase player, but avoid walls
+            // Determine direction towards player
+            const dx = player.x - this.x;
+            const dy = player.y - this.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 100) {
+                // Chase
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    this.vx = dx / dist * this.speed;
+                    this.vy = 0;
+                } else {
+                    this.vx = 0;
+                    this.vy = dy / dist * this.speed;
+                }
+            } else {
+                // Wander
+                this.vx = (Math.random() - 0.5) * this.speed;
+                this.vy = (Math.random() - 0.5) * this.speed;
+            }
+        }
+        this.move(maze, deltaTime);
+    }
+}
+
+
+But we need to ensure ghosts don't collide with walls. The move method handles wall collision.
+
+Now Pellet class:
+
+
+class Pellet {
+    constructor(col, row) {
+        this.col = col;
+        this.row = row;
+        this.eaten = false;
+    }
+    
+    get x() { return this.col * TILE_SIZE + TILE_SIZE/2; }
+    get y() { return this.row * TILE_SIZE + TILE_SIZE/2; }
+}
+
+
+PowerPellet similar but larger radius.
+
+Now Game class:
+
+
+class Game {
+    constructor() {
+        this.player = new Player(CANVAS_WIDTH/2, CANVAS_HEIGHT/2);
+        this.ghosts = [];
+        this.pellets = [];
+        this.powerPellets = [];
+        this.maze = new BreathingMaze();
+        this.lastTime = 0;
+        this.gameOver = false;
+        this.win = false;
+        this.initEntities();
+    }
+    
+    initEntities() {
+        // Create ghosts at spawn points
+        const ghostSpawns = [[5,5],[15,5],[5,15],[15,15]];
+        const colors = [COLORS.ghostPink, COLORS.ghostBlue, COLORS.ghostGreen, COLORS.ghostRed];
+        for (let i = 0; i < 4; i++) {
+            const [col, row] = ghostSpawns[i];
+            this.ghosts.push(new Ghost(col*TILE_SIZE+TILE_SIZE/2, row*TILE_SIZE+TILE_SIZE/2, colors[i]));
+        }
+        
+        // Create pellets
+        for (let r = 0; r < MAZE_ROWS; r++) {
+            for (let c = 0; c < MAZE_COLS; c++) {
+                if (this.maze.isWall(c, r)) continue;
+                if (this.maze.isExit(c, r)) continue;
+                // Skip power pellets area
+                if (c >= 8 && c <= 12 && r >= 8 && r <= 12) continue;
+                this.pellets.push(new Pellet(c, r));
+            }
+        }
+        
+        // Create power pellets
+        for (let r = 0; r < MAZE_ROWS; r++) {
+            for (let c = 0; c < MAZE_COLS; c++) {
+                if (this.maze.isWall(c, r)) continue;
+                if (this.maze.isExit(c, r)) continue;
+                if (c >= 8 && c <= 12 && r >= 8 && r <= 12) {
+                    this.powerPellets.push(new PowerPellet(c, r));
+                }
+            }
+        }
+    }
+    
+    update(deltaTime) {
+        if (!gameState.running || this.gameOver) return;
+        
+        this.maze.update(deltaTime);
+        this.player.update(this.maze, deltaTime);
+        this.ghosts.forEach(g => g.update(this.maze, deltaTime, this.player));
+        
+        // Check pellet collection
+        this.checkCollisions();
+        
+        // Power mode timer
+        if (gameState.powerMode) {
+            gameState.powerTimer -= deltaTime * 1000;
+            if (gameState.powerTimer <= 0) {
+                gameState.powerMode = false;
+                document.getElementById('power-indicator').classList.remove('active');
+            }
+        }
+        
+        // Time left
+        gameState.timeLeft -= deltaTime;
+        document.getElementById('timer').textContent = Math.ceil(gameState.timeLeft);
+        if (gameState.timeLeft <= 0) {
+            endGame(false);
+        }
+        
+        // Win condition: all pellets eaten
+        const remaining = this.pellets.filter(p => !p.eaten).length;
+        if (remaining === 0) {
+            endGame(true);
+        }
+    }
+    
+    checkCollisions() {
+        // Player vs pellets
+        for (const pellet of this.pellets) {
+            if (pellet.eaten) continue;
+            const dist = distance(this.player.x, this.player.y, pellet.x, pellet.y);
+            if (dist < this.player.radius + 4) {
+                pellet.eaten = true;
+                gameState.score += 10;
+                document.getElementById('score').textContent = gameState.score;
+                playSound('eat', 600, 0.05, 0.2);
+            }
+        }
+        
+        // Player vs power pellets
+        for (const pp of this.powerPellets) {
+            if (pp.eaten) continue;
+            const dist = distance(this.player.x, this.player.y, pp.x, pp.y);
+            if (dist < this.player.radius + 8) {
+                pp.eaten = true;
+                gameState.score += 50;
+                gameState.powerMode = true;
+                gameState.powerTimer = POWER_DURATION;
+                document.getElementById('power-indicator').classList.add('active');
+                playSound('power', 800, 0.3, 0.4);
+            }
+        }
+        
+        // Player vs ghosts
+        for (const ghost of this.ghosts) {
+            const dist = distance(this.player.x, this.player.y, ghost.x, ghost.y);
+            if (dist < this.player.radius + ghost.radius) {
+                if (gameState.powerMode) {
+                    // Ghost frightened
+                    ghost.frightened = true;
+                    ghost.frightenedTimer = 3; // seconds
+                    gameState.score += 200;
+                    document.getElementById('score').textContent = gameState.score;
+                    playSound('eat', 400, 0.1, 0.3);
+                } else {
+                    // Death
+                    this.die();
+                    return;
+                }
+            }
+        }
+    }
+    
+    die() {
+        gameState.lives--;
+        document.getElementById('lives').textContent = gameState.lives;
+        playSound('death', 200, 0.5, 0.4);
+        if (gameState.lives <= 0) {
+            endGame(false);
+        } else {
+            // Respawn
+            this.player.x = CANVAS_WIDTH/2;
+            this.player.y = CANVAS_HEIGHT/2;
+            this.ghosts.forEach(g => {
+                g.x = g.homeX;
+                g.y = g.homeY;
+                g.frightened = false;
+            });
+        }
+    }
+    
+    render() {
+        ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        this.drawMaze();
+        this.drawPellets();
+        this.drawPowerPellets();
+        this.drawPlayer();
+        this.drawGhosts();
+        this.drawEffects();
+    }
+    
+    drawMaze() {
+        for (let r = 0; r < MAZE_ROWS; r++) {
+            for (let c = 0; c < MAZE_COLS; c++) {
+                if (this.maze.isWall(c, r)) {
+                    ctx.fillStyle = this.maze.getWallColor();
+                    ctx.fillRect(c*TILE_SIZE, r*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            }
+        }
+        // Draw exit
+        ctx.fillStyle = COLORS.exit;
+        ctx.fillRect((MAZE_COLS-1)*TILE_SIZE, (MAZE_ROWS-1)*TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
+    
+    drawPellets() {
+        ctx.fillStyle = COLORS.pellet;
+        for (const pellet of this.pellets) {
+            if (pellet.eaten) continue;
+            ctx.beginPath();
+            ctx.arc(pellet.x, pellet.y, 3, 0, Math.PI*2);
+            ctx.fill();
+        }
+    }
+    
+    drawPowerPellets() {
+        ctx.fillStyle = COLORS.pelletGlow;
+        for (const pp of this.powerPellets) {
+            if (pp.eaten) continue;
+            ctx.beginPath();
+            ctx.arc(pp.x, pp.y, 8, 0, Math.PI*2);
+            ctx.fill();
+        }
+    }
+    
+    drawPlayer() {
+        ctx.save();
+        ctx.translate(this.player.x, this.player.y);
+        // Draw pacman shape
+        const angle = Math.atan2(this.player.vy, this.player.vx);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.arc(0, 0, this.player.radius, 0.2 * Math.PI, 1.8 * Math.PI);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
+        ctx.fillStyle = COLORS.pacman;
+        ctx.fill();
+        ctx.strokeStyle = COLORS.pacmanOutline;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
+    
+    drawGhosts() {
+        for (const ghost of this.ghosts) {
+            ctx.save();
+            ctx.translate(ghost.x, ghost.y);
+            // Body
+            ctx.beginPath();
+            ctx.arc(0, -2, ghost.radius, Math.PI, 0);
+            ctx.lineTo(ghost.radius, ghost.radius);
+            // Wavy bottom
+            for (let i = 0; i < 3; i++) {
+                ctx.quadraticCurveTo(ghost.radius - (i+1)*4, ghost.radius + 4, ghost.radius - (i+1)*4, ghost.radius);
+            }
+            ctx.closePath();
+            ctx.fillStyle = ghost.frightened ? '#FFFFFF' : ghost.color;
+            ctx.fill();
+            // Eyes
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(-4, -4, 3, 0, Math.PI*2);
+            ctx.arc(4, -4, 3, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#000000';
+            ctx.beginPath();
+            ctx.arc(-4, -4, 1.5, 0, Math.PI*2);
+            ctx.arc(4, -4, 1.5, 0, Math.PI*2);
+            ctx.fill();
+            ctx.restore();
+        }
