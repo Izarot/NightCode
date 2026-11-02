@@ -1,0 +1,128 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 6802 (char 6801)
+
+Raw: {"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Shattered Vault</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>\ud83d\uddf0</text></svg>\">\n    <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n    <div class=\"game-container\">\n        <canvas id=\"gameCanvas\"></canvas>\n        <div id=\"hud\">\n            <div id=\"timer\">00:00</div>\n            <div id=\"stats\">\n                <div>Wave: <span id=\"wave\">1</span></div>\n                <div>Integrity: <span id=\"integrity\">100</span>%</div>\n                <div>High Score: <span id=\"highscore\">0</span></div>\n            </div>\n        </div>\n        <div id=\"overlay\" class=\"hidden\">\n            <h1 id=\"overlay-title\">GAME OVER</h1>\n            <p id=\"overlay-sub\">Waves Survived: <span id=\"overlay-score\">0</span></p>\n            <button onclick=\"location.reload()\">REINITIATE VAULT</button>\n        </div>\n    </div>\n    <script src=\"game.js\"></script>\n</body>\n</html>", "style.css": "body { margin: 0; background: #05050a; color: #0ff; font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }\n.game-container { position: relative; max-width: 100vw; max-height: 100vh; }\ncanvas { display: block; max-width: 100vw; max-height: 100vh; image-rendering: pixelated; }\n#hud { position: absolute; top: 10px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 20px; pointer-events: none; font-weight: bold; text-shadow: 0 0 5px #0ff; }\n#timer { font-size: 24px; }\n#stats { display: flex; gap: 20px; font-size: 18px; }\n#overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; z-index: 10; }\n.hidden { display: none !important; }\nbutton { padding: 10px 20px; background: #0ff; color: #000; border: none; cursor: pointer; font-weight: bold; text-transform: uppercase; }", "game.js": "const canvas = document.getElementById('gameCanvas');\nconst ctx = canvas.getContext('2d');\nconst timerEl = document.getElementById('timer');\nconst waveEl = document.getElementById('wave');\nconst integrityEl = document.getElementById('integrity');\nconst highScoreEl = document.getElementById('highscore');\nconst overlay = document.getElementById('overlay');\nconst overlayTitle = document.getElementById('overlay-title');\nconst overlaySub = document.getElementById('overlay-sub');\nconst overlayScore = document.getElementById('overlay-score');\n\n// Audio\nconst AudioCtx = window.AudioContext || window.webkitAudioContext;\nconst audioCtx = new AudioCtx();\nfunction playSound(type) {\n  if (audioCtx.state === 'suspended') audioCtx.resume();\n  const osc = audioCtx.createOscillator();\n  const gain = audioCtx.createGain();\n  osc.connect(gain);\n  gain.connect(audioCtx.destination);\n  const now = audioCtx.currentTime;\n  if (type === 'shoot') { osc.type = 'square'; osc.frequency.setValueAtTime(400, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.1); gain.gain.setValueAtTime(0.1, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1); osc.start(now); osc.stop(now + 0.1); }\n  if (type === 'hit') { osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.exponentialRampToValueAtTime(50, now + 0.1); gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1); osc.start(now); osc.stop(now + 0.1); }\n  if (type === 'swap') { osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.linearRampToValueAtTime(1200, now + 0.1); gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now + 0.1); osc.start(now); osc.stop(now + 0.1); }\n}\n\n// Config\nconst COLS = 20;\nconst ROWS = 15;\nconst COLORS = {\n  bg: '#0a0a12',\n  wall: '#222233',\n  combat: '#00ffff',\n  trap: '#ff00ff',\n  utility: '#ffff00',\n  barricade: '#888888',\n  player: '#ffffff',\n  enemy: '#ff4444'\n};\n\n// State\nlet width, height, cellSize;\nlet grid = [];\nlet rooms = [];\nlet player = { x: 1, y: 1, tx: 1, ty: 1, vx: 0, vy: 0, radius: 4 };\nlet enemies = [];\nlet particles = [];\nlet wave = 1;\nlet integrity = 100;\nlet score = 0;\nlet highScore = parseInt(localStorage.getItem('shattered_vault_highscore') || '0');\nlet gameOver = false;\nlet startTime = Date.now();\nlet timerRunning = true;\n\nhighScoreEl.textContent = highScore;\n\nfunction resize() {\n  const maxW = window.innerWidth;\n  const maxH = window.innerHeight;\n  let w = Math.min(maxW, maxH * (4/3));\n  let h = w * (3/4);\n  if (h > maxH) { h = maxH; w = h * (4/3); }\n  canvas.width = w;\n  canvas.height = h;\n  width = w;\n  height = h;\n  cellSize = Math.min(w / COLS, h / ROWS);\n}\nwindow.addEventListener('resize', resize);\nresize();\n\nfunction initGrid() {\n  grid = [];\n  rooms = [];\n  for (let r = 0; r < ROWS; r++) {\n    let row = [];\n    for (let c = 0; c < COLS; c++) {\n      let type = 0;\n      if (r === 0 || r === ROWS-1 || c === 0 || c === COLS-1) type = 5;\n      else if (Math.random() > 0.7) type = Math.floor(Math.random() * 4) + 1;\n      row.push(type);\n      rooms.push({ type, x: c, y: r, hp: 100 });\n    }\n    grid.push(row);\n  }\n  grid[1][1] = 0;\n  grid[1][2] = 0;\n  grid[2][1] = 0;\n}\ninitGrid();\n\nconst keys = {};\nwindow.addEventListener('keydown', e => keys[e.key] = true);\nwindow.addEventListener('keyup', e => keys[e.key] = false);\nwindow.addEventListener('touchstart', handleTouch);\nwindow.addEventListener('touchmove', handleTouch);\nlet touchStart = null;\n\nfunction handleTouch(e) {\n  if (gameOver) return;\n  const touch = e.touches[0];\n  const rect = canvas.getBoundingClientRect();\n  const x = (touch.clientX - rect.left) / (canvas.width / width);\n  const y = (touch.clientY - rect.top) / (canvas.height / height);\n  if (e.type === 'touchstart') touchStart = { x, y };\n  else if (e.type === 'touchmove' && touchStart) {\n    const dx = x - touchStart.x;\n    const dy = y - touchStart.y;\n    if (Math.abs(dx) > Math.abs(dy)) {\n      if (dx > 20) movePlayer(1, 0);\n      else if (dx < -20) movePlayer(-1, 0);\n    } else {\n      if (dy > 20) movePlayer(0, 1);\n      else if (dy < -20) movePlayer(0, -1);\n    }\n    touchStart = { x, y };\n  }\n}\n\nfunction movePlayer(dx, dy) {\n  if (gameOver) return;\n  let nx = player.tx + dx;\n  let ny = player.ty + dy;\n  if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && grid[ny][nx] === 0)player.tx = nx;
+    player.ty = ny;
+    playSound('swap');
+  }
+}
+
+function spawnEnemies() {
+  enemies = [];
+  const count = 2 + wave;
+  for (let i = 0; i < count; i++) {
+    let ex, ey;
+    do {
+      ex = Math.floor(Math.random() * COLS);
+      ey = Math.floor(Math.random() * ROWS);
+    } while (grid[ey][ex] !== 0 || (ex === player.tx && ey === player.ty));
+    enemies.push({ x: ex, y: ey, tx: ex, ty: ey, hp: 20 + wave * 5, timer: 0 });
+  }
+}
+
+function update() {
+  if (gameOver) return;
+  
+  player.x += (player.tx * cellSize + cellSize / 2 - player.x) * 0.2;
+  player.y += (player.ty * cellSize + cellSize / 2 - player.y) * 0.2;
+  
+  enemies.forEach(en => {
+    en.timer++;
+    if (en.timer > Math.max(20, 60 - wave * 3)) {
+      en.timer = 0;
+      const dx = player.tx - en.tx;
+      const dy = player.ty - en.ty;
+      if (Math.abs(dx) + Math.abs(dy) === 1) {
+        integrity -= 10;
+        integrityEl.textContent = Math.max(0, integrity);
+        playSound('hit');
+        createParticles(en.tx, en.ty, COLORS.enemy);
+        if (integrity <= 0) endGame();
+      } else {
+        const nx = en.tx + Math.sign(dx);
+        const ny = en.ty + Math.sign(dy);
+        if (nx >= 0 && nx < COLS && ny >= 0 && ny < ROWS && grid[ny][nx] === 0) {
+          en.tx = nx;
+          en.ty = ny;
+        }
+      }
+    }
+  });
+  
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.life--;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function createParticles(cx, cy, color) {
+  for (let i = 0; i < 6; i++) {
+    particles.push({
+      x: cx * cellSize + cellSize / 2,
+      y: cy * cellSize + cellSize / 2,
+      vx: (Math.random() - 0.5) * 6,
+      vy: (Math.random() - 0.5) * 6,
+      life: 25,
+      color: color
+    });
+  }
+}
+
+function endGame() {
+  gameOver = true;
+  timerRunning = false;
+  overlay.classList.remove('hidden');
+  overlayTitle.textContent = 'VAULT BREACHED';
+  overlayScore.textContent = wave - 1;
+  if (wave - 1 > highScore) {
+    highScore = wave - 1;
+    localStorage.setItem('shattered_vault_highscore', highScore.toString());
+    highScoreEl.textContent = highScore;
+  }
+}
+
+function draw() {
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, width, height);
+  
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const type = grid[r][c];
+      if (type === 0) continue;
+      let color = COLORS.wall;
+      if (type === 1) color = COLORS.combat;
+      else if (type === 2) color = COLORS.trap;
+      else if (type === 3) color = COLORS.utility;
+      else if (type === 4) color = COLORS.barricade;
+      ctx.fillStyle = color;
+      ctx.fillRect(c * cellSize, r * cellSize, cellSize - 1, cellSize - 1);
+    }
+  }
+  
+  enemies.forEach(en => {
+    ctx.fillStyle = COLORS.enemy;
+    ctx.fillRect(en.tx * cellSize + 2, en.ty * cellSize + 2, cellSize - 4, cellSize - 4);
+  });
+  
+  ctx.fillStyle = COLORS.player;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+  ctx.fill();
+  
+  particles.forEach(p => {
+    ctx.fillStyle = p.color;
+    ctx.fillRect(p.x, p.y, 3, 3);
+  });
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+spawnEnemies();
+gameLoop();
+</script>"}
