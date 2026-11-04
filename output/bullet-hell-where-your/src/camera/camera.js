@@ -1,0 +1,2 @@
+import {clamp} from '../utils/utils.js';
+export class Camera{constructor(){this.x=4000;this.y=4000;this.shake=0;}update(p,vx,vy){const tx=p.x-960+vx*12,ty=p.y-540+vy*12;this.x+=(tx-this.x)*0.08;this.y+=(ty-this.y)*0.08;this.x=clamp(this.x,0,10000-1920);this.y=clamp(this.y,0,10000-1080);if(this.shake>0)this.shake*=0.9;}addShake(v){this.shake+=v;}}

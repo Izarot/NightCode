@@ -1,0 +1,1 @@
+export class Bullet{constructor(x,y,vx,vy,r,color){this.x=x;this.y=y;this.vx=vx;this.vy=vy;this.r=r;this.color=color;this.life=600;}update(){this.x+=this.vx;this.y+=this.vy;this.life--;}draw(ctx){ctx.save();ctx.shadowBlur=12;ctx.shadowColor=this.color;ctx.fillStyle=this.color;ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();ctx.restore();}}
