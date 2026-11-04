@@ -1,68 +1,86 @@
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('score');
-const timerEl = document.getElementById('timer');
-const highScoreEl = document.getElementById('highScore');
+// Main Game Logic
+import { SETTINGS } from '../config/settings.js';
+import { audioManager } from './audio.js';
+import { scoreManager } from './score.js';
+import { UIManager } from './ui.js';
 
-let score = 0;
-let startTime = Date.now();
-let highScore = localStorage.getItem('highScore') || 0;
-highScoreEl.textContent = highScore;
-
-function resize() {
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    ctx.scale(dpr, dpr);
-}
-window.addEventListener('resize', resize);
-resize();
-
-function updateTimer() {
-    const elapsed = Math.floor((Date.now() - startTime) / 1000);
-    timerEl.textContent = elapsed + 's';
-}
-setInterval(updateTimer, 250);
-
-function draw() {
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = '#ff5722';
-    ctx.beginPath();
-    ctx.arc(canvas.width/2, canvas.height/2, 50, 0, Math.PI*2);
-    ctx.fill();
-}
-function loop() {
-    draw();
-    requestAnimationFrame(loop);
-}
-loop();
-
-function playClickSound() {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.setValueAtTime(440, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-    gain.gain.setValueAtTime(0.001, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.1, ctx.currentTime + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.2);
-}
-
-canvas.addEventListener('click', (e) => {
-    score++;
-    scoreEl.textContent = score;
-    if (score > highScore) {
-        highScore = score;
-        highScoreEl.textContent = highScore;
-        localStorage.setItem('highScore', highScore);
+export class Game {
+  constructor() {
+    this.canvas = null; this.ctx = null; this.uiManager = null;
+    this.state = 'waiting'; this.score = 0; this.highScore = 0;
+    this.startTime = 0; this.timerInterval = null; this.gameActive = false;
+  }
+  init() {
+    this.canvas = document.getElementById('gameCanvas');
+    this.ctx = this.canvas.getContext('2d');
+    this.uiManager = new UIManager(this.canvas, this.ctx);
+    audioManager.init();
+    this.highScore = scoreManager.getHighScore();
+    this.updateHighScoreDisplay();
+    this.setupResponsiveCanvas();
+    this.canvas.addEventListener('click', () => this.handleClick());
+    this.startRound();
+  }
+  setupResponsiveCanvas() {
+    this.uiManager.resizeCanvas();
+    window.addEventListener('resize', () => this.uiManager.resizeCanvas());
+  }
+  startRound() {
+    this.state = 'waiting'; this.gameActive = true;
+    this.uiManager.drawCircle('waiting');
+    audioManager.playSound('start');
+    const waitTime = Math.random() * (SETTINGS.maxWait - SETTINGS.minWait) + SETTINGS.minWait;
+    setTimeout(() => {
+      if (this.gameActive) {
+        this.state = 'ready'; this.startTime = performance.now();
+        this.startTimer(); this.uiManager.drawCircle('ready');
+        setTimeout(() => {
+          if (this.state === 'ready') { this.state = 'danger'; this.uiManager.drawCircle('danger'); audioManager.playSound('wrong'); }
+        }, SETTINGS.readyDuration);
+      }
+    }, waitTime);
+  }
+  startTimer() {
+    this.timerInterval = setInterval(() => {
+      const elapsed = (performance.now() - this.startTime) / 1000;
+      document.getElementById('timer').textContent = elapsed.toFixed(2);
+    }, 100);
+  }
+  stopTimer() {
+    if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
+    document.getElementById('timer').textContent = '0.00';
+  }
+  handleClick() {
+    if (!this.gameActive) return;
+    if (this.state === 'ready') {
+      const reactionTime = (performance.now() - this.startTime) / 1000;
+      const points = SETTINGS.correctClick - Math.round(reactionTime * 10);
+      this.score += points;
+      audioManager.playSound('correct');
+      this.showMessage('Correct! ' + reactionTime.toFixed(3) + 's', '#48bb78');
+      document.getElementById('score').textContent = this.score;
+      this.highScore = scoreManager.updateHighScore(this.score);
+      this.updateHighScoreDisplay();
+      this.stopTimer();
+      setTimeout(() => this.startRound(), 1000);
+    } else if (this.state === 'waiting') {
+      this.score += SETTINGS.wrongClick;
+      audioManager.playSound('wrong');
+      this.showMessage('Too early!', '#f56565');
+      document.getElementById('score').textContent = this.score;
+      setTimeout(() => this.startRound(), 1500);
+    } else if (this.state === 'danger') {
+      this.score += SETTINGS.wrongClick;
+      audioManager.playSound('wrong');
+      this.showMessage('Too slow!', '#f56565');
+      document.getElementById('score').textContent = this.score;
+      setTimeout(() => this.startRound(), 1500);
     }
-    playClickSound();
-});
-
-// Prevent scrolling on touch
-canvas.addEventListener('touchstart', e => e.preventDefault());
+  }
+  showMessage(text, color) {
+    const messageEl = document.getElementById('message');
+    messageEl.textContent = text;
+    messageEl.style.color = color;
+  }
+  updateHighScoreDisplay() { document.getElementById('highscore').textContent = this.highScore; }
+}

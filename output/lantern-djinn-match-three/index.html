@@ -1,32 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Emoji Dodge - Web Game</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
-    <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reaction Master</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='70%' font-size='60' text-anchor='middle'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Tahoma,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
+#gameContainer{background:rgba(255,255,255,.95);border-radius:20px;box-shadow:0 10px 40px rgba(0,0,0,.2);padding:20px;max-width:500px;width:100%}
+h1{text-align:center;color:#2d3748;margin-bottom:15px;font-size:2rem}
+#gameWrapper{position:relative;width:100%;aspect-ratio:1/1}
+canvas{width:100%!important;height:100%!important;display:block;border-radius:10px;cursor:pointer;background:#f7fafc}
+#uiOverlay{position:absolute;top:15px;left:15px;right:15px;display:flex;justify-content:space-between;pointer-events:none}
+.timer,.highscore{background:rgba(255,255,255,.9);padding:10px 20px;border-radius:25px;font-weight:bold}
+.timer{color:#e53e3e}.highscore{color:#38a169}
+#scoreDisplay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+#scoreDisplay h2{font-size:4rem;color:#4c51bf}
+#message{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;font-size:1.5rem;font-weight:bold}
+.instructions{text-align:center;margin-top:15px;color:#4a5568;font-size:.9rem}
+</style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="ui-overlay">
-            <div id="score-board">Score: <span id="score">0</span></div>
-            <div id="high-score-board">High Score: <span id="high-score">0</span></div>
-            <div id="speedrun-timer">Time: <span id="timer">0.00</span>s</div>
-        </div>
-        <canvas id="gameCanvas"></canvas>
-        <div id="start-screen" class="screen">
-            <h1>Emoji Dodge</h1>
-            <p>Avoid the falling emojis for as long as you can!</p>
-            <button id="start-button">Start Game</button>
-        </div>
-        <div id="game-over-screen" class="screen hidden">
-            <h1>Game Over</h1>
-            <p>Score: <span id="final-score">0</span></p>
-            <p>High Score: <span id="final-high-score">0</span></p>
-            <button id="restart-button">Play Again</button>
-        </div>
-    </div>
-    <script src="app.js"></script>
+<div id="gameContainer">
+<h1>Reaction Master</h1>
+<div id="gameWrapper">
+<canvas id="gameCanvas"></canvas>
+<div id="uiOverlay"><div class="timer"><span id="timer">0.00</span>s</div><div class="highscore"><span id="highscore">0</span></div></div>
+<div id="scoreDisplay"><h2 id="score">0</h2><p>Score</p></div>
+<div id="message"></div>
+</div>
+<p class="instructions">Click when the circle turns GREEN! Avoid RED!</p>
+</div>
+<script type="module">
+import { Game } from './src/game.js';
+const game = new Game();
+game.init();
+</script>
 </body>
 </html>

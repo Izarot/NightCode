@@ -1,12 +1,45 @@
 # Architecture Documentation
 
-This project follows a modular structure to ensure maintainability and scalability.
+## Overview
+Reaction Master is a simple browser-based reaction game built with vanilla JavaScript.
 
-- **`src/`**: Contains the core application code, including the game loop, rendering engine, input handling, and audio management.
-- **`tests/`**: Contains automated unit tests for game mechanics like collision detection and state persistence.
-- **`config/`**: Stores non-secret configuration settings such as colors and audio frequencies.
-- **`docs/`**: Contains project documentation and architectural overviews.
-- **`scripts/`**: Contains build and maintenance automation scripts.
+## Key Features
+### 1. Responsive Canvas
+- Uses CSS aspect-ratio for mobile-friendly sizing
+- Dynamically resizes on window resize events
 
-## Responsive Design
-The canvas scales dynamically to fit the viewport, ensuring compatibility across mobile and desktop devices.
+### 2. Emoji Favicon
+- Embedded SVG lightning bolt emoji
+- No external requests needed
+
+### 3. Vibrant Color Palette
+- Blue (#4299e1) for waiting state
+- Green (#48bb78) for ready state
+- Red (#f56565) for danger state
+
+### 4. LocalStorage High Score
+- Persists across page refreshes
+- Automatic update on high scores
+
+### 5. Web Audio API Sound Effects
+- Correct click: C5 sine wave
+- Wrong click: F3 square wave
+- Start: E5 triangle wave
+
+### 6. Speedrun Timer
+- Displays reaction time in top-left corner
+- Updates every 100ms
+
+## File Structure
+
+.
+|-- index.html
+|-- config/settings.js
+|-- src/game.js
+|-- src/audio.js
+|-- src/score.js
+|-- src/ui.js
+|-- tests/game.test.js
+|-- scripts/build.js
+`-- docs/architecture.md
+

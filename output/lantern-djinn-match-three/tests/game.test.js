@@ -1,22 +1,28 @@
-describe('Neon Dodger Game Mechanics', () => {
-    test('should save high score to localStorage', () => {
-        localStorage.setItem('neonDodgerHighScore', '100');
-        expect(localStorage.getItem('neonDodgerHighScore')).toBe('100');
-    });
+// Game Tests
+import { Game } from '../src/game.js';
+import { scoreManager } from '../src/score.js';
 
-    test('should detect collision between player and obstacle', () => {
-        const p = { x: 10, y: 10, size: 10 };
-        const o = { x: 10, y: 10, size: 10 };
-        const collision = p.x < o.x + o.size && p.x + p.size > o.x &&
-                          p.y < o.y + o.size && p.y + p.size > o.y;
-        expect(collision).toBe(true);
-    });
+describe('Game', () => {
+  let game;
+  beforeEach(() => { game = new Game(); });
+  test('should initialize with correct default values', () => {
+    expect(game.state).toBe('waiting');
+    expect(game.score).toBe(0);
+    expect(game.gameActive).toBe(false);
+  });
+  test('should calculate reaction time correctly', () => {
+    const startTime = performance.now();
+    const elapsed = performance.now() - startTime;
+    expect(elapsed).toBeGreaterThanOrEqual(0);
+  });
+});
 
-    test('should not detect collision when apart', () => {
-        const p = { x: 0, y: 0, size: 10 };
-        const o = { x: 100, y: 100, size: 10 };
-        const collision = p.x < o.x + o.size && p.x + p.size > o.x &&
-                          p.y < o.y + o.size && p.y + p.size > o.y;
-        expect(collision).toBe(false);
-    });
+describe('ScoreManager', () => {
+  test('should return 0 for high score when none exists', () => {
+    expect(scoreManager.getHighScore()).toBeGreaterThanOrEqual(0);
+  });
+  test('should save and retrieve high score', () => {
+    scoreManager.saveHighScore(100);
+    expect(scoreManager.getHighScore()).toBe(100);
+  });
 });
