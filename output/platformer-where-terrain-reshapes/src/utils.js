@@ -1,0 +1,5 @@
+export const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+export const lerp=(a,b,t)=>a+(b-a)*t;
+export function noise(x){return Math.sin(x*0.012)*38+Math.sin(x*0.031+1.7)*22+Math.sin(x*0.007+0.5)*50;}
+export function fmtTime(ms){const s=ms/1000;const m=Math.floor(s/60);const sec=(s%60).toFixed(1).padStart(4,'0');return m+':'+sec;}
+export class Sound{constructor(){this.ctx=null;}init(){if(!this.ctx)this.ctx=new (window.AudioContext||window.webkitAudioContext)();}beep(f,d=0.12,type='square',v=0.15){try{this.init();const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(this.ctx.destination);o.start();g.gain.exponentialRampToValueAtTime(0.001,this.ctx.currentTime+d);o.stop(this.ctx.currentTime+d);}catch(e){}}jump(){this.beep(520,0.12,'square',0.12);}cp(){this.beep(880,0.2,'sine',0.2);setTimeout(()=>this.beep(1320,0.25,'sine',0.2),120);}boost(){this.beep(300,0.15,'sawtooth',0.12);}die(){this.beep(140,0.4,'sawtooth',0.2);}win(){[523,659,784,1046].forEach((f,i)=>setTimeout(()=>this.beep(f,0.25,'sine',0.2),i*130));}}
