@@ -2,14 +2,49 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>FRACTURE POINT</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='50%' x='50%' font-size='80' text-anchor='middle' fill='%23FF2E63'%3E💥%3C/text%3E%3C/svg%3E">
-<style>body{margin:0;overflow:hidden;background:#05050A;font-family:Arial,sans-serif}</style>
+<style>body{margin:0;background:#05050A;color:#E0E0E0;font-family:monospace;text-align:center}canvas{background:#05050A;border:1px solid #1A1A2E;max-width:95vw;touch-action:none}h1{color:#00F5D4;letter-spacing:.1em}</style>
 </head>
 <body>
-<canvas id="game"></canvas>
-<canvas id="hud" style="position:absolute;top:0;left:0;pointer-events:none"></canvas>
-<script type="module" src="/src/main.js"></script>
+<h1>FRACTURE POINT</h1>
+<p>Arcade Bullet-Hell / Dodge Em Up - WASD move, Shift focus, Space pulse</p>
+<canvas id="game" width="800" height="600"></canvas>
+<div id="hud">Score: 0 | Lives: 3 | Pulse: 0% | Time: 0.0s</div>
+<script>
+const c=document.getElementById('game');const x=c.getContext('2d');const hud=document.getElementById('hud');
+let p={x:400,y:300,r:6,lives:3,inv:0,focus:false};
+let keys={},seeds=[],shards=[],parts=[],score=0,graze=0,pulse=0,t=0,last=0,over=false,spawn=0;
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key===' '){e.preventDefault();doPulse();}if(over&&e.key==='Enter')reset();});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+let touch={x:0,y:0,active:false,focus:false};
+c.addEventListener('touchstart',e=>{e.preventDefault();const r=c.getBoundingClientRect();const tt=e.touches[0];touch.x=(tt.clientX-r.left)*c.width/r.width;touch.y=(tt.clientY-r.top)*c.height/r.height;touch.active=true;touch.focus=tt.clientX>r.left+r.width/2;if(touch.focus)doPulse();},{passive:false});
+c.addEventListener('touchmove',e=>{e.preventDefault();const r=c.getBoundingClientRect();const tt=e.touches[0];touch.x=(tt.clientX-r.left)*c.width/r.width;touch.y=(tt.clientY-r.top)*c.height/r.height;},{passive:false});
+c.addEventListener('touchend',()=>touch.active=false);
+function reset(){p={x:400,y:300,r:6,lives:3,inv:0,focus:false};seeds=[];shards=[];parts=[];score=0;graze=0;pulse=0;t=0;over=false;}
+function doPulse(){if(pulse<100||over)return;pulse=0;parts.push({x:p.x,y:p.y,r:10,a:1});for(let i=seeds.length-1;i>=0;i--){const s=seeds[i];if(Math.hypot(s.x-p.x,s.y-p.y)<180){fracture(s);seeds.splice(i,1);}}shards=shards.filter(s=>Math.hypot(s.x-p.x,s.y-p.y)>=180);score+=50;}
+function fracture(s){for(let i=0;i<3;i++){const a=Math.random()*6.283;shards.push({x:s.x,y:s.y,vx:Math.cos(a)*2,vy:Math.sin(a)*2,r:4,life:300});}}
+function loop(ts){requestAnimationFrame(loop);const dt=Math.min(32,ts-last||16);last=ts;if(over){draw();return;}t+=dt/1000;score+=dt*0.01*(1+t*0.02);
+p.focus=!!keys['shift']||touch.focus;let sp=p.focus?1.5:3.2;let dx=0,dy=0;
+if(keys['w']||keys['arrowup'])dy-=1;if(keys['s']||keys['arrowdown'])dy+=1;if(keys['a']||keys['arrowleft'])dx-=1;if(keys['d']||keys['arrowright'])dx+=1;
+if(touch.active&&!touch.focus){dx=touch.x-p.x;dy=touch.y-p.y;const m=Math.hypot(dx,dy)||1;dx/=m;dy/=m;}
+const m=Math.hypot(dx,dy);if(m>0){p.x+=dx/m*sp*dt/16;p.y+=dy/m*sp*dt/16;}
+p.x=Math.max(10,Math.min(790,p.x));p.y=Math.max(10,Math.min(590,p.y));if(p.inv>0)p.inv-=dt;
+spawn-=dt;if(spawn<=0){spawn=Math.max(200,900-t*10);const a=Math.random()*6.283;seeds.push({x:Math.random()*800,y:Math.random()*200,vx:Math.cos(a)*1.5,vy:Math.abs(Math.sin(a))*1.5+1,r:7,life:6000,grazed:false});}
+for(let i=seeds.length-1;i>=0;i--){const s=seeds[i];s.x+=s.vx*dt/16;s.y+=s.vy*dt/16;s.life-=dt;if(s.x<0||s.x>800||s.y<0||s.y>600||s.life<=0){fracture(s);seeds.splice(i,1);continue;}checkHit(s,7);}
+for(let i=shards.length-1;i>=0;i--){const s=shards[i];const a=Math.atan2(p.y-s.y,p.x-s.x);s.vx+=Math.cos(a)*0.05;s.vy+=Math.sin(a)*0.05;const v=Math.hypot(s.vx,s.vy);if(v>3){s.vx*=3/v;s.vy*=3/v;}s.x+=s.vx*dt/16;s.y+=s.vy*dt/16;s.life-=dt;if(s.life<=0){shards.splice(i,1);continue;}checkHit(s,4);}
+for(let i=parts.length-1;i>=0;i--){const q=parts[i];q.r+=5;q.a-=0.03;if(q.a<=0)parts.splice(i,1);}
+pulse=Math.min(100,pulse+dt*0.002);
+hud.textContent='Score: '+Math.floor(score)+' | Lives: '+p.lives+' | Pulse: '+Math.floor(pulse)+'% | Time: '+t.toFixed(1)+'s | Graze: '+graze;
+draw();}
+function checkHit(s,r){const d=Math.hypot(s.x-p.x,s.y-p.y);const hr=p.focus?2:4;if(d<r+hr&&p.inv<=0){p.lives--;p.inv=2000;parts.push({x:p.x,y:p.y,r:10,a:1});if(p.lives<=0)over=true;}else if(d<r+24&&!s.grazed){s.grazed=true;graze++;pulse=Math.min(100,pulse+10);score+=25;}}
+function draw(){x.fillStyle='#05050A';x.fillRect(0,0,800,600);x.strokeStyle='#1A1A2E';for(let i=0;i<800;i+=40){x.beginPath();x.moveTo(i,0);x.lineTo(i,600);x.stroke();}for(let i=0;i<600;i+=40){x.beginPath();x.moveTo(0,i);x.lineTo(800,i);x.stroke();}
+x.fillStyle='#FF2E63';seeds.forEach(s=>{x.beginPath();x.arc(s.x,s.y,s.r,0,6.283);x.fill();});
+x.fillStyle='#FFE600';shards.forEach(s=>{x.beginPath();x.arc(s.x,s.y,s.r,0,6.283);x.fill();});
+parts.forEach(q=>{x.strokeStyle='rgba(0,245,212,'+q.a+')';x.beginPath();x.arc(q.x,q.y,q.r,0,6.283);x.stroke();});
+if(p.inv<=0||Math.floor(t*10)%2===0){x.fillStyle='#00F5D4';x.beginPath();x.arc(p.x,p.y,p.r,0,6.283);x.fill();x.fillStyle='#fff';x.beginPath();x.arc(p.x,p.y,p.focus?2:3,0,6.283);x.fill();}
+if(over){x.fillStyle='#fff';x.font='32px monospace';x.textAlign='center';x.fillText('GAME OVER - Press Enter',400,300);}}
+requestAnimationFrame(loop);
+</script>
 </body>
 </html>
