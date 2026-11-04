@@ -1,0 +1,531 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 2 column 3 (char 4)
+
+Raw: The user wants a complete HTML5 Canvas game called "CHROMA DRIFT - Painter's Race" in a single HTML file. Let me carefully implement all the requirements:
+
+1. Core Concept: Player painter moves through color zones, copies current color onto canvas
+2. Win Condition: Complete all required color zones with >70% accuracy before timer expires
+3. Lose Condition: Timer reaches 0 or canvas accuracy drops below 30%
+4. Technical Foundation: Single HTML file, vanilla JS, fixed timestep loop, 1280x720 logical resolution scaled to fit window
+5. Player Physics: acceleration-based movement, sprint/stamina, collision, dash, painting lock
+6. Color Drift System: HSV drift with hue shift rates, saturation/value drift
+7. Painting Mechanic: progress ring, accuracy calculation in HSV space, muddy strokes
+8. Canvas & Scoring: HUD canvas preview, score calculation
+9. Level Structure: 4-6 zones, timer decreasing, level progression
+10. Visuals: Painterly impressionist style, parallax background, procedural shapes
+11. HUD: Top bar with level/timer, stamina bar, canvas preview
+12. Audio: Web Audio API sounds
+13. Performance: 60 FPS, max 300 particles
+
+Let me build this as a comprehensive single HTML file. I need to be thorough and implement all features. Let me structure it well.
+
+Key components:
+- Game class (state management, game loop)
+- Player class (movement, physics, painting)
+- ColorZone class (drift, painting)
+- Renderer class (drawing everything)
+- Input handler
+- Audio system
+- Particle system
+- UI/HUD rendering
+
+Let me write this out carefully. This is a large task but I'll make it complete and working.
+
+I'll create the file at C:\workspace\chroma-drift.html
+
+Let me think about the architecture:
+
+```javascript
+// Game states: MENU, PLAYING, PAUSED, LEVEL_COMPLETE, GAME_OVER
+
+class Game {
+  constructor() - sets up canvas, state, levels
+  init() - initialize
+  update(dt) - fixed timestep update
+  render() - render frame
+  loop() - requestAnimationFrame loop
+}
+
+class Player {
+  position, velocity, stamina, etc.
+  update(dt, input)
+  render(ctx)
+}
+
+class ColorZone {
+  targetColor, currentColor (HSV), position, shape
+  update(dt) - drift logic
+  paint(color) - record stroke
+  render(ctx)
+}
+
+class Renderer {
+  drawBackground, drawZones, drawPlayer, drawHUD, etc.
+}
+
+class ParticleSystem {
+  particles array, spawn, update, render
+}
+
+class AudioManager {
+  init, playSound, etc.
+}
+```
+
+For the color zones, I need organic shapes. I'll use bezier curves for hills, lake, sky patch, flowers, trees.
+
+For the canvas painting, each zone corresponds to a section of the player's canvas. The canvas is a 2D array storing colors per pixel. Actually, let me think about this differently - the "canvas" is a grid where each cell stores a color. When you paint a zone, you fill that zone's region on the canvas with the sampled color.
+
+Actually, re-reading: "Each zone corresponds to a section of the canvas painting." So the canvas has sections, and when you paint a zone correctly, that section gets filled with the correct color. The accuracy is measured per zone.
+
+Let me design the canvas as a 2D grid (e.g., 180x120 cells matching the HUD preview size, or maybe larger). Each zone maps to a region. When painted, the region fills with sampled color. Accuracy = how close sampled color is to target color.
+
+Actually, for simplicity and visual appeal, let me make the canvas a larger area (like the full playfield) and each zone paints its region. The HUD shows a small preview.
+
+Let me simplify: The canvas is a grid of cells. Each zone has a region (set of cells). When you paint a zone, you fill those cells with the current sampled color. The final accuracy is computed by averaging the color difference across all painted zones.
+
+Let me think about the painting mechanic more carefully:
+- Player stands in zone, holds E
+- Progress ring fills over 1.5s
+- While painting, samples zone's Current Color every frame
+- Accuracy = hue difference: >30 poor, 15-30 good, <15 perfect
+- If drifted >45° from start, stroke is muddy, reduces overall accuracy
+- Release E to lock in stroke
+- Partial strokes fill proportionally
+
+So the canvas accumulates strokes. Each stroke records the sampled color at the time of painting. Final accuracy = average of all stroke accuracies (or the best?).
+
+Actually: "Final score = Average accuracy of all zones + Time Bonus + Perfect Stroke Bonus". So average accuracy across zones. Each zone's accuracy is based on the best/last stroke? Or average of strokes?
+
+Let me interpret: Each zone can be painted multiple times. The zone's accuracy is the average accuracy of all strokes painted on it. Or maybe the last stroke determines it. I'll go with average of all strokes for that zone, which gives flexibility.
+
+Hmm, but "each repaint takes time" suggests multiple attempts. Let me go with: zone accuracy = average of all strokes on that zone. You want to paint multiple times to get high accuracy.
+
+Actually, to keep it simpler and more fun, let me say: each zone needs at least one stroke to "complete" it. The zone's accuracy = the accuracy of the best (highest) stroke. But you can repaint to improve. Once accuracy > threshold, zone is complete.
+
+Wait, the win condition is ">70% accuracy" overall. So you need overall accuracy above 70%. Let me compute overall accuracy as average of zone accuracies. Each zone accuracy = average of its strokes. A zone is "completed" when it has been painted at least once AND its accuracy is above some threshold (maybe just needs at least one stroke, and the overall must be >70%).
+
+Let me re-read: "Complete all required color zones on the canvas with >70% accuracy before the level timer expires." So all zones completed with >70% accuracy. I'll track per-zone accuracy and check overall.
+
+Let me make it: each zone requires at least one stroke. Zone accuracy = average stroke accuracy. Overall = average of zone accuracies. Win when all zones have >=1 stroke and overall >=70%. Lose when timer=0 or overall <30%.
+
+Actually the lose condition says "canvas accuracy drops below 30% due to mismatched colors" - this could mean if you paint badly, accuracy drops. But since you control when to paint, this is more about... hmm. Maybe if you paint muddy strokes repeatedly it drags down. Let me just track overall accuracy and lose if it drops below 30% at any point? That seems harsh. Let me make lose condition: timer reaches 0 OR overall accuracy < 30% at end of level. Actually "drops below 30%" suggests real-time. Let me make it: if overall accuracy ever drops below 30%, game over. That creates tension.
+
+Hmm, but that might be too punishing. Let me make it: lose if timer=0 OR (at end of level) overall < 30%. But also "canvas accuracy drops below 30% due to mismatched colors" - I'll interpret as: if at any point during painting the running average drops below 30%, you lose. This adds urgency. Actually, let me keep it simpler: the lose condition triggers when timer expires OR when overall accuracy is computed at end and < 30%. But to honor "drops below 30%", I'll add: if running accuracy < 30% at any point, game over immediately. This makes the game tense.
+
+Let me go with: lose if timer=0 OR running overall accuracy < 30%. This is checked after each stroke. Good tension.
+
+Now let me think about the actual implementation details.
+
+HSV conversion functions needed:
+- hsvToRgb(h, s, v) -> [r, g, b]
+- rgbToHsv(r, g, b) -> [h, s, v]
+
+Color difference in HSV space:
+- Hue difference: circular distance. |h1-h2| wrapped to [0,180]. If >90, use 180-|diff|.
+- Saturation diff: |s1-s2|
+- Value diff: |v1-v2|
+- Accuracy score: higher = better. Perfect (<15° hue), Good (15-30), Poor (>30).
+- Convert to a 0-100 percentage: e.g., hueScore = 100 * (1 - hueDiff/180), satScore = 100*(1-satDiff/1), valScore = 100*(1-valDiff/1). Average them. Or weighted.
+
+Let me define accuracy as:
+- hueAcc = 100 * (1 - min(hueDiff, 180-hueDiff)/180)  -- wait, smaller diff = higher accuracy
+- Actually: accuracy = 100 * (1 - normalizedDiff) where normalizedDiff combines hue, sat, val.
+
+Let me do: 
+- hueNorm = min(hueDiff, 180-hueDiff) / 180  (0 to 1, 0 = perfect match)
+- satNorm = satDiff / 1  (0 to 1)
+- valNorm = valDiff / 1  (0 to 1)
+- accuracy = (hueNorm*0.6 + satNorm*0.2 + valNorm*0.2) * 100
+
+Perfect if hueDiff < 15. Good if 15-30. Poor if >30.
+
+Muddy check: if hue drift from start > 45°, stroke is muddy. Muddy reduces accuracy significantly (multiply by 0.5 or subtract penalty).
+
+OK let me now write the code. This will be long. Let me be systematic.
+
+Let me plan the levels:
+- Level 1: 4 zones, timer 90s, drift rate 5°/s
+- Level 2: 5 zones, timer 80s, drift 10°/s
+- Level 3: 5 zones, timer 70s, drift 15°/s
+- Level 4: 6 zones, timer 65s, drift 20°/s
+- Level 5: 6 zones, timer 60s, drift 25°/s
+
+Zones types: hill, lake, sky patch, flowers, tree. Each has a target color and position.
+
+Let me define zone positions as regions in the playfield. The playfield is the full 1280x720 area. Zones are placed at various locations.
+
+For the canvas painting: I'll make the canvas a separate data structure. Let me make it a grid covering the whole playfield (e.g., 64x36 cells of 20px each = 1280x720). Each cell stores a color or null. When a zone is painted, fill its region's cells with sampled color. The HUD preview shows a subset.
+
+Actually, simpler: the canvas is just a list of strokes. Each stroke = {zoneId, color, accuracy}. The "canvas" display renders the accumulated strokes as colored regions. For the HUD preview, show the latest strokes or a mini version.
+
+Hmm, let me make the canvas a pixel grid for nice visuals. Grid of cells. Each zone has a polygon region. Painting fills cells within that polygon with sampled color. This gives a nice painted look.
+
+Let me do a grid of 1280/20 = 64 wide x 720/20 = 36 tall = 2304 cells. Each cell 20x20. Zones defined as polygons. When painting, rasterize polygon to cells and fill.
+
+This is doable. Let me implement point-in-polygon test for rasterization.
+
+Actually, to keep performance reasonable and code manageable, let me use a coarser grid: 32x18 cells of 40px. Or even simpler, represent zones as rectangles/polygons and fill directly without per-cell. For the "painted" look, I can draw filled polygons with the sampled color, plus a soft edge.
+
+Let me go with filled polygons for zones when painted. Each zone has a polygon path. When painted, draw the polygon filled with sampled color (with some alpha for layering). Multiple strokes layer on top. This gives an impressionist painted look.
+
+For the HUD preview, I'll just show colored rectangles representing each zone's painted result, or a mini canvas. Let me make a mini canvas that shows the painted zones as colored shapes.
+
+OK, I think I have enough design. Let me write the code now. It's going to be ~1000+ lines. Let me write it carefully and completely.
+
+Let me structure the HTML file:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CHROMA DRIFT</title>
+  <link rel="icon" href="data:image/svg+xml,...emoji...">
+  <style>...</style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <script>
+    // All game code here
+  </script>
+</body>
+</html>
+```
+
+For the favicon emoji, I'll use a data URI with an SVG containing an emoji. Actually emojis in SVG data URIs work. Let me use a colorful paint palette emoji 🎨 or 🖌️.
+
+Let me write the CSS for full-screen canvas with letterboxing.
+
+Now the JS. Let me write classes.
+
+I'll write helper math functions, then classes, then the Game controller.
+
+Let me be careful about the fixed timestep: accumulate dt, step in 1/60 increments.
+
+Let me write it all now.
+
+For audio, I'll create an AudioManager using Web Audio API with oscillators and noise buffers. Sounds: brush stroke (filtered noise burst), perfect chime (sine arpeggio), muddy thud (low sine), dash whoosh (filtered noise sweep), UI click (short blip). Ambient pad: low oscillator with slow LFO.
+
+Let me write the code.
+
+I need to handle:
+- Keyboard input (WASD, arrows, Shift, Space, E, Esc)
+- Mouse clicks on UI buttons
+- Touch (optional - virtual joystick + paint button). I'll add basic touch support for mobile.
+
+Let me focus on getting keyboard + mouse working well, plus basic touch.
+
+Let me write the full implementation now. I'll aim for completeness and correctness.
+
+Let me define the color palette for levels:
+Level 1 targets:
+- Hill: H(120) S(0.5) V(0.7) - greenish
+- Lake: H(200) S(0.4) V(0.6) - blue
+- Sky patch: H(200) S(0.3) V(0.9) - light blue
+- Flowers: H(330) S(0.7) V(0.8) - pink
+
+Level 2 adds: Trees H(80) S(0.4) V(0.6)
+
+Etc.
+
+Drift: hue shifts, sometimes reverses randomly.
+
+Let me code the drift: each zone has driftRate (deg/s), and a direction that flips randomly every 3-5s. Hue += dir * driftRate * dt. Saturation += sin(t)*0.02, value += cos(t)*0.02 roughly. Direction reversal: every random 3-5s, flip sign.
+
+Actually spec says "Direction can reverse randomly every 3-5 seconds." So periodically flip direction. Let me implement: a timer that counts down; when it hits 0, pick new random direction and reset timer to random 3-5s.
+
+Saturation/value drift: ±2%/s. So sat += sin(time*speed)*0.02*dt? Or linear oscillation. Let me do: sat += Math.sin(globalTime*2)*0.02*dt, value += Math.cos(globalTime*1.5)*0.02*dt. Simple oscillation.
+
+Visual: zones desaturate slightly as they drift far, chromatic aberration increases. I'll modulate saturation by a factor based on drift magnitude.
+
+OK, writing now. Let me produce the complete file.
+
+For the player sprite: simple top-down character. Draw with paths: body circle, hat, apron, palette, brush. Procedural.
+
+For zones: organic shapes via bezier curves. Each zone has a center and a polygon path. Draw with soft glow border.
+
+Let me define zone shapes as arrays of points forming a closed polygon, drawn with quadraticCurveTo for soft edges.
+
+Let me write a function drawOrganicShape(ctx, points, color, glow).
+
+For the background: layered parallax - distant mountains (darker, offset by camera? no camera movement, just static layers with slight animation), mid hills (the color zones themselves are the mid layer), foreground grass with animated flowers.
+
+Actually the zones ARE the mid landscape. The background behind could be darker hills/mountains. Let me draw:
+1. Sky gradient (top)
+2. Distant mountains (parallax, dark silhouettes)
+3. Mid layer: the color zones (hills, lake, etc.) - these are semi-transparent so distant stuff shows through? Or zones are solid.
+4. Foreground grass with animated flowers at bottom.
+
+Let me make zones semi-transparent with glow so they look like painted areas. The background is the "unpainted" landscape.
+
+Hmm, this is getting complex. Let me simplify the visual: 
+- Background: gradient sky + distant mountain silhouettes + rolling darker hills (static, darker than zones)
+- Zones: positioned as distinct organic shapes with glow borders, semi-transparent fill so they blend with background
+- Foreground: grass strip at bottom with animated flowers
+
+When a zone is painted, its fill becomes opaque sampled color.
+
+Let me just go with it. I'll make zones have a base "landscape" appearance (semi-transparent) and when painted become solid.
+
+Actually, to keep it clean: zones are always visible as colored regions (the "landscape" you paint). Before painting they're at their current drifting color (semi-transparent). After painting they become solid. This represents the landscape you're painting over.
+
+Let me make zones always drawn as filled organic shapes at their current color, with glow border. When painted, draw solid fill (no transparency). This works visually.
+
+OK enough planning, let me write.
+
+For collision: circular radius 14. Obstacles: trees, rocks, water edges. I'll place a few obstacles. Collision = circle-circle or circle-rect. Slide along.
+
+Let me keep obstacles minimal - a few rocks and trees scattered. Collision prevents passing through.
+
+Actually, to keep movement smooth and avoid frustration, let me make obstacles sparse and mostly decorative with light collision. Or skip hard obstacles and just have decorative ones. The spec says "Collides with landscape obstacles (trees, rocks, water edges)." Let me implement circle vs circle collision for trees/rocks, and treat water edges as boundaries.
+
+Let me place ~5 obstacle circles. Collision resolution: push out along normal, dampen velocity slightly (slide).
+
+Dash: velocity boost in movement direction for 0.15s, cooldown 1.2s. Dash leaves paint trail particles.
+
+Painting lock: while holding E, speed reduced to 40%, can't dash. Must be within 48px of zone center.
+
+Let me now write everything. I'll write the file in one go.
+
+Let me make sure to include:
+- High Score in LocalStorage (key 'chromaDriftHighScore')
+- Speedrun Timer in top corner
+- Sound effects via Web Audio API
+- Responsive canvas scaling
+- Emoji favicon
+- Vibrant color palette
+
+Let me write it.
+
+I'll write the JS carefully. Given the size, I'll be thorough.
+
+Let me define the Game state machine and main loop.
+
+```javascript
+const STATE = { MENU:'menu', PLAYING:'playing', PAUSED:'paused', COMPLETE:'complete', GAMEOVER:'gameover' };
+```
+
+Levels config array.
+
+Player class with update(dt, input, zones, obstacles).
+
+ColorZone class with update(dt, globalTime), paint(color, accuracy), getPolygon(), render().
+
+Renderer handles all drawing.
+
+Let me write helper: hsvToRgb, rgbToHsv, colorDiff, pointInPolygon.
+
+For the canvas painting data: store strokes per zone. zone.strokes = [{color:[r,g,b], accuracy:0-100, muddy:bool}]. When rendering painted region, use the average or best color of strokes. For accuracy calc, use average of stroke accuracies for that zone.
+
+Overall accuracy = average of zone accuracies. Running accuracy updated after each stroke.
+
+Win: all zones have >=1 stroke AND overall >= 70%.
+Lose: timer=0 OR running overall < 30%.
+
+Wait, "Complete all required color zones ... with >70% accuracy". So need all zones painted and overall >70%. Let me require each zone has >=1 stroke and overall >=70%.
+
+But also lose if overall < 30% at any point. So you must maintain accuracy. Painting muddy strokes hurts. You can repaint to fix.
+
+Let me make the lose condition check: if overall < 30% after any stroke, game over. This means you can't afford bad painting. Combined with needing >70% to win. Tension!
+
+Hmm, but that might be too strict. Let me re-read: "Lose Condition: Timer reaches 0, or canvas accuracy drops below 30% due to mismatched colors." Yes, drops below 30% = lose. So real-time check. OK.
+
+So strategy: paint carefully, repaint if needed, maintain accuracy above 30%. Win by getting all zones above 70% overall.
+
+This is challenging but doable. Good.
+
+Let me set initial overall accuracy to something, and it updates as you paint. Before any painting, accuracy = 0? Then first stroke sets it. If first stroke is poor, accuracy drops to <30% → immediate loss. That's harsh. Let me instead: accuracy only counts zones that have been painted. Unpainted zones don't count (or count as neutral). Let me make unpainted zones contribute 50% (neutral) so they don't drag down. Actually, let me make overall = average of painted zones' accuracies, and unpainted zones excluded. Then early game you can paint one good zone. But you need ALL zones >70% to win, so eventually all must be painted.
+
+Hmm, but "canvas accuracy drops below 30%" - if unpainted zones are excluded, then before painting anything accuracy is undefined/N/A. Let me make unpainted zones count as 0 accuracy (they're blank/white = not painted). Then overall includes them. Starting accuracy 0 → immediately lose on first stroke if poor. Too harsh.
+
+Alternative: unpainted zones count as 50% (neutral gray). Then overall starts at 50% (if all unpainted). As you paint good zones, rises. As you paint bad, drops. Lose if <30%. Win if all painted and >70%.
+
+That works! Neutral 50% baseline. Let me do that. Overall = average including neutral 50% for unpainted zones.
+
+Wait but then you could win by painting all zones moderately. And lose if any painting drags below 30%. Reasonable.
+
+Actually, let me reconsider: maybe unpainted should count as 0 and you just need to paint quickly. But the <30% lose condition with 0-count is brutal. The neutral approach is friendlier. Let me go neutral 50%.
+
+Hmm, but actually if unpainted = 50% and you paint a perfect zone (+100), overall goes up. Paint a muddy zone (-?), overall could drop. Fine.
+
+Let me finalize: zone.accuracy = average of stroke accuracies (or 50 if no strokes). overall = average of zone accuracies. Lose if overall < 30% at any point. Win if all zones have >=1 stroke and overall >= 70%.
+
+Good. Let me code it.
+
+Now, the "muddy" stroke: if hue drift from start > 45°, stroke accuracy reduced (multiply by 0.4 or cap lower). Let me apply: if muddy, accuracy *= 0.5. And maybe a screen shake.
+
+Also "Perfect Stroke Bonus +50" - track perfect strokes count.
+
+Time bonus: remaining seconds * 10 added to score.
+
+Score display: show in level complete.
+
+Let me now write the entire file. I'll be comprehensive.
+
+Let me write the code section by section mentally then output.
+
+Given length, I'll write it directly in the output. Let me make sure it's valid and complete.
+
+One concern: file is large (~1500 lines). That's fine.
+
+Let me write it.
+
+For responsive scaling: canvas logical 1280x720, scale to fit window maintaining aspect ratio, letterbox with dark bg. Use CSS to size canvas, set canvas width/height to logical*dpr, ctx.scale(dpr,dpr). Actually for crispness, set canvas.width = 1280*dpr, height=720*dpr, style width/height = 1280/720 scaled. Then ctx.setTransform(dpr,0,0,dpr,0,0). All drawing in logical coords.
+
+Let me handle resize: compute scale = min(window.innerWidth/1280, window.innerHeight/720). Set canvas style width/height accordingly. Center with flexbox.
+
+Touch: I'll add a left virtual joystick (touchstart/move on left half) and right paint button (right half). Map to movement and E. Keep optional but functional.
+
+Let me write now. Final output.
+
+I'll write the complete HTML. Let me go.
+
+Let me make the code robust and clean. Writing now.
+
+For the drift arrow indicator and floating swatch, I'll draw them in zone rendering.
+
+For the progress ring around player when near a zone and painting, draw a ring around player showing progress.
+
+For color match indicator near player: two swatches + accuracy bar.
+
+Let me implement these in render.
+
+OK writing the file now. I'll produce it fully.
+
+Let me make sure the game loop uses fixed timestep:
+```
+let acc = 0; const STEP = 1/60;
+function frame(t){
+  const dt = Math.min((t - last)/1000, 0.1); last = t;
+  acc += dt;
+  while(acc >= STEP){ update(STEP); acc -= STEP; }
+  render();
+  requestAnimationFrame(frame);
+}
+```
+
+Input: track keys in a set. Read each frame.
+
+Let me write input handling: keydown/keyup add/remove from keys object. Check in update.
+
+Mouse: click on canvas, check if over a button (defined by rects in current state).
+
+Let me define button rects per state for click handling.
+
+Alright, writing the complete file now. This is the big one.
+
+Let me also add pause on visibilitychange.
+
+Let me write it all.
+
+I'll define everything inside one script tag.
+
+Let me write the favicon as SVG data URI with emoji 🎨:
+`data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>`
+
+Good.
+
+Now writing. I'll produce the final JSON-mapped... wait, the instruction says Output ONLY a valid raw JSON object mapping filenames to their complete code contents. But this is a single HTML file. The example shows {"index.html": "...", "game.js": "..."}. Since it's one file, I'll output {"chroma-drift.html": "<full html>"}.
+
+Wait, re-reading: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents (e.g. {"index.html": "...", "game.js": "..."}). Do NOT include markdown block formatting like ```json or any conversational commentary."
+
+So I should output a JSON object with the filename as key and the file content as value. No markdown fences. Just `{ "filename": "content" }`.
+
+Since there's one file, key = "chroma-drift.html".
+
+Let me write the complete content. This is going to be long but I'll make it complete and working.
+
+Let me carefully write the JavaScript to ensure it runs without errors.
+
+I'll now compose the entire file.
+
+Let me write helper functions first, then classes, then game controller, then init.
+
+I need to be careful with the painting progress ring and accuracy.
+
+Let me define ColorZone:
+```
+class ColorZone {
+  constructor(cfg){ this.id=cfg.id; this.type=cfg.type; this.cx=cfg.x; this.cy=cfg.y; this.target={h:cfg.th,s:cfg.ts,v:cfg.tv}; this.current={h:cfg.th,s:cfg.ts,v:cfg.tv}; this.driftRate=cfg.drift; this.dir=1; this.dirTimer=3+Math.random()*2; this.points=cfg.shape; this.strokes=[]; this.painted=false; this.pulse=0; this.swatchY=0; this.arrowDir=0; }
+  update(dt, t){
+    // drift hue
+    this.current.h += this.dir * this.driftRate * dt;
+    // occasionally reverse
+    this.dirTimer -= dt;
+    if(this.dirTimer<=0){ this.dir *= -1; this.dirTimer = 3+Math.random()*2; }
+    // sat/val oscillation
+    this.current.s = clamp(this.target.s + Math.sin(t*2)*0.03 + (this.driftRate>15?0.02:0), 0,1);
+    this.current.v = clamp(this.target.v + Math.cos(t*1.5)*0.03, 0,1);
+    // drift magnitude
+    const dh = hueDiff(this.current.h, this.target.h);
+    this.driftMag = dh;
+    this.pulse += dt;
+    this.swatchY = Math.sin(t*3)*3;
+  }
+  stroke(color, accuracy, muddy){
+    this.strokes.push({color, accuracy, muddy});
+    this.painted = true;
+  }
+  get avgAcc(){ if(!this.strokes.length) return 50; return this.strokes.reduce((a,b)=>a+b.accuracy,0)/this.strokes.length; }
+  get bestAcc(){ ... }
+}
+```
+
+hueDiff(a,b): circular. d = abs(a-b)%360; return min(d,360-d).
+
+For rendering the zone polygon, I'll precompute the path.
+
+Let me define shapes as point arrays relative to center, scaled.
+
+Let me write drawZone(ctx, zone):
+- compute current color hsv->rgb
+- draw glow border (soft)
+- draw filled organic shape with current color (alpha based on painted? or always)
+- if painted, draw solid fill
+- draw floating swatch above
+- draw drift arrow
+- draw drift warning flash
+
+For painted look, draw the shape filled with sampled color at full alpha, plus stroke lines for impressionist texture.
+
+Let me keep it clean: filled shape with current color, glow border. When painted, alpha 1. When not painted, alpha 0.5 (so you see the landscape). Actually zones represent the landscape to paint. Before painting, show current drifting color semi-transparent. After, solid.
+
+Hmm, but the "landscape" behind should be visible. Let me draw a base landscape (darker) then zones on top semi-transparently. When painted, zones become opaque. This layered look is nice.
+
+Let me do:
+1. Draw base landscape (dark rolling hills, sky) - static
+2. Draw zones as semi-transparent organic shapes (current color, alpha 0.55) with glow
+3. If zone painted, redraw zone shape with opaque sampled color (covers base)
+4. Foreground grass
+
+This gives a painted landscape feel.
+
+OK let me just write it. Enough deliberation.
+
+For the player character drawing, I'll draw a simple painter: circle head with hat, body, palette, brush. Bobbing animation.
+
+Let me write the code now, finally.
+
+I'll write the whole thing. Let me be meticulous about syntax.
+
+Given the massive size, let me write it in the response directly.
+
+Let me make sure all referenced functions exist.
+
+Writing now.
+
+For audio, create AudioContext lazily on first user gesture (click to start). Functions: playBrush(), playPerfect(), playMuddy(), playDash(), playClick(), playAmbient().
+
+Ambient: a low oscillator (sine) with slow gain LFO, plus detuned saw for texture. Start muted, fade in.
+
+Let me implement a simple ambient pad: two oscillators (root note) with slow tremolo. Change root note based on average zone hue.
+
+OK. Writing the file.
+
+Let me also implement the HUD:
+- Top bar: level (left), timer (center-left, large monospace, red <15s), stamina (below timer), canvas preview (right) with accuracy %
+- Canvas{"chroma-drift.html":"<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n<title>CHROMA DRIFT — Painter's Race</title>\n<link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>\">\n<style>\n  *{margin:0;padding:0;box-sizing:border-box}\n  html,body{width:100%;height:100%;overflow:hidden;background:#0b0d12;font-family:\"Trebuchet MS\",system-ui,sans-serif;-webkit-user-select:none;user-select:none}\n  #wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0b0d12}\n  #game{display:block;background:#000;touch-action:none;image-rendering:auto}\n  .hint{position:fixed;left:8px;bottom:8px;color:#7a8194;font-size:12px;pointer-events:none;opacity:.7}\n</style>\n</head>\n<body>\n<div id=\"wrap\"><canvas id=\"game\" width=\"1280\" height=\"720\"></canvas></div>\n<div class=\"hint\">WASD move · Shift dash · E paint · Esc pause · click to start</div>\n<script>\n\"use strict\";\n/* ============================================================
+   CHROMA DRIFT — Painter's Race
+   Single-file HTML5 Canvas game. Vanilla JS, fixed timestep, 1280×720 logical res scaled to fit window.
+   ============================================================ */\n\nconst W=1280,H=720;\nconst canvas=document.getElementById('game');\nconst ctx=canvas.getContext('2d');\nlet DPR=Math.min(window.devicePixelRatio||1,2);\nfunction resize(){ DPR=Math.min(window.devicePixelRatio||1,2); const s=Math.min(innerWidth/W,innerHeight/H); canvas.style.width=(W*s)+'px'; canvas.style.height=(H*s)+'px'; }\naddEventListener('resize',resize);\nresize();\n\n/* ---------- math helpers ---------- */\nconst clamp=(v,a,b)=>v<a?a:v>b?b:v;\nconst lerp=(a,b,t)=>a+(b-a)*t;\nconst TAU=Math.PI*2;\nfunction hsvToRgb(h,s,v){\n  h=((h%360)+360)%360;\n  const c=v*s, hp=h/60, x=c*(1-Math.abs((hp%2)-1)), m=v-c;\n  let r,g,b;\n  if(hp<1){r=c;g=x;b=0;} else if(hp<2){r=x;g=c;b=0;} else if(hp<3){r=0;g=c;b=x;} else if(hp<4){r=0;g=x;b=c;} else if(hp<5){r=x;g=0;b=c;} else {r=c;g=0;b=x;}\n  return [Math.round((r+m)*255),Math.round((g+m)*255),Math.round((b+m)*255)];\n}\nfunction rgbToHsv(r,g,b){\n  r/=255;g/=255;b/=255;\n  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;\n  let h=0;\n  if(d!==0){ if(mx===r)h=((g-b)/d)%6; else if(mx===g)h=(b-r)/d+2; else h=(r-g)/d+4;\n    h*=60; if(h<0)h+=360;\n  }\n  const s=mx===0?0:(d/mx);\n  return [h,s,mx];\n}\nfunction hueDiff(a,b){ let d=Math.abs(a-b)%360; return Math.min(d,360-d); }\nfunction colorAccuracy(cur,tgt){\n  const dh=hueDiff(cur[0],tgt[0]);\n  const ds=Math.abs(cur[1]-tgt[1]);\n  const dv=Math.abs(cur[2]-tgt[2]);\n  const hueN=dh/180, satN=ds, valN=dv;\n  const acc=(hueN*0.6+satN*0.2+valN*0.2)*100;\n  return clamp(acc,0,100);\n}\nfunction pointInPoly(x,y,poly){\n  let inside=false;\n  for(let i=0,j=poly.length-1;i<poly.length;j=i++){ const xi=poly[i].x,yi=poly[i].y,xj=poly[j].x,yj=poly[j].y;\n    if(((yi>y)!==(yj>y)) && (x<(xj-xi)*(y-yi)/(yj-yi)+xi)) inside=!inside; }\n  return inside;\n}\nfunction polyCentroid(poly){ let x=0,y=0; poly.forEach(p=>{x+=p.x;y+=p.y}); return {x:x/poly.length,y:y/poly.length}; }\n\n/* ---------- levels ---------- */\nconst LEVELS=[\n  {name:'First Strokes',zones:[{type:'hill',x:300,y:430,th:120,ts:.55,tv:.72},{type:'lake',x:900,y:560,th:205,ts:.45,tv:.6},{type:'sky',x:640,y:150,th:205,ts:.35,tv:.92},{type:'flowers',x:150,y:600,th:330,ts:.75,tv:.8}],timer:90,drift:5,obstacles:[]},\n  {name:'Drift Run',zones:[{type:'hill',x:260,y:420,th:95,ts:.4,tv:.6},{type:'lake',x:1000,y:580,th:210,ts:.5,tv:.55},{type:'sky',x:640,y:130,th:210,ts:.3,tv:.95},{type:'flowers',x:180,y:620,th:30,ts:.8,tv:.85},{type:'tree',x:1100,y:470,th:70,ts:.45,tv:.65}],timer:82,drift:10,obstacles:[{x:520,y:540,r:26},{x:760,y:300,r:22}]},\n  {name:'Chromatic Storm',zones:[{type:'hill',x:300,y:400,th:140,ts:.5,tv:.7},{type:'lake',x:980,y:560,th:260,ts:.55,tv:.5},{type:'sky',x:640,y:110,th:260,ts:.35,tv:.95},{type:'flowers',x:200,y:600,th:200,ts:.8,tv:.8},{type:'tree',x:1120,y:460,th:150,ts:.4,tv:.6}],timer:72,drift:15,obstacles:[{x:560,y:520,r:30},{x:820,y:320,r:24},{x:400,y:250,r:20}]},\n  {name:'The Grand Canvas',zones:[{type:'hill',x:250,y:380,th:110,ts:.5,tv:.72},{type:'lake',x:1020,y:580,th:200,ts:.45,tv:.55},{type:'sky',x:640,y:100,th:200,ts:.3,tv:.96},{type:'flowers',x:160,y:620,th:330,ts:.78,tv:.82},{type:'tree',x:1140,y:440,th:65,ts:.42,tv:.62},{type:'hill',x:700,y:560,th:30,ts:.5,tv:.6}],timer:66,drift:20,obstacles:[{x:500,y:500,r:28},{x:780,y:300,r:26},{x:360,y:260,r:22},{x:900,y:250,r:20}]},\n  {name:'Final Chroma',zones:[{type:'hill',x:220,y:360,th:130,ts:.55,tv:.7},{type:'lake',x:1040,y:590,th:210,ts:.5,tv:.5},{type:'sky',x:640,y:90,th:210,ts:.32,tv:.97},{type:'flowers',x:140,y:630,th:300,ts:.82,tv:.84},{type:'tree',x:1160,y:420,th:55,ts:.45,tv:.6},{type:'hill',x:720,y:570,th:20,ts:.55,tv:.58}],timer:60,drift:25,obstacles:[{x:480,y:520,r:30},{x:760,y:280,r:26},{x:340,y:240,r:22},{x:880,y:230,r:20},{x:600,y:380,r:20}]}\n];\n\n/* ---------- procedural organic shapes ---------- */\nfunction makeShape(cx,cy,seed,kind){\n  const pts=[]; const n=kind==='lake'?14:kind==='sky'?10:kind==='flowers'?12:kind==='tree'?10:kind==='hill'?16:14;\n  let rnd=mulberry32(seed);\n  for(let i=0;i<n;i++){ const ang=i/n*TAU; const rad=kind==='lake'?0.55+rnd()*0.5:kind==='sky'?0.3+rnd()*0.5:0.5+rnd()*0.75;\n    pts.push({x:cx+Math.cos(ang)*rad*150, y:cy+Math.sin(ang)*rad*90}); }\n  return pts;\n}\nfunction mulberry32(a){ return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^0;return ((t^t>>>14)>>>0)/4294967296; }; }\n\n/* ---------- particle system ---------- */\nconst MAXP=300;\nconst particles=[];\nfunction spawnParticle(p){ if(particles.length>MAXP) particles.shift(); particles.push(p); }\nfunction burst(x,y,color,n,spd,life,grav,size){ for(let i=0;i<n;i++){ const a=Math.random()*TAU, s=spd*(0.4+Math.random()); spawnParticle({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:life*(0.6+Math.random()*0.6),age:0,color,size:size*(0.6+Math.random()*0.8),grav:grav||0}); } }\nfunction updateParticles(dt){ for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; p.age+=dt; p.x+=p.vx; p.y+=p.vy; p.vy+=p.grav; p.vx*=0.98; if(p.life<=0) particles.splice(i,1); } }\nfunction renderParticles(){ for(const p of particles){ const a=clamp(1-p.age/p.life,0,1); ctx.globalAlpha=a; ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,p.size,0,TAU); ctx.fill(); } ctx.globalAlpha=1; }\n\n/* ---------- audio ---------- */\nconst Audio={ctx:null,master:null,ambient:null,ready:false};\nfunction initAudio(){ if(Audio.ready) return; try{ Audio.ctx=new (window.AudioContext||window.webkitAudioContext)(); Audio.master=Audio.ctx.createGain(); Audio.master.gain.value=0.5; Audio.master.connect(Audio.ctx.destination); Audio.ready=true; startAmbient(); }catch(e){} }\nfunction startAmbient(){ if(!Audio.ctx) return; const o1=Audio.ctx.createOscillator(),o2=Audio.ctx.createOscillator(),g=Audio.ctx.createGain();\n  o1.type='sine';o1.frequency.value=110;o2.type='sine';o2.frequency.value=165;\n  g.gain.value=0; o1.connect(g);o2.connect(g);g.connect(Audio.master);\n  const lfo=Audio.ctx.createOscillator(),lfoG=Audio.ctx.createGain(); lfo.frequency.value=0.12; lfoG.gain.value=0.06; lfo.connect(lfoG);lfoG.connect(g.gain);\n  o1.start();o2.start();lfo.start(); Audio.ambient={o1,o2,lfo,g};\n}\nfunction tone(freq,dur,type,vol,slide){ if(!Audio.ctx) return; const t=Audio.ctx.currentTime; const o=Audio.ctx.createOscillator(),g=Audio.ctx.createGain(); o.type=type||'sine'; o.frequency.setValueAtTime(freq,t); if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(1,freq*slide),t+dur); g.gain.setValueAtTime(vol||0.2,t); g.gain.exponentialRampToValueAtTime(0.001,t+dur); o.connect(g);g.connect(Audio.master); o.start(t); o.stop(t+dur+0.02); }\nfunction noiseBurst(dur,vol,filterFreq){ if(!Audio.ctx) return; const t=Audio.ctx.currentTime; const buf=Audio.ctx.createBuffer(1,Audio.ctx.sampleRate*dur,Audio.ctx.sampleRate); const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const src=Audio.ctx.createBufferSource(); src.buffer=buf; const f=Audio.ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=filterFreq||1200; const g=Audio.ctx.createGain(); g.gain.setValueAtTime(vol||0.3,t); g.gain.exponentialRampToValueAtTime(0.001,t+dur); src.connect(f);f.connect(g);g.connect(Audio.master); src.start(t); src.stop(t+dur); }\nfunction playBrush(){ noiseBurst(0.18,0.18,900); tone(220,0.12,'triangle',0.08,1.4); }\nfunction playPerfect(){ tone(880,0.1,'sine',0.25); setTimeout(()=>tone(1320,0.12,'sine',0.22),70); setTimeout(()=>tone(1760,0.14,'sine',0.18),150); }\nfunction playMuddy(){ tone(90,0.22,'sawtooth',0.18,0.5); noiseBurst(0.2,0.12,400); }\nfunction playDash(){ noiseBurst(0.16,0.16,1800); tone(440,0.1,'square',0.06,2); }\nfunction playClick(){ tone(660,0.05,'square',0.12); }\nfunction playWin(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,0.22,'triangle',0.22),i*120)); }\nfunction playLose(){ [330,247,196,147].forEach((f,i)=>setTimeout(()=>tone(f,0.28,'sawtooth',0.16),i*140)); }\n\n/* ---------- input ---------- */\nconst keys={};\naddEventListener('keydown',e=>{ keys[e.code]=true; if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault(); });\naddEventListener('keyup',e=>{ keys[e.code]=false;
