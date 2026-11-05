@@ -1,0 +1,150 @@
+JSON Decode Error after continuation: Invalid control character at: line 1 column 3016 (char 3015)
+
+Raw: 
+
+{"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n    <title>Zoo Stack</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦁</text></svg>\">\n    <link rel=\"stylesheet\" href=\"css/styles.css\">\n</head>\n<body>\n    <div id=\"game-container\">\n        <canvas id=\"game-canvas\"></canvas>\n        <div id=\"ui-overlay\">\n            <div class=\"glass-panel score-panel\">\n                <div id=\"score\">0</div>\n                <div id=\"combo\">Combo: x1</div>\n            </div>\n            <div class=\"glass-panel timer-panel\">\n                <div id=\"timer\">00:00.00</div>\n            </div>\n            <div class=\"glass-panel next-animal-panel\">\n                <div id=\"next-animal-preview\">?</div>\n            </div>\n            <div class=\"glass-panel stability-panel\">\n                <div id=\"stability-meter\">\n                    <div id=\"stability-fill\"></div>\n                </div>\n            </div>\n        </div>\n        <div id=\"start-screen\" class=\"glass-panel\">\n            <h1>Zoo Stack</h1>\n            <p>Build the tallest animal tower!</p>\n            <button id=\"start-btn\">Start Game</button>\n        </div>\n        <div id=\"game-over-screen\" class=\"glass-panel\" style=\"display: none;\">\n            <h1>Game Over</h1>\n            <div id=\"final-score\">0</div>\n            <div id=\"high-score\">High Score: 0</div>\n            <button id=\"restart-btn\">Play Again</button>\n        </div>\n    </div>\n    <script src=\"js/utils.js\"></script>\n    <script src=\"js/audio.js\"></script>\n    <script src=\"js/entities/animal.js\"></script>\n    <script src=\"js/entities/feeder.js\"></script>\n    <script src=\"js/entities/stackBlock.js\"></script>\n    <script src=\"js/physics/collision.js\"></nscript>\n    <script src=\"js/physics/verlet.js\"></script>\n    <script src=\"js/render/background.js\"></script>\n    <script src=\"js/render/particles.js\"></script>\n    <script src=\"js/ui/hud.js\"></script>\n    <script src=\"js/ui/controls.js\"></script>\n    <script src=\"js/core/game.js\"></script>\n    <script src=\"js/core/main.js\"></script>\n</body>\n</html>", "css/styles.css": "/* Zoo Stack Styles */\n:root {\n    --primary: #ff6b6b;\n    --secondary: #4ecdc4;\n    --accent: #ffe66d;\n    --dark: #1a1a2e;\n    --glass-bg: rgba(255, 255, 255, 0.1);\n    --glass-border: rgba(255, 255, 255, 0.2);\n    --text-light: #ffffff;\n    --text-dark: #1a1a2e;\n}\n\n* {\n    margin: 0;\n    padding: 0;\n    box-sizing: border-box;\n}\n\nbody {\n    font-family: 'Arial Rounded MT Bold', 'Arial', sans-serif;\n    background: linear-gradient(135deg, #2c3e50, #4ca1af);\n    min-height: 100vh;\n    display: flex;\n    justify-content: centeralign-items: center;
+    padding: 20px;
+}
+
+#game-container {
+    position: relative;
+    width: 100%;
+    max-width: 800px;
+    height: 600px;
+    margin: 0 auto;
+}
+
+#game-canvas {
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.glass-panel {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 15px;
+    padding: 15px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    color: var(--text-light);
+}
+
+#ui-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.score-panel, .timer-panel, .next-animal-panel, .stability-panel {
+    position: absolute;
+    pointer-events: auto;
+}
+
+.score-panel {
+    top: 20px;
+    left: 20px;
+}
+
+.timer-panel {
+    top: 20px;
+    right: 20px;
+}
+
+.next-animal-panel {
+    bottom: 20px;
+    left: 20px;
+}
+
+.stability-panel {
+    bottom: 20px;
+    right: 20px;
+    width: 200px;
+}
+
+#score {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+#combo {
+    font-size: 16px;
+}
+
+#timer {
+    font-size: 18px;
+    font-family: 'Courier New', monospace;
+}
+
+#next-animal-preview {
+    font-size: 40px;
+    text-align: center;
+}
+
+#stability-meter {
+    width: 100%;
+    height: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#stability-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(to right, #ff6b6b, #4ecdc4);
+    transition: width 0.3s;
+}
+
+#start-screen, #game-over-screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    width: 80%;
+    max-width: 500px;
+}
+
+#start-screen h1, #game-over-screen h1 {
+    font-size: 3em;
+    margin-bottom: 20px;
+    color: var(--accent);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+#start-screen p {
+    font-size: 1.2em;
+    margin-bottom: 30px;
+}
+
+button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    font-size: 1.1em;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+button:hover {
+    background: var(--secondary);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+#final-score, #high-score {
+    font-size: 1.5em;
+    margin: 10px 0;
+}
+
+"}
