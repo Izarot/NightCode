@@ -1,0 +1,704 @@
+JSON Decode Error: Extra data: line 1 column 3 (char 2)
+
+Raw LLM Output that failed to parse:
+The user wants me to create a complete game called "WIZARD DUEL - DODGE THE DARK ARTS" based on a detailed specification. This is a complex 2D arena survival game with many features. Let me break down what I need to implement:
+
+1. Core Concept: HTML5 Canvas + JavaScript, no external dependencies
+2. Player Movement Physics: WASD/Arrow keys, velocity-based movement, dash mechanic
+3. Mechanics: Health, Stamina, Score, spell patterns per phase, pickups, counter-spell
+4. Visuals: Stylized vector/neon fantasy art style
+5. HUD/UI: Various UI elements
+6. Audio & Controls: Web Audio API synthesized SFX
+7. Technical Requirements: Game states, fixed timestep, object pooling, etc.
+
+The architecture suggests modular structure with src/ directory containing:
+- GameEngine.js (state machine and fixed-timestep loop)
+- entities/ (Player, Spells, Pickups)
+- systems/ (Physics, Collision, ObjectPooling)
+- ui/ (HUD, Menus)
+- audio/ (Synth, Ambient)
+- utils/ (delta-time calculations, canvas rendering)
+
+However, since this is a single-page game and the user wants output as a JSON mapping of filenames to code contents, I need to decide how to organize this. The spec mentions a modular `src/` directory, but for a self-contained game that works without a server (avoiding CORS issues with module loading), I should consider using either:
+1. ES modules with type="module" scripts
+2. A single bundled file
+3. Multiple script files loaded in order
+
+Given the complexity and the requirement for it to work, I'll create a well-organized set of files. Let me think about the best approach.
+
+Actually, looking at the request more carefully, they want "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". So I need to provide multiple files.
+
+Let me plan the file structure:
+- index.html - Main HTML file with canvas and UI
+- style.css - Styling
+- js/utils/GameUtils.js - Utility functions
+- js/utils/InputManager.js - Input handling
+- js/audio/AudioManager.js - Web Audio API synthesis
+- js/systems/PhysicsSystem.js - Physics calculations
+- js/systems/CollisionSystem.js - Collision detection
+- js/systems/ObjectPool.js - Object pooling
+- js/entities/Player.js - Player wizard
+- js/entities/Spells.js - Spell patterns
+- js/entities/Pickups.js - Pickups
+- js/ui/HUD.js - HUD rendering
+- js/ui/Menus.js - Menu screens
+- js/GameEngine.js - Main game loop and state machine
+
+Wait, but ES modules require a server to run due to CORS. If the user opens index.html directly via file:// protocol, ES modules won't work. Let me use regular script tags instead, or use a build approach.
+
+Actually, let me reconsider. The cleanest approach for a game that works from file:// would be to either:
+1. Use inline scripts in order
+2. Use a single large JS file
+3. Use classic scripts (not modules) loaded in order
+
+I'll go with classic scripts loaded in order, which avoids CORS issues. Each file will attach to a global namespace or be loaded in the right order.
+
+Let me design this properly. I'll create:
+
+1. `index.html` - HTML structure, canvas, loads all scripts
+2. `style.css` - All styling
+3. `js/utils.js` - Utility functions, delta time, input manager
+4. `js/audio.js` - Audio synthesis
+5. `js/systems.js` - Physics, collision, object pooling
+6. `js/entities.js` - Player, spells, pickups (or split into separate files)
+7. `js/ui.js` - HUD and menus
+8. `js/gameEngine.js` - Main engine
+
+Actually, let me split entities into separate files as the spec suggests, but keep them as classic scripts.
+
+Let me think about the full implementation now. This is going to be quite extensive.
+
+Let me start coding each file:
+
+### index.html
+- Canvas element
+- Loading screen
+- Script tags in order
+- Emoji favicon
+
+### style.css
+- Responsive canvas
+- Neon styling
+- Fonts
+
+### js/utils.js
+- DeltaTime utility
+- InputManager (keyboard handling)
+- Math helpers (lerp, clamp, distance, angle)
+- Vector helpers
+
+### js/audio.js
+- AudioManager class
+- Synthesized sounds (cast, hit, dash, pickup, lightning)
+- Ambient drone
+
+### js/systems.js
+- PhysicsSystem (movement, collision with walls)
+- CollisionSystem (circle-circle collision)
+- ObjectPool (generic pooling for spells, particles)
+
+### js/entities.js
+- Player class (movement, dash, health, stamina, facing)
+- Spell classes (Fireball, FrostShard, LightningStrike, ArcaneOrb, SpellStorm)
+- Pickup class (mana crystals)
+
+### js/ui.js
+- HUD rendering (health bar, stamina bar, score, timer, phase indicator, counter-spell meter)
+- Menu screens (main menu, pause, game over, victory)
+
+### js/gameEngine.js
+- GameEngine class
+- State machine (MENU, PLAYING, PAUSED, GAMEOVER, VICTORY)
+- Fixed timestep update loop
+- Rendering orchestration
+- Phase management
+- Score tracking
+- High score persistence
+
+This is a massive implementation. Let me write it all out carefully.
+
+Let me start with the HTML file, then CSS, then each JS file.
+
+For the canvas, I need:
+- 960x640 internal resolution
+- Responsive scaling to fit window while maintaining 3:2 aspect ratio
+- requestAnimationFrame with delta-time
+
+Let me code this step by step.
+
+I'll aim for clean, well-structured code that implements all the features described.
+
+Let me write out each file now. This will be long but comprehensive.
+
+Let me think about the key systems:
+
+**Delta Time**: Fixed timestep of 1/60s, capped at 0.033s. Use accumulator pattern.
+
+**Input Manager**: Track key states, handle keydown/keyup events. Map WASD, arrows, space, shift, E, P, Esc, M, Enter.
+
+**Physics System**: 
+- Acceleration = 2400 px/s²
+- Max speed = 320 px/s
+- Friction = 1800 px/s²
+- Wall padding = 24px
+- Circular collision radius = 16px
+
+**Dash**:
+- Instant 140px dash
+- Duration 0.12s
+- Invulnerability 0.25s
+- Cooldown 1.2s
+- Stamina cost 25
+- Regenerates at 30/s after 0.5s delay
+
+**Player**:
+- Health 100 HP
+- Contact with spell deals damage + 0.8s i-frames
+- Score: +10/sec survived, +50/phase, +100/near-miss
+
+**Evil Wizard AI**:
+- Positioned at top-center, strafes slowly
+- Casts on decreasing timer per phase
+- Phase 1: Fireballs every 1.4s, speed 220, radius 12, 15 dmg
+- Phase 2: Frost Shards 3-way spread every 1.8s, speed 260, radius 8, 10 dmg
+- Phase 3: Lightning Strikes telegraph circles every 2.0s, strike after 0.7s, radius 50, 20 dmg
+- Phase 4: Arcane Orbs homing every 2.2s, turn rate 90°/s, speed 180, lifetime 4s, 15 dmg
+- Phase 5: Spell Storm combines all at 1.3x speed, 30s survival or collect mana crystals
+
+**Pickups**:
+- Mana Crystals drop from destroyed orbs and every 10s
+- Counter-Spell meter 0-100
+- Press E when full: 200px shockwave destroys all spells, 25 damage to evil wizard
+
+**Visual Effects**:
+- Particle system (max 200 active)
+- Screen shake (4px player hit, 8px lightning)
+- Vignette overlay
+- Telegraph glow colors: orange=fire, cyan=frost, yellow=lightning, magenta=arcane
+
+**HUD**:
+- Top-Left: Health bar (200x18), stamina bar (200x10)
+- Top-Right: Score, Timer, Phase indicator
+- Top-Center (Phase 5 only): Evil wizard HP bar (400x14)
+- Bottom-Center: Counter-Spell meter (300x12), dash cooldown icon
+- Damage feedback: red vignette flash, floating damage numbers, low-health heartbeat pulse
+
+**Audio**:
+- Web Audio API synthesized SFX
+- Background ambient drone, mutable with M
+
+OK, let me write this all out now. I'll create the files one by one.
+
+Given the enormous scope, I'll write comprehensive but efficient code. Let me start.
+
+Actually, I realize I should think about how to structure the JavaScript to avoid module loading issues. I'll use a global namespace pattern where each file defines classes on a global object, and they're loaded in dependency order via script tags.
+
+Let me define a global `WD` (Wizard Duel) namespace.
+
+Order of loading:
+1. utils.js (defines WD.Utils, WD.Input)
+2. audio.js (defines WD.Audio)
+3. systems.js (defines WD.Physics, WD.Collision, WD.ObjectPool)
+4. entities.js (defines WD.Player, WD.Spells, WD.Pickups)
+5. ui.js (defines WD.HUD, WD.Menus)
+6. gameEngine.js (defines WD.GameEngine, starts the game)
+
+Let me write each file now.
+
+I'll be thorough but try to keep the code clean and performant.
+
+Let me start writing:
+
+```javascript
+// utils.js
+const WD = {};
+
+WD.Utils = {
+    clamp(value, min, max) { return Math.max(min, Math.min(max, value)); },
+    lerp(a, b, t) { return a + (b - a) * t; },
+    distance(x1, y1, x2, y2) { return Math.hypot(x2 - x1, y2 - y1); },
+    angle(x1, y1, x2, y2) { return Math.atan2(y2 - y1, x2 - x1); },
+    randRange(min, max) { return min + Math.random() * (max - min); },
+    randInt(min, max) { return Math.floor(min + Math.random() * (max - min + 1)); },
+    // ... more utilities
+};
+```
+
+Actually, let me just write the whole thing out. It's going to be very long but that's expected for a game of this complexity.
+
+Let me think about the overall architecture more carefully before diving in.
+
+The GameEngine will manage:
+- State machine
+- Game loop (fixed timestep)
+- Update logic (player, spells, pickups, AI, collisions, particles)
+- Render logic (background, entities, effects, HUD, menus)
+- Phase management
+- Score tracking
+- High score persistence
+
+The fixed timestep pattern:
+```
+accumulator += deltaTime;
+while (accumulator >= FIXED_DT) {
+    update(FIXED_DT);
+    accumulator -= FIXED_DT;
+}
+render();
+```
+
+Where FIXED_DT = 1/60.
+
+Let me now write all the files. I'll be comprehensive.
+
+For the canvas scaling, I'll use CSS to scale the canvas while keeping the internal resolution at 960x640.
+
+Let me write the code now. I'll create each file with complete implementations.
+
+One thing to note: the spec says "No per-frame allocations in hot loop" - so I need to pre-allocate arrays and reuse objects.
+
+Also "object pooling for spells/particles (max 200 active)" - I'll implement a generic pool.
+
+Let me also think about the visual style. The spec asks for:
+- Dark stone arena background with glowing runes
+- Parallax dust particles
+- Blue robe wizard, purple/black evil wizard
+- Neon glow effects
+
+I'll draw these procedurally on canvas rather than using sprite images.
+
+OK, let me write everything now. This is going to be a lot of code.
+
+Let me structure my output as a JSON object with filenames as keys and code content as values.
+
+Files:
+1. index.html
+2. style.css
+3. js/utils.js
+4. js/audio.js
+5. js/systems.js
+6. js/entities.js
+7. js/ui.js
+8. js/gameEngine.js
+
+Let me write them all out now.
+
+Actually, I want to make sure the game is fully functional and fun. Let me think through the gameplay flow:
+
+1. Start at main menu → click Play
+2. Phase 1: Fireballs every 1.4s
+3. Survive 5 phases
+4. Phase 5: Evil wizard has HP bar, survive 30s or collect mana crystals
+5. Win by surviving 30s in Phase 5, or defeat evil wizard with counter-spell
+6. Lose if health reaches 0
+
+Let me make sure the phase progression works correctly. Each phase needs to be cleared before moving to the next. "Survive 5 phases" means survive through all 5 phases. In Phase 5, you can win by surviving 30 seconds or collecting enough mana crystals to cast counter-spell.
+
+Actually, re-reading: "Win by surviving 5 phases and defeating the evil wizard." and "Phase 5 - Spell Storm: ... player must survive 30s to win, or collect dropped mana crystals to cast counter-spell."
+
+So the win condition is: survive through all 5 phases, and in Phase 5 either survive 30s or defeat the evil wizard.
+
+Let me implement this.
+
+For the evil wizard AI, I need to track its position (top-center, strafes left/right), cast timers, and HP (only in Phase 5).
+
+Let me now write all the code. I'll be thorough.
+
+Let me think about what classes/objects I need:
+
+**Utils**: clamp, lerp, distance, angle, randRange, randInt, formatTime, FIXED_DT
+
+**Input**: tracks key states, provides methods like isDown(key), wasPressed(key)
+
+**Audio**: AudioManager with methods playCast(), playHit(), playDash(), playPickup(), playLightning(), toggleMute(), startAmbient(), stopAmbient()
+
+**Physics**: handles player movement physics, wall collision
+
+**Collision**: circle-circle collision detection, circle-rect collision
+
+**ObjectPool**: generic pool for objects with activate/deactivate/get/release
+
+**Player**: position, velocity, health, stamina, facing, dash state, update(), render()
+
+**Spells**: base Spell class, Fireball, FrostShard, LightningStrike, ArcaneOrb, SpellStorm
+  - Each spell has position, velocity, radius, damage, color, update(), render(), isDead()
+  - Telegraph system for lightning
+
+**Pickups**: ManaCrystal, update(), render(), collect()
+
+**HUD**: renders all UI elements
+
+**Menus**: renders menu screens, handles input
+
+**GameEngine**: ties everything together
+
+Let me write this now. I'll create each file.
+
+For performance, I'll avoid creating new objects in the update loop. I'll use pre-allocated arrays and reuse objects from pools.
+
+Let me start coding:
+
+Actually, I realize this is going to be extremely long. Let me be efficient but complete. I'll write each file with all necessary code.
+
+Let me begin with the HTML file, then CSS, then each JS module.
+
+For the favicon, I'll use an emoji like 🧙‍♂️ or 🔮.
+
+Let me write it all out now.
+
+I need to be careful about the size of each file. Let me try to keep things reasonable while still being complete.
+
+Let me start writing the actual code now.
+
+For the index.html, I need:
+- Canvas element
+- Script tags loading all JS files in order
+- Meta viewport for mobile
+- Emoji favicon
+
+For style.css:
+- Canvas responsive scaling
+- Dark theme styling
+- Font setup
+
+For each JS file, I'll write complete implementations.
+
+Let me go ahead and write this. I'll aim for quality and completeness.
+
+One important consideration: the game needs to work when opened directly from the filesystem (file:// protocol). This means no ES module imports. I'll use classic script tags with a global namespace.
+
+Let me write the code now. I'll be thorough but try to keep each file focused.
+
+Here's my plan for each file:
+
+### index.html
+- DOCTYPE, html, head with meta, title, favicon link
+- Body with canvas#gameCanvas
+- Script tags for all JS files in order
+- Start script that initializes the game
+
+### style.css
+- Reset styles
+- Canvas positioning and responsive scaling
+- Body dark background
+- Font import (Google Fonts Orbitron)
+
+### js/utils.js
+- WD namespace
+- Utility functions
+- Input manager
+- Constants (FIXED_DT, CANVAS_WIDTH, CANVAS_HEIGHT, etc.)
+
+### js/audio.js
+- WD.Audio namespace
+- AudioContext setup
+- Sound synthesis methods
+- Ambient drone
+
+### js/systems.js
+- WD.Physics namespace
+- WD.Collision namespace
+- WD.Pool namespace
+
+### js/entities.js
+- WD.Player class
+- WD.Spell base class
+- WD.Fireball, WD.FrostShard, WD.LightningStrike, WD.ArcaneOrb, WD.SpellStorm
+- WD.Pickup class
+
+### js/ui.js
+- WD.HUD class
+- WD.Menu class
+
+### js/gameEngine.js
+- WD.GameEngine class
+- State machine
+- Game loop
+- Phase management
+- Score tracking
+- High score
+
+Let me write all of these now.
+
+Actually, I want to reconsider the file organization. Having too many tiny files might be unwieldy. But the spec explicitly asks for a modular src/ directory structure. Let me follow that.
+
+Let me write the code now. I'll start with the simpler files and work up to the complex ones.
+
+Let me think about how to handle the "telegraph" system for lightning strikes. The spec says "Telegraph circles appear at player position every 2.0s, strike after 0.7s." So I need a telegraph object that shows a warning circle at the player's position, then after 0.7s the actual lightning strike happens.
+
+For the near-miss scoring: "near-miss (spell passes within 40px without hitting)" - I need to detect when a spell passes close to the player without actually hitting.
+
+For the "slow zone" from frost shards: "Leaves brief slow zone on impact" - when frost shards hit something, they create a brief slow zone. I'll implement this as an area effect.
+
+OK, let me write everything now. This is going to be comprehensive.
+
+Let me also think about the rendering pipeline:
+1. Clear canvas
+2. Draw background (dark stone arena with runes, parallax dust)
+3. Draw telegraphs
+4. Draw pickups
+5. Draw spells
+6. Draw player
+7. Draw particles
+8. Draw effects (screen shake offset applied)
+9. Draw HUD
+10. Draw menus (if applicable)
+11. Draw vignette overlay
+
+Screen shake: I'll apply a shake offset to the canvas context before drawing world objects, then reset it.
+
+Vignette: Draw a radial gradient overlay.
+
+Let me now write all the code. I'll be as complete as possible.
+
+For the parallax dust particles, I'll have a set of background particles that slowly drift.
+
+For the runes, I'll draw some geometric shapes on the background.
+
+OK, I'm going to write this now. Let me be systematic.
+
+Let me write each file completely:
+
+I'll start with index.html and style.css since those are simpler, then move to the JS files.
+
+For the HTML, I need to make sure the canvas is properly sized and the scripts load in the right order.
+
+Let me also think about mobile support. The spec says "Make the canvas responsive so it scales to fit mobile phone screens." I'll use CSS transform scale or width/height percentages to scale the canvas while maintaining aspect ratio.
+
+For touch controls... the spec doesn't mention touch controls explicitly, but says "responsive scaling to fit mobile phone screens." I'll add basic touch button overlays for mobile, or at least make the canvas responsive. Actually, the controls are keyboard-based (WASD, arrows, space, etc.), so on mobile there won't be keyboard input. I could add virtual buttons, but the spec doesn't explicitly ask for them. Let me focus on making the canvas responsive and adding basic touch support if feasible.
+
+Actually, let me add simple touch joystick/buttons for mobile. That would be a nice touch. But the spec doesn't mention it... Let me focus on what's specified and make the canvas responsive.
+
+OK, let me write the code now. I'll be thorough.
+
+Let me write each file:
+
+I'm going to write this as a massive JSON response. Let me structure it properly.
+
+Let me begin coding each file mentally and then write them all out.
+
+### index.html
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>WIZARD DUEL - Dodge the Dark Arts</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧙‍♂️</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="gameCanvas" width="960" height="640"></canvas>
+    <script src="js/utils.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/systems.js"></script>
+    <script src="js/entities.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/gameEngine.js"></script>
+</body>
+</html>
+```
+
+### style.css
+
+```css
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    background: #0a0a12;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    font-family: 'Orbitron', sans-serif;
+}
+#gameCanvas {
+    image-rendering: pixelated;
+    /* Responsive scaling */
+    max-width: 100vw;
+    max-height: 100vh;
+    aspect-ratio: 3 / 2;
+    /* ... */
+}
+```
+
+Actually, for proper responsive scaling while maintaining aspect ratio, I should use JavaScript to calculate the scale factor and apply it via CSS transform. Or I can use CSS with object-fit or width/height tricks.
+
+Let me use a combination: CSS for basic constraints, and JS for precise scaling.
+
+Actually, the simplest approach: set canvas CSS width/height based on window size while maintaining 3:2 aspect ratio.
+
+```css
+#gameCanvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 100vw;
+    max-height: 100vh;
+    /* Scale to maintain aspect ratio */
+}
+```
+
+Hmm, this won't automatically maintain aspect ratio. Let me use JavaScript to compute the scale:
+
+```javascript
+function resizeCanvas() {
+    const canvas = document.getElementById('gameCanvas');
+    const scaleX = window.innerWidth / 960;
+    const scaleY = window.innerHeight / 640;
+    const scale = Math.min(scaleX, scaleY);
+    canvas.style.width = (960 * scale) + 'px';
+    canvas.style.height = (640 * scale) + 'px';
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+```
+
+And in CSS:
+```css
+#gameCanvas {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+```
+
+This should work well. Let me include this in the gameEngine or a separate init function.
+
+OK, let me now write all the files. I'll be comprehensive.
+
+Let me think about the total amount of code. This is a complex game with many features. Each file will be several hundred lines. The total will probably be 3000-5000 lines across all files.
+
+Let me write it all out now. I'll start with the simpler files and work up.
+
+Let me begin writing the actual code content for each file.
+
+I need to be careful about:
+1. No per-frame allocations in hot loops
+2. Object pooling for spells and particles (max 200)
+3. Fixed timestep with accumulator
+4. Delta-time capped at 0.033s
+5. Proper state machine
+6. All the mechanics working correctly
+
+Let me write the code now. I'll do my best to make it complete and functional.
+
+Let me start with utils.js since everything depends on it.
+
+For the Input Manager, I need to track:
+- Key states (pressed/released)
+- Key press events (for one-time actions like dash, counter-spell, pause)
+- Support both WASD and Arrow keys
+
+```javascript
+WD.Input = {
+    keys: {},
+    justPressed: {},
+    init() {
+        document.addEventListener('keydown', (e) => {
+            if (!this.keys[e.code]) {
+                this.justPressed[e.code] = true;
+            }
+            this.keys[e.code] = true;
+            // Prevent default for game keys
+            if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) {
+                e.preventDefault();
+            }
+        });
+        document.addEventListener('keyup', (e) => {
+            this.keys[e.code] = false;
+        });
+    },
+    isDown(...codes) {
+        return codes.some(c => this.keys[c]);
+    },
+    wasPressed(...codes) {
+        return codes.some(c => this.justPressed[c]);
+    },
+    clearJustPressed() {
+        this.justPressed = {};
+    },
+    // Movement keys
+    up: () => WD.Input.isDown('KeyW', 'ArrowUp'),
+    down: () => WD.Input.isDown('KeyS', 'ArrowDown'),
+    left: () => WD.Input.isDown('KeyA', 'ArrowLeft'),
+    right: () => WD.Input.isDown('KeyD', 'ArrowRight'),
+    dash: () => WD.Input.wasPressed('Space', 'ShiftLeft', 'ShiftRight'),
+    counter: () => WD.Input.wasPressed('KeyE'),
+    pause: () => WD.Input.wasPressed('KeyP', 'Escape'),
+    mute: () => WD.Input.wasPressed('KeyM'),
+    confirm: () => WD.Input.wasPressed('Enter')
+};
+```
+
+OK, let me now write all the files. I'll write them out completely.
+
+Let me think about the entity system more carefully.
+
+**Player Entity:**
+- Properties: x, y, vx, vy, health, maxHealth, stamina, maxStamina, facing (angle), isDashing, dashTimer, invulnTimer, dashCooldown, dashDir, radius, bobPhase
+- Methods: update(dt), render(ctx), takeDamage(amount), startDash(), getDashReady()
+
+**Spell Entity (base):**
+- Properties: x, y, vx, vy, radius, damage, color, type, alive, trailPoints
+- Methods: update(dt, player), render(ctx), checkCollision(player), isDead()
+
+**Specific spells:**
+- Fireball: straight projectile toward player position at cast time
+- FrostShard: 3-way spread, straight projectiles
+- LightningStrike: telegraph circle at player position, then strike
+- ArcaneOrb: homing orb, turns toward player
+- SpellStorm: combines all patterns at 1.3x speed
+
+**Pickup:**
+- ManaCrystal: drops from destroyed orbs, every 10s
+- Properties: x, y, value, alive, bobPhase
+- Methods: update(dt), render(ctx), collect(player)
+
+**Particle:**
+- Simple particle with position, velocity, life, color, size
+- Used for spell trails, impacts, dash afterimages, pickup effects
+
+**Telegraph:**
+- Shows warning circle at player position
+- Has a timer counting down to strike
+- When timer expires, triggers the actual spell
+
+Let me now write all the code. I'll be thorough.
+
+For the evil wizard AI, I need:
+- Position: top-center of arena (x = CANVAS_WIDTH/2, y = 80)
+- Strafe direction and speed
+- Cast timer (decreases per phase)
+- HP (only in Phase 5, 100 HP, 25 damage per counter-spell hit)
+- Update method that strafes and casts
+
+Let me think about the phase progression:
+- Phase 1: Fireballs every 1.4s (speed 220, radius 12, 15 dmg)
+- Phase 2: Frost Shards 3-way spread every 1.8s (speed 260, radius 8, 10 dmg)
+- Phase 3: Lightning Strikes telegraph every 2.0s (radius 50, 20 dmg)
+- Phase 4: Arcane Orbs homing every 2.2s (turn rate 90°/s, speed 180, lifetime 4s, 15 dmg)
+- Phase 5: Spell Storm (all patterns at 1.3x speed), 30s survival or defeat evil wizard
+
+Each phase lasts until the player survives long enough to progress. How long does each phase last? The spec doesn't specify exact durations. Let me make each phase last a reasonable duration, say 30 seconds each, except Phase 5 which is the final phase lasting 30 seconds.
+
+Actually, re-reading: "Win by surviving 5 phases and defeating the evil wizard." So you need to survive through all 5 phases. Let me make each phase last 30 seconds, so total game time is 150 seconds. Phase 5 is special - you can win by surviving 30 seconds or defeating the evil wizard.
+
+Wait, but Phase 5 is part of the 5 phases. So maybe each phase is 30 seconds, and in Phase 5 you either survive 30 seconds or defeat the wizard. That would mean the total game is 150 seconds (2.5 minutes).
+
+Let me implement it as: each phase lasts 30 seconds. After surviving all 5 phases, you enter Phase 5 which is the final phase. In Phase 5, you can win by surviving 30 seconds or defeating the evil wizard.
+
+Actually, that's redundant. Let me simplify: 5 phases, each lasting 30 seconds. Phase 5 is the final phase where you can either survive 30 seconds or defeat the evil wizard. So effectively, the game ends when you survive Phase 5 (either by surviving 30s or defeating the wizard).
+
+Let me implement it this way.
+
+Now, for the difficulty scaling: "Spell speed and cast rate increase 10% per phase." So in Phase 5, spells are 1.3^4 = 2.856x faster than Phase 1? Wait, 1.3^4 = 2.856. That seems very fast. Let me re-read: "increase 10% per phase." So each phase adds 10% more difficulty. Phase 5 would be 1 + 0.1*4 = 1.4x. But the spec also says Phase 5 is "1.3x speed". These are different things. Let me just follow the spec: Phase 5 uses 1.3x speed for all patterns.
+
+Actually, looking again: "Difficulty scaling: Spell speed and cast rate increase 10% per phase." This is a general statement. And Phase 5 specifically says "Combines all previous patterns at 1.3x speed." So the 1.3x is specific to Phase 5. For other phases, the 10% per phase scaling applies.
+
+Hmm, but the phases are defined with specific parameters. Let me just implement the specific
