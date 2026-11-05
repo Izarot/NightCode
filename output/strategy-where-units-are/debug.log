@@ -1,0 +1,742 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 1 column 30 (char 29)
+
+Raw: The user wants a complete 2D HTML5 Canvas strategy game called "Leafline Colony" with very specific requirements. This is a massive undertaking. Let me break down what I need to create:
+
+1. `index.html` - Entry point that loads all modules
+2. `Constants.js` - Tunable physics values
+3. `main.js` - Game orchestrator with fixed-timestep loop
+4. `Game.js` - Main game class
+5. `Input.js` - Input handling
+6. `Renderer.js` - Rendering
+7. `Pathfinding.js` - A* pathfinding
+8. `UI.js` - UI/HUD
+9. `Audio.js` - Web Audio API sounds
+10. `Ant.js` - Ant entity
+11. `Enemy.js` - Enemy entities (Spider, Beetle)
+12. `LeafSource.js` - Leaf sources
+13. `Nest.js` - Nest entity
+14. `Structure.js` - Structures (Turret, Royal Chamber)
+15. `ParticleSystem.js` - Particles
+
+This is an enormous amount of code. I need to be strategic and produce something that works as a single JSON object mapping filenames to their complete code contents.
+
+Given the complexity, I'll need to write substantial code for each file. Let me think about the architecture:
+
+- The game needs to be playable from load to win/lose
+- All physics values must be tunable constants at top of file
+- Must run by opening HTML file in browser with no server or dependencies
+- ES6 modules - but wait, ES6 modules require a server due to CORS. However, the user says "no server or dependencies". This is contradictory. I'll use ES6 module syntax but note that it may need a local server, OR I could use a different approach. Actually, let me re-read...
+
+"Code must run by opening the HTML file in a browser with no server or dependencies."
+
+ES6 modules don't work with `file://` protocol due to CORS. So I should either:
+1. Use inline scripts (not modular)
+2. Use a build step (not allowed)
+3. Use dynamic import with blob URLs
+
+Actually, the spec says "modular ES6 modules" but also "no server or dependencies". These are contradictory. I think the best approach is to write the code using ES6 module syntax but also provide a way to make it work. Or I could just write everything in one big script tag to avoid the module issue.
+
+Wait, let me re-read more carefully. It says "loads modular ES6 modules" but also "no server or dependencies". I think the intent is that the code should be modular in structure but work without a build step. The simplest way to achieve this without a server is to put everything in a single HTML file with inline scripts, or use a single JS file loaded via a regular `<script>` tag.
+
+Actually, I think the best approach given the constraints is to put all the code in a single HTML file with inline JavaScript, OR use multiple files but load them via regular script tags (not ES6 modules). But the spec explicitly says "ES6 modules".
+
+Let me just go with ES6 modules and hope the user uses a local server, or I'll note this. Actually, you know what, let me just make it work by putting everything in one big HTML file. That's the safest approach for "open the HTML file directly". But the spec wants modular files...
+
+OK, I'll compromise: I'll create the files as specified (multiple files), use ES6 module syntax, and add a note about needing a local server. Most developers know to use `python -m http.server` or similar. The acceptance criteria says "fully playable from load to win/lose without console errors" which implies it should work. 
+
+Hmm, let me think again. Maybe I should just put all the code in a single index.html file with everything inline. That would definitely work when opened directly. But the spec wants separate files...
+
+I think the pragmatic choice is to create separate files as requested, use ES6 modules, and include a small note. Many modern browsers can handle ES6 modules if served properly. Let me go with this approach.
+
+Actually wait - I just realized I need to output ONLY a raw JSON object. No markdown, no conversational text. Just `{"filename": "code content", ...}`.
+
+Let me plan out each file:
+
+### Constants.js
+All tunable constants - physics values, costs, HP, speeds, etc.
+
+### Pathfinding.js
+A* implementation on 64x64 grid with diagonal movement.
+
+### Input.js
+Mouse and keyboard input handling, selection rectangle, commands.
+
+### Audio.js
+Web Audio API procedural sounds.
+
+### ParticleSystem.js
+Particle effects system.
+
+### Ant.js
+Ant entity with movement, carrying, combat.
+
+### Enemy.js
+Spider and Beetle enemy entities.
+
+### LeafSource.js
+Depleting leaf sources.
+
+### Nest.js
+Nest with HP, building.
+
+### Structure.js
+Turret, Royal Chamber structures.
+
+### Renderer.js
+All drawing code - terrain, units, effects, HUD.
+
+### UI.js
+HUD elements, menus, buttons.
+
+### Game.js
+Main orchestrator, game loop, state management.
+
+### main.js
+Entry point, creates Game instance.
+
+This is going to be a LOT of code. Let me start writing it.
+
+Let me think about the game design more carefully:
+
+**World:** 1280x1280 grid, 64x64 cells, 20px per cell. Camera panning, zoom.
+
+**Entities:**
+- Ant (Worker, Soldier)
+- Spider (enemy)
+- Beetle (enemy)
+- LeafSource
+- Nest
+- Turret (structure)
+- RoyalChamber (structure)
+
+**Game Loop:** Fixed timestep at 33ms cap, requestAnimationFrame.
+
+**Waves:** 10 waves, spawn every 45s from map edges.
+
+**Resources:** Leaves, starting 50.
+
+**Build Menu:** B (Worker), N (Soldier), T (Turret), R (Royal Chamber).
+
+**Selection:** Left-click single, left-drag rectangle, shift+click add, double-click all same type. Right-click commands. Shift+right-click queues up to 5.
+
+**Camera:** WASD/arrows + edge pan, mouse wheel zoom 0.5x-2.0x centered on cursor.
+
+**Combat:** Soldiers attack, workers defend, turrets shoot acid.
+
+**Win:** Wave 10 cleared + Royal Chamber built.
+**Lose:** Nest HP reaches 0.
+
+OK this is a huge project. Let me write it efficiently. I'll focus on making it functional and playable, even if some visual details are simplified.
+
+Let me start coding each file. I'll try to keep the code clean and well-organized.
+
+For the canvas: 1280x720 internal resolution, scaled responsively. Wait, the world is 1280x1280 but the canvas is 1280x720? That seems odd. Let me re-read...
+
+"Rendering: Single `<canvas>` element, 1280x720 internal resolution, scaled responsively with CSS while preserving aspect ratio."
+
+So the canvas is 1280x720 (16:9 aspect ratio), but the world is 1280x1280. The camera shows part of the world. That makes sense - the world is larger than the viewport, so we pan around.
+
+Actually wait, 1280x720 canvas with a 1280x1280 world means we see about 56% of the world width. That's fine for a strategy game where you pan around.
+
+Let me now write the code. I'll aim for completeness and playability.
+
+Let me structure the code carefully:
+
+```javascript
+// Constants.js
+export const CONFIG = {
+  // World
+  WORLD_SIZE: 1280,
+  CELL_SIZE: 20,
+  GRID_W: 64,
+  GRID_H: 64,
+  
+  // Canvas
+  CANVAS_WIDTH: 1280,
+  CANVAS_HEIGHT: 720,
+  
+  // Physics
+  ANT_MAX_SPEED: 90,
+  ANT_CARRY_SPEED: 55,
+  ANT_ACCEL: 300,
+  ANT_FRICTION: 400,
+  ANT_TURN_RATE: 4.5,
+  ANT_SEPARATION_RADIUS: 14,
+  ANT_SEPARATION_FORCE: 120,
+  ANT_RADIUS: 7,
+  
+  // Combat
+  SOLDIER_HP: 30,
+  SOLDIER_DMG: 8,
+  SOLDIER_RANGE: 28,
+  SOLDIER_CD: 1.0,
+  WORKER_HP: 15,
+  WORKER_DMG: 2,
+  SPIDER_HP: 40,
+  SPIDER_DMG: 6,
+  BEETLE_HP: 120,
+  BEETLE_DMG: 12,
+  TURRET_DMG: 20,
+  TURRET_RANGE: 150,
+  TURRET_CD: 0.8,
+  
+  // Resources
+  START_LEAVES: 50,
+  START_WORKERS: 5,
+  DEPOSIT_AMOUNT: 10,
+  LEAF_SOURCE_HP: 500,
+  LEAF_SOURCE_REGROW: 30,
+  
+  // Spawning
+  WORKER_COST: 20,
+  SOLDIER_COST: 35,
+  TURRET_COST: 50,
+  ROYAL_CHAMBER_COST: 200,
+  WORKER_SPAWN_TIME: 3,
+  SOLDIER_SPAWN_TIME: 5,
+  
+  // Waves
+  TOTAL_WAVES: 10,
+  WAVE_INTERVAL: 45,
+  
+  // Nest
+  NEST_HP: 500,
+  
+  // Camera
+  MIN_ZOOM: 0.5,
+  MAX_ZOOM: 2.0,
+  EDGE_PAN_MARGIN: 30,
+  EDGE_PAN_SPEED: 600,
+  
+  // Selection
+  SELECTION_RECT_DRAW_TIME: 0.8,
+  QUEUE_MAX: 5,
+  
+  // Colors
+  COLORS: {
+    // ... vibrant palette
+  }
+};
+```
+
+Now let me think about the overall game flow and write all the files. This is going to be very long. Let me be efficient but thorough.
+
+Actually, I realize this is going to be extremely long - probably 5000+ lines total across all files. Let me be strategic about what I include and make sure the game is actually playable.
+
+Let me write each file now. I'll focus on:
+1. Making the core loop work
+2. Selection and command system
+3. Harvesting
+4. Building
+5. Combat
+6. Wave spawning
+7. Win/lose conditions
+8. Basic visuals
+9. HUD
+10. Audio
+11. High score persistence
+
+Let me start writing the code. I'll try to keep each file focused and not too bloated.
+
+For the color palette, the spec says "unique, vibrant color palette". Let me pick something like:
+- Background: Deep forest green (#1a3a2a)
+- Terrain: Warm earth brown (#8B6B47)
+- Grass patches: Vibrant green (#4CAF50)
+- Worker ants: Warm brown (#A0522D)
+- Soldier ants: Reddish brown (#8B0000)
+- Carried leaf: Bright green (#00FF00)
+- Spider: Dark black (#1a1a1a) with red eyes (#FF0000)
+- Beetle: Dark gray (#333333)
+- Nest: Warm brown (#D2691E)
+- Turret: Steel blue (#4682B4)
+- Royal Chamber: Gold (#FFD700)
+- UI: Dark semi-transparent panels (#1a1a2e with transparency)
+
+Let me write all the files now. I'll be comprehensive but efficient.
+
+Actually, I need to think about how to handle the ES6 module issue. Since the user says "no server or dependencies", I should probably avoid ES6 modules entirely and instead use a single bundled approach. But the spec explicitly asks for modular ES6 modules...
+
+You know what, I'll just write the files as ES6 modules and include a comment in the HTML about needing a local server. The user can figure it out. Most devs know this. Or better yet, I'll use a trick: I'll write the code as if it were modules, but in the HTML I'll use a script that concatenates them or use import maps.
+
+Actually, the simplest solution: just put ALL the code in a single `index.html` file. Everything inline. This avoids the module CORS issue entirely. The spec says "modular ES6 modules" but the practical constraint of "no server" makes this impossible otherwise. I'll prioritize working code over strict adherence to the module structure.
+
+Wait, but the output format requires mapping filenames to code contents. So I can have multiple files. Let me just use regular script tags (not ES6 modules) and organize the code into classes/modules within each file. Each file will define classes/objects on the global scope (or a shared namespace).
+
+Actually, let me use a shared namespace pattern. I'll have a global `LC` (Leafline Colony) object that each module attaches to. This way they can be loaded via regular `<script>` tags in order.
+
+No wait, that's messy. Let me just use ES6 modules and accept that the user needs a local server. I'll add a note. The spec says "no server or dependencies" but that's physically impossible with ES6 modules. I'll prioritize the "playable" requirement.
+
+Hmm, actually there IS a way: I can use `<script type="module">` with `import` statements, and it WILL work if served over HTTP. The user just needs to run a simple HTTP server. Let me just do that and add a comment.
+
+OR - I could use a clever approach: put all code in one big JS file and load it with a regular `<script>` tag. Then split the code into logical sections within that file. But the output format wants separate files...
+
+OK final decision: I'll create separate files as requested, use ES6 module syntax, and add a brief comment in the HTML about running a local server. This is the standard approach for ES6 module projects.
+
+Let me now write all the code. I'll be thorough but try to keep things manageable.
+
+Let me plan the file sizes:
+- Constants.js: ~100 lines
+- Pathfinding.js: ~150 lines
+- Input.js: ~200 lines
+- Audio.js: ~100 lines
+- ParticleSystem.js: ~100 lines
+- Ant.js: ~300 lines
+- Enemy.js: ~200 lines
+- LeafSource.js: ~80 lines
+- Nest.js: ~80 lines
+- Structure.js: ~150 lines
+- Renderer.js: ~500 lines
+- UI.js: ~300 lines
+- Game.js: ~400 lines
+- main.js: ~30 lines
+- index.html: ~50 lines
+
+Total: ~3000+ lines. That's a lot but doable.
+
+Let me start writing. I'll focus on getting a working game first, then add polish.
+
+Actually, let me reconsider the approach. Writing 14 separate files and ensuring they all work together perfectly is extremely challenging in this format. Let me consolidate some files to reduce the risk of errors while still maintaining modularity.
+
+Revised file list:
+1. `index.html` - Entry point
+2. `Constants.js` - All config
+3. `Pathfinding.js` - A* implementation
+4. `Input.js` - Input handling
+5. `Audio.js` - Sound effects
+6. `Particles.js` - Particle system
+7. `Ant.js` - Ant class
+8. `Enemy.js` - Enemy classes
+9. `Entities.js` - LeafSource, Nest, Structure classes
+10. `Renderer.js` - All rendering
+11. `UI.js` - HUD and menus
+12. `Game.js` - Main game logic
+13. `main.js` - Entry point
+
+That's 13 files. Still a lot but more manageable.
+
+Actually, let me merge some:
+- Merge Entities into Game.js? No, spec wants separate files.
+- Merge Particles into Renderer? No, spec wants separate.
+
+OK let me just go with the original 14 files. Let me start writing.
+
+I'll write each file completely. Let me begin.
+
+For the game to be playable, I need to make sure:
+1. The game loop runs correctly
+2. Selection works
+3. Commands work
+4. Harvesting works
+5. Building works
+6. Combat works
+7. Waves spawn correctly
+8. Win/lose triggers correctly
+9. High score persists
+10. Audio plays
+11. Minimap works
+12. Camera controls work
+
+Let me write the code now. I'll be as complete as possible.
+
+One thing to note: the output must be ONLY a raw JSON object. No markdown, no conversational text. Just `{"file1": "content", "file2": "content", ...}`.
+
+Let me write each file's content carefully.
+
+I'll start with Constants.js since everything depends on it.
+
+```javascript
+export const CONFIG = {
+  WORLD_SIZE: 1280,
+  CELL_SIZE: 20,
+  GRID_W: 64,
+  GRID_H: 64,
+  CANVAS_W: 1280,
+  CANVAS_H: 720,
+  
+  ANT_MAX_SPEED: 90,
+  ANT_CARRY_SPEED: 55,
+  ANT_ACCEL: 300,
+  ANT_FRICTION: 400,
+  ANT_TURN_RATE: 4.5,
+  ANT_SEPARATION_RADIUS: 14,
+  ANT_SEPARATION_FORCE: 120,
+  ANT_RADIUS: 7,
+  
+  SOLDIER_HP: 30,
+  SOLDIER_DMG: 8,
+  SOLDIER_RANGE: 28,
+  SOLDIER_CD: 1.0,
+  WORKER_HP: 15,
+  WORKER_DMG: 2,
+  SPIDER_HP: 40,
+  SPIDER_DMG: 6,
+  BEETLE_HP: 120,
+  BEETLE_DMG: 12,
+  TURRET_DMG: 20,
+  TURRET_RANGE: 150,
+  TURRET_CD: 0.8,
+  
+  START_LEAVES: 50,
+  START_WORKERS: 5,
+  DEPOSIT_AMOUNT: 10,
+  LEAF_SOURCE_HP: 500,
+  LEAF_SOURCE_REGROW: 30,
+  
+  WORKER_COST: 20,
+  SOLDIER_COST: 35,
+  TURRET_COST: 50,
+  ROYAL_CHAMBER_COST: 200,
+  WORKER_SPAWN_TIME: 3,
+  SOLDIER_SPAWN_TIME: 5,
+  
+  TOTAL_WAVES: 10,
+  WAVE_INTERVAL: 45,
+  NEST_HP: 500,
+  
+  MIN_ZOOM: 0.5,
+  MAX_ZOOM: 2.0,
+  EDGE_PAN_MARGIN: 30,
+  EDGE_PAN_SPEED: 600,
+  
+  SELECTION_RECT_DRAW_TIME: 0.8,
+  QUEUE_MAX: 5,
+  
+  COLORS: {
+    bg: '#1a2a1a',
+    terrain: '#8B6B47',
+    grass: '#4CAF50',
+    worker: '#A0522D',
+    soldier: '#8B0000',
+    leaf: '#00FF00',
+    spider: '#1a1a1a',
+    beetle: '#333333',
+    nest: '#D2691E',
+    turret: '#4682B4',
+    royal: '#FFD700',
+    uiPanel: 'rgba(20, 25, 40, 0.85)',
+    uiText: '#E0E0E0',
+    selection: '#00FF00',
+    moveMarker: '#00FF00',
+    harvestMarker: '#FFFF00',
+    attackMarker: '#FF0000',
+  }
+};
+```
+
+Now Pathfinding.js - A* on 64x64 grid:
+
+```javascript
+export class Pathfinder {
+  constructor(gridW, gridH) {
+    this.gridW = gridW;
+    this.gridH = gridH;
+    this.size = gridW * gridH;
+    this.grid = new Uint8Array(this.size);
+    this.blocked = new Set(); // dynamic blocked cells
+  }
+  
+  setBlocked(cellX, cellY, blocked) {
+    const idx = cellY * this.gridW + cellX;
+    if (blocked) this.blocked.add(idx);
+    else this.blocked.delete(idx);
+  }
+  
+  isBlocked(x, y) {
+    return this.blocked.has(Math.floor(y / CONFIG.CELL_SIZE) * this.gridW + Math.floor(x / CONFIG.CELL_SIZE));
+  }
+  
+  findPath(startX, startY, goalX, goalY, maxIterations = 500) {
+    const sx = Math.floor(startX / CONFIG.CELL_SIZE);
+    const sy = Math.floor(startY / CONFIG.CELL_SIZE);
+    const gx = Math.floor(goalX / CONFIG.CELL_SIZE);
+    const gy = Math.floor(goalY / CONFIG.CELL_SIZE);
+    
+    if (sx < 0 || sx >= this.gridW || sy < 0 || sy >= this.gridH) return null;
+    if (gx < 0 || gx >= this.gridW || gy < 0 || gy >= this.gridH) return null;
+    
+    const openSet = [];
+    const closedSet = new Set();
+    const cameFrom = new Map();
+    const gScore = new Map();
+    const fScore = new Map();
+    
+    const key = (x, y) => y * this.gridW + x;
+    
+    const startKey = key(sx, sy);
+    gScore.set(startKey, 0);
+    fScore.set(startKey, heuristic(sx, sy, gx, gy));
+    openSet.push({ x: sx, y: sy, f: fScore.get(startKey) });
+    
+    let iterations = 0;
+    while (openSet.length > 0 && iterations < maxIterations) {
+      iterations++;
+      // Find node with lowest f score
+      let bestIdx = 0;
+      for (let i = 1; i < openSet.length; i++) {
+        if (openSet[i].f < openSet[bestIdx].f) bestIdx = i;
+      }
+      const current = openSet[bestIdx];
+      const currentKey = key(current.x, current.y);
+      
+      if (current.x === gx && current.y === gy) {
+        // Reconstruct path
+        const path = [];
+        let ck = currentKey;
+        while (cameFrom.has(ck)) {
+          const prev = cameFrom.get(ck);
+          path.unshift({ x: prev.x, y: prev.y });
+          ck = key(prev.x, prev.y);
+        }
+        return path;
+      }
+      
+      openSet.splice(bestIdx, 1);
+      closedSet.add(currentKey);
+      
+      // Check neighbors (8 directions)
+      const dirs = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
+      for (const [dx, dy] of dirs) {
+        const nx = current.x + dx;
+        const ny = current.y + dy;
+        const nKey = key(nx, ny);
+        
+        if (nx < 0 || nx >= this.gridW || ny < 0 || ny >= this.gridH) continue;
+        if (closedSet.has(nKey)) continue;
+        if (this.isBlocked(nx, ny)) continue;
+        
+        const tentativeG = gScore.get(currentKey) + 1;
+        if (tentativeG < (gScore.get(nKey) ?? Infinity)) {
+          cameFrom.set(nKey, { x: current.x, y: current.y });
+          gScore.set(nKey, tentativeG);
+          fScore.set(nKey, tentativeG + heuristic(nx, ny, gx, gy));
+          if (!openSet.some(n => n.x === nx && n.y === ny)) {
+            openSet.push({ x: nx, y: ny, f: fScore.get(nKey) });
+          }
+        }
+      }
+    }
+    return null;
+  }
+}
+
+function heuristic(x1, y1, x2, y2) {
+  return Math.max(Math.abs(x1 - x2), Math.abs(y1 - y2)) + 
+         Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2) * 0.5;
+}
+```
+
+Hmm, this is getting complex. Let me simplify the pathfinding and make it work well enough.
+
+Actually, let me rethink the architecture. Instead of trying to implement every single feature perfectly, let me focus on creating a game that is playable and meets the core requirements. I'll simplify some aspects where needed.
+
+Let me write the code now, being practical about it. I'll create all files with complete implementations.
+
+Let me think about what's absolutely essential for a playable game:
+1. Game loop with fixed timestep
+2. Entity management (ants, enemies, structures, sources)
+3. Selection system
+4. Command system (move, harvest, attack)
+5. Harvesting mechanic
+6. Building system
+7. Combat
+8. Wave spawning
+9. Win/lose conditions
+10. Basic rendering
+11. HUD
+12. Audio
+13. High score
+
+Let me write each file now. I'll be comprehensive but practical.
+
+For the rendering, I need to draw:
+- Terrain (dirt background, grass patches, nest area)
+- Grid overlay (toggleable)
+- Leaf sources
+- Nest
+- Structures (turrets, royal chamber)
+- Ants (with walk animation)
+- Enemies (spiders, beetles)
+- Particles
+- HUD (top bar, minimap, selection panel, build menu)
+- Menus (start, pause, help, end screen)
+- Markers (move, harvest, attack)
+
+This is a lot of drawing code. Let me write it efficiently.
+
+OK, I'm going to start writing the actual code now. Let me be systematic.
+
+For the canvas scaling: The canvas is 1280x720 internally. CSS will scale it to fit the viewport while preserving aspect ratio. I'll use `object-fit: contain` or calculate the scale manually.
+
+Let me write all the files. I'll try to keep each one focused and correct.
+
+Actually, I realize I should think about the coordinate system. The world is 1280x1280. The camera has position (camX, camY) and zoom level. Screen coordinates are derived from world coordinates by:
+- screenX = (worldX - camX) * zoom
+- screenY = (worldY - camY) * zoom
+
+And inverse:
+- worldX = screenX / zoom + camX
+- worldY = screenY / zoom + camY
+
+The camera is clamped to world bounds, meaning camX ranges from 0 to 1280 - canvasWidth/zoom, etc.
+
+Mouse coordinates need to be converted from screen to world for clicking on entities.
+
+OK let me just write the code. I'll start with the simpler files and work up to the complex ones.
+
+Let me write all files now. I'll aim for correctness and playability.
+
+For the high score, I'll use localStorage to save the highest wave reached or longest survival time.
+
+Let me write the code now. I'll produce each file's content.
+
+I need to be careful about the JSON output format. Each file's content goes as a string value in the JSON object. I need to escape any special characters properly.
+
+Let me start writing. This will be long but I'll be thorough.
+
+Actually, let me reconsider the file count. The spec mentions these files:
+- main.js
+- Game.js
+- Input.js
+- Renderer.js
+- Pathfinding.js
+- UI.js
+- Audio.js
+- Ant.js
+- Enemy.js
+- LeafSource.js
+- Nest.js
+- Structure.js
+- ParticleSystem.js
+- Constants.js
+
+That's 14 files. Let me write them all.
+
+Let me start with the simpler ones and work up.
+
+I'll write the code now, being as complete as possible while keeping it functional.
+
+Let me think about potential issues:
+1. ES6 modules require a server - I'll add a note
+2. Performance with many entities - I'll optimize where possible
+3. Pathfinding performance - A* on 64x64 grid should be fast enough
+4. Collision detection - circle-based, simple
+5. State management - clear states for game phases
+
+Game states:
+- MENU (start screen)
+- PLAYING
+- PAUSED
+- WIN
+- LOSE
+
+Let me write the code now.
+
+For the ant AI:
+- When idle, ants wander slightly
+- When commanded, move toward target
+- When near leaf source and commanded to harvest, harvest
+- When near nest and carrying, deposit
+- Separation force prevents stacking
+
+For enemy AI:
+- Move toward nearest target (ant or structure)
+- Attack when in range
+- If blocked, attack blocker
+
+For turret AI:
+- Find nearest enemy in range
+- Shoot acid projectile
+
+OK, I'm going to write all the code now. Let me be systematic and produce complete, working code.
+
+Let me write each file:
+
+### 1. Constants.js
+
+Simple config object with all tunable values.
+
+### 2. Pathfinding.js
+
+A* pathfinding on grid.
+
+### 3. Input.js
+
+Mouse and keyboard input handler.
+
+### 4. Audio.js
+
+Web Audio API sound effects.
+
+### 5. ParticleSystem.js
+
+Particle effects.
+
+### 6. Ant.js
+
+Ant entity class.
+
+### 7. Enemy.js
+
+Enemy entity classes.
+
+### 8. LeafSource.js
+
+Leaf source entity.
+
+### 9. Nest.js
+
+Nest entity.
+
+### 10. Structure.js
+
+Structure entity classes.
+
+### 11. Renderer.js
+
+All rendering code.
+
+### 12. UI.js
+
+HUD and menu rendering.
+
+### 13. Game.js
+
+Main game logic.
+
+### 14. main.js
+
+Entry point.
+
+### 15. index.html
+
+HTML entry point.
+
+Let me write them all now. I'll be thorough.
+
+Actually, I realize I should think about this more carefully. The code is going to be very long. Let me estimate:
+
+Each file will probably be 100-500 lines. Total across all files: 2000-4000 lines. That's a lot of JSON string content.
+
+Let me be efficient and write tight, focused code. I'll avoid unnecessary verbosity.
+
+Let me start writing now. I'll produce the complete content for each file.
+
+For the game to be actually playable, I need to make sure:
+1. The game starts in a menu state
+2. Clicking "Start" begins the game
+3. The player can select ants and give commands
+4. Ants can harvest leaves
+5. The player can build structures
+6. Enemies spawn in waves
+7. The game ends when win or lose condition is met
+8. The restart button works
+
+Let me write the code now. I'll focus on getting a working game.
+
+One more consideration: the spec says "Save the player's High Score using the browser's LocalStorage so it persists when they refresh." I'll save the highest wave reached or longest survival time.
+
+OK, let me write all the code now. Here we go.
+
+I'll write each file's content as a string. Let me be careful with escaping.
+
+Actually, I realize I should just start writing and stop planning. Let me produce the code{"Constants.js":"export const CONFIG = {\n  WORLD_SIZE: 1280,\n  CELL_SIZE: 20,\n  GRID_W: 64,\n  GRID_H: 64,\n  CANVAS_W: 1280,\n  CANVAS_H: 720,\n\n  ANT_MAX_SPEED: 90,\n  ANT_CARRY_SPEED: 55,\n  ANT_ACCEL: 300,\n  ANT_FRICTION: 400,\n  ANT_TURN_RATE: 4.5,\n  ANT_SEPARATION_RADIUS: 14,\n  ANT_SEPARATION_FORCE: 120,\n  ANT_RADIUS: 7,\n  ANT_CARRY_RADIUS: 18,\n\n  SOLDIER_HP: 30,\n  SOLDIER_DMG: 8,\n  SOLDIER_RANGE: 28,\n  SOLDIER_CD: 1.0,\n  WORKER_HP: 15,\n  WORKER_DMG: 2,\n  SPIDER_HP: 40,\n  SPIDER_DMG: 6,\n  BEETLE_HP: 120,\n  BEETLE_DMG: 12,\n  TURRET_DMG: 20,\n  TURRET_RANGE: 150,\n  TURRET_CD: 0.8,\n\n  START_LEAVES: 50,\n  START_WORKERS: 5,\n  DEPOSIT_AMOUNT: 10,\n  LEAF_SOURCE_HP: 500,\n  LEAF_SOURCE_REGROW: 30,\n\n  WORKER_COST: 20,\n  SOLDIER_COST: 35,\n  TURRET_COST: 50,\n  ROYAL_CHAMBER_COST: 200,\n  WORKER_SPAWN_TIME: 3,\n  SOLDIER_SPAWN_TIME: 5,\n\n  TOTAL_WAVES: 10,\n  WAVE_INTERVAL: 45,\n  NEST_HP: 500,\n\n  MIN_ZOOM: 0.5,\n  MAX_ZOOM: 2.0,\n  EDGE_PAN_MARGIN: 30,\n  EDGE_PAN_SPEED: 600,\n\n  SELECTION_RECT_DRAW_TIME: 0.8,\n  QUEUE_MAX: 5,\n\n  COLORS: {\n    bg: '#1a2a1a',\n    terrain: '#8B6B47',\n    grass: '#4CAF50',\n    worker: '#A0522D',\n    soldier: '#8B0000',\n    leaf: '#00FF00',\n    spider: '#1a1a1a',\n    beetle: '#333333',\n    nest: '#D2691E',\n    turret: '#4682B4',\n    royal: '#FFD700',\n    uiPanel: 'rgba(20, 25, 40, 0.85)',\n    uiText: '#E0E0E0',\n    selection: '#00FF00',\n    moveMarker: '#00FF00',\n    harvestMarker: '#FFFF00',\n    attackMarker: '#FF0000',\n    pathGrid: 'rgba(255,255,255,0.06)',\n    projectile: '#9370DB'\n  }\n};\n","Pathfinding.js":"export class Pathfinder {\n  constructor(gridW, gridH) {\n    this.gridW = gridW;\n    this.gridH = gridH;\n    this.size = gridW * gridH;\n    this.blocked = new Set();\n  }\n\n  setBlocked(cellX, cellY, blocked) {\n    const idx = cellY * this.gridW + cellX;\n    if (blocked) this.blocked.add(idx);\n    else this.blocked.delete(idx);\n  }\n\n  isBlocked(x, y) {\n    const gx = Math.floor(x / CONFIG.CELL_SIZE);\n    const gy = Math.floor(y / CONFIG.CELL_SIZE);\n    return this.blocked.has(gy * this.gridW + gx);\n  }\n\n  findPath(startX, startY, goalX, goalY, maxIterations = 800) {\n    const sx = Math.floor(startX / CONFIG.CELL_SIZE);\n    const sy = Math.floor(startY / CONFIG.CELL_SIZE);\n    const gx = Math.floor(goalX / CONFIG.CELL_SIZE);\n    const gy = Math.floor(goalY / CONFIG.CELL_SIZE);\n\n    if (sx < 0 || sx >= this.gridW || sy < 0 || sy >= this.gridH) return null;\n    if (gx < 0 || gx >= this.gridW || gy < 0 || gy >= this.gridH) return null;\n\n    const openSet = [];\n    const closedSet = new Set();\n    const cameFrom = new Map();\n    const gScore = new Map();\n    const fScore = new Map();\n\n    const key = (x, y) => y * this.gridW + x;\n    const sk = key(sx, sy);\n    gScore.set(sk, 0);\n    fScore.set(sk, this.heuristic(sx, sy, gx, gy));\n    openSet.push({ x: sx, y: sy, f: fScore.get(sk) });\n\n    let iter = 0;\n    while (openSet.length > 0 && iter < maxIterations) {\n      iter++;\n      let bestIdx = 0;\n      for (let i = 1; i < openSet.length; i++) {\n        if (openSet[i].f < openSet[bestIdx].f) bestIdx = i;\n      }\n      const current = openSet[bestIdx];\n      const ck = key(current.x, current.y);\n\n      if (current.x === gx && current.y === gy) {\n        const path = [];\n        let c = ck;\n        while (cameFrom.has(c)) {\n          const p = cameFrom.get(c);\n          path.unshift({ x: p.x, y: p.y });\n          c = key(p.x, p.y);\n        }\n        return path;\n      }\n\n      openSet.splice(bestIdx, 1);\n      closedSet.add(ck);\n\n      const dirs = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];\n      for (const [dx, dy] of dirs) {\n        const nx = current.x + dx;\n        const ny = current.y + dy;\n        const nk = key(nx, ny);\n        if (nx < 0 || nx >= this.gridW || ny < 0 || ny >= this.gridH) continue;\n        if (closedSet.has(nk)) continue;\n        if (this.isBlocked(nx, ny)) continue;\n        const tg = gScore.get(ck) + 1;\n        if (tg < (gScore.get(nk) ?? Infinity)) {\n          cameFrom.set(nk, { x: current.x, y: current.y });\n          gScore.set(nk, tg);\n          fScore.set(nk, tg + this.heuristic(nx, ny, gx, gy));\n          if (!openSet.some(n => n.x === nx && n.y === ny)) {\n            openSet.push({ x: nx, y: ny, f: fScore.get(nk) });\n          }\n        }\n      }\n    }\n    return null;\n  }\n\n  heuristic(x1, y1, x2, y2) {\n    return Math.max(Math.abs(x1 - x2), Math.abs(y1 - y2)) +\n           Math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2) * 0.5;\n  }\n}\n","Input.js":"export class InputHandler {\n  constructor(canvas) {\n    this.canvas = canvas;\n    this.mouse = { x: 0, y: 0, worldX: 0, worldY: 0 };\n    this.keys = {};\n    this.leftDown = false;\n    this.rightDown = false;\n    this.shiftDown = false;\n\n    this.dragStart = null;\n    this.dragging = false;\n    this.dragType = null;\n    this.dragTime = 0;\n\n    this.queueCommands = [];\n    this.queueIndex = 0;\n\n    this.onLeftClick = null;\n    this.onRightClick = null;\n    this.onDoubleClick = null;\n    this.onKeyPress = null;\n    this.onMouseMove = null;\n    this.onMouseDown = null;\n    this.onMouseUp = null;\n    this.onWheel = null;\n\n    this.bindEvents();\n  }\n\n  update(dt) {\n    this.dragTime += dt;\n    if (this.dragging && this.dragType === 'rect') {\n      if (this.dragTime > CONFIG.SELECTION_RECT_DRAW_TIME) {\n        this.dragging = false;\n        this.dragType = null;\n        this.dragStart = null;\n        if (this.onRectComplete) this.onRectComplete(this.rectData);\n      }\n    }\n  }\n\n  getRectData() {\n    if (!this.dragging || !this.dragStart) return null;\n    const sx = Math.min(this.dragStart.x, this.mouse.worldX);\n    const sy = Math.min(this.dragStart.y, this.mouse.worldY);\n    const ex = Math.max(this.dragStart.x, this.mouse.worldX);\n    const ey = Math.max(this.dragStart.y, this.mouse.worldY);\n    return { x: sx, y: sy, w: ex - sx, h: ey - sy };\n  }\n\n  clearQueue() {\n    this.queueCommands = [];\n    this.queueIndex = 0;\n  }\n\n  addCommand(cmd) {\n    if (this.queueCommands.length >= CONFIG.QUEUE_MAX) return false;\n    this.queueCommands.push(cmd);\n    return true;\n  }\n\n  consumeNextCommand() {\n    if (this.queueIndex < this.queueCommands.length) {\n      return this.queueCommands[this.queueIndex++];\n    }\n    return null;\n  }\n\n  bindEvents() {\n    this.canvas.addEventListener('mousemove', (e) => {\n      const rect = this.canvas.getBoundingClientRect();\n      const scaleX = CONFIG.CANVAS_W / rect.width;\n      const scaleY = CONFIG.CANVAS_H / rect.height;\n      const mx = (e.clientX - rect.left) * scaleX;\n      const my = (e.clientY - rect.top) * scaleY;\n      this.mouse.x = mx;\n      this.mouse.y = my;\n      if (this.onMouseMove) this.onMouseMove(mx, my);\n    });\n\n    this.canvas.addEventListener('mousedown', (e) => {\n      e.preventDefault();\n      const rect = this.canvas.getBoundingClientRect();\n      const scaleX = CONFIG.CANVAS_W / rect.width;\n      const scaleY = CONFIG.CANVAS_H / rect.height;\n      const mx = (e.clientX - rect.left) * scaleX;\n      const my = (e.clientY - rect.top) * scaleY;\n\n      if (e.button === 0) {\n        this.leftDown = true;\n        this.dragStart = { x: mx, y: my };\n        this.dragging = true;\n        this.dragType = 'rect';\n        this.dragTime = 0;\n        if (this.onMouseDown) this.onMouseDown(mx, my, 'left');\n      } else if (e.button === 2) {\n        this.rightDown = true;\n        if (this.onMouseDown) this.onMouseDown(mx, my, 'right');\n      }\n    });\n\n    this.canvas.addEventListener('mouseup', (e) => {\n      if (e.button === 0) {\n        this.leftDown = false;\n        if (this.dragging && this.dragType === 'rect') {\n          const r = this.getRectData();\n          if (r && (r.w > 5 || r.h > 5)) {\n            if (this.onRectComplete) this.onRectComplete(r);\n          }\n        }\n        this.dragging = false;\n        this.dragType = null;\n        this.dragStart = null;\n        if (this.onMouseUp) this.onMouseUp(this.mouse.x, this.mouse.y, 'left');\n      } else if (e.button === 2) {\n        this.rightDown = false;\n        if (this.onMouseUp) this.onMouseUp(this.mouse.x, this.mouse.y, 'right');\n      }\n    });\n\n    this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());\n\n    this.canvas.addEventListener('wheel', (e) => {\n      e.preventDefault();\n      if (this.onWheel) this.onWheel(e.deltaY);\n    }, { passive: false });\n\n    window.addEventListener('keydown', (e) => {\n      this.keys[e.key.toLowerCase()] = true;\n      if (this.onKeyPress) this.onKeyPress(e.key.toLowerCase(), e);\n    });\n    window.addEventListener('keyup', (e) => {\n      this.keys[e.key.toLowerCase()] = false;\n    });\n  }\n\n  isKeyDown(key) {\n    return !!this.keys[key];\n  }\n}\n","Audio.js":"export class AudioManager {\n  constructor() {\n    this.ctx = null;\n    this.enabled = true;\n    this.masterGain = null;\n  }\n\n  init() {\n    try {\n      this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n      this.masterGain = this.ctx.createGain();\n      this.masterGain.gain.value = 0.3;\n      this.masterGain.connect(this.ctx.destination);\n    } catch (e) {\n      this.enabled = false;\n    }\n  }\n\n  resume() {\n    if (this.ctx && this.ctx.state === 'suspended') {\n      this.ctx.resume();\n    }\n  }\n\n  play(type, freq, duration, volume = 0.3) {\n    if (!this.enabled || !this.ctx) return;\n    const osc = this.ctx.createOscillator();\n    const gain = this.ctx.createGain();\n    osc.type = type;\n    osc.frequency.value = freq;\n    gain.gain.setValueAtTime(volume, this.ctx.currentTime);\n    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);\n    osc.connect(gain);\n    gain.connect(this.masterGain);\n    osc.start();\n    osc.stop(this.ctx.currentTime + duration);\n  }\n\n  sweep(type, f1, f2, duration, volume = 0.3) {\n    if (!this.enabled || !this.ctx) return;\n    const osc = this.ctx.createOscillator();\n    const gain = this.ctx.createGain();\n    osc.type = type;\n    osc.frequency.setValueAtTime(f1, this.ctx.currentTime);\n    osc.frequency.exponentialRampToValueAtTime(f2, this.ctx.currentTime + duration);\n    gain.gain.setValueAtTime(volume, this.ctx.currentTime);\n    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);\n    osc.connect(gain);\n    gain.connect(this.masterGain);\n    osc.start();\n    osc.stop(this.ctx.currentTime + duration);\n  }\n\n  noise(duration, volume = 0.2) {\n    if (!this.enabled || !this.ctx) return;\n    const bufferSize = this.ctx.sampleRate * duration;\n    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);\n    const data = buffer.getChannelData(0);\n    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;\n    const src = this.ctx.createBufferSource();\n    src.buffer = buffer;\n    const gain = this.ctx.createGain();\n    gain.gain.setValueAtTime(volume, this.ctx.currentTime);\n    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);\n    src.connect(gain);\n    gain.connect(this.masterGain);\n    src.start();\n  }\n\n  harvest() { this.play('sine', 440, 0.15, 0.2); }\n  deposit() { this.play('triangle', 660, 0.2, 0.2); }\n  build() { this.sweep('square', 200, 800, 0.3, 0.2); }\n  shoot() { this.play('sawtooth', 800, 0.1, 0.15); }\n  hit() { this.noise(0.08, 0.15); }\n  enemyDeath() { this.sweep('sawtooth', 300, 50, 0.3, 0.2); }\n  waveStart() { this.sweep('sine', 100, 300, 0.8, 0.3); }\n  win() { this.sweep('sine', 400, 1200, 1.0, 0.3); }\n  lose() { this.sweep('sawtooth', 400, 50, 1.0, 0.3); }\n  click() { this.play('sine', 800, 0.05, 0.1); }\n  error() { this.play('square', 150, 0.15, 0.15); }\n}\n","ParticleSystem.js":"export class ParticleSystem {\n  constructor() {\n    this.particles = [];\n  }\n\n  emit(x, y, count, options = {}) {\n    const colors = options.colors || ['#fff'];\n    const speedMin = options.speedMin || 30;\n    const speedMax = options.speedMax || 100;\n    const lifeMin = options.lifeMin || 0.3;\n    const lifeMax = options.lifeMax || 0.8;\n    const sizeMin = options.sizeMin || 2;\n    const sizeMax = options.sizeMax || 5;\n    const gravity = options.gravity || 0;\n    const spread = options.spread || Math.PI * 2;\n    const angle = options.angle || 0;\n\n    for (let i = 0; i < count; i++) {\n      const a = angle + (Math.random() - 0.5) * spread;\n      const sp = speedMin + Math.random() * (speedMax - speedMin);\n      const l = lifeMin + Math.random() * (lifeMax - lifeMin);\n      const sz = sizeMin + Math.random() * (sizeMax - sizeMin);\n      this.particles.push({\n        x, y,\n        vx: Math.cos(a) * sp,\n        vy: Math.sin(a) * sp,\n        life: l,\n        maxLife: l,\n        size: sz,\n        color: colors[Math.floor(Math.random() * colors.length)],\n        gravity\n      });\n    }\n  }\n\n  emitBurst(x, y, count, color) {\n    this.emit(x, y, count, { colors: [color, '#fff'], speedMin: 40, speedMax: 120, lifeMin: 0.3, lifeMax: 0.7, sizeMin: 2, sizeMax: 5 });\n  }\n\n  emitLeaf(x, y) {\n    this.emit(x, y, 3, { colors: ['#00FF00', '#4CAF50', '#8BC34A'], speedMin: 20, speedMax: 60, lifeMin: 0.5, lifeMax: 1.0, sizeMin: 1, sizeMax: 3, gravity: 50, spread: Math.PI * 0.8, angle: -Math.PI / 2 });\n  }\n\n  emitExplosion(x, y, color) {\n    this.emit(x, y, 15, { colors: [color, '#FF6347', '#FFD700'], speedMin: 60, speedMax: 200, lifeMin: 0.4, lifeMax: 1.0, sizeMin: 2, sizeMax: 6 });\n  }\n\n  update(dt) {\n    for (let i = this.particles.length - 1; i >= 0; i--) {\n      const p = this.particles[i];\n      p.x += p.vx * dt;\n      p.y += p.vy * dt;\n      p.vy += p.gravity * dt;\n      p.life -= dt;\n      if (p.life <= 0) this.particles.splice(i, 1);\n    }\n  }\n\n  draw(ctx) {\n    for (const p of this.particles) {\n      const alpha = Math.max(0, p.life / p.maxLife);\n      ctx.globalAlpha = alpha;\n      ctx.fillStyle = p.color;\n      ctx.beginPath();\n      ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);\n      ctx.fill();\n    }\n    ctx.globalAlpha = 1;\n  }\n\n  clear() { this.particles = []; }\n}\n","Ant.js":"import { CONFIG } from './Constants.js';\n\nexport class Ant {\n  constructor(x, y, type = 'worker') {\n    this.id = Math.random().toString(36).substr(2, 9);\n    this.type = type;\n    this.x = x;\n    this.y = y;\n    this.vx = 0;\n    this.vy = 0;\n    this.angle = Math.random() * Math.PI * 2;\n    this.targetAngle = this.angle;\n\n    if (type === 'worker') {\n      this.hp = CONFIG.WORKER_HP;\n      this.maxHp = CONFIG.WORKER_HP;\n      this.dmg = CONFIG.WORKER_DMG;\n      this.range = 14;\n      this.cd = 0;\n      this.carrying = 0;\n      this.carryCapacity = 5;\n      this.state = 'idle';\n      this.command = null;\n      this.path = null;\n      this.pathIndex = 0;\n      this.wanderTimer = 0;\n      this.wanderTarget = null;\n    } else {\n      this.hp = CONFIG.SOLDIER_HP;\n      this.maxHp = CONFIG.SOLDIER_HP;\n      this.dmg = CONFIG.SOLDIER_DMG;\n      this.range = CONFIG.SOLDIER_RANGE;\n      this.cd = 0;\n      this.carrying = 0;\n      this.state = 'idle';\n      this.command = null;\n      this.path = null;\n      this.pathIndex = 0;\n      this.wanderTimer = 0;\n      this.wanderTarget = null;\n    }\n\n    this.radius = CONFIG.ANT_RADIUS;\n    this.alive = true;\n    this.deathTimer = 0;\n    this.flashTimer = 0;\n    this.depositCooldown = 0;\n  }\n\n  setCommand(cmd) {\n    this.command = cmd;\n    if (cmd && cmd.type === 'move') {\n      this.state = 'moving';\n      this.path = null;\n    } else if (cmd && cmd.type === 'attack') {\n      this.state = 'attacking';\n      this.path = null;\n    } else if (cmd && cmd.type === 'harvest') {\n      this.state = 'harvesting';\n      this.path = null;\n    } else if (cmd && cmd.type === 'defend') {\n      this.state = 'defending';\n      this.path = null;\n    } else if (cmd && cmd.type === 'return') {\n      this.state = 'returning';\n      this.path = null;\n    }\n  }\n\n  findNearestEnemy(enemies) {\n    let nearest = null;\n    let minDist = Infinity;\n    for (const e of enemies) {\n      if (!e.alive) continue;\n      const d = this.distTo(e);\n      if (d < minDist) {\n        minDist = d;\n        nearest = e;\n      }\n    }\n    return nearest;\n  }\n\n  distTo(other) {\n    const dx = this.x - other.x;\n    const dy = this.y - other.y;\n    return Math.sqrt(dx * dx + dy * dy);\n  }\n\n  update(dt, game) {\n    if (!this.alive) {\n      this.deathTimer += dt;\n      return;\n    }\n\n    this.flashTimer = Math.max(0, this.flashTimer - dt);\n    this.cd = Math.max(0, this.cd - dt);\n    this.depositCooldown = Math.max(0, this.depositCooldown - dt);\n\n    const enemies = [...game.enemies, ...game.structures.filter(s => s.alive && s.type !== 'nest')];\n\n    if (this.state === 'idle') {\n      this.wanderTimer -= dt;\n      if (this.wanderTimer <= 0) {\n        this.wanderTimer = 1 + Math.random() * 2;\n        this.wanderTarget = {\n          x: this.x + (Math.random() - 0.5) * 80,\n          y: this.y + (Math.random() - 0.5) * 80\n        };\n      }\n      const wx = this.wanderTarget.x + Math.cos(this.angle) * 30;\n      const wy = this.wanderTarget.y + Math.sin(this.angle) * 30;\n      this.applyMovement(wx, wy, dt);\n    } else if (this.state === 'moving') {\n      if (this.path && this.pathIndex < this.path.length) {\n        const target = this.path[this.pathIndex];\n        const tx = target.x * CONFIG.CELL_SIZE;\n        const ty = target.y * CONFIG.CELL_SIZE;\n        this.applyMovement(tx, ty, dt);\n        if (this.distTo({ x: tx, y: ty }) < 5) {\n          this.pathIndex++;\n          if (this.pathIndex >= this.path.length) {\n            this.path = null;\n            if (this.command && this.command.type === 'harvest') {\n              this.state = 'harvesting';\n            } else if (this.command && this.command.type === 'return') {\n              this.state = 'returning';\n            }\n          }\n        }\n      } else {\n        this.applyMovement(this.x + Math.cos(this.angle) * 20, this.y + Math.sin(this.angle) * 20, dt);\n      }\n    } else if (this.state === 'harvesting') {\n      const source = game.leafSources.find(ls => ls.alive && this.distTo(ls) < CONFIG.ANT_CARRY_RADIUS + ls.radius);\n      if (source) {\n        if (this.carrying < this.carryCapacity) {\n          this.carrying = Math.min(this.carrying + CONFIG.DEPOSIT_AMOUNT * dt, this.carryCapacity);\n          if (Math.random() < 0.1) game.audio.harvest();\n        }\n        if (this.carrying >= this.carryCapacity) {\n          this.state = 'returning';\n          this.command = { type: 'return' };\n        }\n      } else {\n        const path = game.pathfinder.findPath(this.x, this.y, source ? source.x : this.x + 100, source ? source.y : this.y + 100);\n        if (path) {\n          this.path = path;\n          this.pathIndex = 0;\n          this.state = 'moving';\n        } else {\n          this.state = 'idle';\n        }\n      }\n    } else if (this.state === 'returning') {\n      const nest = game.nest;\n      if (nest && this.distTo(nest) < 30) {\n        if (this.depositCooldown <= 0) {\n          const amount = Math.min(this.carrying, CONFIG.DEPOSIT_AMOUNT);\n          game.resources += amount;\n          this.carrying -= amount;\n          this.depositCooldown = 1.0;\n          if (amount > 0) game.audio.deposit();\n        }\n        this.state = 'idle';\n        this.command = null;\n      } else {\n        const path = game.pathfinder.findPath(this.x, this.y, nest.x, nest.y);\n        if (path) {\n          this.path = path;\n          this.pathIndex = 0;\n          this.state = 'moving';\n        } else {\n          this.state = 'idle';\n        }\n      }\n    } else if (this.state === 'attacking') {\n      const enemy = this.findNearestEnemy(enemies);\n      if (enemy) {\n        const dx = enemy.x - this.x;\n        const dy = enemy.y - this.y;\n        const dist = Math.sqrt(dx * dx + dy * dy);\n        if (dist <= this.range) {\n          this.angle = Math.atan2(dy, dx);\n          if (this.cd <= 0) {\n            enemy.takeDamage(this.dmg, game);\n            this.cd =
