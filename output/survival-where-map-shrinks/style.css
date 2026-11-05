@@ -1,0 +1,30 @@
+/* Vibrant palette: obsidian #0a0018, neon cyan #00f5ff, magenta #ff2ec4, lime #b6ff00, violet #7b2fff, amber #ffb300 */
+*{box-sizing:border-box}html,body{margin:0;padding:0;background:#0a0018;color:#eaffff;font-family:'Courier New',monospace;overflow:hidden;height:100%}
+#wrap{position:fixed;inset:0}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.panel{background:rgba(10,0,30,.55);border:1px solid rgba(0,245,255,.5);backdrop-filter:blur(6px);border-radius:10px;padding:6px 10px}
+#timer{position:absolute;top:8px;left:8px;z-index:20;background:rgba(0,0,0,.6);border:1px solid #b6ff00;color:#b6ff00;padding:4px 8px;border-radius:6px;font-weight:bold}
+#turrets{position:absolute;top:44px;left:8px;z-index:10;font-size:12px}
+#resources{position:absolute;top:8px;right:8px;z-index:10;text-align:right}
+.bob{display:inline-block;animation:bob 1.6s ease-in-out infinite}@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+#healthWrap{position:absolute;left:8px;bottom:8px;z-index:10;min-width:220px}
+#hpBar{height:16px;background:#220;border:1px solid #ff2ec4;border-radius:8px;overflow:hidden}
+#hpFill{height:100%;width:100%;background:linear-gradient(90deg,#ff2e63,#ff2ec4,#7b2fff);box-shadow:0 0 12px #ff2ec4;transition:width .15s}
+#tetherWrap{position:absolute;left:50%;transform:translateX(-50%);bottom:8px;z-index:10;text-align:center}
+#tetherPct{margin-top:-52px;font-weight:bold}
+#controls{position:absolute;right:8px;bottom:8px;z-index:10;display:flex;flex-direction:column;gap:6px;max-width:46vw}
+button{background:#12002e;color:#00f5ff;border:1px solid #00f5ff;border-radius:8px;padding:8px;cursor:pointer;font-family:inherit}button:active{transform:scale(.96);background:#7b2fff;color:#fff}
+#upgrades{display:flex;flex-wrap:wrap;gap:4px}#upgrades button{font-size:10px;padding:5px}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,0,20,.82);z-index:30;text-align:center;padding:20px}
+#overlay h1{color:#00f5ff;text-shadow:0 0 20px #ff2ec4;font-size:clamp(24px,6vw,52px)}
+#startBtn{font-size:20px;padding:14px 28px}
+#vignette{position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 120px 40px rgba(0,0,0,.9);z-index:5}
+#lowVignette{position:absolute;inset:0;pointer-events:none;border:4px solid rgba(255,0,60,0);z-index:6;transition:border-color .3s}
+#bossBar{position:absolute;top:44px;left:50%;transform:translateX(-50%);z-index:10;width:min(420px,70vw)}
+.bar{height:12px;background:#222;border:1px solid #ff2ec4}.bar div{height:100%;background:#ff2ec4;width:100%}
+.hidden{display:none!important}
+#msg{position:absolute;top:18%;left:50%;transform:translateX(-50%);color:#ffb300;font-size:20px;text-shadow:0 0 10px #000;z-index:15}
+#joystick{position:absolute;left:18px;bottom:90px;width:110px;height:110px;border:2px solid rgba(0,245,255,.6);border-radius:50%;z-index:12;display:none;background:rgba(255,255,255,.05)}
+#stick{position:absolute;left:35px;top:35px;width:40px;height:40px;border-radius:50%;background:#ff2ec4;box-shadow:0 0 12px #00f5ff}
+@media(pointer:coarse){#joystick{display:block}#controls{bottom:210px}}
+@media(max-width:600px){#healthWrap{min-width:150px}#tetherWrap{transform:translateX(-50%) scale(.8);bottom:70px}#controls{max-width:52vw}}
