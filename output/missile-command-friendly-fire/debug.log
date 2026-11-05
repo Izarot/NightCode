@@ -1,0 +1,510 @@
+JSON Decode Error: Extra data: line 1 column 3 (char 2)
+
+Raw LLM Output that failed to parse:
+The user wants a complete HTML5 Canvas game based on a detailed specification for "Missile Command – Friendly Fire Penalty". They want the output to be ONLY valid raw JSON mapping filenames to their complete code contents. No markdown, no conversational commentary.
+
+Key requirements:
+1. Canvas responsive (mobile friendly)
+2. Emoji favicon in HTML head
+3. Vibrant color palette
+4. High score persistence via LocalStorage
+5. Web Audio API sound effects
+6. Speedrun timer in top corner
+7. Friendly fire penalty system
+8. All the core mechanics specified
+
+Architecture: src/ directory with index.html, styles.css, js/ modules.
+
+I need to write shorter code to avoid JSON parsing errors. The previous error was about invalid JSON due to long lines. I'll keep code reasonably concise but functional.
+
+Let me plan the files:
+- index.html (entry point with canvas, overlays, favicon)
+- styles.css (responsive layout, pixel font)
+- js/config.js (constants, colors, settings)
+- js/storage.js (localStorage high score)
+- js/pooling.js (object pooling for missiles/particles)
+- js/audioManager.js (Web Audio API sounds)
+- js/utils.js (helpers)
+- js/entities/launcher.js
+- js/entities/missile.js
+- js/entities/city.js
+- js/entities/particle.js
+- js/systems/physics.js
+- js/systems/collision.js
+- js/systems/friendlyFire.js
+- js/systems/scoring.js
+- js/ui/hud.js
+- js/ui/overlays.js
+- js/ui/input.js
+- js/game.js (main loop, state machine)
+
+That's a lot of files. I need to write them all and output as JSON. Let me be efficient and write compact but complete code.
+
+Given the constraint of "write shorter code" and avoiding JSON errors, I should keep each file relatively small. Let me draft them.
+
+Actually, given the massive scope, I need to be pragmatic. I'll create a working, playable game that implements the key features: friendly fire penalty, scoring, waves, HUD, responsive canvas, audio, high score persistence.
+
+Let me write each file carefully. I'll use a single shared config object to reduce module count where possible, but follow the architecture.
+
+Let me think about the game design more concretely:
+
+- Canvas 800x600, scaled responsively
+- Launcher moves horizontally at base speed 8, accel 0.5, friction 0.95
+- Space to launch missile, cooldown 0.5s
+- Missiles launch at 45° up, vy -= gravity (0.3), lifetime 120 frames
+- Enemy missiles spawn from top, descend at 4px/frame, random horizontal offset
+- Cities at bottom, 3 health each
+- Friendly fire: missile hits own city or launcher -> penalty -50, -10 per 10px overshoot, consumes allowance (start 3), lock 10s when exhausted
+- Score: +100 per enemy destroyed, +200 perfect intercept, +500 per city, time bonus
+- Waves: increasing difficulty
+- HUD: score top-left, wave top-center, FF budget top-right, launcher health bottom-left, cooldown bottom-center, city health bottom-right
+- Pause overlay, Game Over screen with name entry
+- High score in localStorage
+- Speedrun timer in top corner
+- Audio: launch chirp, explosion, FF warning, penalty beep, UI click
+- Color palette as specified
+- Retro pixel aesthetic
+
+I'll implement this with vanilla JS ES modules or just script tags. To keep it simple and avoid module loading issues, I'll use regular script tags with global namespace, or ES modules with type="module". ES modules are cleaner. But CORS issues with file://... The user might open via a server. I'll use type="module" and assume they serve it. Actually, to be safe and avoid module CORS issues when opening directly, I could use a single bundled approach. But the spec wants modular files. I'll use ES modules and note they need a server. Actually, many users just double-click. To be safe, I'll use classic scripts with an IIFE pattern and a global game object, avoiding module imports. That way it works from file:// too.
+
+Hmm, but that's less clean. Given the priority is a working deliverable, I'll use classic scripts loaded in order, attaching to a global `Game` namespace. This avoids CORS entirely.
+
+Let me structure:
+- Each file defines functions on window.Game or specific namespaces.
+- Load order in index.html: config, utils, storage, pooling, audioManager, entities, systems, ui, game.
+
+Let me write the code now. I'll aim for completeness but keep lines manageable.
+
+Let me start writing files. I'll keep each file focused.
+
+### index.html
+- meta viewport for mobile
+- emoji favicon
+- canvas
+- overlay divs for menu/options/pause/gameover
+- script tags
+
+### styles.css
+- reset, body flex center, canvas scaling
+- pixel font 'Press Start 2P' from Google Fonts (but offline fallback). I'll include link but also fallback monospace.
+- overlays styling
+
+### js/config.js
+- constants: canvas size, speeds, gravity, colors, etc.
+
+### js/utils.js
+- helpers: clamp, rand, dist, lerp
+
+### js/storage.js
+- high score load/save
+
+### js/pooling.js
+- pool class
+
+### js/audioManager.js
+- Web Audio API sound generation (no external assets, synthesize beeps)
+
+### js/entities/launcher.js
+- launcher object
+
+### js/entities/missile.js
+- missile object (player & enemy)
+
+### js/entities/city.js
+- city object
+
+### js/entities/particle.js
+- particle object
+
+### js/systems/physics.js
+- maybe merge into game, but spec wants separate. I'll make a physics helper.
+
+Actually to reduce complexity, I'll fold physics into game loop but keep collision and friendlyFire as separate modules.
+
+### js/systems/collision.js
+- circle collision detection
+
+### js/systems/friendlyFire.js
+- penalty logic
+
+### js/systems/scoring.js
+- scoring logic
+
+### js/ui/hud.js
+- draw HUD
+
+### js/ui/overlays.js
+- menu/options/pause/gameover screens
+
+### js/ui/input.js
+- keyboard/mouse/touch input
+
+### js/game.js
+- main loop, state machine, waves
+
+This is a big undertaking. Let me write it efficiently. I'll combine some smaller modules to keep total file count reasonable but still match the architecture. I'll keep them separate as requested.
+
+Let me write each file now. I need to be careful about length to avoid JSON parse issues. I'll write fairly compact code.
+
+Let me begin.
+
+I'll write the JSON object with keys being filenames (relative paths like "index.html", "styles.css", "js/config.js", etc.) and values being the full file contents.
+
+Let me draft each file content.
+
+---
+
+**index.html**
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Missile Command - Friendly Fire</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="game-container">
+  <canvas id="game" width="800" height="600"></canvas>
+  <!-- Overlays -->
+  <div id="menu-overlay" class="overlay">...</div>
+  ...
+</div>
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/pooling.js"></script>
+<script src="js/audioManager.js"></script>
+<script src="js/entities/launcher.js"></script>
+<script src="js/entities/missile.js"></script>
+<script src="js/entities/city.js"></script>
+<script src="js/entities/particle.js"></script>
+<script src="js/systems/collision.js"></script>
+<script src="js/systems/friendlyFire.js"></script>
+<script src="js/systems/scoring.js"></script>
+<script src="js/ui/hud.js"></script>
+<script src="js/ui/overlays.js"></script>
+<script src="js/ui/input.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>
+```
+
+I need to flesh out overlays. Let me include menu, options, pause, gameover.
+
+For mobile touch, I'll handle in input.js.
+
+Let me write the full HTML with all overlay markup.
+
+**styles.css**: responsive canvas, overlays, buttons, pixel font sizing.
+
+Now the JS. Let me write config first.
+
+**js/config.js**:
+```js
+window.Game = window.Game || {};
+Game.Config = {
+  WIDTH: 800, HEIGHT: 600,
+  DPR: Math.max(1, window.devicePixelRatio || 1),
+  BASE_SPEED: 8, ACCEL: 0.5, FRICTION: 0.95,
+  LAUNCH_VEL: 12, GRAVITY: 0.3, LIFETIME: 120, EXPLOSION_R: 30,
+  COOLDOWN: 0.5, ENEMY_DESCEND: 4, MAX_MISSILES: 30, MAX_PARTICLES: 30,
+  SCORE_CAP: 9999, START_FF: 3, FF_LOCK_TIME: 10,
+  CITY_MAX_HP: 3, CITY_DAMAGE_DELAY: 2,
+  COLORS: {
+    sky:'#87CEEB', cityHealthy:'#2E8B57', cityDamaged:'#8B0000',
+    enemy:'#FF4500', launcher:'#FFD700', explosion:'#FFA500',
+    hud:'#FFFFFF', dark:'#1a1a2e'
+  }
+};
+```
+
+**js/utils.js**:
+```js
+Game.Utils = {
+  clamp:(v,a,b)=>v<a?a:v>b?b:v,
+  rand:(a,b)=>a+Math.random()*(b-a),
+  dist:(x1,y1,x2,y2)=>Math.hypot(x2-x1,y2-y1),
+  lerp:(a,b,t)=>a+(b-a)*t,
+  now:()=>performance.now()
+};
+```
+
+**js/storage.js**:
+```js
+Game.Storage = {
+  KEY:'mc_highscore',
+  load(){try{const d=JSON.parse(localStorage.getItem(this.KEY));return d||null;}catch(e){return null;}},
+  save(name,score){try{localStorage.setItem(this.KEY,JSON.stringify({name:name||'PLAYER',score:score,date:Date.now()}));}catch(e){}},
+  clear(){try{localStorage.removeItem(this.KEY);}catch(e){}}
+};
+```
+
+**js/pooling.js**:
+```js
+Game.Pool = function Pool(factory){
+  let items=[],free=[];
+  return{
+    get(){if(free.length)return free.pop();items.push(factory());return items[items.length-1];},
+    release(o){o.active=false;free.push(o);}
+  };
+};
+```
+
+**js/audioManager.js**: Web Audio API synthesized sounds.
+```js
+Game.Audio = (function(){
+  let ctx=null,master=null,enabled=true,vol=0.3;
+  function ensure(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=vol;master.connect(ctx.destination);} if(ctx.state==='suspended')ctx.resume();}
+  function tone(freq,dur,type='square',gain=0.2){if(!enabled)return;ensure();const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(gain,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);o.connect(g);g.connect(master);o.start();o.stop(ctx.currentTime+dur);}
+  return{
+    init(){ensure();},
+    setVolume(v){vol=v;if(master)master.gain.value=v;},
+    setEnabled(e){enabled=e;if(master)master.gain.value=e?vol:0;},
+    launch(){tone(440,0.12,'square',0.15);},
+    explosion(){tone(80,0.3,'sawtooth',0.25);tone(120,0.2,'square',0.15);},
+    ffWarn(){tone(220,0.15,'square',0.2);},
+    penalty(){tone(160,0.4,'sawtooth',0.25);},
+    click(){tone(660,0.05,'square',0.1);},
+    perfect(){tone(880,0.1,'triangle',0.2);tone(1320,0.15,'triangle',0.15);}
+  };
+})();
+```
+
+**js/entities/launcher.js**:
+```js
+Game.Launcher = function(x,y){
+  this.x=x;this.y=y;this.vx=0;this.hp=100;this.cooldown=0;this.shake=0;
+  this.width=32;this.height=32;
+};
+Game.Launcher.prototype.update=function(dt,input){
+  const c=Game.Config;
+  if(input.left)this.vx-=c.ACCEL;
+  if(input.right)this.vx+=c.ACCEL;
+  this.vx*=c.FRICTION;
+  this.x+=this.vx;
+  this.x=Game.Utils.clamp(this.x,this.width/2,c.WIDTH-this.width/2);
+  if(this.shake>0)this.shake-=dt*60;
+  if(this.cooldown>0)this.cooldown-=dt;
+};
+Game.Launcher.prototype.draw=function(ctx){
+  const s=Math.max(0,this.shake);
+  ctx.save();ctx.translate(this.x+(Math.random()-0.5)*s,this.y+(Math.random()-0.5)*s);
+  // pixel launcher
+  ctx.fillStyle='#FFD700';ctx.fillRect(-16,-16,32,32);
+  ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.strokeRect(-16,-16,32,32);
+  ctx.fillStyle='#8B0000';ctx.fillRect(-6,-22,12,8); // missile port
+  ctx.restore();
+};
+```
+
+Wait, launcher hp bar is drawn separately in HUD. Launcher has hp for damage from friendly fire? Spec says launcher shake on FF. I'll keep launcher hp for visual.
+
+**js/entities/missile.js**: player & enemy missiles.
+```js
+Game.Missile = function(x,y,vx,vy,owner,enemy){
+  this.x=x;this.y=y;this.vx=vx;this.vy=vy;this.owner=owner;this.enemy=!!enemy;
+  this.life=Game.Config.LIFETIME;this.exploded=false;this.trail=[];
+};
+Game.Missile.prototype.update=function(dt){
+  const c=Game.Config;
+  this.vy-=c.GRAVITY*(this.enemy?1:1); // both affected by gravity? Player missiles arc per spec. Enemy missiles constant vertical speed.
+  // For player: gravity applies. For enemy: constant descent.
+  if(this.enemy){this.y+=c.ENEMY_DESCEND*dt*60;this.x+=this.vx*dt*60;this.life-=dt*60;}
+  else{this.vy-=c.GRAVITY;this.x+=this.vx;this.y+=this.vy;this.life-=dt;}
+  this.trail.push({x:this.x,y:this.y});if(this.trail.length>6)this.trail.shift();
+  if(this.life<=0)this.exploded=true;
+};
+```
+
+Hmm, mixing dt*60 for frame independence. Let me simplify: assume 60fps, use per-frame values directly but multiply by dt factor. Actually simpler: use frame-based with dt normalized to 1 at 60fps. I'll do `dt` as fraction of frame (dt=1 per frame). Many implementations just use per-frame. To keep it simple and consistent, I'll treat dt as "frames elapsed" and multiply velocities by dt. But velocities are px/frame. So position += vx*dt. Gravity vy -= GRAVITY*dt. That works if dt≈1.
+
+Let me define dt as normalized frames (1.0 at 60fps). Then:
+- player missile: vy -= GRAVITY*dt; x+=vx*dt; y+=vy*dt; life-=dt
+- enemy: y += ENEMY_DESCEND*dt; x+=vx*dt; life-=dt
+
+Good, cleaner.
+
+**js/entities/city.js**:
+```js
+Game.City = function(x,y){
+  this.x=x;this.y=y;this.hp=3;this.damagedUntil=0;this.flash=0;
+};
+Game.City.prototype.hit=function(){if(this.damagedUntil>Game.Utils.now())return false;this.hp--;this.damagedUntil=Game.Utils.now()+2000;this.flash=1;return true;};
+Game.City.prototype.draw=function(ctx){
+  const col=this.hp===3?'#2E8B57':this.hp===2?'#8B8B00':'#8B0000';
+  ctx.fillStyle=col;ctx.fillRect(this.x-24,this.y-24,48,48);
+  ctx.strokeStyle='#000';ctx.lineWidth=2;ctx.strokeRect(this.x-24,this.y-24,48,48);
+  // pixel roof details
+  ctx.fillStyle='#000';ctx.fillRect(this.x-16,this.y-32,32,8);
+  if(this.flash>0){ctx.fillStyle='rgba(255,255,255,'+this.flash+')';ctx.fillRect(this.x-24,this.y-24,48,48);this.flash-=0.05;}
+};
+```
+
+**js/entities/particle.js**:
+```js
+Game.Particle = function(x,y,color){
+  this.x=x;this.y=y;this.vx=(Math.random()-0.5)*6;this.vy=(Math.random()-0.5)*6;
+  this.life=1;this.color=color;this.r=Math.random()*3+2;
+};
+Game.Particle.prototype.update=function(dt){this.x+=this.vx*dt;this.y+=this.vy*dt;this.vy+=0.2*dt;this.life-=dt*0.04;};
+Game.Particle.prototype.draw=function(ctx){ctx.globalAlpha=Math.max(0,this.life);ctx.fillStyle=this.color;ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;};
+```
+
+**js/systems/collision.js**:
+```js
+Game.Collision = {
+  circleCircle:(x1,y1,r1,x2,y2,r2)=>{const dx=x2-x1,dy=y2-y1;const r=r1+r2;return dx*dx+dy*dy<=r*r;},
+  pointCircle:(px,py,pr,cx,cy,cr)=>(px-cx)*(px-cx)+(py-cy)*(py-cy)<=pr*pr
+};
+```
+
+**js/systems/friendlyFire.js**:
+```js
+Game.FriendlyFire = {
+  penalty(overshoot){return -50-(Math.floor(overshoot/10))*10;},
+  applyPenalty(budget,allowances,lockEnd,penalty){
+    const p=this.penalty(penalty);
+    allowances[0]-=p; // track negative
+    if(allowances[0]<0){allowances[0]=0;lockEnd=Game.Utils.now()+10000;return{penalty:p,locked:true};}
+    return{penalty:p,locked:false};
+  }
+};
+```
+
+Hmm, allowances tracking: start 3. Each penalty reduces. When goes below 0, set to 0 and lock 10s. I'll manage in game. Let me keep this module focused on calculation.
+
+**js/systems/scoring.js**:
+```js
+Game.Scoring = {
+  add(score,amount){score[0]+=amount;if(score[0]>9999)score[0]=0;},
+  perfectIntercept(){return 200;}
+};
+```
+
+**js/ui/hud.js**: draw HUD.
+```js
+Game.HUD = {
+  draw(ctx,state){
+    const c=Game.Config;
+    // score top-left
+    ctx.font='20px "Press Start 2P", monospace';ctx.fillStyle=c.COLORS.hud;
+    ctx.textAlign='left';ctx.fillText('SCORE '+state.score[0],20,30);
+    // wave top-center
+    ctx.textAlign='center';ctx.fillText('WAVE '+state.wave+' / '+state.waveTotal,c.WIDTH/2,30);
+    // FF budget top-right
+    for(let i=0;i<3;i++){ctx.fillStyle=i<state.ffAllowances[0]?'#FFD700':'#444';ctx.fillRect(c.WIDTH-90+i*30,20,24,24);}
+    // penalty timer
+    if(state.locked){ctx.fillStyle='#FF4500';ctx.fillText('LOCK '+Math.ceil((state.lockEnd-state.time)/1000)+'s',c.WIDTH-150,50);}
+    // launcher health bottom-left
+    ctx.fillStyle='#fff';ctx.fillRect(20,c.HEIGHT-30,120,16);ctx.fillStyle='#2E8B57';ctx.fillRect(22,c.HEIGHT-28,100*(state.launcher.hp/100),12);
+    // cooldown bottom-center
+    const cd=state.launcher.cooldown/Game.Config.COOLDOWN;
+    ctx.fillStyle='#fff';ctx.fillRect(c.WIDTH/2-80,c.HEIGHT-30,160,16);ctx.fillStyle='#2E8B57';ctx.fillRect(c.WIDTH/2-78,c.HEIGHT-28,156*cd,12);
+    // city health bottom-right
+    let cx=c.WIDTH-20;for(const city of state.cities){ctx.fillStyle='#fff';ctx.fillRect(cx-40,c.HEIGHT-30,80,16);ctx.fillStyle='#2E8B57';ctx.fillRect(cx-38,c.HEIGHT-28,76*(city.hp/3),12);cx-=90;}
+    // speedrun timer top-right corner
+    ctx.textAlign='right';ctx.fillText('TIME '+Math.ceil(state.time/1000)+'s',c.WIDTH-20,50);
+  }
+};
+```
+
+**js/ui/overlays.js**: menu/options/pause/gameover DOM handling.
+This will manipulate DOM elements. I'll create functions showMenu, showOptions, showPause, showGameOver, etc.
+
+**js/ui/input.js**: keyboard/mouse/touch.
+
+**js/game.js**: main loop, state machine, waves, spawning, collisions, rendering.
+
+This is a lot. Let me write it all out carefully and keep it working. I'll aim for a cohesive single-file-ish experience across modules.
+
+Given the enormous scope and the instruction to "write shorter code," I'll produce a complete but compact implementation. Let me write each file.
+
+I need to be very careful that the JSON is valid (no trailing commas, proper escaping of newlines within strings). I'll put each file content as a string value. Newlines inside strings are fine as \n in JSON? No—in JSON, actual newline characters inside a string must be escaped as \n. But if I write the value with real newlines, JSON parsers accept multi-line strings? Actually no, JSON strings cannot contain literal newlines; they must be escaped. So I must escape newlines as \n within the JSON string values. That means each file content must have its newlines represented as \n sequences. That's error-prone for long code.
+
+Alternative: I can output the JSON with each line's content. But the requirement says output a JSON object mapping filenames to complete code contents. The safest approach: build the JSON programmatically mentally and ensure proper escaping. Since I'm writing raw text, I need every newline in the code to become \n in the JSON string.
+
+This is risky for large files. A better approach: I can write the entire response as a JSON object where each value is a string with escaped newlines. I'll carefully construct it.
+
+Actually, there's a trick: I can write the JSON such that the whole thing is one big object, and I manually escape. For long code this is hard to get right by hand.
+
+Better idea: Use a compact representation where I join file contents with "\n" and the JSON value is the joined string. But still need escaping.
+
+Hmm. Given the constraints, perhaps the most reliable approach is to make each file's content a single line (replace internal newlines with spaces or keep them but escape). But code with newlines is much more readable and less error-prone if I just write the JSON with properly escaped strings.
+
+Let me think about how to generate valid JSON reliably. I'll write each file content, then mentally convert to JSON string with \n escapes. For very long files this is tedious but doable if I'm systematic. However, the risk of a single mistake invalidating the whole JSON is high.
+
+Alternative: Output the JSON using a format where I don't escape—impossible, JSON requires escaping.
+
+Wait — actually, I could output the JSON object but make each file content a single long line with spaces instead of newlines? That would make code unreadable but valid JSON. The spec says "complete code contents" — readability isn't strictly required, but it'd be poor. However, given the previous error was about invalid JSON, reliability matters more.
+
+Compromise: I'll write each file content as a string with \n escapes for newlines, but I'll keep code reasonably compact (fewer blank lines, shorter). I'll be meticulous.
+
+Actually, let me reconsider. The instruction: "Output ONLY a valid raw JSON object mapping filenames to their complete code contents." So the entire output must be valid JSON. If I include newlines unescaped, it breaks. So I must escape.
+
+To minimize risk, I'll write the code with minimal newlines—mostly single-line statements separated by semicolons, occasional multi-line for clarity but I'll convert. Actually, I can keep natural newlines and just escape them. Let me just be careful and produce the JSON with \n escapes. I'll write a mental helper: for each line break in code, insert \n.
+
+Given the volume, let me reduce the number of files by combining some. The architecture suggests separate files, but I can consolidate entities into fewer files while keeping names. However, the user explicitly listed the architecture. I'll keep the directory structure but maybe merge particle into missile, etc. Actually, to honor the architecture, I'll keep them separate but write compact code.
+
+Let me reduce risk by writing each file content as a single line where possible (using semicolons and spaces). For things like object literals with multiple properties on one line, that's fine. Multi-line function bodies I'll compress to single lines. This makes escaping trivial (only actual newlines matter, and I control them).
+
+Plan: Write each file as mostly single-line code. Where I need a block, use one line. This keeps each file's content essentially one line, making JSON construction easy: each value is a long single-line string. Newlines become rare.
+
+But some files naturally need multiple lines (e.g., HTML with multiple elements). I can put HTML on fewer lines.
+
+OK let me just write it. I'll produce the final JSON carefully.
+
+Given the scale, let me write the code now, keeping each file compact.
+
+Let me write all files.
+
+I'll define a global `Game` namespace.
+
+Let me write **index.html** with overlays. I'll keep markup compact.
+
+Let me write **styles.css**.
+
+Then JS files.
+
+I'll now compose the entire JSON. This is going to be long. Let me be systematic.
+
+For each file, I'll write the content, then convert to JSON string with \n escapes.
+
+Actually, to reduce my error surface, I'll write the code with explicit \n in my mind as I go, treating each physical line break as a \n. Since I'm composing the final text, I'll just write the code normally and then the JSON will have \n where I had newlines. But I can't easily "convert" after the fact without error.
+
+Better: I'll write the code content for each file as a string literal in my head, ensuring every newline is represented. Since I'm generating the final output directly, I'll write the code with newlines and then immediately represent them as \n in the JSON. The challenge is doing this correctly in one pass.
+
+I think the cleanest is: write each file's code, then in the JSON value replace "\n" with "\\n". I'll do this by writing the code with newlines and then constructing the JSON string with those newlines escaped. Since I'm authoring the final text, I'll write the JSON value as a string where newlines are written as the two characters backslash-n.
+
+Let me just do it. I'll write the code first (mentally), then produce the JSON.
+
+Given the difficulty, I'll make code predominantly single-line to ease escaping. Let me proceed.
+
+Let me write each file's content now, aiming for compact single-line style.
+
+---
+
+File: index.html
+Content (with newlines):
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Missile Command - Friendly Fire</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="game-container">
+<canvas id="game" width="800" height="600"></canvas>
+<div id="menu-overlay" class="overlay">
+<h1>MISSILE COMMAND</h1>
+<p class="subtitle">Friendly Fire Penalty Edition</p>
+<button id="

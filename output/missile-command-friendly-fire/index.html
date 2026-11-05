@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'>
+<title>Missile Command: Friendly Fire</title>
+<link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>'>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:linear-gradient(135deg,#1a0533,#ff2e88 55%,#00e5ff);min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Courier New',monospace;color:#fff;padding:10px}
+.wrap{width:100%;max-width:820px;text-align:center}
+h1{font-size:clamp(18px,4vw,32px);letter-spacing:2px;text-shadow:3px 3px 0 #ff4500,6px 6px 0 #00e5ff;margin:6px 0}
+.sub{color:#ffd700;font-size:13px;margin-bottom:8px}
+.stage{position:relative;width:100%;aspect-ratio:4/3;background:#87CEEB;border:4px solid #ffd700;border-radius:10px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.6)}
+canvas{width:100%;height:100%;display:block;image-rendering:pixelated;touch-action:none}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,0,30,.82);gap:12px;padding:16px;z-index:5}
+.overlay h2{font-size:clamp(22px,5vw,42px);color:#ffd700;text-shadow:3px 3px 0 #ff4500}
+.overlay p{font-size:clamp(12px,2.5vw,16px);line-height:1.5;max-width:520px}
+button{background:#ff4500;color:#fff;border:3px solid #fff;padding:12px 22px;font-family:inherit;font-weight:bold;font-size:16px;cursor:pointer;border-radius:6px;min-width:140px;min-height:44px}
+button:hover{background:#ffd700;color:#000}
+button.alt{background:#2E8B57}
+.hidden{display:none!important}
+.bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px;font-size:13px}
+.badge{background:rgba(0,0,0,.55);border:2px solid #fff;border-radius:20px;padding:6px 12px}
+#high{color:#00ffcc}
+</style>
+</head>
+<body>
+<div class='wrap'>
+<h1>🚀 MISSILE COMMAND</h1>
+<div class='sub'>FRIENDLY FIRE PENALTY EDITION • Protect cities • Don't hit your own!</div>
+<div class='stage'>
+<canvas id='c' width='800' height='600'></canvas>
+<div id='menu' class='overlay'><h2>MISSILE COMMAND</h2><p>← → Move Launcher • SPACE / Click to Launch<br>Destroy enemy missiles (+100). Perfect intercept +200.<br>⚠️ Friendly fire: -50+ pts, loses 1 of 3 allowances. 0 = 10s lock!<br>Survive waves. +500 per city at wave end.</p><button id='play'>▶ PLAY</button><button id='how' class='alt'>HOW TO PLAY</button><p id='howText' class='hidden'>Aim with mouse/touch. Your missile explodes after ~2s with 30px radius. Keep explosions away from green cities & gold launcher!</p></div>
+<div id='pause' class='overlay hidden'><h2>PAUSED</h2><button id='resume'>RESUME</button><button id='toMenu'>MAIN MENU</button></div>
+<div id='over' class='overlay hidden'><h2>GAME OVER</h2><p id='final'></p><p id='newHigh' style='color:#00ffcc;font-weight:bold'></p><button id='retry'>↻ RETRY</button><button id='menu2' class='alt'>MAIN MENU</button></div>
+</div>
+<div class='bar'><span class='badge'>⏱ Speedrun: <b id='timer'>00:00</b></span><span class='badge'>🏆 High: <b id='high'>0</b></span><span class='badge'>P = Pause</span><span class='badge'>Sound: Web Audio 🔊</span></div>
+</div>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d'),W=800,H=600;
+let state='menu',score=0,wave=1,frame=0,shake=0,redFlash=0,ffBudget=3,ffLock=0,cool=0,spawnLeft=0,spawnTimer=0,startAt=0,elapsed=0,notif='',notifT=0;
+let high=0;try{const s=JSON.parse(localStorage.getItem('mc_high')||'null');if(s)high=s.score||0;}catch(e){}
+document.getElementById('high').textContent=high;
+const launcher={x:400,y:560,vx:0};
+let cities=[],enemies=[],pmiss=[],parts=[],stars=[];
+for(let i=0;i<70;i++)stars.push({x:Math.random()*W,y:Math.random()*H,s:Math.random()*2+0.5});
+function resetCities(){cities=[{x:80,y:552,w:48,h:48,hp:3,alive:true},{x:376,y:552,w:48,h:48,hp:3,alive:true},{x:672,y:552,w:48,h:48,hp:3,alive:true}];}
+resetCities();
+let AC=null;function ac(){if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();return AC;}
+function beep(f,d,type,v){try{const a=ac(),o=a.createOscillator(),g=a.createGain();o.type=type||'square';o.frequency.value=f;g.gain.value=v||0.15;o.connect(g);g.connect(a.destination);o.start();g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+d);o.stop(a.currentTime+d);}catch(e){}}
+function sLaunch(){beep(880,0.15,'sawtooth',0.12);setTimeout(()=>beep(1320,0.1,'square',0.08),60);}
+function sBoom(){beep(120,0.35,'sawtooth',0.25);beep(60,0.4,'square',0.2);}
+function sFF(){beep(220,0.2,'square',0.2);setTimeout(()=>beep(180,0.3,'square',0.2),150);}
+function sClick(){beep(600,0.07,'square',0.1);}
+function notify(t){notif=t;notifT=120;}
+function startGame(){score=0;wave=1;ffBudget=3;ffLock=0;cool=0;enemies=[];pmiss=[];parts=[];launcher.x=400;launcher.vx=0;resetCities();startWave();startAt=Date.now();elapsed=0;state='playing';hideAll();sClick();}
+function startWave(){spawnLeft=Math.min(2+wave,8);spawnTimer=0;notify('WAVE '+wave);}
+function hideAll(){['menu','pause','over'].forEach(id=>document.getElementById(id).classList.add('hidden'));}
+function gameOver(){state='over';let isNew=false;if(score>high){high=score;isNew=true;try{localStorage.setItem('mc_high',JSON.stringify({name:'ACE',score:score,date:new Date().toISOString()}));}catch(e){}}document.getElementById('high').textContent=high;document.getElementById('final').textContent='Final Score: '+score+' • Wave '+wave+' • Time '+fmt(elapsed);document.getElementById('newHigh').textContent=isNew?'★ NEW HIGH SCORE! ★':'';document.getElementById('over').classList.remove('hidden');sFF();}
+function fmt(s){s=Math.floor(s);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+document.getElementById('play').onclick=startGame;
+document.getElementById('retry').onclick=startGame;
+document.getElementById('how').onclick=()=>{document.getElementById('howText').classList.toggle('hidden');sClick();};
+document.getElementById('resume').onclick=()=>{state='playing';hideAll();};
+document.getElementById('toMenu').onclick=()=>{state='menu';document.getElementById('menu').classList.remove('hidden');hideAll();document.getElementById('menu').classList.remove('hidden');};
+document.getElementById('menu2').onclick=()=>{state='menu';hideAll();document.getElementById('menu').classList.remove('hidden');};
+let keys={},mouse={x:400,y:200};
+addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Space'){e.preventDefault();launch();}if(e.code==='KeyP'&&state==='playing'){state='paused';document.getElementById('pause').classList.remove('hidden');}else if(e.code==='KeyP'&&state==='paused'){state='playing';hideAll();}});
+addEventListener('keyup',e=>keys[e.code]=false);
+cv.addEventListener('pointermove',e=>{const r=cv.getBoundingClientRect();mouse.x=(e.clientX-r.left)*W/r.width;mouse.y=(e.clientY-r.top)*H/r.height;});
+cv.addEventListener('pointerdown',e=>{const r=cv.getBoundingClientRect();mouse.x=(e.clientX-r.left)*W/r.width;mouse.y=(e.clientY-r.top)*H/r.height;if(state==='playing')launch();});
+function launch(){if(state!=='playing'||cool>0||ffLock>0)return;cool=30;let ang=Math.atan2(mouse.y-launcher.y,mouse.x-launcher.x);if(mouse.y>launcher.y-20)ang=-Math.PI/4;let sp=12;pmiss.push({x:launcher.x,y:launcher.y-20,vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,life:120});sLaunch();}
+function explode(x,y,hostile){parts.push({x:x,y:y,r:30,t:20});for(let i=0;i<8&&parts.length<30;i++)parts.push({x:x,y:y,vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4,r:3,t:20});sBoom();
+ if(hostile){let hit=false;enemies=enemies.filter(en=>{let d=Math.hypot(en.x-x,en.y-y);if(d<32){let perfect=en.y>H-90;let pts=perfect?300:100;score+=pts;if(score>9999)score%=10000;notify(perfect?'PERFECT HIT! +300':'HIT! +100');beep(1000,0.1,'square',0.12);return false;}return true;});}
+ else{let ff=false,pen=50;for(let c of cities){if(!c.alive)continue;let d=Math.hypot(c.x+24-x,c.y+24-y);if(d<55){ff=true;pen+=Math.floor(d/10)*2;}}let dl=Math.hypot(launcher.x-x,launcher.y-y);if(dl<50){ff=true;pen+=20;}
+ if(ff){score-=pen;if(score<0)score=0;ffBudget--;redFlash=12;shake=10;sFF();notify('FRIENDLY FIRE! -'+pen);if(ffBudget<=0){ffLock=600;ffBudget=3;notify('PENALTY LOCK 10s!');}}}}
+function update(){frame++;if(state!=='playing')return;elapsed=(Date.now()-startAt)/1000;document.getElementById('timer').textContent=fmt(elapsed);
+ if(cool>0)cool--;if(ffLock>0)ffLock--;if(shake>0)shake--;if(redFlash>0)redFlash--;if(notifT>0)notifT--;
+ if(keys['ArrowLeft'])launcher.vx-=0.5;if(keys['ArrowRight'])launcher.vx+=0.5;launcher.vx=Math.max(-8,Math.min(8,launcher.vx));if(!keys['ArrowLeft']&&!keys['ArrowRight'])launcher.vx*=0.95;launcher.x+=launcher.vx;launcher.x=Math.max(24,Math.min(W-24,launcher.x));
+ for(let c of cities)if(c.alive&&Math.abs(launcher.x-(c.x+24))<36)launcher.x=c.x+24+(launcher.x<c.x+24?-37:37);
+ if(spawnLeft>0){spawnTimer--;if(spawnTimer<=0){spawnTimer=72;spawnLeft--;let alive=cities.filter(c=>c.alive);let tgt=alive.length?alive[Math.floor(Math.random()*alive.length)]:{x:400};let sx=Math.random()*W;let vy=4*(1+(wave-1)*0.05);let vx=(tgt.x+24-sx)/(H/vy);enemies.push({x:sx,y:-10,vx:vx,vy:vy});}}
+ enemies.forEach(en=>{en.x+=en.vx;en.y+=en.vy;});
+ enemies=enemies.filter(en=>{if(en.y>=552){for(let c of cities){if(c.alive&&Math.abs(en.x-(c.x+24))<30){c.hp--;explode(en.x,552,false);if(c.hp<=0)c.alive=false;break;}}explode(en.x,552,true);return false;}return true;});
+ pmiss.forEach(m=>{m.x+=m.vx;m.y+=m.vy;m.vy+=0.3;m.life--;});
+ let used=[];pmiss=pmiss.filter(m=>{if(m.life<=0||m.y>H-10||m.y<0){explode(m.x,m.y,false);return false;}for(let en of enemies){if(Math.hypot(en.x-m.x,en.y-m.y)<30){explode(m.x,m.y,true);return false;}}return true;});
+ parts.forEach(p=>{if(p.vx){p.x+=p.vx;p.y+=p.vy;}p.t--;});parts=parts.filter(p=>p.t>0);
+ stars.forEach(s=>{s.y+=s.s*0.5;if(s.y>H)s.y=0;});
+ if(spawnLeft===0&&enemies.length===0){let bonus=cities.filter(c=>c.alive).length*500;score+=bonus;if(score>9999)score%=10000;wave++;startWave();}
+ if(cities.every(c=>!c.alive))gameOver();
+}
+function draw(){ctx.save();if(shake>0)ctx.translate((Math.random()-0.5)*shake,(Math.random()-0.5)*shake);
+ let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#87CEEB');g.addColorStop(0.6,'#FF6EC7');g.addColorStop(1,'#FFD700');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ ctx.fillStyle='#fff';stars.forEach(s=>ctx.fillRect(s.x,s.y,2,2));
+ ctx.fillStyle='#2E8B57';ctx.fillRect(0,552,W,48);
+ cities.forEach(c=>{ctx.fillStyle=c.alive?(c.hp===3?'#2E8B57':c.hp===2?'#FFA500':'#8B0000'):'#222';ctx.fillRect(c.x,c.y,c.w,c.h);ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(c.x,c.y,c.w,c.h);ctx.fillStyle='#fff';ctx.font='10px monospace';ctx.fillText(c.alive?'HP '+c.hp:'DEAD',c.x+6,c.y+20);});
+ ctx.fillStyle='#FFD700';ctx.beginPath();ctx.moveTo(launcher.x,launcher.y-28);ctx.lineTo(launcher.x-20,launcher.y);ctx.lineTo(launcher.x+20,launcher.y);ctx.closePath();ctx.fill();ctx.strokeStyle='#000';ctx.stroke();
+ ctx.fillStyle='#FF4500';enemies.forEach(en=>{ctx.beginPath();ctx.arc(en.x,en.y,6,0,7);ctx.fill();ctx.fillStyle='#FFA500';ctx.fillRect(en.x-2,en.y-12,4,8);ctx.fillStyle='#FF4500';});
+ ctx.fillStyle='#00e5ff';pmiss.forEach(m=>{ctx.beginPath();ctx.arc(m.x,m.y,5,0,7);ctx.fill();});
+ parts.forEach(p=>{ctx.fillStyle=p.r>10?'#FFA500':'#FF4500';ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fill();});
+ if(redFlash>0){ctx.fillStyle='rgba(255,0,0,0.35)';ctx.fillRect(0,0,W,H);}
+ ctx.fillStyle='#fff';ctx.font='bold 20px monospace';ctx.shadowColor='#000';ctx.shadowBlur=4;
+ ctx.fillText('SCORE '+score,12,28);
+ ctx.textAlign='center';ctx.fillText('WAVE '+wave+' / '+enemies.length+' ENEMIES',W/2,28);ctx.textAlign='left';
+ ctx.fillStyle='#ffd700';ctx.font='bold 16px monospace';ctx.fillText('⏱ '+fmt(elapsed),W-110,28);
+ ctx.fillStyle='#fff';ctx.fillText('FF: '+'🔥'.repeat(Math.max(0,ffBudget))+'⚪'.repeat(3-Math.max(0,ffBudget))+(ffLock>0?' LOCK '+Math.ceil(ffLock/60)+'s':''),W-180,52);
+ ctx.fillStyle='#000';ctx.fillRect(W/2-80,H-28,160,14);ctx.fillStyle=cool===0?'#00ffcc':'#ff4500';ctx.fillRect(W/2-80,H-28,160*(1-cool/30),14);ctx.fillStyle='#fff';ctx.font='12px monospace';ctx.fillText('COOLDOWN',W/2-30,H-32);
+ if(notifT>0){ctx.fillStyle='#ff0';ctx.font='bold 22px monospace';ctx.textAlign='center';ctx.fillText(notif,W/2,120);ctx.textAlign='left';}
+ ctx.restore();}
+function loop(){update();draw();requestAnimationFrame(loop);}loop();
+</script>
+</body>
+</html>
