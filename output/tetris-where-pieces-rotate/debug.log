@@ -1,0 +1,543 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 2 column 5 (char 6)
+
+Raw: We need to produce a complete codebase for AutoRotate Tetris as per the spec. The output should be a JSON object mapping filenames to their complete code contents. We need to create files: index.html, style.css, js/main.js, js/game.js, js/board.js, js/piece.js, js/renderer.js, js/input.js, js/audio.js, js/config.js, README.md. Possibly also include a favicon? The spec says "Add a cool emoji favicon in the HTML head." So we need an emoji favicon, maybe using data URI or link rel="icon" with emoji. Could use <link rel="icon" href="data:image/svg+xml,..."> with emoji. Or just set favicon via inline SVG with emoji. We'll do that in index.html.
+
+We must ensure all code is functional and matches the spec. The game should have auto-rotation of pieces every 4 seconds (ROTATE_INTERVAL default 4 seconds) with animation over 150ms. Also player has 200ms reaction window after rotation. But note: the auto-rotation rotates all active pieces. That includes the current piece and any other pieces on board? Typically Tetris only has one active piece at a time. But spec says "all active pieces on the board". In standard Tetris there is only one active piece. However, we could implement that the current piece is the only active piece. But maybe they want multiple pieces? Actually Tetris has only one falling piece. So "all active pieces" likely means the current piece. But they might intend that the next piece also rotates? No, next piece is preview. So it's just the current piece. However, the spec says "Global timer triggers automatic 90° clockwise rotation of all active pieces on the board". Since there is only one active piece, it's fine. But we could also consider that after locking, new piece spawns, and that piece becomes active. So it's just the current piece.
+
+But there is also a "Next Piece Preview" that also auto-rotates. That is specified: "Critically, this piece must also auto-rotate to inform the player of the incoming shape's orientation." So the preview piece also rotates automatically. That's interesting. So we need to render the next piece preview and rotate it automatically as well. That means we need to keep track of the orientation of the next piece and rotate it over time.
+
+Also, the rotation animation: linear interpolation over 150ms. We need to animate the rotation visually. That means we need to compute the rotation angle for each piece during the tween. For the current piece, we can apply a rotation transform around its center or pivot. For the preview piece, we can rotate its matrix similarly.
+
+Implementation details:
+
+- Use ES6 modules? The spec suggests separate files but not necessarily modules. We can use script tags with global namespace or ES6 modules. Since they mention ES6+ JavaScript (strict mode), we can use ES6 modules with import/export. However, for simplicity and compatibility, we might use plain scripts loaded in order, with global objects. But the architecture suggests separate files; we can use ES6 modules if we serve via HTTP. But the user may open index.html directly from file system, which would cause CORS issues for ES6 modules. To avoid that, we can use regular script tags without modules, using global variables. Or we can use type="module" but then need to serve via server. Since the spec doesn't specify, we can choose either. I'll go with classic scripts using global namespace, to ensure it works when opened directly. But we need to be careful about ordering.
+
+Alternatively, we can use ES6 modules and instruct to run a local server. But the output is just code; we can assume they will serve it. However, many users open file:// directly. Safer to use classic scripts.
+
+I'll structure each JS file to attach to a global object `Game` or something. But simpler: define classes and functions globally.
+
+Let's plan files:
+
+- index.html: contains canvas elements, UI overlays, script tags in order.
+- style.css: styling.
+- js/config.js: constants like COLS, ROWS, BLOCK_SIZE, COLORS, ROTATE_INTERVAL, etc.
+- js/audio.js: AudioManager class.
+- js/input.js: InputHandler class.
+- js/piece.js: Piece class, tetromino definitions, rotation matrices, auto-rotation scheduling.
+- js/board.js: Board class with grid, collision detection, line clearing, gravity.
+- js/renderer.js: Renderer class with drawing, particles, screen shake.
+- js/game.js: Game class with state machine, score, level, etc.
+- js/main.js: entry point, game loop.
+
+We'll also need README.md.
+
+Now, let's design each component.
+
+### config.js
+
+Constants:
+
+```javascript
+const CONFIG = {
+    COLS: 10,
+    ROWS: 20,
+    BLOCK_SIZE: 30, // pixels per block
+    BOARD_WIDTH: COLS * BLOCK_SIZE,
+    BOARD_HEIGHT: ROWS * BLOCK_SIZE,
+    ROTATE_INTERVAL: 4000, // ms
+    ROTATE_ANIMATION_DURATION: 150, // ms
+    LOCK_DELAY: 500, // ms
+    REACTION_WINDOW: 200, // ms after rotation
+    GRAVITY: 500, // px/s base
+    SOFT_DROP_GRAVITY: 1500,
+    MAX_HORIZONTAL_SPEED: 350, // px/s
+    LINE_CLEAR_PARTICLE_COUNT: 20,
+    SCREEN_SHAKE_MAGNITUDE: 4,
+    LEVEL_UP_LINES: 10,
+    ...
+};
+```
+
+Colors per piece type:
+
+```javascript
+const COLORS = {
+    I: '#00f2ff',
+    J: '#ff00ea',
+    L: '#f9f871',
+    O: '#7cfc00',
+    S: '#ff6b00',
+    T: '#0000ff',
+    Z: '#ff0000',
+};
+```
+
+Tetromino shapes: standard SRS (Super Rotation System) matrices. We'll define rotation states for each piece. Usually we define base shapes and then rotate. We can define rotation matrices for each piece in four orientations. Simpler: define each piece's shape as a 4x4 matrix (or 3x3) and rotate by transposing and reversing rows. But we can also predefine all rotations.
+
+I'll define each piece's base shape as an array of [x,y] offsets relative to a pivot (e.g., center). Then rotation can be computed by rotating coordinates.
+
+Standard tetromino shapes (SRS):
+
+- I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]] but we can use 4x4.
+- O: [[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]]? Actually O is 2x2.
+- T, J, L, S, Z similar.
+
+Better to define each piece's shape as a list of coordinates in a 4x4 grid, with 1 indicating block. Then rotation: rotate the grid 90° clockwise: newGrid[i][j] = oldGrid[n-1-j][i]. We'll implement a function rotateMatrix(matrix) that returns rotated matrix.
+
+We'll store for each piece type an array of rotation matrices (4 states). Or we can compute on the fly.
+
+Simpler: define base shape as array of [x,y] points relative to a reference point (e.g., top-left). Then rotation: transform each point (x,y) -> ( -y, x ) for 90° clockwise? Actually standard rotation: (x,y) -> (-y, x) for 90° clockwise around origin. But we need to adjust pivot. We can define shapes with coordinates relative to center. Let's define each piece's shape as array of [x,y] where x,y are integers, and we'll place them on a grid with origin at some point. For rotation, we can rotate the coordinates around the origin (0,0) and then shift to keep within bounds.
+
+Common approach: define each piece's shape as a 4x4 matrix of 0/1. Then rotation: rotate the matrix.
+
+I'll implement a function `rotateMatrix(matrix)` that returns a new matrix rotated 90° clockwise.
+
+Then for each piece type, we can generate all rotations by repeatedly applying rotateMatrix until we have 4 unique states (though some pieces have fewer). We'll store them as arrays of matrices.
+
+Alternatively, we can define the four rotations manually.
+
+Given the complexity, I'll define each piece's base shape as a 4x4 matrix (with 1s where blocks are). Then we can compute rotations by applying rotateMatrix 0,1,2,3 times.
+
+Define base shapes:
+
+- I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]]
+- O: [[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]]? Actually O is 2x2, but we can embed in 4x4. Standard O: [[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]]? That would be a 2x3? Better: [[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]] gives a 2x2 block? Actually that's 2 columns wide, 2 rows tall? Let's think: indices row0: [0,1,0,0] => blocks at (0,1) and (1,1)? Wait coordinates: row index i, column j. So matrix[i][j]. For O, we want a 2x2 block: positions (0,0),(0,1),(1,0),(1,1). So matrix:
+row0: [1,1,0,0]
+row1: [1,1,0,0]
+row2: [0,0,0,0]
+row3: [0,0,0,0]
+That's fine.
+
+- T: [[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]]
+- J: [[1,0,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]]
+- L: [[0,0,1,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]]
+- S: [[0,1,1,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]]
+- Z: [[1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]]
+
+These are standard.
+
+Rotation function:
+
+```javascript
+function rotateMatrix(matrix) {
+    const n = matrix.length;
+    const result = Array.from({length: n}, () => Array(n).fill(0));
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+            result[j][n-1-i] = matrix[i][j];
+        }
+    }
+    return result;
+}
+```
+
+This rotates 90° clockwise.
+
+Now, for each piece type, we can generate all rotations by applying rotateMatrix up to 3 times. But note that some pieces have symmetry, so we might get duplicates. We'll just store all 4 rotations (some may be same). For simplicity, we can store the four rotations as arrays of matrices.
+
+Alternatively, we can store the base shape and compute rotation on the fly when needed, but we need to know the current rotation index for each piece. We'll maintain a rotation index (0-3) for each piece instance. When rotating, we increment index modulo 4 and get the corresponding matrix.
+
+For the preview piece, we also need to rotate automatically. So we need to keep track of its rotation index and animate.
+
+Now, piece.js:
+
+Class Piece:
+
+- properties: type (string), rotationIndex (0-3), x, y (grid coordinates), matrix (current rotation matrix), color.
+- methods: getMatrix(), getBlocks() (returns array of {x,y} grid positions relative to piece origin), rotate() (increments rotationIndex, returns new matrix), etc.
+
+We'll also need to handle the auto-rotation scheduling. The Game class will manage timers.
+
+Board.js:
+
+- Grid: 2D array of null or color string.
+- methods: clear(), lockPiece(piece), checkCollision(piece), moveDown(piece), moveLeft, moveRight, hardDrop, etc.
+- Also line clearing: removeFullRows, addGravity, return cleared lines count.
+
+Renderer.js:
+
+- Draw board, draw piece, draw ghost, draw next piece preview, draw particles, screen shake offset.
+- Particle system: array of particles with position, velocity, life, color.
+- Methods: drawBoard, drawPiece, drawGhost, drawNextPreview, drawParticles, applyScreenShake.
+
+Input.js:
+
+- InputHandler: listens to keydown/keyup, maintains a state object for keys pressed. Also handles debouncing? Not needed.
+- Provide methods to query current state.
+
+Audio.js:
+
+- AudioManager: uses Web Audio API to synthesize sounds. Methods: playMove, playRotate, playHardDrop, playLineClear, playGameOver. Each creates oscillator and gain envelope.
+
+Game.js:
+
+- State machine: MENU, PLAYING, PAUSED, GAME_OVER.
+- Properties: score, lines, level, nextPiece, currentPiece, board, renderer, input, audio, config.
+- Methods: start, pause, resume, gameOver, reset, update (called each frame), handleInput, etc.
+- Auto-rotation timer: track elapsed time since last rotation; when exceeds ROTATE_INTERVAL, trigger rotation of current piece and start animation; also trigger rotation of next piece preview.
+- Reaction window: after rotation, give player 200ms to move before next rotation? Actually spec: "Player has a 200ms reaction window post-rotation to reposition the piece before the next rotation cycle begins." This suggests that after an automatic rotation, the player must move the piece within 200ms or else it locks? That seems harsh. But we can implement: after automatic rotation, we set a timer; if the player hasn't moved the piece within that window, the piece locks immediately (maybe with a warning). However, the spec says "Failure to move results in an unavoidable locked state if misaligned." So we can enforce that after rotation, the piece cannot move horizontally? Actually it says reposition the piece before the next rotation cycle begins. So the next rotation cycle is the next automatic rotation. So the player has 200ms after each automatic rotation to move the piece. If they don't move, the piece locks (maybe because it's stuck). But we need to be careful: the piece might already be locked due to collision? Actually after rotation, the piece might be in a position that collides immediately. The reaction window is to allow moving before the next rotation. So we can implement: after automatic rotation, we set a flag `reactionWindowActive` with a timer. During that window, horizontal movement is disabled? Or we allow movement but if no movement occurs within 200ms, the piece locks. But the spec says "Failure to move results in an unavoidable locked state if misaligned." So we can simply lock the piece if no movement occurs within the window. However, we must ensure that the piece is not already colliding; if it is colliding, it would lock anyway. So we can implement: after rotation, we record time; in update, if current time - rotationTime > REACTION_WINDOW and no horizontal movement has occurred since rotation, then lock the piece. But we need to detect movement: we can track if the piece moved horizontally after rotation. We'll set a flag `movedAfterRotation` when horizontal movement occurs. If not moved within window, lock.
+
+But also note: the player can still move vertically? Probably not allowed during reaction window? The spec doesn't say. It says "reposition the piece", likely meaning move left/right. So we can disable horizontal movement during that window, but allow vertical? Actually vertical movement is controlled by gravity, so not manual. So we can disable horizontal movement during the window, and if the player doesn't move left/right within 200ms, the piece locks. That seems plausible.
+
+However, we must also consider that the piece might be in a position where it cannot move horizontally (blocked by walls). In that case, the player cannot move it, and it would lock anyway. So the reaction window would cause immediate lock. That's acceptable.
+
+Implementation: after automatic rotation, we set `this.lastRotationTime = now`. In update, if `now - this.lastRotationTime > REACTION_WINDOW` and `!this.pieceMovedSinceRotation`, then lock the piece (call board.lockPiece). Also we need to prevent further horizontal movement during that window. We can set a flag `horizontalLocked` for that duration.
+
+But also note: the player might press left/right during the window; we should allow movement if pressed. So we need to check input even during window. So we shouldn't disable input; we just need to detect if any horizontal movement occurred. So we can track `hasHorizontalMovement` flag. If no movement within window, lock.
+
+Thus, we need to update `hasHorizontalMovement` whenever horizontal movement is processed.
+
+Now, the auto-rotation also triggers a sound and visual effect.
+
+The rotation animation: we need to animate the rotation over 150ms. That means we need to interpolate the rotation angle. For the current piece, we can apply a rotation transform around its center. For the preview piece, similar.
+
+We can implement a rotation animation system: each piece has a `rotationProgress` (0 to 1) that animates from 0 to 1 over ROTATE_ANIMATION_DURATION when a rotation is triggered. During animation, we compute the effective rotation matrix by interpolating between old and new matrices. However, interpolating matrices is complex. Simpler: we can animate the visual rotation by applying a CSS-like transform on the canvas context: translate to piece center, rotate by angle * progress, draw the piece without rotation, then restore. But we need to draw the piece's blocks at their grid positions, but rotated. We can compute the rotated positions of each block based on the current rotation angle. For each block coordinate (x,y) relative to piece origin, we can rotate around the piece's center (which is at (x+0.5, y+0.5) in pixel coordinates). Then draw at that position.
+
+So we can implement a method `drawPiece(ctx, piece, rotationAngle)` that draws the piece with a given rotation angle (in radians). The piece's matrix defines which cells are filled. For each filled cell, we compute its pixel position relative to piece origin, then rotate around piece center, then translate to board position.
+
+Thus, we can animate by incrementing rotationAngle from 0 to Math.PI/2 (90°) over the animation duration.
+
+For the preview piece, we can do similar but smaller scale.
+
+Now, the board rendering: we need to draw the grid background, then draw locked blocks, then draw the current piece (with rotation animation), then ghost piece, then particles.
+
+Screen shake: offset the entire canvas drawing by a random small amount that decays.
+
+Particles: on line clear, spawn particles at each cleared block location.
+
+Now, HUD: score, level, lines. We can draw these on the canvas or use HTML overlays. The spec says "Top Bar", "Right Panel", "Bottom Bar". We can implement using HTML elements positioned over the canvas. Or we can draw everything on canvas. Simpler: use HTML overlays for text, and canvas for game area. We'll create a container div with canvas and overlay divs.
+
+We'll design index.html with:
+
+- A main container.
+- Canvas for game (maybe 300x600? Actually board width = COLS*BLOCK_SIZE = 10*30=300, height=20*30=600). So canvas size 300x600.
+- Overlay divs for top bar, right panel (next preview mini-canvas), bottom bar.
+- Pause menu and game over modal overlays.
+
+We'll style with CSS.
+
+Now, let's write code.
+
+First, index.html:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoRotate Tetris</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🟦</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="top-bar">
+            <div id="score">0</div>
+            <div id="level">Level 1</div>
+            <div id="lines">0</div>
+        </div>
+        <canvas id="game-canvas" width="300" height="600"></canvas>
+        <div id="right-panel">
+            <canvas id="next-canvas" width="120" height="120"></canvas>
+        </div>
+        <div id="bottom-bar">
+            <span>← → : Move</span>
+            <span>↓ : Soft Drop</span>
+            <span>↑ : Hard Drop</span>
+            <span>P : Pause</span>
+        </div>
+        <div id="pause-menu" class="overlay hidden">
+            <h2>PAUSED</h2>
+            <button id="resume-btn">RESUME</button>
+            <button id="quit-btn">QUIT</button>
+        </div>
+        <div id="game-over" class="overlay hidden">
+            <h2>GAME OVER</h2>
+            <p>Score: <span id="final-score">0</span></p>
+            <button id="retry-btn">RETRY</button>
+        </div>
+    </div>
+    <script src="js/config.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/piece.js"></script>
+    <script src="js/board.js"></script>
+    <script src="js/renderer.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
+```
+
+We need to make sure the canvas scales responsively. The spec says "Make the canvas responsive so it scales to fit mobile phone screens." So we need to adjust canvas size based on viewport. We can use CSS to scale the canvas while keeping aspect ratio. We'll set canvas width/height attributes to fixed values, but CSS can scale it. For example, `#game-canvas { width: 100%; max-width: 300px; height: auto; }` but we need to maintain aspect ratio. Alternatively, we can use JavaScript to resize the canvas internal resolution and scale via CSS. Simpler: set canvas width/height to fixed, and use CSS to scale the whole container. But the spec wants it to fit mobile screens, so we can make the canvas container flexible.
+
+We'll implement responsive scaling: the canvas element will have a fixed internal resolution (300x600), but CSS will set its display size to fit the container width, maintaining aspect ratio. We'll also adjust the right panel and bars accordingly.
+
+We'll use CSS:
+
+```css
+#game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 400px; /* maybe */
+    margin: 0 auto;
+}
+#game-canvas {
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    aspect-ratio: 1/2;
+}
+```
+
+But aspect-ratio may not be supported in older browsers, but modern ones support. We'll use `height: auto` and width set.
+
+Alternatively, we can use JavaScript to resize the canvas internal dimensions based on device pixel ratio and viewport. But for simplicity, we'll keep fixed resolution and scale via CSS.
+
+Now, style.css:
+
+Neon glassmorphism theme. Dark background, neon borders, glow effects.
+
+We'll write CSS accordingly.
+
+Now, let's write each JS file.
+
+#### config.js
+
+```javascript
+const CONFIG = {
+    COLS: 10,
+    ROWS: 20,
+    BLOCK_SIZE: 30,
+    BOARD_WIDTH: COLS * BLOCK_SIZE,
+    BOARD_HEIGHT: ROWS * BLOCK_SIZE,
+    ROTATE_INTERVAL: 4000,
+    ROTATE_ANIMATION_DURATION: 150,
+    LOCK_DELAY: 500,
+    REACTION_WINDOW: 200,
+    GRAVITY: 500,
+    SOFT_DROP_GRAVITY: 1500,
+    MAX_HORIZONTAL_SPEED: 350,
+    LINE_CLEAR_PARTICLE_COUNT: 20,
+    SCREEN_SHAKE_MAGNITUDE: 4,
+    LEVEL_UP_LINES: 10,
+    COLORS: {
+        I: '#00f2ff',
+        J: '#ff00ea',
+        L: '#f9f871',
+        O: '#7cfc00',
+        S: '#ff6b00',
+        T: '#0000ff',
+        Z: '#ff0000',
+    },
+    TETROMINOES: ['I', 'J', 'L', 'O', 'S', 'T', 'Z'],
+};
+```
+
+We'll also define helper functions maybe.
+
+#### audio.js
+
+AudioManager class:
+
+```javascript
+class AudioManager {
+    constructor() {
+        this.ctx = null;
+        this.enabled = true;
+    }
+
+    init() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+
+    playMove() {
+        if (!this.enabled || !this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = 80;
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.05);
+    }
+
+    playRotate() {
+        // similar blip
+    }
+
+    playHardDrop() {
+        // low thud
+    }
+
+    playLineClear() {
+        // ascending arpeggio
+    }
+
+    playGameOver() {
+        // descending slide
+    }
+}
+```
+
+We'll implement each method with appropriate parameters.
+
+#### input.js
+
+InputHandler class:
+
+```javascript
+class InputHandler {
+    constructor() {
+        this.keys = {};
+        window.addEventListener('keydown', (e) => {
+            this.keys[e.code] = true;
+            // prevent default for game keys
+            if (['ArrowLeft','ArrowRight','ArrowDown','ArrowUp','Space'].includes(e.code)) {
+                e.preventDefault();
+            }
+        });
+        window.addEventListener('keyup', (e) => {
+            this.keys[e.code] = false;
+        });
+    }
+
+    isDown(code) {
+        return !!this.keys[code];
+    }
+}
+```
+
+We'll also handle pause key separately.
+
+#### piece.js
+
+Define tetromino shapes and rotation.
+
+We'll create a function to generate rotations for each piece type.
+
+```javascript
+function rotateMatrix(matrix) {
+    const n = matrix.length;
+    const result = Array.from({length: n}, () => Array(n).fill(0));
+    for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+            result[j][n-1-i] = matrix[i][j];
+        }
+    }
+    return result;
+}
+
+const TETROMINO_SHAPES = {
+    I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+    O: [[1,1,0,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]],
+    T: [[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],
+    J: [[1,0,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],
+    L: [[0,0,1,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],
+    S: [[0,1,1,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]],
+    Z: [[1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+};
+
+const TETROMINO_COLORS = {
+    I: '#00f2ff',
+    J: '#ff00ea',
+    L: '#f9f871',
+    O: '#7cfc00',
+    S: '#ff6b00',
+    T: '#0000ff',
+    Z: '#ff0000',
+};
+```
+
+We'll precompute rotations for each piece:
+
+```javascript
+const TETROMINO_ROTATIONS = {};
+for (const type in TETROMINO_SHAPES) {
+    let rotations = [];
+    let matrix = TETROMINO_SHAPES[type];
+    for (let i = 0; i < 4; i++) {
+        rotations.push(matrix);
+        matrix = rotateMatrix(matrix);
+    }
+    TETROMINO_ROTATIONS[type] = rotations;
+}
+```
+
+Now Piece class:
+
+```javascript
+class Piece {
+    constructor(type) {
+        this.type = type;
+        this.color = TETROMINO_COLORS[type];
+        this.rotationIndex = 0;
+        this.matrix = TETROMINO_ROTATIONS[type][0];
+        this.x = 0; // grid column
+        this.y = 0; // grid row (top-left of piece)
+        // initial position: spawn at top center
+        this.x = Math.floor((CONFIG.COLS - this.getBoundingWidth()) / 2);
+        this.y = 0;
+    }
+
+    getBoundingWidth() {
+        // number of columns occupied by piece in its current rotation
+        let count = 0;
+        for (let i = 0; i < this.matrix.length; i++) {
+            for (let j = 0; j < this.matrix[i].length; j++) {
+                if (this.matrix[i][j]) count++;
+            }
+        }
+        return count;
+    }
+
+    getBoundingHeight() {
+        let count = 0;
+        for (let i = 0; i < this.matrix.length; i++) {
+            for (let j = 0; j < this.matrix[i].length; j++) {
+                if (this.matrix[i][j]) count++;
+            }
+        }
+        return count;
+    }
+
+    getBlocks() {
+        const blocks = [];
+        for (let i = 0; i < this.matrix.length; i++) {
+            for (let j = 0; j < this.matrix[i].length; j++) {
+                if (this.matrix[i][j]) {
+                    blocks.push({x: j, y: i});
+                }
+            }
+        }
+        return blocks;
+    }
+
+    rotate() {
+        this.rotationIndex = (this.rotationIndex + 1) % 4;
+        this.matrix = TETROMINO_ROTATIONS[this.type][this.rotationIndex];
+        return this.matrix;
+    }
+
+    // For drawing with rotation animation
+    draw(ctx, rotationAngle = 0) {
+        // Draw piece at its grid position with rotation angle
+        const blocks = this.getBlocks();
+        const centerX = this.x + 0.5;
+        const centerY = this.y + {
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>AutoRotate Tetris</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🟦</text></svg>\">\n    <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n    <div id=\"game-container\">\n        <div id=\"top-bar\">\n            <div id=\"score\">0</div>\n            <div id=\"level\">Level 1</div>\n            <div id=\"lines\">0</div>\n        </div>\n        <canvas id=\"game-canvas\" width=\"300\" height=\"600\"></canvas>\n        <div id=\"right-panel\">\n            <canvas id=\"next-canvas\" width=\"120\" height=\"120\"></canvas>\n        </div>\n        <div id=\"bottom-bar\">\n            <span>← → : Move</span>\n            <span>↓ : Soft Drop</span>\n            <span>↑ : Hard Drop</span>\n            <span>P : Pause</span>\n        </div>\n        <div id=\"pause-menu\" class=\"overlay hidden\">\n            <h2>PAUSED</h2>\n            <button id=\"resume-btn\">RESUME</button>\n            <button id=\"quit-btn\">QUIT</button>\n        </div>\n        <div id=\"game-over\" class=\"overlay hidden\">\n            <h2>GAME OVER</h2>\n            <p>Score: <span id=\"final-score\">0</span></p>\n            <button id=\"retry-btn\">RETRY</button>\n        </div>\n    </div>\n    <script src=\"js/config.js\"></script>\n    <script src=\"js/audio.js\"></script>\n    <script src=\"js/input.js\"></script>\n    <script src=\"js/piece.js\"></script>\n    <script src=\"js/board.js\"></script>\n    <script src=\"js/renderer.js\"></script>\n    <script src=\"js/game.js\"></script>\n    <script src=\"js/main.js\"></script>\n</body>\n</html>",
+  "style.css": "/* Neon Glassmorphism Theme */\n* { margin: 0; padding: 0; box-sizing: border-box; }\n\nbody {\n    background: #0a0a1a;\n    color: #e0e0ff;\n    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;\n    display: flex;\n    justify-content: center;\n    align-items: center;\n    min-height: 100vh;\n    overflow: hidden;\n}\n\n#game-container {\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    gap: 10px;\n    padding: 10px;\n    max-width: 420px;\n    width: 100%;\n}\n\n/* Top Bar */\n#top-bar {\n    display: flex;\n    justify-content: space-between;\n    width: 100%;\n    padding: 10px 20px;\n    background: rgba(20, 20, 60, 0.6);\n    border: 1px solid rgba(0, 242, 255, 0.3);\n    border-radius: 10px;\n    backdrop-filter: blur(10px);\n    box-shadow: 0 0 20px rgba(0, 242, 255, 0.1), inset 0 0 10px rgba(0, 242, 255, 0.05);\n}\n\n#score, #level, #lines {\n    font-size: 18px;\n    font-weight: bold;\n    text-shadow: 0 0 10px currentColor;\n}\n\n#score { color: #00f2ff; }\n#level { color: #ff00ea; }\n#lines { color: #7cfc00; }\n\n/* Game Canvas */\n#game-canvas {\n    background: rgba(10, 10, 30, 0.8);\n    border: 2px solid rgba(0, 242, 255, 0.4);\n    border-radius: 8px;\n    box-shadow: 0 0 30px rgba(0, 242, 255, 0.15), inset 0 0 20px rgba(0, 242, 255, 0.05);\n    image-rendering: pixelated;\n    image-rendering: crisp-edges;\n}\n\n/* Right Panel - Next Piece Preview */\n#right-panel {\n    display: flex;\n    justify-content: center;\n    padding: 10px;\n    background: rgba(20, 20, 60, 0.6);\n    border: 1px solid rgba(255, 0, 234, 0.3);\n    border-radius: 10px;\n    backdrop-filter: blur(10px);\n    box-shadow: 0 0 20px rgba(255, 0, 234, 0.1);\n}\n\n#next-canvas {\n    background: rgba(10, 10, 30, 0.8);\n    border: 1px solid rgba(255, 0, 234, 0.4);\n    border-radius: 6px;\n    box-shadow: 0 0 15px rgba(255, 0, 234, 0.1);\n}\n\n/* Bottom Bar */\n#bottom-bar {\n    display: flex;\n    justify-content: space-around;\n    width: 100%;\n    padding: 8px 20px;\n    background: rgba(20, 20, 60, 0.6);\n    border: 1px solid rgba(255, 107, 0, 0.3);\n    border-radius: 10px;\n    backdrop-filter: blur(10px);\n    font-size: 12px;\n    color: #ff6b00;\n}\n\n/* Overlays */\n.overlay {\n    position: absolute;\n    top: 0; left: 0; right: 0; bottom: 0;\n    background: rgba(0, 0, 0, 0.85);\n    display: flex;\n    flex-direction: column;\n    justify-content: center;\n    align-items: center;\n    gap: 20px;\n    z-index: 10;\n    backdrop-filter: blur(5px);\n}\n\n.overlay h2 {\n    font-size: 36px;\n    color: #00f2ff;\n    text-shadow: 0 0 20px currentColor;\n    margin-bottom: 10px;\n}\n\n.overlay button {\n    padding: 12px 30px;\n    font-size: 18px;\n    font-weight: bold;\n    color: #fff;\n    background: linear-gradient(135deg, rgba(0, 242, 255, 0.2), rgba(255, 0, 234, 0.2));\n    border: 2px solid rgba(0, 242, 255, 0.5);\n    border-radius: 8px;\n    cursor: pointer;\n    transition: all 0.3s ease;\n    text-transform: uppercase;\n}\n\n.overlay button:hover {\n    background: linear-gradient(135deg, rgba(0, 242, 255, 0.4), rgba(255, 0, 234, 0.4));\n    box-shadow: 0 0 20px rgba(0, 242, 255, 0.3);\n    transform: scale(1.05);\n}\n\n.hidden { display: none !important; }\n\n/* Responsive */\n@media (max-width: 480px) {\n    #game-container {\n        padding: 5px;\n        gap: 5px;\n    }\n    #top-bar, #bottom-bar {\n        padding: 8px 12px;\n    }\n    #score, #level, #lines {\n        font-size: 14px;\n    }\n    #bottom-bar span {\n        font-size: 10px;\n    }\n    #game-canvas {\n        width: 100%;\n        height: auto;\n    }\n}\n\n@media (max-height: 700px) {\n    #game-container {\n        transform: scale(0.85);\n        transform-origin: top center;\n    }\n}",
+  "js/config.js": "const CONFIG = {\n    COLS: 10,\n    ROWS: 20,\n    BLOCK_SIZE: 30,\n    BOARD_WIDTH: COLS * BLOCK_SIZE,\n    BOARD_HEIGHT: ROWS * BLOCK_SIZE,\n    ROTATE_INTERVAL: 4000,\n    ROTATE_ANIMATION_DURATION: 150,\n    LOCK_DELAY: 500,\n    REACTION_WINDOW: 200,\n    GRAVITY: 500,\n    SOFT_DROP_GRAVITY: 1500,\n    MAX_HORIZONTAL_SPEED: 350,\n    LINE_CLEAR_PARTICLE_COUNT: 20,\n    SCREEN_SHAKE_MAGNITUDE: 4,\n    LEVEL_UP_LINES: 10,\n    COLORS: {\n        I: '#00f2ff',\n        J: '#ff00ea',\n        L: '#f9f871',\n        O: '#7cfc00',\n        S: '#ff6b00',\n        T: '#0000ff',\n        Z: '#ff0000'\n    },\n    TETROMINOES: ['I', 'J', 'L', 'O', 'S', 'T', 'Z']\n};\n\nfunction rotateMatrix(matrix) {\n    const n = matrix.length;\n    const result = Array.from({length: n}, () => Array(n).fill(0));\n    for (let i = 0; i < n; i++) {\n        for (let j = 0; j < n; j++) {\n            result[j][n - 1 - i] = matrix[i][j];\n        }\n    }\n    return result;\n}\n\nconst TETROMINO_SHAPES = {\n    I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],\n    O: [[1,1,0,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]],\n    T: [[0,1,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],\n    J: [[1,0,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],\n    L: [[0,0,1,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],\n    S: [[0,1,1,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]],\n    Z: [[1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]]\n};\n\nconst TETROMINO_COLORS = {\n    I: '#00f2ff',\n    J: '#ff00ea',\n    L: '#f9f871',\n    O: '#7cfc00',\n    S: '#ff6b00',\n    T: '#0000ff',\n    Z: '#ff0000'\n};\n\nconst TETROMINO_ROTATIONS = {};\nfor (const type in TETROMINO_SHAPES) {\n    let rotations = [];\n    let matrix = TETROMINO_SHAPES[type];\n    for (let i = 0; i < 4; i++) {\n        rotations.push(matrix);\n        matrix = rotateMatrix(matrix);\n    }\n    TETROMINO_ROTATIONS[type] = rotations;\n}\n\nfunction getRandomTetromino() {\n    const types = CONFIG.TETROMINOES;\n    return types[Math.floor(Math.random() * types.length)];\n}",
+  "js/audio.js": "class AudioManager {\n    constructor() {\n        this.ctx = null;\n        this.enabled = true;\n    }\n\n    init() {\n        if (!this.ctx) {\n            try {\n                this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n            } catch (e) {\n                this.enabled = false;\n            }\n        }\n    }\n\n    playMove() {\n        if (!this.enabled || !this.ctx) return;\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.type = 'square';\n        osc.frequency.value = 80;\n        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);\n        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);\n        osc.connect(gain);\n        gain.connect(this.ctx.destination);\n        osc.start();\n        osc.stop(this.ctx.currentTime + 0.05);\n    }\n\n    playRotate() {\n        if (!this.enabled || !this.ctx) return;\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.type = 'triangle';\n        osc.frequency.setValueAtTime(400, this.ctx.currentTime);\n        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.1);\n        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);\n        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);\n        osc.connect(gain);\n        gain.connect(this.ctx.destination);\n        osc.start();\n        osc.stop(this.ctx.currentTime + 0.1);\n    }\n\n    playHardDrop() {\n        if (!this.enabled || !this.ctx) return;\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.type = 'sawtooth';\n        osc.frequency.setValueAtTime(200, this.ctx.currentTime);\n        osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.15);\n        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);\n        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.15);\n        osc.connect(gain);\n        gain.connect(this.ctx.destination);\n        osc.start();\n        osc.stop(this.ctx.currentTime + 0.15);\n    }\n\n    playLineClear() {\n        if (!this.enabled || !this.ctx) return;\n        const notes = [523, 659, 784, 1047];\n        notes.forEach((freq, i) => {\n            const osc = this.ctx.createOscillator();\n            const gain = this.ctx.createGain();\n            osc.type = 'sine';\n            osc.frequency.value = freq;\n            const startTime = this.ctx.currentTime + i * 0.08;\n            gain.gain.setValueAtTime(0.15, startTime);\n            gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.15);\n            osc.connect(gain);\n            gain.connect(this.ctx.destination);\n            osc.start(startTime);\n            osc.stop(startTime + 0.15);\n        });\n    }\n\n    playGameOver() {\n        if (!this.enabled || !this.ctx) return;\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.type = 'sawtooth';\n        osc.frequency.setValueAtTime(400, this.ctx.currentTime);\n        osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.8);\n        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);\n        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.8);\n        osc.connect(gain);\n        gain.connect(this.ctx.destination);\n        osc.start();\n        osc.stop(this.ctx.currentTime + 0.8);\n    }\n\n    toggle() {\n        this.enabled = !this.enabled;\n        return this.enabled;\n    }\n}",
+  "js/input.js": "class InputHandler {\n    constructor() {\n        this.keys = {};\n        window.addEventListener('keydown', (e) => {\n            this.keys[e.code] = true;\n            if (['ArrowLeft', 'ArrowRight', 'ArrowDown', 'ArrowUp', 'Space'].includes(e.code)) {\n                e.preventDefault();\n            }\n        });\n        window.addEventListener('keyup', (e) => {\n            this.keys[e.code] = false;\n        });\n    }\n\n    isDown(code) {\n        return !!this.keys[code];\n    }\n\n    clear() {\n        this.keys = {};\n    }\n}",
+  "js/piece.js": "class Piece {\n    constructor(type) {\n        this.type = type;\n        this.color = CONFIG.COLORS[type];\n        this.rotationIndex = 0;\n        this.matrix = TETROMINO_ROTATIONS[type][0];\n        this.x = Math.floor((CONFIG.COLS - this.getBoundingWidth()) / 2);\n        this.y = 0;\n        this.rotationProgress = 0;\n        this.isRotating = false;\n    }\n\n    getBoundingWidth() {\n        let count = 0;\n        for (let i = 0; i < this.matrix.length; i++) {\n            for (let j = 0; j < this.matrix[i].length; j++) {\n                if (this.matrix[i][j]) count++;\n            }\n        }\n        return count;\n    }\n\n    getBoundingHeight() {\n        let count = 0;\n        for (let i = 0; i < this.matrix.length; i++) {\n            for (let j = 0; j < this.matrix[i].length; j++) {\n                if (this.matrix[i][j]) count++;\n            }\n        }\n        return count;\n    }\n\n    getBlocks() {\n        const blocks = [];\n        for (let i = 0; i < this.matrix.length; i++) {\n            for (let j = 0; j < this.matrix[i].length; j++) {\n                if (this.matrix[i][j]) {\n                    blocks.push({ x: j, y: i });\n                }\n            }\n        }\n        return blocks;\n    }\n\n    rotate() {\n        this.rotationIndex = (this.rotationIndex + 1) % 4;\n        this.matrix = TETROMINO_ROTATIONS[this.type][this.rotationIndex];\n        this.rotationProgress = 0;\n        this.isRotating = true;\n        return this.matrix;\n    }\n\n    updateRotation(dt) {\n        if (this.isRotating) {\n            this.rotationProgress += dt / CONFIG.ROTATE_ANIMATION_DURATION;\n            if (this.rotationProgress >= 1) {\n                this.rotationProgress = 1;\n                this.isRotating = false;\n            }\n        }\n    }\n\n    draw(ctx, offsetX, offsetY, rotationAngle = 0) {\n        const blocks = this.getBlocks();\n        const blockSize = CONFIG.BLOCK_SIZE;\n        const cx = this.x + 0.5;\n        const cy = this.y + 0.5;\n\n        ctx.save();\n        ctx.translate(offsetX + cx * blockSize, offsetY + cy * blockSize);\n        ctx.rotate(rotationAngle);\n        ctx.translate(-cx * blockSize, -cy * blockSize);\n\n        for (const block of blocks) {\n            const bx = offsetX + (block.x + cx) * blockSize;\n            const by = offsetY + (block.y + cy) * blockSize;\n            ctx.fillStyle = this.color;\n            ctx.fillRect(bx, by, blockSize - 1, blockSize - 1);\n            ctx.strokeStyle = 'rgba(255,255,255,0.3)';\n            ctx.lineWidth = 1;\n            ctx.strokeRect(bx, by, blockSize - 1, blockSize - 1);\n        }\n\n        ctx.restore();\n    }\n\n    drawPreview(ctx, offsetX, offsetY, rotationAngle = 0) {\n        const blocks = this.getBlocks();\n        const blockSize = 20;\n        const cx = 2;\n        const cy = 2;\n\n        ctx.save();\n        ctx.translate(offsetX + cx * blockSize, offsetY + cy * blockSize);\n        ctx.rotate(rotationAngle);\n        ctx.translate(-cx * blockSize, -cy * blockSize);\n\n        for (const block of blocks) {\n            const bx = offsetX + (block.x + cx) * blockSize;\n            const by = offsetY + (block.y + cy) * blockSize;\n            ctx.fillStyle = this.color;\n            ctx.fillRect(bx, by, blockSize - 1, blockSize - 1);\n            ctx.strokeStyle = 'rgba(255,255,255,0.3)';\n            ctx.lineWidth = 1;\n            ctx.strokeRect(bx, by, blockSize - 1, blockSize - 1);\n        }\n\n        ctx.restore();\n    }\n}",
+  "js/board.js": "class Board {\n    constructor() {\n        this.grid = Array.from({ length: CONFIG.ROWS }, () => Array(CONFIG.COLS).fill(null));\n    }\n\n    clear() {\n        this.grid = Array.from({ length: CONFIG.ROWS }, () => Array(CONFIG.COLS).fill(null));\n    }\n\n    collides(piece, dx = 0, dy = 0) {\n        const blocks = piece.getBlocks();\n        for (const block of blocks) {\n            const x = piece.x + block.x + dx;\n            const y = piece.y + block.y + dy;\n            if (x < 0 || x >= CONFIG.COLS || y >= CONFIG.ROWS) return true;\n            if (y >= 0 && this.grid[y][x]) return true;\n        }\n        return false;\n    }\n\n    moveLeft(piece) {\n        if (!this.collides(piece, -1, 0)) {\n            piece.x--;\n            return true;\n        }\n        return false;\n    }\n\n    moveRight(piece) {\n        if (!this.collides(piece, 1, 0)) {\n            piece.x++;\n            return true;\n        }\n        return false;\n    }\n\n    moveDown(piece) {\n        if (!this.collides(piece, 0, 1)) {\n            piece.y++;\n            return true;\n        }\n        return false;\n    }\n\n    hardDrop(piece) {\n        while (this.moveDown(piece)) {\n            // continue dropping\n        }\n        return true;\n    }\n\n    lockPiece(piece) {\n        const blocks = piece.getBlocks();\n        for (const block of blocks) {\n            const y = piece.y + block.y;\n            const x = piece.x + block.x;\n            if (y >= 0 && y < CONFIG.ROWS && x >= 0 && x < CONFIG.COLS) {\n                this.grid[y][x] = piece.color;\n            }\n        }\n    }\n\n    clearLines() {\n        const cleared = [];\n        for (let y = CONFIG.ROWS - 1; y >= 0; y--) {\n            if (this.grid[y].every(cell => cell !== null)) {\n                cleared.push(y);\n            }\n        }\n\n        for (const row of cleared) {\n            this.grid.splice(row, 1);\n            this.grid.unshift(Array(CONFIG.COLS).fill(null));\n        }\n\n        return cleared.length;\n    }\n\n    draw(ctx, offsetX, offsetY) {\n        // Draw grid background\n        ctx.fillStyle = 'rgba(10, 10, 30, 0.8)';\n        ctx.fillRect(offsetX, offsetY, CONFIG.BOARD_WIDTH, CONFIG.BOARD_HEIGHT);\n\n        // Draw grid lines\n        ctx.strokeStyle = 'rgba(0, 242, 255, 0.08)';\n        ctx.lineWidth = 1;\n        for (let x = 0; x <= CONFIG.COLS; x++) {\n            ctx.beginPath();\n            ctx.moveTo(offsetX + x * CONFIG.BLOCK_SIZE, offsetY);\n            ctx.lineTo(offsetX + x * CONFIG.BLOCK_SIZE, offsetY + CONFIG.BOARD_HEIGHT);\n            ctx.stroke();\n        }\n        for (let y = 0; y <= CONFIG.ROWS; y++) {\n            ctx.beginPath();\n            ctx.moveTo(offsetX, offsetY + y * CONFIG.BLOCK_SIZE);\n            ctx.lineTo(offsetX + CONFIG.BOARD_WIDTH, offsetY + y * CONFIG.BLOCK_SIZE);\n            ctx.stroke();\n        }\n\n        // Draw locked blocks\n        for (let y = 0; y < CONFIG.ROWS; y++) {\n            for (let x = 0; x < CONFIG.COLS; x++) {\n                if (this.grid[y][x]) {\n                    const px = offsetX + x * CONFIG.BLOCK_SIZE;\n                    const py = offsetY + y * CONFIG.BLOCK_SIZE;\n                    ctx.fillStyle = this.grid[y][x];\n                    ctx.fillRect(px, py, CONFIG.BLOCK_SIZE - 1, CONFIG.BLOCK_SIZE - 1);\n                    ctx.strokeStyle = 'rgba(255,255,255,0.3)';\n                    ctx.lineWidth = 1;\n                    ctx.strokeRect(px, py, CONFIG.BLOCK_SIZE - 1, CONFIG.BLOCK_SIZE - 1);\n                }\n            }\n        }\n    }\n\n    drawGhost(ctx, piece, offsetX, offsetY) {\n        const ghostPiece = new Piece(piece.type);\n        ghostPiece.matrix = piece.matrix;\n        ghostPiece.rotationIndex = piece.rotationIndex;\n        ghostPiece.x = piece.x;\n        ghostPiece.y = piece.y;\n        const blocks = ghostPiece.getBlocks();\n\n        for (const block of blocks) {\n            const px = offsetX + (piece.x + block.x) * CONFIG.BLOCK_SIZE;\n            const py = offsetY + (piece.y + block.y + 1) * CONFIG.BLOCK_SIZE;\n            ctx.fillStyle = 'rgba(255,255,255,0.15)';\n            ctx.fillRect(px, py, CONFIG.BLOCK_SIZE - 1, CONFIG.BLOCK_SIZE - 1);\n            ctx.strokeStyle = 'rgba(255,255,255,0.4)';\n            ctx.lineWidth = 1;\n            ctx.strokeRect(px, py, CONFIG.BLOCK_SIZE - 1, CONFIG.BLOCK_SIZE - 1);\n        }\n    }\n}",
+  "js/renderer.js": "class Renderer {\n    constructor(canvasId) {\n        this.canvas = document.getElementById(canvasId);\n        this.ctx = this.canvas.getContext('2d');\n        this.particles = [];\n        this.screenShake = 0;\n        this.shakeOffsetX = 0;\n        this.shakeOffsetY = 0;\n    }\n\n    addParticles(x, y, color, count = 10) {\n        for (let i = 0; i < count; i++) {\n            const angle = Math.random() * Math.PI * 2;\n            const speed = Math.random() * 3 + 1;\n            this.particles.push({\n                x: x,\n                y: y,\n                vx: Math.cos(angle) * speed,\n                vy: Math.sin(angle) * speed,\n                life: 1.0,\n                color: color,\n                size: Math.random() * 3 + 1\n            });\n        }\n    }\n\n    updateParticles(dt) {\n        for (let i = this.particles.length - 1; i >= 0; i--) {\n            const p = this.particles[i];\n            p.x += p.vx;\n            p.y += p.vy;\n            p.vy += 0.1;\n            p.life -= dt / 1.0;\n            if (p.life <= 0) {\n                this.particles
