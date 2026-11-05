@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'>
+<title>WallSnake — Eat to Build Walls</title>
+<link rel='icon' href='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐍</text></svg>'>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#070812;color:#e8f6ff;font-family:Orbitron,monospace,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:8px;background-image:radial-gradient(circle at 20% 10%,#2b1055 0,transparent 40%),radial-gradient(circle at 90% 90%,#0f3460 0,transparent 45%)}
+h1{font-size:clamp(22px,5vw,42px);letter-spacing:3px;color:#00e5ff;text-shadow:0 0 18px #00e5ff,0 0 40px #7c4dff;margin:6px}
+h1 span{color:#ffd54f;text-shadow:0 0 18px #ffd54f}
+#hud{width:min(96vw,816px);display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between;background:#0d1226;border:1px solid #26365e;border-radius:12px;padding:8px 10px;box-shadow:0 0 20px #00e5ff33}
+.badge{background:#151d3a;border:1px solid #2d4a7a;padding:5px 9px;border-radius:999px;font-size:clamp(10px,2.5vw,14px);white-space:nowrap}
+.badge b{color:#00e5ff}.gold{color:#ffd54f}.pink{color:#ff3d5a}.timer{color:#69f0ae;border-color:#1b5e20}
+#wrap{position:relative;width:min(96vw,816px);margin-top:8px}
+canvas{width:100%;height:auto;display:block;background:#0a0e1a;border:2px solid #00e5ff;border-radius:14px;box-shadow:0 0 30px #00e5ff55,0 0 80px #7c4dff33;touch-action:none}
+#overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:rgba(5,7,18,.82);border-radius:14px;padding:16px;z-index:5}
+#overlay h2{font-size:clamp(28px,7vw,56px);color:#00e5ff;text-shadow:0 0 20px #00e5ff;letter-spacing:4px}
+#overlay p{margin:8px;line-height:1.5;font-size:clamp(12px,3vw,16px)}
+button{background:linear-gradient(90deg,#00e5ff,#7c4dff);color:#fff;border:0;padding:12px 22px;border-radius:999px;font-family:inherit;font-weight:800;cursor:pointer;box-shadow:0 0 18px #00e5ff88;margin:6px}
+button:active{transform:scale(.95)}
+#pad{display:none;width:min(96vw,816px);justify-content:space-between;align-items:center;margin-top:10px;gap:10px}
+.dpad{display:grid;grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px 56px;gap:4px}
+.dpad button{margin:0;padding:0;font-size:22px;border-radius:14px}
+@media(pointer:coarse){#pad{display:flex}}
+.small{opacity:.85;font-size:12px;text-align:center;margin-top:8px;max-width:816px}
+</style>
+</head>
+<body>
+<h1>🐍 WALL<span>SNAKE</span></h1>
+<div id='hud'>
+<div class='badge'>SCORE <b id='score'>0</b></div>
+<div class='badge'>BEST <b class='gold' id='best'>0</b></div>
+<div class='badge'>WAVE <b id='wave'>1</b></div>
+<div class='badge'>SPEED <b id='zone'>NORMAL</b></div>
+<div class='badge'>HP <b class='pink' id='hp'>6</b></div>
+<div class='badge'>WALLS <b id='walls'>0</b></div>
+<div class='badge timer'>⏱ SPEEDRUN <b id='timer'>00:00.0</b></div>
+</div>
+<div id='wrap'>
+<canvas id='c' width='816' height='600'></canvas>
+<div id='overlay'><h2 id='otitle'>WALLSNAKE</h2><p id='otext'>Eat to build walls. Build walls to protect what matters.<br>🍎 +1 &nbsp; ⭐ Golden +3 &nbsp; 💣 Bomb wall blocks all<br>WASD / Arrows / D-Pad &nbsp;•&nbsp; SPACE start &nbsp;•&nbsp; P pause &nbsp;•&nbsp; M mute</p><button id='btn'>▶ START</button><p class='small' id='stats'></p></div>
+</div>
+<div id='pad'>
+<div class='dpad'><span></span><button data-d='0,-1'>▲</button><span></span><button data-d='-1,0'>◀</button><button data-d='0,1'>▼</button><button data-d='1,0'>▶</button></div>
+<div><button id='pauseBtn'>⏸ PAUSE</button><br><button id='muteBtn'>🔊 SOUND</button></div>
+</div>
+<p class='small'>Vibrant neon palette • Responsive canvas • High score saved in LocalStorage • Speedrun timer in top corner • Procedural Web Audio sounds</p>
+<script>
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+const COLS=34,ROWS=25,CELL=24,W=COLS*CELL,H=ROWS*CELL;
+const $=id=>document.getElementById(id);
+let state='start',score=0,wave=1,hp=6,foodsEaten=0,particles=[],walls=[],foods=[],enemies=[],flash=0,muted=false,startTime=0,elapsed=0,waveTime=30000,last=0,acc=0,enemyAcc=0,shake=0;
+let best=+(localStorage.getItem('wallsnake_highscore')||0);$('best').textContent=best;
+let AC=null;function audio(){if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();return AC}
+function tone(f,d,type,v,slide){if(muted)return;try{let a=audio(),o=a.createOscillator(),g=a.createGain();o.type=type||'square';o.frequency.value=f;if(slide)o.frequency.exponentialRampToValueAtTime(slide,a.currentTime+d);g.gain.value=v||.12;g.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);o.connect(g);g.connect(a.destination);o.start();o.stop(a.currentTime+d)}catch(e){}}
+function sEat(){tone(880,.08,'square',.12);tone(1320,.06,'sine',.08)}
+function sGold(){tone(660,.12,'sine',.14,990);setTimeout(()=>tone(990,.15,'sine',.14,1320),90)}
+function sBomb(){tone(80,.25,'sine',.25,40);tone(200,.1,'sawtooth',.1)}
+function sWall(){tone(400,.2,'triangle',.1,800)}
+function sDie(){tone(400,.3,'sawtooth',.15,100)}
+function sOver(){tone(300,.6,'sawtooth',.18,50)}
+function sWave(){[523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.15,'square',.12),i*110))}
+function makeSnake(x,y,color,head,isPlayer){return{cells:[{x,y},{x,y:y+1},{x,y:y+2}],dir:{x:0,y:-1},next:{x:0,y:-1},color,head,isPlayer,alive:true,id:Math.random()}}
+let player=makeSnake(17,12,'#00e5ff','#00e5ff',true);
+function rndEmpty(){while(true){let x=1+Math.floor(Math.random()*(COLS-2)),y=1+Math.floor(Math.random()*(ROWS-2));if(!player.cells.some(c=>c.x==x&&c.y==y)&&!enemies.some(e=>e.cells.some(c=>c.x==x&&c.y==y))&&!foods.some(f=>f.x==x&&f.y==y))return{x,y}}}
+function spawnFood(){let p=rndEmpty(),r=Math.random(),type=r<.12?'bomb':(r<.3?'golden':'apple');foods.push({x:p.x,y:p.y,type,born:performance.now(),life:20000})}
+function wallCells(w){let out=[];if(w.type=='bomb'){out.push({x:w.x,y:w.y},{x:w.x+1,y:w.y},{x:w.x-1,y:w.y},{x:w.x,y:w.y+1},{x:w.x,y:w.y-1})}else{for(let dx=-1;dx<=1;dx++)for(let dy=-1;dy<=1;dy++)out.push({x:w.x+dx,y:w.y+dy})}return out}
+function canMove(x,y,snake){if(x<0||y<0||x>=COLS||y>=ROWS)return false;for(let w of walls){if(wallCells(w).some(c=>c.x==x&&c.y==y)){if(w.type=='bomb')return false;if(w.owner!=snake.id)return false}}return true}
+function burst(x,y,color,n){for(let i=0;i<n;i++)particles.push({x:x*CELL+12,y:y*CELL+12,vx:(Math.random()-.5)*4,vy:(Math.random()-.5)*4,life:600,max:600,color})}
+function addWall(f){let type=f.type=='golden'?'golden':(f.type=='bomb'?'bomb':'normal');walls.push({x:f.x,y:f.y,owner:player.id,type,born:performance.now(),dur:type=='bomb'?3000:(type=='golden'?7000:5000)});burst(f.x,f.y,type=='golden'?'#ffd54f':(type=='bomb'?'#ff1744':'#00e5ff'),14);sWall()}
+function spawnEnemies(){enemies=[];let n=wave==1?1:(wave==2?2:3);let types=['chaser','explorer','predator'];for(let i=0;i<n;i++){let t=types[Math.min(wave-1,2)];let e=makeSnake(2+i*4,2,t=='explorer'?'#b388ff':(t=='predator'?'#ff6e40':'#ff3d5a'),t=='explorer'?'#b388ff':(t=='predator'?'#ff6e40':'#ff3d5a'),false);e.kind=t;enemies.push(e)}}
+function startGame(){score=0;wave=1;hp=6;foodsEaten=0;walls=[];foods=[];particles=[];player=makeSnake(17,12,'#00e5ff','#00e5ff',true);startTime=performance.now();elapsed=0;waveTime=30000;for(let i=0;i<6;i++)spawnFood();spawnEnemies();state='playing';$('overlay').style.display='none';sWave()}
+function gameOver(){state='gameover';sOver();burst(player.cells[0].x,player.cells[0].y,'#00e5ff',24);if(score>best){best=score;localStorage.setItem('wallsnake_highscore',best)}elapsed=performance.now()-startTime;$('otitle').textContent='GAME OVER';$('otext').innerHTML='Score '+score+' • Wave '+wave+'<br>⏱ Speedrun '+fmt(elapsed)+' • Best '+best;$('btn').textContent='↻ RESTART';$('overlay').style.display='flex';$('best').textContent=best}
+function fmt(ms){let s=Math.floor(ms/1000),m=Math.floor(s/60);return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0')+'.'+Math.floor(ms%1000/100)}
+function moveInterval(){return score>=300?80:(score>=100?110:140)}
+function enemyInterval(){return Math.max(90,170-wave*15)}
+function setDir(dx,dy){if(state!='playing')return;if(player.dir.x==-dx&&player.dir.y==-dy)return;player.next={x:dx,y:dy};tone(1200,.04,'square',.06)}
+function aiMove(e){let target;if(e.kind=='predator')target=player.cells[0];else if(foods.length)target=foods.reduce((a,b)=>{let da=Math.abs(a.x-e.cells[0].x)+Math.abs(a.y-e.cells[0].y),db=Math.abs(b.x-e.cells[0].x)+Math.abs(b.y-e.cells[0].y);return db<da?b:a});else target={x:Math.floor(Math.random()*COLS),y:Math.floor(Math.random()*ROWS)};let dirs=[{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}].sort((a,b)=>{let da=Math.abs(e.cells[0].x+a.x-target.x)+Math.abs(e.cells[0].y+a.y-target.y),db=Math.abs(e.cells[0].x+b.x-target.x)+Math.abs(e.cells[0].y+b.y-target.y);return da-db});if(e.kind=='explorer')dirs.sort(()=>Math.random()-.5);for(let d of dirs){if(e.dir.x==-d.x&&e.dir.y==-d.y)continue;let nx=e.cells[0].x+d.x,ny=e.cells[0].y+d.y;if(canMove(nx,ny,e)){e.dir=d;return}}e.dir=dirs[0]}
+function stepSnake(s,isPlayer){let d=isPlayer?s.next:s.dir;s.dir=d;let h={x:s.cells[0].x+d.x,y:s.cells[0].y+d.y};if(!canMove(h.x,h.y,s)){flash=120;if(!isPlayer)aiMove(s);return false}if(h.x<0||h.y<0||h.x>=COLS||h.y>=ROWS){if(isPlayer)gameOver();return false}s.cells.unshift(h);s.cells.pop();return true}
+function checkCollisions(){let h=player.cells[0];if(player.cells.slice(1).some(c=>c.x==h.x&&c.y==h.y)){gameOver();return}for(let e of enemies){if(!e.alive)continue;if(e.cells.some(c=>c.x==h.x&&c.y==h.y)){e.alive=false;score+=5;burst(h.x,h.y,e.color,20);sDie()}let eh=e.cells[0];if(eh.x==h.x&&eh.y==h.y){let shield=walls.some(w=>wallCells(w).some(c=>Math.abs(c.x-h.x)<=1&&Math.abs(c.y-h.y)<=1));if(!shield)gameOver();else{e.alive=false;score+=10;burst(h.x,h.y,'#ffd54f',20)}}if(player.cells.some(c=>c.x==eh.x&&c.y==eh.y)){e.alive=false;score+=5;burst(eh.x,eh.y,e.color,20);sDie()}}enemies=enemies.filter(e=>e.alive)}
+function eatCheck(){let h=player.cells[0];for(let i=foods.length-1;i>=0;i--){let f=foods[i];if(f.x==h.x&&f.y==h.y){foods.splice(i,1);addWall(f);burst(f.x,f.y,f.type=='golden'?'#ffd54f':(f.type=='bomb'?'#ff1744':'#4caf50'),10);foodsEaten++;if(f.type=='golden'){score+=3;player.cells.push({...player.cells[player.cells.length-1]},{...player.cells[player.cells.length-1]});sGold()}else if(f.type=='bomb'){score+=1;hp=Math.max(0,hp-1);shake=200;sBomb();if(hp<=0)gameOver()}else{score+=1;player.cells.push({...player.cells[player.cells.length-1]});sEat()}if(foodsEaten%10==0&&player.cells.length>10)player.cells.splice(-5,5);spawnFood()}}}
+function update(dt){if(state!='playing')return;elapsed=performance.now()-startTime;waveTime-=dt;if(waveTime<=0){wave++;waveTime=30000;spawnEnemies();sWave();flash=300}acc+=dt;while(acc>=moveInterval()){acc-=moveInterval();if(stepSnake(player,true)){eatCheck();checkCollisions()}}enemyAcc+=dt;while(enemyAcc>=enemyInterval()){enemyAcc-=enemyInterval();for(let e of enemies){aiMove(e);stepSnake(e,false);let h=e.cells[0];for(let i=foods.length-1;i>=0;i--)if(foods[i].x==h.x&&foods[i].y==h.y){foods.splice(i,1);walls.push({x:h.x,y:h.y,owner:e.id,type:'normal',born:performance.now(),dur:5000});spawnFood()}}}let now=performance.now();walls=walls.filter(w=>now-w.born<w.dur);foods=foods.filter(f=>now-f.born<f.life);while(foods.length<8)spawnFood();particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life-=dt});particles=particles.filter(p=>p.life>0);if(flash>0)flash-=dt;if(shake>0)shake-=dt}
+function drawSnake(s){s.cells.forEach((c,i)=>{ctx.fillStyle=i==0?s.head:s.color;ctx.shadowColor=s.color;ctx.shadowBlur=i==0?16:8;let sz=i==0?18:Math.max(8,14-i*.15);let bob=i==0?Math.sin(performance.now()/90)*2:0;ctx.beginPath();ctx.roundRect(c.x*CELL+3,c.y*CELL+3+bob,sz,sz,6);ctx.fill()});ctx.shadowBlur=0;let h=s.cells[0];ctx.fillStyle='#fff';let ex=h.x*CELL+8+s.dir.x*3,ey=h.y*CELL+8+s.dir.y*3;ctx.beginPath();ctx.arc(ex,ey,3,0,7);ctx.arc(ex+6,ey,3,0,7);ctx.fill();ctx.fillStyle='#000';ctx.beginPath();ctx.arc(ex+s.dir.x,ey+s.dir.y,1.5,0,7);ctx.arc(ex+6+s.dir.x,ey+s.dir.y,1.5,0,7);ctx.fill()}
+function render(){ctx.save();if(shake>0)ctx.translate((Math.random()-.5)*6,(Math.random()-.5)*6);ctx.fillStyle='#0a0e1a';ctx.fillRect(0,0,W,H);ctx.strokeStyle='rgba(40,60,100,.25)';for(let x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*CELL,0);ctx.lineTo(x*CELL,H);ctx.stroke()}for(let y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*CELL);ctx.lineTo(W,y*CELL);ctx.stroke()}let now=performance.now();for(let w of walls){let age=now-w.born,alpha=age>w.dur-1000?(w.dur-age)/1000:1;let col=w.type=='golden'?'255,213,79':(w.type=='bomb'?'255,23,68':'0,229,255');let cells=wallCells(w);let xs=cells.map(c=>c.x),ys=cells.map(c=>c.y);let x0=Math.min(...xs)*CELL,y0=Math.min(...ys)*CELL,x1=(Math.max(...xs)+1)*CELL,y1=(Math.max(...ys)+1)*CELL;ctx.globalAlpha=.18*alpha;ctx.fillStyle=`rgba(${col},.5)`;ctx.fillRect(x0,y0,x1-x0,y1-y0);ctx.globalAlpha=alpha;ctx.strokeStyle=`rgba(${col},.9)`;ctx.shadowColor=`rgba(${col},1)`;ctx.shadowBlur=12;ctx.strokeRect(x0+2,y0+2,x1-x0-4,y1-y0-4);ctx.shadowBlur=0;ctx.globalAlpha=1}for(let f of foods){let cx=f.x*CELL+12,cy=f.y*CELL+12,p=1+Math.sin(now/300)*.12;ctx.fillStyle=f.type=='golden'?'#ffd54f':(f.type=='bomb'?'#ff1744':'#4caf50');ctx.shadowColor=ctx.fillStyle;ctx.shadowBlur=16;ctx.beginPath();ctx.arc(cx,cy,10*p,0,7);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#fff';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText(f.type=='golden'?'★':(f.type=='bomb'?'💣':'🍎'),cx,cy+4)}enemies.forEach(drawSnake);if(state!='gameover')drawSnake(player);particles.forEach(p=>{ctx.globalAlpha=p.life/p.max;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,3,0,7);ctx.fill()});ctx.globalAlpha=1;if(flash>0){ctx.fillStyle='rgba(255,60,60,.25)';ctx.fillRect(0,0,W,H)}ctx.restore();$('score').textContent=score;$('wave').textContent=wave;$('hp').textContent=hp;$('walls').textContent=walls.length;$('zone').textContent=score>=300?'TURBO':(score>=100?'FAST':'NORMAL');$('timer').textContent=fmt(state=='playing'||state=='paused'?elapsed:(elapsed||0))}
+function loop(t){let dt=Math.min(50,t-last||16);last=t;update(dt);render();requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+addEventListener('keydown',e=>{let k=e.key.toLowerCase();if(k=='w'||k=='arrowup')setDir(0,-1);if(k=='s'||k=='arrowdown')setDir(0,1);if(k=='a'||k=='arrowleft')setDir(-1,0);if(k=='d'||k=='arrowright')setDir(1,0);if(k==' '){e.preventDefault();if(state!='playing')startGame()}if(k=='p'&&state=='playing'){state='paused';$('otitle').textContent='PAUSED';$('otext').textContent='Press P to Resume';$('btn').textContent='▶ RESUME';$('overlay').style.display='flex'}else if(k=='p'&&state=='paused'){state='playing';$('overlay').style.display='none'}if(k=='m'){muted=!muted;$('muteBtn').textContent=muted?'🔇 MUTED':'🔊 SOUND'}if(k=='escape'){state='start';$('overlay').style.display='flex';$('otitle').textContent='WALLSNAKE';$('btn').textContent='▶ START'}});
+$('btn').onclick=()=>{if(state=='paused'){state='playing';$('overlay').style.display='none'}else startGame()};
+$('pauseBtn').onclick=()=>{if(state=='playing'){state='paused';$('otitle').textContent='PAUSED';$('btn').textContent='▶ RESUME';$('overlay').style.display='flex'}};
+$('muteBtn').onclick=()=>{muted=!muted;$('muteBtn').textContent=muted?'🔇 MUTED':'🔊 SOUND'};
+document.querySelectorAll('.dpad button').forEach(b=>b.onclick=()=>{let d=b.dataset.d.split(',').map(Number);setDir(d[0],d[1])});
+let tx=0,ty=0;cv.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});cv.addEventListener('touchend',e=>{let dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>Math.abs(dy))setDir(dx>0?1:-1,0);else setDir(0,dy>0?1:-1)},{passive:true});
+for(let i=0;i<6;i++)spawnFood();spawnEnemies();
+</script>
+</body>
+</html>
