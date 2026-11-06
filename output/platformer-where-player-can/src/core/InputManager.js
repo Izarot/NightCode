@@ -1,0 +1,1 @@
+export class InputManager{constructor(){this.keys={};this.mouse={x:0,y:0,down:false};} }\n

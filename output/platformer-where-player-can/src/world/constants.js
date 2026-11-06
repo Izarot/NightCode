@@ -1,0 +1,1 @@
+export const GRAVITY=0.6,ACC=0.8,MAXV=8,JUMP=-12;export const PALETTE={bg:'#050510',solid:'#1a1a2e',cyan:'#00f3ff',core:'#a0ffff',pink:'#ff0055',green:'#39ff14',yellow:'#ffea00',violet:'#b967ff'};\n

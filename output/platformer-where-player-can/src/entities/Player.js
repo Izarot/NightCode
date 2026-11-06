@@ -1,0 +1,1 @@
+export const Player={w:28,h:36};export const Platform={cost:25,duration:4};\n
