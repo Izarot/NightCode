@@ -1,20 +1,43 @@
+// main.js
 import { Game } from './game.js';
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const game = new Game(canvas, ctx);
-function resize() {
-  const dpr = window.devicePixelRatio || 1;
-  const maxW = window.innerWidth * 0.95;
-  const maxH = window.innerHeight * 0.95;
-  const size = Math.min(maxW, maxH * 0.9);
-  canvas.width = size * dpr;
-  canvas.height = size * dpr;
-  canvas.style.width = size + 'px';
-  canvas.style.height = size + 'px';
-  ctx.scale(dpr, dpr);
-  game.resize(size, size);
+import { Renderer } from './render.js';
+import { Input } from './input.js';
+import { AudioManager } from './audio.js';
+import { UI } from './ui.js';
+
+let canvas, ctx;
+let game, renderer, input, audio, ui;
+
+function init() {
+  canvas = document.getElementById('game');
+  ctx = canvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  game = new Game();
+  renderer = new Renderer(canvas, game);
+  input = new Input(canvas, game);
+  audio = new AudioManager();
+  ui = new UI(canvas, game);
+
+  audio.init().then(() => {
+    game.start();
+    requestAnimationFrame(gameLoop);
+  });
 }
-window.addEventListener('resize', resize);
-resize();
-function loop(ts) { game.update(ts); game.render(); requestAnimationFrame(loop); }
-requestAnimationFrame(loop);
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  renderer.resize();
+}
+
+function gameLoop(timestamp) {
+  const delta = Math.min((timestamp - (gameLoop.lastTime || 0)) / 1000, 0.1);
+  gameLoop.lastTime = timestamp;
+  game.update(delta);
+  renderer.render();
+  requestAnimationFrame(gameLoop);
+}
+
+init();

@@ -1,33 +1,63 @@
+// input.js
 export class Input {
   constructor(canvas, game) {
+    this.canvas = canvas;
     this.game = game;
-    canvas.addEventListener('click', e => this.onClick(e));
-    canvas.addEventListener('touchstart', e => { e.preventDefault(); this.onTouch(e); }, { passive: false });
-    window.addEventListener('keydown', e => this.onKey(e));
+    this.isTouch = false;
+    this.startX = 0;
+    this.startY = 0;
+    this.sourceIdx = null;
+    this.canvas.addEventListener('pointerdown', this.handlePointerDown.bind(this));
+    this.canvas.addEventListener('pointerup', this.handlePointerUp.bind(this));
+    this.canvas.addEventListener('pointermove', this.handlePointerMove.bind(this));
   }
-  getPos(e) {
-    const rect = this.game.canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: (clientX - rect.left) * (this.game.width / rect.width), y: (clientY - rect.top) * (this.game.height / rect.height) };
+
+  handlePointerDown(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    this.isTouch = e.type === 'pointerdown';
+    this.startX = x;
+    this.startY = y;
+    const idx = this.getTubeIndex(x, y);
+    if (idx !== null) {
+      this.sourceIdx = idx;
+    }
   }
-  onClick(e) { const p = this.getPos(e); this.hitTest(p); }
-  onTouch(e) { const p = this.getPos(e); this.hitTest(p); }
-  hitTest(p) {
-    if (this.game.state === 'menu') { this.game.ui.handleMenuClick(p); return; }
-    if (this.game.state === 'win') { this.game.ui.handleWinClick(p); return; }
-    if (this.game.state === 'paused') { this.game.ui.handlePauseClick(p); return; }
-    this.game.tubes.forEach((t, i) => {
-      if (p.x >= t.x && p.x <= t.x + t.w && p.y >= t.y && p.y <= t.y + t.h) {
-        this.game.onTubeTap(i);
+
+  handlePointerUp(e) {
+    if (!this.isTouch) return;
+    const rect = this.canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const targetIdx = this.getTubeIndex(x, y);
+    if (this.sourceIdx !== null && targetIdx !== undefined && this.sourceIdx !== targetIdx) {
+      this.game.pour(this.sourceIdx, targetIdx);
+      this.sourceIdx = null;
+    }
+    this.isTouch = false;
+  }
+
+  handlePointerMove(e) {
+    // not needed for simple tap
+  }
+
+  getTubeIndex(x, y) {
+    const tubes = this.game.tubes;
+    const tubeWidth = 80;
+    const spacing = 20;
+    const startX = (this.canvas.width - (tubes.length * tubeWidth + (tubes.length - 1) * spacing)) / 2;
+    const tubeTopY = this.canvas.height * 0.6;
+    for (let i = 0; i < tubes.length; i++) {
+      const tubeX = startX + i * (tubeWidth + spacing);
+      if (x >= tubeX && x <= tubeX + tubeWidth && y >= tubeTopY - 20 && y <= tubeTopY + 300) {
+        return i;
       }
-    });
-    this.game.ui.hitTest(p);
+    }
+    return null;
   }
-  onKey(e) {
-    if (e.key === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); this.game.undo(); }
-    if (e.key === 'h') this.game.hint();
-    if (e.key === 'Escape') this.game.pause();
-    if (e.key === 'r') this.game.restart();
+
+  start() {
+    // nothing
   }
 }

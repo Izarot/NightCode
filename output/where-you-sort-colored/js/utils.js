@@ -1,2 +1,5 @@
-export function saveState(key, val) { try { localStorage.setItem('watersort_' + key, JSON.stringify(val)); } catch(e) {} }
-export function loadState(key, def) { try { const v = localStorage.getItem('watersort_' + key); return v ? JSON.parse(v) : def; } catch(e) { return def; } }
+// utils.js
+export const COLORS = ['#e53935', '#1e88e5', '#43a047', '#fdd835', '#8e24aa', '#fb8c00'];
+export function randomColor() {
+  return COLORS[Math.floor(Math.random() * COLORS.length)];
+}
