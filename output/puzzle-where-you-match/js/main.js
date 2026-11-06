@@ -1,0 +1,33 @@
+(function(){
+const canvas=$('gameCanvas'),ctx=canvas.getContext('2d');
+let levelIdx=0,board,token=new Token(),particles=new Particles(),inventory=[],selected=-1,startTime=Date.now(),elapsed=0,timerRunning=true,soundOn=true,hintTimer=0,gameWon=false;
+let high=parseInt(localStorage.getItem('shapePathHighScore')||'0')||0;
+let audioCtx=null;function beep(f,d=0.08,type='sine',v=0.15){if(!soundOn)return;try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(audioCtx.destination);o.start();g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+d);o.stop(audioCtx.currentTime+d)}catch(e){}}
+window.onTokenStep=()=>beep(600+Math.random()*200,0.05,'square',0.06);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function loadLevel(idx){levelIdx=idx;const lvl=LEVELS[idx];board=new Board(lvl);token=new Token();particles=new Particles();gameWon=false;inventory=shuffle(lvl.solution.map(s=>({ports:[...s.p],used:false})));selected=inventory.findIndex(i=>!i.used);startTime=Date.now();elapsed=0;timerRunning=true;buildDock(inventory,selected,selectShape);updateHUD(idx,board,0,high);$('statusLabel').textContent='Place shapes to connect START → END';beep(440,0.08)}
+function selectShape(i,e){if(inventory[i].used)return;selected=i;beep(700,0.05);buildDock(inventory,selected,selectShape);startDrag(e,i)}
+function refreshDock(){buildDock(inventory,selected,selectShape)}
+function rotateSelected(){if(selected<0||inventory[selected].used)return;inventory[selected].ports=rotatePorts(inventory[selected].ports);refreshDock();beep(500,0.06)}
+function placeAt(clientX,clientY){const r=canvas.getBoundingClientRect();const x=Math.floor((clientX-r.left)/r.width*8);const y=Math.floor((clientY-r.top)/r.height*8);if(!board.inBounds(x,y))return;lastX=x;lastY=y;if(selected<0||!inventory[selected]||inventory[selected].used){$('statusLabel').textContent='Select a shape from inventory first';return}if(board.place(x,y,inventory[selected].ports,selected)){inventory[selected].used=true;particles.burst(x*64+32,y*64+32,16);beep(880,0.07);selected=inventory.findIndex(i=>!i.used);refreshDock();const p=board.bfs();$('statusLabel').textContent=p?'Path connected! Press RUN TOKEN':'Placed - keep connecting START to END'}else{const c=board.grid[y]&&board.grid[y][x];if(c&&!c.fixed)c.shake=10;beep(160,0.12,'sawtooth',0.12);$('statusLabel').textContent='Cannot place there (occupied, fixed, or move limit)'}updateHUD(levelIdx,board,elapsed,high)}
+let lastX=-1,lastY=-1,dragging=false,ghost=$('dragGhost');
+function startDrag(e,i){dragging=true;ghost.classList.remove('hidden');moveGhost(e)}
+function moveGhost(e){if(!dragging)return;ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';ghost.innerHTML='';const c=document.createElement('canvas');c.width=56;c.height=56;c.style.width='56px';c.style.height='56px';ghost.appendChild(c);if(selected>=0&&inventory[selected])drawDockShape(c,inventory[selected].ports,'#00f5ff')}
+function endDrag(e){if(!dragging)return;dragging=false;ghost.classList.add('hidden');if(e&&e.clientX!==undefined)placeAt(e.clientX,e.clientY)}
+canvas.addEventListener('pointerdown',e=>{e.preventDefault();placeAt(e.clientX,e.clientY)});
+window.addEventListener('pointermove',moveGhost);
+window.addEventListener('pointerup',endDrag);
+window.addEventListener('keydown',e=>{if(e.key==='r'||e.key==='R')rotateSelected();if(e.key==='z'||e.key==='Z')doUndo()});
+function doUndo(){const h=board.undo();if(!h)return;if(h.prev===null&&h.prev!==undefined&&inventory[h.prev&&h.prev.invIndex!==undefined?h.prev.invIndex:0]){}const cell=h.prev;if(cell&&cell.invIndex!==undefined&&inventory[cell.invIndex])inventory[cell.invIndex].used=false;else if(h.x!==undefined){const idx=inventory.findIndex(i=>i.used);if(idx>=0)inventory[idx].used=false}selected=inventory.findIndex(i=>!i.used);refreshDock();beep(300,0.06);updateHUD(levelIdx,board,elapsed,high);$('statusLabel').textContent='Undone'}
+$('undoBtn').onclick=doUndo;
+$('resetBtn').onclick=()=>{loadLevel(levelIdx);beep(400,0.08)};
+$('rotateBtn').onclick=rotateSelected;
+$('soundBtn').onclick=()=>{soundOn=!soundOn;$('soundBtn').textContent=soundOn?'🔊':'🔇';if(soundOn)beep(700,0.06)};
+$('clearBtn').onclick=()=>{if(lastX<0)return;const c=board.grid[lastY]&&board.grid[lastY][lastX];if(c&&!c.fixed){if(board.clear(lastX,lastY)){if(c.invIndex!==undefined&&inventory[c.invIndex])inventory[c.invIndex].used=false;selected=inventory.findIndex(i=>!i.used);refreshDock();beep(250,0.07);updateHUD(levelIdx,board,elapsed,high);$('statusLabel').textContent='Cell cleared'}}};
+$('hintBtn').onclick=()=>{const sol=LEVELS[levelIdx].solution;for(const s of sol){const c=board.grid[s.y][s.x];if(!c||c.fixed||JSON.stringify(c.ports)!==JSON.stringify(s.p)){board.hintCell={x:s.x,y:s.y};beep(990,0.09);$('statusLabel').textContent='Hint: place a shape at '+s.x+','+s.y;setTimeout(()=>{board.hintCell=null},2500);return}}};
+$('runBtn').onclick=()=>{const p=board.bfs();if(!p){beep(140,0.15,'sawtooth',0.15);$('statusLabel').textContent='No path yet - token cannot run';return}token.start(p);timerRunning=true;beep(520,0.08);$('statusLabel').textContent='Token running...'};
+function win(){gameWon=true;timerRunning=false;particles.burst(LEVELS[levelIdx].end.x*64+32,LEVELS[levelIdx].end.y*64+32,40);beep(880,0.12);setTimeout(()=>beep(1100,0.15),120);if(!high||elapsed<high){high=elapsed;localStorage.setItem('shapePathHighScore',String(high))}const isLast=levelIdx>=LEVELS.length-1;showModal(true,isLast?'YOU WIN!':'LEVEL COMPLETE!','Time: '+fmtTime(elapsed)+'  Moves: '+board.movesUsed+'/'+LEVELS[levelIdx].moves,'Best: '+fmtTime(high),isLast?'Play Again ↺':'Next Level →',()=>{loadLevel(isLast?0:levelIdx+1)})}
+let lastT=performance.now();
+function loop(now){const dt=Math.min(50,now-lastT);lastT=now;if(timerRunning&&!gameWon){elapsed=Date.now()-startTime;if(Math.floor(now/100)%3===0)updateHUD(levelIdx,board,elapsed,high)}token.update(dt);particles.update(dt);for(let y=0;y<8;y++)for(let x=0;x<8;x++){const c=board.grid[y][x];if(c&&!c.fixed){if(c.anim!==undefined&&c.anim<1)c.anim=Math.min(1,c.anim+dt/200);if(c.shake>0)c.shake=Math.max(0,c.shake-dt/30)}}if(token.done&&!gameWon){const e=LEVELS[levelIdx].end;if(token.x===e.x&&token.y===e.y)win();else{token.done=false;$('statusLabel').textContent='Token stopped - path incomplete'}}drawBoard(ctx,board,token,particles,now,board.hintCell);requestAnimationFrame(loop)}
+loadLevel(0);requestAnimationFrame(loop);
+})();

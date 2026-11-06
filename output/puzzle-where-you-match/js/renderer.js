@@ -1,0 +1,14 @@
+function drawShape(ctx,x,y,ports,scale,color,alpha=1){const cx=x*TILE+TILE/2,cy=y*TILE+TILE/2;const s=scale;ctx.save();ctx.globalAlpha=alpha;ctx.translate(cx,cy);ctx.scale(s,s);ctx.translate(-cx,-cy);ctx.strokeStyle=color;ctx.fillStyle=color+'33';ctx.lineWidth=4;ctx.shadowColor=color;ctx.shadowBlur=12;ctx.lineJoin='round';
+ const dirs=[[0,-1],[1,0],[0,1],[-1,0]];ctx.beginPath();ctx.arc(cx,cy,10,0,Math.PI*2);ctx.fill();ctx.stroke();
+ ports.forEach((p,i)=>{if(!p)return;const [dx,dy]=dirs[i];ctx.beginPath();ctx.moveTo(cx+dx*8,cy+dy*8);ctx.lineTo(cx+dx*28,cy+dy*28);ctx.stroke();ctx.beginPath();ctx.arc(cx+dx*28,cy+dy*28,7,0,Math.PI*2);ctx.fill();ctx.stroke()});ctx.restore()}
+function drawBoard(ctx,board,token,particles,time,hint){ctx.clearRect(0,0,512,512);const g=ctx.createLinearGradient(0,0,512,512);g.addColorStop(0,'#0a0a22');g.addColorStop(1,'#120826');ctx.fillStyle=g;ctx.fillRect(0,0,512,512);
+ for(let y=0;y<8;y++)for(let x=0;x<8;x++){ctx.strokeStyle='rgba(255,255,255,0.07)';ctx.lineWidth=1;ctx.strokeRect(x*64+0.5,y*64+0.5,63,63);if((x+y)%2===0){ctx.fillStyle='rgba(255,255,255,0.02)';ctx.fillRect(x*64,y*64,64,64)}}
+ if(hint){ctx.fillStyle='rgba(182,255,46,0.18)';ctx.fillRect(hint.x*64,hint.y*64,64,64);ctx.strokeStyle='#b6ff2e';ctx.setLineDash([6,4]);ctx.strokeRect(hint.x*64+4,hint.y*64+4,56,56);ctx.setLineDash([])}
+ const palette=['#00f5ff','#ff2ea6','#b6ff2e','#ff9f1c','#8b5cff'];
+ for(let y=0;y<8;y++)for(let x=0;x<8;x++){const c=board.grid[y][x];if(!c)continue;let sx=x;if(c.shake>0){sx+=Math.sin(time*0.08)*3*(c.shake/10)}
+  if(c.fixed==='start'){ctx.fillStyle='#00ffc8';ctx.shadowColor='#00ffc8';ctx.shadowBlur=18;ctx.beginPath();ctx.arc(x*64+32,y*64+32,20,0,Math.PI*2);ctx.fill();ctx.fillStyle='#001018';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('START',x*64+32,y*64+32);ctx.shadowBlur=0;drawShape(ctx,sx,y,c.ports,1,'#00ffc8',0.9)}
+  else if(c.fixed==='end'){ctx.fillStyle='#ff2ea6';ctx.shadowColor='#ff2ea6';ctx.shadowBlur=18;ctx.beginPath();ctx.arc(x*64+32,y*64+32,20,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('END',x*64+32,y*64+32);ctx.shadowBlur=0;drawShape(ctx,sx,y,c.ports,1,'#ff2ea6',0.9)}
+  else{const col=palette[(x+y)%palette.length];drawShape(ctx,sx,y,c.ports,c.anim||1,col)}}
+ if(token&&token.path.length){const tx=token.px*64+32,ty=token.py*64+32;ctx.save();ctx.translate(tx,ty);ctx.rotate(token.rot*Math.PI/180);ctx.fillStyle='#ff9f1c';ctx.shadowColor='#ff9f1c';ctx.shadowBlur=22;ctx.beginPath();ctx.arc(0,0,13,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();ctx.restore()}
+ particles.draw(ctx)}
+function drawDockShape(canvas,ports,color){const ctx=canvas.getContext('2d');ctx.clearRect(0,0,52,52);const old=TILE;drawShape(ctx,-0.1875,-0.1875,ports,0.8125,color)}
