@@ -1,0 +1,1404 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 2 column 13 (char 14)
+
+Raw: The user wants a complete HTML5 Canvas game called "Yarn Maze: Unravel the Path". This is a complex project with many specific requirements. Let me break down what I need to implement:
+
+1. **Responsive canvas** that scales to mobile screens
+2. **Emoji favicon** in HTML head
+3. **Vibrant color palette** as specified
+4. **LocalStorage high score** persistence
+5. **Web Audio API** sound effects
+6. **Speedrun timer** in top corner
+7. **Player movement physics** (acceleration, friction, max speed, circle-vs-rectangle collision)
+8. **Cutting mechanic** with slash vector
+9. **Procedural maze generation** (Recursive Backtracker)
+10. **Verlet integration** for loose fibers
+11. **HUD elements**: minimap, progress ring, interaction prompt, monospace typography
+12. **Particle effects** for cutting and settling
+13. **Lighting vignette** overlay
+
+Let me structure this as a modular layout:
+- `index.html` - main HTML file
+- `css/style.css` - styles
+- `js/core/game.js` - main game loop and state manager
+- `js/core/state.js` - central state manager
+- `js/systems/physics.js` - physics system
+- `js/systems/rendering.js` - rendering system
+- `js/systems/audio.js` - audio system
+- `js/systems/input.js` - input handling
+- `js/data/maze.js` - maze generation
+- `js/data/entities.js` - entity definitions
+
+Wait, the user said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". So I need to output a JSON object where keys are filenames and values are the full code content of each file.
+
+Let me think about the architecture carefully. The user specified:
+- `core/` directory for main game loop and central state manager
+- `systems/` subdirectories for physics, rendering, audio, input
+- `data/` subdirectories for maze generation, entity definitions
+
+But since this is a browser game without a build system, I'll use ES modules or just script tags. Actually, let me use ES modules with type="module" so I can have proper imports. Or I could use global namespace approach. Let me use ES modules since that's cleaner.
+
+Actually, for simplicity and to avoid CORS issues when opening from file://, let me use a single bundled approach or use script tags in order. But the user wants modular structure... Let me use ES modules and note that they need to serve via HTTP.
+
+Actually, let me reconsider. The user wants a working game. ES modules can have CORS issues when opened directly from file system. Let me use traditional script tags with global namespace, or I could inline everything. But the user specifically asked for modular structure.
+
+Let me use ES modules but also provide a note. Actually, let me just use ES modules - most modern browsers handle it fine when served properly, and the user can use any local server.
+
+Hmm, but to be safe and make it work out of the box, let me use a hybrid approach: define classes on a global namespace and load scripts in order via script tags. This avoids module loading issues.
+
+Let me go with script tags loaded in order, using a global `Game` namespace pattern.
+
+Actually, let me reconsider the whole thing. This is a big project. Let me plan each file:
+
+### index.html
+- Canvas element
+- Script tags loading all JS files in order
+- Emoji favicon
+- CSS link
+
+### css/style.css
+- Reset styles
+- Canvas positioning
+- UI overlays
+
+### js/core/state.js
+- GameState class managing all state
+
+### js/core/game.js
+- Main game loop
+- Fixed timestep update
+- Render pipeline
+
+### js/data/maze.js
+- Maze generation (Recursive Backtracker)
+- Yarn segment creation
+
+### js/data/entities.js
+- Player class
+- YarnSegment class
+- LooseFiber class
+- Particle class
+- Checkpoint class
+- Spider class
+
+### js/systems/physics.js
+- Verlet integration for loose fibers
+- Collision detection (circle vs rectangle)
+- Spatial hashing
+
+### js/systems/rendering.js
+- Yarn bezier curves rendering
+- Particle rendering
+- Vignette overlay
+- Minimap rendering
+- Progress ring rendering
+- Interaction prompt
+
+### js/systems/audio.js
+- Web Audio API sound effects
+
+### js/systems/input.js
+- Keyboard input
+- Mouse input for cutting
+- Responsive canvas scaling
+
+Let me now write all of these. This is going to be extensive.
+
+Let me start coding:
+
+#### index.html
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Yarn Maze: Unravel the Path</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧶</text></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-overlay">
+            <div id="hud-top">
+                <div id="timer">00:00</div>
+                <div id="progress-ring"></div>
+                <div id="unravel-text">UNRAVELLED: 0%</div>
+            </div>
+            <div id="minimap-container">
+                <canvas id="minimap" width="150" height="150"></canvas>
+            </div>
+            <div id="interaction-prompt"></div>
+            <div id="start-screen">
+                <h1>YARN MAZE</h1>
+                <h2>Unravel the Path</h2>
+                <p>Use WASD to move, left-click+drag to cut yarn.</p>
+                <button id="start-btn">START</button>
+                <p id="high-score-display">HIGH SCORE: 0</p>
+            </div>
+            <div id="win-screen" style="display:none;">
+                <h1>YOU UNRAVELED IT!</h1>
+                <p id="final-time"></p>
+                <button id="restart-btn">PLAY AGAIN</button>
+            </div>
+        </div>
+    </div>
+    <script src="js/data/entities.js"></script>
+    <script src="js/data/maze.js"></script>
+    <script src="js/systems/physics.js"></script>
+    <script src="js/systems/audio.js"></script>
+    <script src="js/systems/input.js"></script>
+    <script src="js/systems/rendering.js"></script>
+    <script src="js/core/state.js"></script>
+    <script src="js/core/game.js"></script>
+    <script>
+        window.onload = function() {
+            const game = new Game();
+            game.init();
+        };
+    </script>
+</body>
+</html>
+```
+
+Wait, I need to think about the order of script loading. The entities should be loaded first, then data, then systems, then core. But actually, the systems might depend on entities being defined globally. Let me make sure the order is correct.
+
+Actually, let me reconsider. Using global namespace pattern means everything is attached to `window`. The order matters because later scripts can reference earlier ones.
+
+Order:
+1. entities.js (defines Player, YarnSegment, etc.)
+2. maze.js (defines MazeGenerator, uses entities)
+3. physics.js (uses entities)
+4. audio.js (standalone)
+5. input.js (standalone, uses game state)
+6. rendering.js (uses entities, state)
+7. state.js (uses entities, maze, etc.)
+8. game.js (main, uses everything)
+
+This should work.
+
+Now let me write each file in detail.
+
+#### css/style.css
+```css
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0B1026; overflow: hidden; font-family: 'Courier New', monospace; }
+#game-container { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+#gameCanvas { display: block; background: #0B1026; touch-action: none; }
+#ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+#hud-top { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; align-items: center; }
+#timer { color: #FFFDD0; font-size: 14px; letter-spacing: 2px; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+#progress-ring { width: 60px; height: 60px; }
+#unravel-text { color: #FFFDD0; font-size: 12px; letter-spacing: 1px; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+#minimap-container { position: absolute; bottom: 15px; right: 15px; }
+#minimap { border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; background: rgba(11,16,38,0.7); }
+#interaction-prompt { position: absolute; color: rgba(255,255,255,0.6); font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+#start-screen, #win-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: auto; }
+#start-screen h1 { font-size: 48px; color: #E0725C; letter-spacing: 4px; text-shadow: 0 0 20px rgba(224,114,92,0.5); }
+#start-screen h2 { font-size: 20px; color: #FFFDD0; letter-spacing: 6px; margin-bottom: 20px; }
+#start-screen p { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 15px; }
+#start-btn, #restart-btn { padding: 12px 32px; font-family: 'Courier New', monospace; font-size: 16px; letter-spacing: 3px; background: transparent; color: #00E5FF; border: 2px solid #00E5FF; cursor: pointer; border-radius: 4px; transition: all 0.3s; }
+#start-btn:hover, #restart-btn:hover { background: #00E5FF; color: #0B1026; }
+#high-score-display { color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 15px; }
+#final-time { color: #FFFDD0; font-size: 18px; margin: 15px 0; }
+```
+
+Now the JavaScript files. Let me think carefully about each one.
+
+#### js/data/entities.js
+
+I need to define:
+- Player class
+- YarnSegment class
+- LooseFiber class
+- Particle class
+- Checkpoint class
+- Spider class
+
+Let me write these:
+
+```javascript
+// Player class
+class Player {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.radius = 12;
+        this.acceleration = 1200;
+        this.friction = 0.85;
+        this.maxSpeed = 220;
+        this.angle = 0;
+    }
+    
+    update(dt, input) {
+        let ax = 0, ay = 0;
+        if (input.up) ay -= this.acceleration;
+        if (input.down) ay += this.acceleration;
+        if (input.left) ax -= this.acceleration;
+        if (input.right) ax += this.acceleration;
+        
+        this.vx += ax * dt;
+        this.vy += ay * dt;
+        
+        // Apply friction
+        this.vx *= Math.pow(this.friction, dt * 60);
+        this.vy *= Math.pow(this.friction, dt * 60);
+        
+        // Cap speed
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > this.maxSpeed) {
+            this.vx = (this.vx / speed) * this.maxSpeed;
+            this.vy = (this.vy / speed) * this.maxSpeed;
+        }
+        
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        
+        // Update angle based on horizontal movement
+        if (Math.abs(this.vx) > 1) {
+            this.angle = Math.atan2(this.vy, this.vx);
+        }
+    }
+    
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        
+        // Glow
+        ctx.shadowColor = '#00E5FF';
+        ctx.shadowBlur = 15;
+        
+        // Body
+        ctx.fillStyle = '#00E5FF';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Inner highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.beginPath();
+        ctx.arc(-3, -3, this.radius * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+    
+    getBounds() {
+        return { x: this.x - this.radius, y: this.y - this.radius, w: this.radius * 2, h: this.radius * 2 };
+    }
+}
+```
+
+Hmm wait, the friction model says "velocity multiplied by 0.85 per frame at 60fps". So if I use `Math.pow(0.85, dt * 60)` that would give the correct exponential decay. But actually, the simpler approach is just `*= 0.85` per frame. With fixed timestep of 16ms, that's fine. Let me keep it simple with the fixed timestep approach.
+
+Actually, let me reconsider. The spec says "Exponential decay friction (velocity multiplied by 0.85 per frame at 60fps)". So I should multiply by 0.85 each frame. With a fixed timestep of 16ms (60fps), I can just do `this.vx *= 0.85; this.vy *= 0.85;` each update step. That's simpler and matches the spec.
+
+Let me revise:
+
+```javascript
+update(dt, input) {
+    let ax = 0, ay = 0;
+    if (input.up) ay -= this.acceleration;
+    if (input.down) ay += this.acceleration;
+    if (input.left) ax -= this.acceleration;
+    if (input.right) ax += this.acceleration;
+    
+    this.vx += ax * dt;
+    this.vy += ay * dt;
+    
+    // Friction (per frame at 60fps)
+    this.vx *= 0.85;
+    this.vy *= 0.85;
+    
+    // Cap speed
+    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    if (speed > this.maxSpeed) {
+        this.vx = (this.vx / speed) * this.maxSpeed;
+        this.vy = (this.vy / speed) * this.maxSpeed;
+    }
+    
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    
+    if (Math.abs(this.vx) > 1) {
+        this.angle = Math.atan2(this.vy, this.vx);
+    }
+}
+```
+
+OK good. Now let me continue with the other entities.
+
+For YarnSegment, I need:
+- Position, size
+- Color (terracotta or oxblood)
+- Type (wall, start, exit)
+- Cut flag
+- Sine wave displacement for fuzzy look
+
+```javascript
+class YarnSegment {
+    constructor(x, y, w, h, color, type = 'wall') {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.color = color;
+        this.type = type; // 'wall', 'start', 'exit'
+        this.cut = false;
+        this.thickness = 2 + Math.random() * 3; // 2-5px
+        this.id = Math.random().toString(36).substr(2, 9);
+    }
+    
+    draw(ctx) {
+        if (this.cut) return;
+        
+        const cx = this.x + this.w / 2;
+        const cy = this.y + this.h / 2;
+        const halfW = this.w / 2;
+        const halfH = this.h / 2;
+        
+        // Sine wave displacement
+        const waveAmp = 1.5;
+        const waveFreq = 0.15;
+        const offsetX = Math.sin(Date.now() * 0.001 + this.id.charCodeAt(0)) * waveAmp;
+        const offsetY = Math.cos(Date.now() * 0.001 + this.id.charCodeAt(1)) * waveAmp;
+        
+        ctx.save();
+        
+        // Glow for danger types
+        if (this.type === 'danger') {
+            ctx.shadowColor = this.color;
+            ctx.shadowBlur = 8;
+        } else if (this.type === 'exit') {
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 15;
+        } else if (this.type === 'start') {
+            ctx.shadowColor = '#00E5FF';
+            ctx.shadowBlur = 10;
+        }
+        
+        // Draw yarn as bezier curves
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.thickness;
+        ctx.lineCap = 'round';
+        
+        // Draw multiple bezier curves for yarn texture
+        const segments = 3;
+        for (let i = 0; i < segments; i++) {
+            const t = i / (segments - 1);
+            const px = this.x + halfW + (this.w - halfW * 2) * t + offsetX * 0.3;
+            const py = this.y + halfH + (this.h - halfH * 2) * t + offsetY * 0.3;
+            
+            ctx.beginPath();
+            ctx.moveTo(this.x + halfW, this.y + halfH * 0.3);
+            ctx.quadraticCurveTo(cx + offsetX * 0.5, cy + offsetY * 0.5, px, py);
+            ctx.stroke();
+        }
+        
+        // Border
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
+        
+        ctx.restore();
+    }
+    
+    intersects(point, radius) {
+        // Check if a point with given radius intersects this rectangle
+        const closestX = Math.max(this.x, Math.min(point.x, this.x + this.w));
+        const closestY = Math.max(this.y, Math.min(point.y, this.y + this.h));
+        const dx = point.x - closestX;
+        const dy = point.y - closestY;
+        return (dx * dx + dy * dy) < (radius * radius);
+    }
+    
+    containsPoint(px, py) {
+        return px >= this.x && px <= this.x + this.w && py >= this.y && py <= this.y + this.h;
+    }
+}
+```
+
+For LooseFiber (Verlet integration):
+
+```javascript
+class LooseFiber {
+    constructor(x, y, w, h, color) {
+        this.x = x;
+        this.y = y;
+        this.oldX = x;
+        this.oldY = y;
+        this.w = w;
+        this.h = h;
+        this.color = color;
+        this.gravity = 800;
+        this.friction = 0.98;
+        this.settled = false;
+        this.settledTime = 0;
+    }
+    
+    update(dt) {
+        if (this.settled) return;
+        
+        const vx = (this.x - this.oldX) * this.friction;
+        const vy = (this.y - this.oldY) * this.friction;
+        
+        this.oldX = this.x;
+        this.oldY = this.y;
+        
+        this.x += vx;
+        this.y += vy;
+        this.y += this.gravity * dt;
+        
+        // Simple collision with walls
+        // Check against other wall segments
+        // For simplicity, check against canvas bounds and other fibers
+        if (this.y > window.innerHeight) {
+            this.y = window.innerHeight;
+            this.oldY = this.y;
+        }
+    }
+    
+    draw(ctx) {
+        ctx.save();
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + this.w, this.y + this.h);
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+```
+
+Hmm, the Verlet integration needs to interact with the maze walls. Let me think about this more carefully. When a yarn segment is cut, it becomes a loose fiber that falls and settles against remaining walls. The settling should check collision with other wall segments.
+
+Let me simplify: loose fibers fall under gravity, and when they hit a wall segment (or the floor), they stop. I'll check collision against all active wall segments.
+
+Actually, for performance, I should use spatial hashing. But for simplicity, let me just check against all wall segments. If there aren't too many, it's fine.
+
+Let me revise the LooseFiber to check against wall segments:
+
+```javascript
+class LooseFiber {
+    constructor(x, y, w, h, color) {
+        this.x = x;
+        this.y = y;
+        this.oldX = x;
+        this.oldY = y;
+        this.w = w;
+        this.h = h;
+        this.color = color;
+        this.gravity = 1200;
+        this.friction = 0.95;
+        this.settled = false;
+        this.alpha = 0.7;
+    }
+    
+    update(dt, walls) {
+        if (this.settled) return;
+        
+        const vx = (this.x - this.oldX) * this.friction;
+        const vy = (this.y - this.oldY) * this.friction;
+        
+        this.oldX = this.x;
+        this.oldY = this.y;
+        
+        this.x += vx;
+        this.y += vy;
+        this.y += this.gravity * dt;
+        
+        // Floor collision
+        if (this.y + this.h / 2 > window.innerHeight) {
+            this.y = window.innerHeight - this.h / 2;
+            this.oldY = this.y;
+        }
+        
+        // Wall collision (check against all walls)
+        for (const wall of walls) {
+            if (wall.cut || wall.type === 'loose') continue;
+            // Simple AABB collision resolution
+            if (this.x < wall.x + wall.w &&
+                this.x + this.w > wall.x &&
+                this.y < wall.y + wall.h &&
+                this.y + this.h > wall.y) {
+                // Push out
+                const overlapLeft = (this.x + this.w) - wall.x;
+                const overlapRight = (wall.x + wall.w) - this.x;
+                const overlapTop = (this.y + this.h) - wall.y;
+                const overlapBottom = (wall.y + wall.h) - this.y;
+                
+                const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+                
+                if (minOverlap === overlapLeft) {
+                    this.x = wall.x - this.w;
+                    this.oldX = this.x;
+                } else if (minOverlap === overlapRight) {
+                    this.x = wall.x + wall.w;
+                    this.oldX = this.x;
+                } else if (minOverlap === overlapTop) {
+                    this.y = wall.y - this.h;
+                    this.oldY = this.y;
+                } else {
+                    this.y = wall.y + wall.h;
+                    this.oldY = this.y;
+                }
+            }
+        }
+        
+        // Check if settled (low velocity for a while)
+        const speed = Math.abs(this.x - this.oldX) + Math.abs(this.y - this.oldY);
+        if (speed < 0.5 && this.y + this.h / 2 >= window.innerHeight - 1) {
+            this.settled = true;
+        }
+    }
+    
+    draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + this.w, this.y + this.h);
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+```
+
+For Particle:
+
+```javascript
+class Particle {
+    constructor(x, y, vx, vy, color, life, size) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = color;
+        this.life = life;
+        this.maxLife = life;
+        this.size = size;
+    }
+    
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vy += 400 * dt; // gravity
+        this.life -= dt;
+    }
+    
+    draw(ctx) {
+        const alpha = this.life / this.maxLife;
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.size;
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + this.vx * 0.05, this.y + this.vy * 0.05);
+        ctx.stroke();
+        ctx.restore();
+    }
+    
+    isDead() {
+        return this.life <= 0;
+    }
+}
+```
+
+For Checkpoint:
+
+```javascript
+class Checkpoint {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.activated = false;
+    }
+    
+    draw(ctx) {
+        ctx.save();
+        ctx.fillStyle = this.activated ? 'rgba(0,229,255,0.3)' : 'rgba(0,229,255,0.1)';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = this.activated ? '#00E5FF' : 'rgba(0,229,255,0.3)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+```
+
+For Spider:
+
+```javascript
+class Spider {
+    constructor(x, y, path) {
+        this.x = x;
+        this.y = y;
+        this.path = path; // array of points to follow
+        this.pathIndex = 0;
+        this.speed = 60;
+        this.radius = 10;
+        this.alive = true;
+    }
+    
+    update(dt) {
+        if (!this.alive) return;
+        
+        const target = this.path[this.pathIndex];
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist < 5) {
+            this.pathIndex = (this.pathIndex + 1) % this.path.length;
+        } else {
+            this.x += (dx / dist) * this.speed * dt;
+            this.y += (dy / dist) * this.speed * dt;
+        }
+    }
+    
+    draw(ctx) {
+        if (!this.alive) return;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        
+        // Body
+        ctx.fillStyle = '#8A1C1C';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Eyes
+        ctx.fillStyle = '#FF0000';
+        ctx.beginPath();
+        ctx.arc(-3, -2, 2, 0, Math.PI * 2);
+        ctx.arc(3, -2, 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+}
+```
+
+#### js/data/maze.js
+
+Recursive Backtracker maze generation:
+
+```javascript
+class MazeGenerator {
+    constructor(cols, rows, cellSize) {
+        this.cols = cols;
+        this.rows = rows;
+        this.cellSize = cellSize;
+        this.grid = [];
+        this.walls = [];
+        this.generate();
+    }
+    
+    generate() {
+        // Initialize grid
+        for (let r = 0; r < this.rows; r++) {
+            this.grid[r] = [];
+            for (let c = 0; c < this.cols; c++) {
+                this.grid[r][c] = {
+                    visited: false,
+                    walls: [true, true, true, true], // N, E, S, W
+                };
+            }
+        }
+        
+        // Start recursive backtracker
+        const stack = [];
+        const startCell = { col: 0, row: 0 };
+        this.grid[0][0].visited = true;
+        stack.push(startCell);
+        
+        while (stack.length > 0) {
+            const current = stack[stack.length - 1];
+            const neighbors = this.getUnvisitedNeighbors(current.col, current.row);
+            
+            if (neighbors.length > 0The user wants me to continue the JSON output. I need to complete the maze generation code and all the other files, then output a valid JSON object mapping filenames to their complete code contents.
+
+Let me think about what I need to write:
+1. Complete `js/data/maze.js` - Recursive Backtracker maze generation
+2. `js/systems/physics.js` - Verlet integration for loose fibers, collision detection
+3. `js/systems/audio.js` - Web Audio API sound effects
+4. `js/systems/input.js` - Keyboard and mouse input handling
+5. `js/systems/rendering.js` - All rendering: yarn bezier curves, particles, vignette, minimap, progress ring, interaction prompt
+6. `js/core/state.js` - Central state manager
+7. `js/core/game.js` - Main game loop
+
+I need to be careful about the JSON format. The keys should be filenames like "index.html", "css/style.css", "js/data/entities.js", etc. The values should be the complete code content as strings.
+
+Since this is a large project, I'll need to write all the code carefully. Let me plan each file:
+
+### js/data/maze.js
+- MazeGenerator class with Recursive Backtracker
+- Yarn creation from walls
+- Color assignment (terracotta, oxblood)
+- Danger zones, start, exit
+
+### js/systems/physics.js
+- Verlet integration for loose fibers
+- Circle-rectangle collision detection
+- Spatial hashing for performance
+
+### js/systems/audio.js
+- Web Audio API context
+- Sound effects: cut, step, settle, win, lose
+- Background ambient drone
+
+### js/systems/input.js
+- Keyboard state tracking
+- Mouse/touch for cutting
+- Canvas scaling for mobile
+
+### js/systems/rendering.js
+- Yarn bezier curves with sine wave displacement
+- Particle rendering
+- Vignette overlay
+- Minimap rendering
+- Progress ring
+- Interaction prompt
+
+### js/core/state.js
+- GameState class managing all game state
+- High score persistence
+- Timer management
+
+### js/core/game.js
+- Main game loop
+- Fixed timestep update
+- Render pipeline
+- Game state transitions
+
+Let me write all of these now. I need to be very careful about the JSON format - no markdown, just raw JSON.
+
+Actually, looking at the instructions again: "Continue EXACTLY from the next character. DO NOT repeat ANY previous text. DO NOT use markdown. Just output the remaining characters to complete the JSON."
+
+So I need to output just the JSON object, starting from where the previous response was cut off. The previous response was cut off mid-code in the maze.js file. I need to continue writing the rest of that file and then all other files, all within a valid JSON object.
+
+Wait, but the user said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". So the entire output should be a JSON object. Let me structure it properly.
+
+The JSON should look like:
+
+{
+  "index.html": "...",
+  "css/style.css": "...",
+  ...
+}
+
+
+But wait, the previous response was cut off mid-code. I need to continue from where it left off. The last thing written was part of the maze.js file. I need to complete that file and then write all the other files.
+
+Actually, I realize I need to be more careful. The user said "Continue EXACTLY from the next character." This means I should pick up where the previous response left off and continue writing. But the previous response was a JSON object that got cut off. So I need to continue the JSON object.
+
+Hmm, but the instruction says "DO NOT repeat ANY previous text." So I should just start writing the JSON object fresh, continuing from where the previous one was cut off.
+
+Actually, I think the intent is that I should continue the JSON output. The previous response started a JSON object and was cut off. I need to continue that JSON object.
+
+Let me think about this differently. The user wants a complete JSON object with all the file contents. I've been writing the code piece by piece. Now I need to wrap it all up in a JSON object.
+
+But actually, re-reading the instructions: "Continue EXACTLY from the next character. DO NOT repeat ANY previous text. DO NOT use markdown. Just output the remaining characters to complete the JSON."
+
+This means I should continue writing the JSON object, starting from the character right after where the previous response was cut off. The previous response ended mid-code in the maze.js file. So I need to continue writing that code and then add all the other files, all within a single JSON object.
+
+Wait, but the previous response was already a JSON object that was cut off. So I need to continue that JSON object. Let me just start writing the JSON object from the beginning, since I can't continue a partially-written JSON object easily.
+
+Actually, I think the simplest approach is to just output the complete JSON object now, with all the file contents. The previous response was cut off, so I'll provide the complete solution.
+
+Let me write all the files now. This is going to be extensive.
+
+Let me plan the architecture:
+
+**Files:**
+1. `index.html` - HTML structure with canvas, UI overlays, script tags
+2. `css/style.css` - All styling
+3. `js/data/entities.js` - Player, YarnSegment, LooseFiber, Particle, Checkpoint, Spider classes
+4. `js/data/maze.js` - MazeGenerator class
+5. `js/systems/physics.js` - Physics system with Verlet integration
+6. `js/systems/audio.js` - Audio system
+7. `js/systems/input.js` - Input handling
+8. `js/systems/rendering.js` - Rendering system
+9. `js/core/state.js` - Game state manager
+10. `js/core/game.js` - Main game loop
+
+Let me write each file carefully.
+
+For the maze generation, I need:
+- Recursive Backtracker algorithm
+- Convert grid cells to wall segments
+- Assign colors based on position (terracotta borders, oxblood interior)
+- Create start and exit points
+- Add danger zones
+- Add checkpoints
+- Add spider patrol paths
+
+For physics:
+- Verlet integration for loose fibers
+- Circle-rectangle collision
+- Spatial hashing for performance
+
+For audio:
+- Web Audio API
+- Cut sound (short noise burst)
+- Step sound (subtle footstep)
+- Settle sound (thud)
+- Win sound (fanfare)
+- Ambient drone
+
+For input:
+- Keyboard tracking (WASD)
+- Mouse drag for cutting
+- Touch support
+- Canvas scaling
+
+For rendering:
+- Yarn as bezier curves with sine wave displacement
+- Particles
+- Vignette overlay
+- Minimap
+- Progress ring
+- Interaction prompt
+
+For state:
+- Game state management
+- High score persistence
+- Timer
+
+For game loop:
+- Fixed timestep
+- Update and render phases
+- State transitions
+
+Let me write all of this now. I'll be thorough but efficient.
+
+Actually, I realize this is going to be a very long response. Let me make sure I get everything right.
+
+Let me write the code now, being careful about syntax and completeness.
+
+For the maze, I need to think about how walls become segments. The recursive backtracker creates a grid of cells, each with 4 walls. I need to convert these walls into rectangular segments that the player can collide with and the player can cut.
+
+The approach:
+1. Generate the maze grid
+2. For each cell, create wall segments for N, E, S, W walls that exist
+3. Assign colors: border walls get terracotta, interior walls get oxblood
+4. Mark start cell (top-left) and exit cell (bottom-right)
+5. Add danger zones near exit
+6. Add checkpoints along the path
+7. Create spider patrol paths
+
+For the wall segments, each wall is a rectangle. The width of horizontal walls should be the cell size, and the height should also be the cell size. Vertical walls would be the same.
+
+Actually, let me think about this more carefully. In a typical maze representation:
+- Each cell is `cellSize` x `cellSize` pixels
+- Walls are between cells
+- A horizontal wall between two cells spans the full width of both cells
+- A vertical wall spans the full height of both cells
+
+So for each cell at (col, row):
+- If there's a wall to the north (N), create a horizontal segment at y = row * cellSize, spanning from col * cellSize to (col+1) * cellSize
+- If there's a wall to the east (E), create a vertical segment at x = (col+1) * cellSize, spanning from row * cellSize to (row+1) * cellSize
+- And so on for S and W
+
+This will create overlapping walls at corners, but that's fine for collision purposes.
+
+Let me code this up.
+
+For the color scheme:
+- Border walls: terracotta (#C45A47)
+- Interior walls: oxblood (#8B1A1A)
+- Start: cyan glow
+- Exit: gold glow
+- Danger: dark red with red glow
+
+Now let me write all the files. I'll start with the JSON object.
+
+Actually, I need to think about the overall structure. The user wants a JSON object where keys are filenames and values are the complete code. So the JSON would look like:
+
+
+{
+  "index.html": "<!DOCTYPE html>...",
+  "css/style.css": "*{...}",
+  "js/data/entities.js": "class Player {...}",
+  ...
+}
+
+
+Let me write this out completely now. I need to be very careful with escaping quotes and newlines in the JSON strings.
+
+Actually, for JSON, I need to escape:
+- Double quotes as \"
+- Newlines as \n
+- Tabs as \t
+
+This is going to be quite verbose. Let me write it carefully.
+
+Alternatively, I could use a different approach - maybe I can write the JSON with proper escaping. But this is going to be very long.
+
+Let me think about whether there's a simpler way. The user said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". So I must output JSON.
+
+OK let me just do it. I'll write each file's content as a JSON string value.
+
+Let me start writing the code for each file:
+
+### index.html
+
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Yarn Maze: Unravel the Path</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧶</text></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-overlay">
+            <div id="hud-top">
+                <div id="timer">00:00</div>
+                <div id="progress-ring"><canvas id="progressCanvas" width="60" height="60"></canvas></div>
+                <div id="unravel-text">UNRAVELLED: 0%</div>
+            </div>
+            <div id="minimap-container">
+                <canvas id="minimap" width="150" height="150"></canvas>
+            </div>
+            <div id="interaction-prompt"></div>
+            <div id="start-screen">
+                <h1>YARN MAZE</h1>
+                <h2>Unravel the Path</h2>
+                <p>Use WASD to move, left-click+drag to cut yarn.</p>
+                <button id="start-btn">START</button>
+                <p id="high-score-display">HIGH SCORE: 0</p>
+            </div>
+            <div id="win-screen" style="display:none;">
+                <h1>YOU UNRAVELED IT!</h1>
+                <p id="final-time"></p>
+                <button id="restart-btn">PLAY AGAIN</button>
+            </div>
+        </div>
+    </div>
+    <script src="js/data/entities.js"></script>
+    <script src="js/data/maze.js"></script>
+    <script src="js/systems/physics.js"></script>
+    <script src="js/systems/audio.js"></script>
+    <script src="js/systems/input.js"></script>
+    <script src="js/systems/rendering.js"></script>
+    <script src="js/core/state.js"></script>
+    <script src="js/core/game.js"></script>
+    <script>
+        window.addEventListener('load', function() {
+            var game = new Game();
+            game.init();
+        });
+    </script>
+</body>
+</html>
+
+
+### css/style.css
+
+css
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0B1026; overflow: hidden; font-family: 'Courier New', monospace; user-select: none; }
+#game-container { position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+#gameCanvas { display: block; background: #0B1026; touch-action: none; }
+#ui-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+#hud-top { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; align-items: center; }
+#timer { color: #FFFDD0; font-size: 14px; letter-spacing: 2px; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+#progress-ring canvas { display: block; }
+#unravel-text { color: #FFFDD0; font-size: 12px; letter-spacing: 1px; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+#minimap-container { position: absolute; bottom: 15px; right: 15px; }
+#minimap { border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; background: rgba(11,16,38,0.7); }
+#interaction-prompt { position: absolute; color: rgba(255,255,255,0.6); font-size: 12px; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+#start-screen, #win-screen { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: auto; }
+#start-screen h1 { font-size: 48px; color: #E0725C; letter-spacing: 4px; text-shadow: 0 0 20px rgba(224,114,92,0.5); }
+#start-screen h2 { font-size: 20px; color: #FFFDD0; letter-spacing: 6px; margin-bottom: 20px; }
+#start-screen p { color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 15px; }
+#start-btn, #restart-btn { padding: 12px 32px; font-family: 'Courier New', monospace; font-size: 16px; letter-spacing: 3px; background: transparent; color: #00E5FF; border: 2px solid #00E5FF; cursor: pointer; border-radius: 4px; transition: all 0.3s; }
+#start-btn:hover, #restart-btn:hover { background: #00E5FF; color: #0B1026; }
+#high-score-display { color: rgba(255,255,255,0.4); font-size: 12px; margin-top: 15px; }
+#final-time { color: #FFFDD0; font-size: 18px; margin: 15px 0; }
+
+
+### js/data/entities.js
+
+This needs Player, YarnSegment, LooseFiber, Particle, Checkpoint, Spider classes.
+
+### js/data/maze.js
+
+MazeGenerator with Recursive Backtracker.
+
+### js/systems/physics.js
+
+Verlet integration, collision detection.
+
+### js/systems/audio.js
+
+Web Audio API sounds.
+
+### js/systems/input.js
+
+Keyboard and mouse input.
+
+### js/systems/rendering.js
+
+All rendering code.
+
+### js/core/state.js
+
+Game state manager.
+
+### js/core/game.js
+
+Main game loop.
+
+OK, let me write all of this now. I need to be very careful about the JSON formatting.
+
+Actually, I realize I should think about this more carefully. The JSON will be enormous because each file's content is a string value. I need to make sure all the code is correct and complete.
+
+Let me write each file's content carefully:
+
+#### entities.js
+
+javascript
+class Player {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.radius = 12;
+        this.acceleration = 1200;
+        this.friction = 0.85;
+        this.maxSpeed = 220;
+        this.angle = 0;
+    }
+    update(dt, input) {
+        let ax = 0, ay = 0;
+        if (input.up) ay -= this.acceleration;
+        if (input.down) ay += this.acceleration;
+        if (input.left) ax -= this.acceleration;
+        if (input.right) ax += this.acceleration;
+        this.vx += ax * dt;
+        this.vy += ay * dt;
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+        if (speed > this.maxSpeed) {
+            this.vx = (this.vx / speed) * this.maxSpeed;
+            this.vy = (this.vy / speed) * this.maxSpeed;
+        }
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        if (Math.abs(this.vx) > 1) {
+            this.angle = Math.atan2(this.vy, this.vx);
+        }
+    }
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.shadowColor = '#00E5FF';
+        ctx.shadowBlur = 15;
+        ctx.fillStyle = '#00E5FF';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.beginPath();
+        ctx.arc(-3, -3, this.radius * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+    getBounds() {
+        return { x: this.x - this.radius, y: this.y - this.radius, w: this.radius * 2, h: this.radius * 2 };
+    }
+}
+
+class YarnSegment {
+    constructor(x, y, w, h, color, type = 'wall') {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.color = color;
+        this.type = type;
+        this.cut = false;
+        this.thickness = 2 + Math.random() * 3;
+        this.id = Math.random().toString(36).substr(2, 9);
+    }
+    draw(ctx) {
+        if (this.cut) return;
+        const cx = this.x + this.w / 2;
+        const cy = this.y + this.h / 2;
+        const halfW = this.w / 2;
+        const halfH = this.h / 2;
+        const waveAmp = 1.5;
+        const waveFreq = 0.15;
+        const t = Date.now() * 0.001;
+        const offsetX = Math.sin(t + this.id.charCodeAt(0)) * waveAmp;
+        const offsetY = Math.cos(t + this.id.charCodeAt(1)) * waveAmp;
+        ctx.save();
+        if (this.type === 'danger') {
+            ctx.shadowColor = this.color;
+            ctx.shadowBlur = 8;
+        } else if (this.type === 'exit') {
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 15;
+        } else if (this.type === 'start') {
+            ctx.shadowColor = '#00E5FF';
+            ctx.shadowBlur = 10;
+        }
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.thickness;
+        ctx.lineCap = 'round';
+        const segments = 3;
+        for (let i = 0; i < segments; i++) {
+            const segT = i / (segments - 1);
+            const px = this.x + halfW + (this.w - halfW * 2) * segT + offsetX * 0.3;
+            const py = this.y + halfH + (this.h - halfH * 2) * segT + offsetY * 0.3;
+            ctx.beginPath();
+            ctx.moveTo(this.x + halfW, this.y + halfH * 0.3);
+            ctx.quadraticCurveTo(cx + offsetX * 0.5, cy + offsetY * 0.5, px, py);
+            ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(this.x, this.y, this.w, this.h);
+        ctx.restore();
+    }
+    intersects(px, py, radius) {
+        const closestX = Math.max(this.x, Math.min(px, this.x + this.w));
+        const closestY = Math.max(this.y, Math.min(py, this.y + this.h));
+        const dx = px - closestX;
+        const dy = py - closestY;
+        return (dx * dx + dy * dy) < (radius * radius);
+    }
+    containsPoint(px, py) {
+        return px >= this.x && px <= this.x + this.w && py >= this.y && py <= this.y + this.h;
+    }
+}
+
+class LooseFiber {
+    constructor(x, y, w, h, color) {
+        this.x = x;
+        this.y = y;
+        this.oldX = x;
+        this.oldY = y;
+        this.w = w;
+        this.h = h;
+        this.color = color;
+        this.gravity = 1200;
+        this.friction = 0.95;
+        this.settled = false;
+        this.alpha = 0.7;
+    }
+    update(dt, walls) {
+        if (this.settled) return;
+        const vx = (this.x - this.oldX) * this.friction;
+        const vy = (this.y - this.oldY) * this.friction;
+        this.oldX = this.x;
+        this.oldY = this.y;
+        this.x += vx;
+        this.y += vy;
+        this.y += this.gravity * dt;
+        if (this.y + this.h / 2 > window.innerHeight) {
+            this.y = window.innerHeight - this.h / 2;
+            this.oldY = this.y;
+        }
+        for (const wall of walls) {
+            if (wall.cut || wall.type === 'loose') continue;
+            if (this.x < wall.x + wall.w &&
+                this.x + this.w > wall.x &&
+                this.y < wall.y + wall.h &&
+                this.y + this.h > wall.y) {
+                const overlapLeft = (this.x + this.w) - wall.x;
+                const overlapRight = (wall.x + wall.w) - this.x;
+                const overlapTop = (this.y + this.h) - wall.y;
+                const overlapBottom = (wall.y + wall.h) - this.y;
+                const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
+                if (minOverlap === overlapLeft) {
+                    this.x = wall.x - this.w;
+                    this.oldX = this.x;
+                } else if (minOverlap === overlapRight) {
+                    this.x = wall.x + wall.w;
+                    this.oldX = this.x;
+                } else if (minOverlap === overlapTop) {
+                    this.y = wall.y - this.h;
+                    this.oldY = this.y;
+                } else {
+                    this.y = wall.y + wall.h;
+                    this.oldY = this.y;
+                }
+            }
+        }
+        const speed = Math.abs(this.x - this.oldX) + Math.abs(this.y - this.oldY);
+        if (speed < 0.5 && this.y + this.h / 2 >= window.innerHeight - 1) {
+            this.settled = true;
+        }
+    }
+    draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + this.w, this.y + this.h);
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+class Particle {
+    constructor(x, y, vx, vy, color, life, size) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = color;
+        this.life = life;
+        this.maxLife = life;
+        this.size = size;
+    }
+    update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vy += 400 * dt;
+        this.life -= dt;
+    }
+    draw(ctx) {
+        const alpha = this.life / this.maxLife;
+        ctx.save();
+        ctx.globalAlpha = alpha * 0.8;
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = this.size;
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x + this.vx * 0.05, this.y + this.vy * 0.05);
+        ctx.stroke();
+        ctx.restore();
+    }
+    isDead() {
+        return this.life <= 0;
+    }
+}
+
+class Checkpoint {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.activated = false;
+    }
+    draw(ctx) {
+        ctx.save();
+        ctx.fillStyle = this.activated ? 'rgba(0,229,255,0.3)' : 'rgba(0,229,255,0.1)';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = this.activated ? '#00E5FF' : 'rgba(0,229,255,0.3)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+    }
+}
+
+class Spider {
+    constructor(x, y, path) {
+        this.x = x;
+        this.y = y;
+        this.path = path;
+        this.pathIndex = 0;
+        this.speed = 60;
+        this.radius = 10;
+        this.alive = true;
+    }
+    update(dt) {
+        if (!this.alive) return;
+        const target = this.path[this.pathIndex];
+        const dx = target.x - this.x;
+        const dy = target.y - this.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 5) {
+            this.pathIndex = (this.pathIndex + 1) % this.path.length;
+        } else {
+            this.x += (dx / dist) * this.speed * dt;
+            this.y += (dy / dist) * this.speed * dt;
+        }
+    }
+    draw(ctx) {
+        if (!this.alive) return;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.fillStyle = '#8A1C1C';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FF0000';
+        ctx.beginPath();
+        ctx.arc(-3, -2, 2, 0, Math.PI * 2);
+        ctx.arc(3, -2, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+
+#### maze.js
+
+javascript
+class MazeGenerator {
+    constructor(cols, rows, cellSize) {
+        this.cols = cols;
+        this.rows = rows;
+        this.cellSize = cellSize;
+        this.grid = [];
+        this.walls = [];
+        this.generate();
+    }
+    generate() {
+        for (let r = 0; r < this.rows; r++) {
+            this.grid[r] = [];
+            for (let c = 0; c < this.cols; c++) {
+                this.grid[r][c] = {
+                    visited: false,
+                    walls: [true, true, true, true],
+                };
+            }
+        }
+        const stack = [];
+        const startCell = { col: 0, row: 0 };
+        this.grid[0][0].visited = true;
+        stack.push(startCell);
+        while (stack.length > 0) {
+            const current = stack[stack.length - 1];
+            const neighbors = this.getUnvisitedNeighbors(current.col, current.row);
+            if (neighbors.length > 0) {
+                const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                this.removeWall(current.col, current.row, next.col, next.row);
+                this.grid[next.row][next.col].visited = true;
+                stack.push({ col: next.col, row: next.row });
+            } else {
+                stack.pop();
+            }
+        }
+        this.createWallSegments();
+        this.assignColors();
+        this.addStartExit();
+        this.addCheckpoints();
+        this.addSpider();
+    }
+    getUnvisitedNeighbors(col, row) {
+        const neighbors = [];
+        if (row > 0 && !this.grid[row - 1][col].visited) neighbors.
