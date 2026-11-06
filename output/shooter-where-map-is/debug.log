@@ -1,0 +1,1491 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 2 column 3 (char 4)
+
+Raw: The user wants me to create a 2D HTML5 Canvas shooter game called "Cube Rotor" based on a detailed technical specification. Let me break down what I need to build:
+
+1. **Project Structure:**
+   - `index.html` - Entry point with canvas, favicon, responsive design
+   - `style.css` - Styling for the game UI
+   - `main.js` - Public entry point that initializes the game
+   - `src/core/` - Game loop, input, physics, rotation transforms, screen shake
+   - `src/entities/` - Player, enemies, projectiles, particles, power-ups
+   - `src/systems/` - Combat, spawning, rendering, audio
+
+2. **Key Features:**
+   - Responsive canvas (mobile-friendly)
+   - Emoji favicon
+   - Vibrant color palette (cyberpunk neon)
+   - High score persistence via LocalStorage
+   - Web Audio API sound effects
+   - Speedrun timer
+   - Rotating cube map mechanics
+   - Player movement physics (acceleration-based)
+   - Combat system (spread shot, projectiles)
+   - Enemy types (Drone, Tank)
+   - Power-ups (Health, Rapid Fire, Shield)
+   - HUD elements (Health bar, rotation timer, score, ammo, crosshair)
+   - Particle effects
+   - Screen shake on rotation
+
+Let me plan the architecture:
+
+**src/core/**
+- `gameLoop.js` - Main game loop
+- `input.js` - Input handling
+- `physics.js` - Physics calculations
+- `rotation.js` - Cube rotation transforms
+- `screenShake.js` - Screen shake logic
+
+**src/entities/**
+- `player.js` - Player entity
+- `enemy.js` - Enemy types (Drone, Tank)
+- `projectile.js` - Bullet system
+- `particle.js` - Particle effects
+- `powerup.js` - Power-up drops
+
+**src/systems/**
+- `combat.js` - Combat system
+- `spawning.js` - Enemy spawning
+- `rendering.js` - Canvas rendering
+- `audio.js` - Sound effects via Web Audio API
+
+Let me start building this. I'll create all the files needed.
+
+Let me think about the game design more carefully:
+
+**Rotation Mechanics:**
+- Every 8 seconds, the map rotates 90 degrees clockwise
+- 1.5 second warning before rotation
+- Rotation interpolates over 0.5 seconds
+- Spawn points anchored to cube vertices
+
+**Player Movement:**
+- Acceleration: 1500 px/s²
+- Max speed: 320 px/s
+- Friction: 0.85 per frame
+- Can't leave active face of cube
+
+**Combat:**
+- Bullets at 600 px/s, max lifetime 1.5s, max range 400px
+- Spread shot: 3 projectiles, 5-degree spread
+- Drone: fast, weak, moves toward player
+- Tank: slow, strong, sine wave movement, shoots back
+
+**Power-ups:**
+- Triangle = Health
+- Square = Rapid Fire
+- Hexagon = Shield
+
+**Visual Style:**
+- Dark void background (#050508)
+- Neon cyan edges
+- Cyberpunk minimalism
+- Glassmorphism HUD
+
+Let me write the code now. I'll structure it as ES modules.
+
+Actually, let me think about how to make this work well. The game needs to be playable and fun. Let me design the core systems carefully.
+
+For the rotation mechanic, I need to think about what "rotating the map" means in 2D. The spec says "the playfield represents a single face of a giant, rotating cubic map." So the entire playfield rotates. This means:
+- The world coordinates rotate
+- The player's position is in world space but rendered in screen space
+- When the map rotates, the player needs to adapt
+
+Actually, let me re-read: "Collision detection uses a transformed coordinate system—the player's position is translated into the wall's local frame before checking bounds, ensuring smooth sliding along dynamically rotating edges."
+
+So the idea is:
+- There's an active face of the cube (a square boundary)
+- The player can move within this square
+- When the cube rotates, the boundaries change
+- We transform the player's position into the wall's local frame to check bounds
+
+This is essentially a rotating square boundary. Let me implement it as:
+- The play area is always a square centered on screen
+- The square has a "rotation" angle that changes over time
+- Player position is checked against the rotated square bounds
+- Visual: the square border rotates
+
+Let me simplify: The playfield is a large square. The square rotates by 90° every 8 seconds. The player must stay within the current orientation of the square. When checking bounds, we transform the player's position into the square's local coordinate system (un-rotate by the square's angle) and check if they're within [-size/2, size/2] in both axes.
+
+This creates the "sliding along rotating edges" effect.
+
+Let me code this up now.
+
+I'll create the following files:
+1. `index.html`
+2. `style.css`
+3. `main.js`
+4. `src/core/gameLoop.js`
+5. `src/core/input.js`
+6. `src/core/physics.js`
+7. `src/core/rotation.js`
+8. `src/core/screenShake.js`
+9. `src/entities/player.js`
+10. `src/entities/enemy.js`
+11. `src/entities/projectile.js`
+11. `src/entities/particle.js`
+12. `src/entities/powerup.js`
+13. `src/systems/combat.js`
+14. `src/systems/spawning.js`
+15. `src/systems/rendering.js`
+16. `src/systems/audio.js`
+
+Let me write each file carefully.
+
+Actually, let me reconsider the file structure. The spec says:
+- `src/core/` for game loop, input, physics, rotation transforms, screen shake
+- `src/entities/` for player, enemies, projectiles, particles, power-ups
+- `src/systems/` for combat, spawning, rendering, audio
+
+And `index.html`, `style.css`, `main.js` as public entry point.
+
+Let me also add tests and assets directories as mentioned.
+
+Let me start coding. I'll be thorough and make sure everything works together.
+
+Let me think about the module system. I'll use ES modules with import/export. In the HTML, I'll use `<script type="module">`.
+
+Let me plan the main game loop:
+
+```
+GameLoop:
+  - update(dt):
+    - handle input
+    - update player physics
+    - update rotation timer
+    - update enemies
+    - update projectiles
+    - update particles
+    - update power-ups
+    - spawn enemies
+    - handle combat collisions
+    - check win/lose conditions
+  - render():
+    - clear canvas
+    - apply screen shake offset
+    - render background grid
+    - render cube face (rotated square)
+    - render spawn points
+    - render enemies
+    - render projectiles
+    - render player
+    - render particles
+    - render power-ups
+    - render HUD
+```
+
+Now let me think about the rotation system more carefully.
+
+The cube face is a square. Let's say the square has side length S (e.g., 800px). It's centered at the canvas center. The square has a rotation angle θ.
+
+When checking if the player is inside the square:
+1. Transform player position into the square's local frame: subtract center, rotate by -θ
+2. Check if both |x| < S/2 and |y| < S/2
+
+When rendering:
+1. Save context
+2. Translate to center
+3. Rotate by θ
+4. Draw square border
+5. Restore context
+
+The rotation cycle:
+- Every 8 seconds, rotation starts
+- 1.5s warning: pulsing red arc at top
+- 0.5s rotation: interpolate from current angle to current angle + 90°
+- After rotation, new 8s cycle begins
+
+Wait, actually re-reading: "Every 8 seconds, the map rotates exactly 90 degrees clockwise." So the full cycle is 8 seconds, and during that time the map might rotate? Or does the rotation happen within the 8 seconds?
+
+Let me re-read: "Rotation Cycle: Every 8 seconds, the map rotates exactly 90 degrees clockwise."
+
+I think this means: every 8 seconds, there's a rotation event. The rotation takes 0.5 seconds. Then there's a new 8-second countdown before the next rotation.
+
+Actually, looking at the warning phase: "1.5 seconds before rotation, a pulsing red arc appears at the top edge of the screen, signaling the impending shift."
+
+So the cycle is:
+- 8 seconds of normal play
+- 1.5 seconds warning (red arc appears)
+- 0.5 seconds rotation transition
+- Then back to normal play for another 8 seconds
+
+Total cycle: 8 + 1.5 + 0.5 = 10 seconds. Or maybe the 8 seconds includes the warning and rotation? Let me interpret it as: the rotation happens every 8 seconds total, with the warning and rotation phases being part of that 8 seconds.
+
+Actually, I think the simplest interpretation is:
+- A rotation cycle is 8 seconds
+- Within that cycle, there's a warning phase (1.5s) then rotation (0.5s)
+- But 1.5 + 0.5 = 2s, leaving 6s of normal play
+
+Hmm, that doesn't quite work either. Let me just go with:
+- Rotation cycle: 8 seconds
+- Warning: starts at some point, lasts 1.5s
+- Rotation: 0.5s
+- Normal play: remaining time
+
+I'll make the rotation cycle 8 seconds total, with warning starting at 6.5s (1.5s before rotation at 8s mark), rotation at 8s taking 0.5s, and then normal play until the next rotation at 16s.
+
+Actually, let me simplify: the rotation happens every 8 seconds. The warning shows 1.5 seconds before. The rotation takes 0.5 seconds. So:
+- t=0 to t=6.5: normal play
+- t=6.5 to t=8: warning (red arc)
+- t=8 to t=8.5: rotation transition
+- t=8.5 to t=16: normal play
+- t=16 to t=18.5: warning
+- t=18.5 to t=19: rotation
+...
+
+That gives a 16-second cycle. That seems reasonable.
+
+Or maybe simpler: rotation cycle is 8 seconds, warning is part of it. Warning at 6.5s, rotation at 7-7.5s, rest is normal. Then 8s normal, repeat. Total cycle 16s.
+
+I'll go with this approach. Let me code it.
+
+Now, for the "speedrun timer" mentioned in the sneaky features - I'll add a timer that tracks elapsed time and displays it. The high score will be saved to localStorage.
+
+Let me now write all the code.
+
+Let me start with the HTML file, then CSS, then JS modules.
+
+For the favicon, I'll use an emoji like 🎮 or 🔷 or something cube-related. Let me use 🔷 or maybe a custom approach. Actually, the spec says "cool emoji favicon" so I'll use something like 🎮 or 👾 or 🔷. Let me use 🔷 since it relates to cubes.
+
+Actually, for a favicon, I can use an emoji directly in the HTML:
+```html
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔷</text></svg>">
+```
+
+This creates an SVG favicon with an emoji.
+
+Now let me write all the files. This is going to be extensive.
+
+Let me think about the overall code organization more carefully.
+
+**main.js** - Entry point, creates Game instance, starts loop
+**src/core/gameLoop.js** - Game class with update/render methods
+**src/core/input.js** - InputManager class
+**src/core/physics.js** - Physics utilities (collision, velocity)
+**src/core/rotation.js** - RotationManager class
+**src/core/screenShake.js** - ScreenShake utility
+
+**src/entities/player.js** - Player class
+**src/entities/enemy.js** - Enemy base class + Drone, Tank subclasses
+**src/entities/projectile.js** - Projectile class
+**src/entities/particle.js** - Particle class
+**src/entities/powerup.js** - PowerUp class
+
+**src/systems/combat.js** - CombatSystem class
+**src/systems/spawning.js** - SpawningSystem class
+**src/systems/rendering.js** - RenderingSystem class
+**src/systems/audio.js** - AudioSystem class
+
+Let me write these now. I need to be careful about the module imports working correctly.
+
+Let me think about the game state management. I'll have a central Game object that holds all entities and manages the systems.
+
+Here's my plan for the Game class:
+
+```javascript
+class Game {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.input = new InputManager(canvas);
+    this.physics = new Physics();
+    this.rotation = new RotationManager();
+    this.screenShake = new ScreenShake();
+    this.audio = new AudioSystem();
+    this.combat = new CombatSystem();
+    this.spawning = new SpawningSystem();
+    this.renderer = new RenderingSystem(this);
+    
+    this.player = new Player(this);
+    this.enemies = [];
+    this.projectiles = [];
+    this.particles = [];
+    this.powerups = [];
+    
+    this.score = 0;
+    this.highScore = parseInt(localStorage.getItem('cubeRotorHighScore')) || 0;
+    this.startTime = Date.now();
+    this.elapsedTime = 0;
+    
+    // ... setup
+  }
+  
+  update(dt) { ... }
+  render() { ... }
+}
+```
+
+OK let me just write all the code now. I'll be comprehensive.
+
+Let me think about responsive canvas. The canvas should scale to fit mobile screens. I'll set the canvas internal resolution to a fixed size (like 800x600 or 1000x1000) and use CSS to scale it. On mobile, it should fill the viewport while maintaining aspect ratio.
+
+Actually, for a square playfield, let me use a square aspect ratio. The canvas internal resolution could be something like 1000x1000, and CSS scales it to fit the screen.
+
+Let me use a design resolution of 1000x1000 and scale via CSS.
+
+For mobile responsiveness:
+```css
+#gameCanvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+```
+
+But I need to handle the canvas scaling properly. Let me set the canvas width/height attributes to the internal resolution and use CSS to scale.
+
+Actually, let me think about this differently. For best mobile support:
+- Set canvas internal resolution based on device pixel ratio
+- Use CSS to make it fill the screen while maintaining aspect ratio
+
+Let me use a simpler approach: fixed internal resolution (1000x1000), CSS scales to fit viewport.
+
+Now let me write everything.
+
+Actually, I realize I should think about the mouse aiming. The spec says "Mouse for aiming/shooting." So the player aims with the mouse and shoots when clicking. The crosshair follows the mouse.
+
+But on mobile, there's no mouse. I should add touch controls - touch to aim and shoot. Let me add basic touch support.
+
+For the crosshair being "offset slightly based on player velocity" - I'll track the player's velocity and offset the crosshair accordingly.
+
+Let me now write all the code. I'll create each file one by one.
+
+Let me start coding:
+
+### index.html
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Cube Rotor</title>
+  <link rel="icon" href="data:image/svg+xml,...">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="1000" height="1000"></canvas>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
+```
+
+### style.css
+
+I need glassmorphism, responsive canvas, etc.
+
+### main.js
+
+Entry point that creates the game.
+
+Let me write all the modules now. I'll be thorough.
+
+Let me think about the physics module:
+
+```javascript
+// src/core/physics.js
+export class Physics {
+  static clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+  
+  static lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+  
+  static distance(x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  
+  static checkSquareBounds(px, py, cx, cy, halfSize, angle) {
+    // Transform player position into square's local frame
+    const cos = Math.cos(-angle);
+    const sin = Math.sin(-angle);
+    const dx = px - cx;
+    const dy = py - cy;
+    const localX = dx * cos - dy * sin;
+    const localY = dx * sin + dy * cos;
+    return Math.abs(localX) <= halfSize && Math.abs(localY) <= halfSize;
+  }
+  
+  static resolveSquareCollision(px, py, cx, cy, halfSize, angle, playerRadius) {
+    // Returns adjusted position if collision, null otherwise
+    if (!this.checkSquareBounds(px, py, cx, cy, halfSize, angle)) {
+      // Transform to local frame
+      const cos = Math.cos(-angle);
+      const sin = Math.sin(-angle);
+      const dx = px - cx;
+      const dy = py - cy;
+      const localX = dx * cos - dy * sin;
+      const localY = dx * sin + dy * cos;
+      
+      // Push out of the square
+      const pushDist = halfSize + playerRadius;
+      let newLocalX = localX;
+      let newLocalY = localY;
+      
+      if (Math.abs(localX) > pushDist) {
+        newLocalX = Math.sign(localX) * pushDist;
+      }
+      if (Math.abs(localY) > pushDist) {
+        newLocalY = Math.sign(localY) * pushDist;
+      }
+      
+      // Transform back to world frame
+      const worldCos = Math.cos(angle);
+      const worldSin = Math.sin(angle);
+      const worldX = cx + newLocalX * worldCos - newLocalY * worldSin;
+      const worldY = cy + newLocalX * worldSin + newLocalY * worldCos;
+      
+      return { x: worldX, y: worldY };
+    }
+    return null;
+  }
+}
+```
+
+Hmm, this collision resolution is a bit tricky. Let me think about it more carefully.
+
+When the square is axis-aligned (angle = 0), the player is constrained to a box. When the square rotates, we need to transform the player's position into the square's local frame, check bounds, and if outside, push them back in.
+
+The push direction should be along the normal of the nearest edge. Let me simplify: just push the player back to the nearest edge.
+
+Actually, for a simple approach: transform to local frame, clamp to [-halfSize, halfSize], transform back. This gives smooth sliding behavior.
+
+```javascript
+static resolveSquareCollision(px, py, cx, cy, halfSize, angle, radius) {
+  const cos = Math.cos(-angle);
+  const sin = Math.sin(-angle);
+  const dx = px - cx;
+  const dy = py - cy;
+  const localX = dx * cos - dy * sin;
+  const localY = dx * sin + dy * cos;
+  
+  const limit = halfSize - radius; // Account for player radius
+  let newLocalX = localX;
+  let newLocalY = localY;
+  
+  if (localX > limit) newLocalX = limit;
+  else if (localX < -limit) newLocalX = -limit;
+  
+  if (localY > limit) newLocalY = limit;
+  else if (localY < -limit) newLocalY = -limit;
+  
+  // Transform back
+  const worldCos = Math.cos(angle);
+  const worldSin = Math.sin(angle);
+  const worldX = cx + newLocalX * worldCos - newLocalY * worldSin;
+  const worldY = cy + newLocalX * worldSin + newLocalY * worldCos;
+  
+  return { x: worldX, y: worldY };
+}
+```
+
+This should work well for smooth sliding along edges.
+
+Now let me think about the rotation manager:
+
+```javascript
+// src/core/rotation.js
+export class RotationManager {
+  constructor() {
+    this.cycleDuration = 8; // seconds between rotations
+    this.warningDuration = 1.5; // seconds before rotation
+    this.rotationDuration = 0.5; // seconds for rotation transition
+    this.currentAngle = 0;
+    this.targetAngle = 0;
+    this.warningTimer = 0;
+    this.rotationTimer = 0;
+    this.isWarning = false;
+    this.isRotating = false;
+    this.nextRotationTime = this.cycleDuration;
+  }
+  
+  update(dt) {
+    if (!this.isRotating) {
+      this.nextRotationTime -= dt;
+      if (this.nextRotationTime <= 0) {
+        this.isWarning = true;
+        this.warningTimer = this.warningDuration;
+      }
+      if (this.isWarning) {
+        this.warningTimer -= dt;
+        if (this.warningTimer <= 0) {
+          this.isRotating = true;
+          this.rotationTimer = this.rotationDuration;
+          this.currentAngle += Math.PI / 2; // 90 degrees clockwise
+          this.targetAngle = this.currentAngle;
+        }
+      }
+    } else {
+      this.rotationTimer -= dt;
+      // Interpolate angle
+      const t = 1 - (this.rotationTimer / this.rotationDuration);
+      this.currentAngle = this.lerp(this.startAngle, this.targetAngle, t);
+      if (this.rotationTimer <= 0) {
+        this.isRotating = false;
+        this.isWarning = false;
+        this.nextRotationTime = this.cycleDuration;
+      }
+    }
+  }
+  
+  get progress() {
+    // 0 to 1 progress through the warning phase
+    if (this.isWarning) {
+      return 1 - (this.warningTimer / this.warningDuration);
+    }
+    return 0;
+  }
+  
+  get rotationProgress() {
+    // 0 to 1 progress through the rotation phase
+    if (this.isRotating) {
+      return 1 - (this.rotationTimer / this.rotationDuration);
+    }
+    return 0;
+  }
+  
+  get countdown() {
+    // Time remaining until rotation (for HUD)
+    if (this.isWarning) {
+      return this.warningTimer;
+    }
+    return this.nextRotationTime;
+  }
+}
+```
+
+Wait, I need to track the start angle for interpolation. Let me fix that.
+
+Actually, let me rethink. The rotation manager should:
+1. Track the current rotation angle (which changes over time)
+2. Trigger warnings and rotations at specific times
+3. Provide the current angle for rendering and collision
+
+Let me redesign:
+
+```javascript
+export class RotationManager {
+  constructor() {
+    this.cycleDuration = 8;
+    this.warningDuration = 1.5;
+    this.rotationDuration = 0.5;
+    this.angle = 0;
+    this.phase = 'normal'; // 'normal', 'warning', 'rotating'
+    this.phaseTimer = this.cycleDuration;
+    this.warningStart = 0;
+    this.warningEnd = 0;
+    this.rotationStart = 0;
+    this.rotationEnd = 0;
+  }
+  
+  update(dt) {
+    this.phaseTimer -= dt;
+    
+    switch (this.phase) {
+      case 'normal':
+        if (this.phaseTimer <= this.cycleDuration - this.warningDuration) {
+          this.phase = 'warning';
+          this.warningStart = this.phaseTimer;
+          this.warningEnd = this.warningStart + this.warningDuration;
+        }
+        break;
+      case 'warning':
+        if (this.phaseTimer <= 0) {
+          this.phase = 'rotating';
+          this.rotationStart = this.angle;
+          this.rotationEnd = this.angle + Math.PI / 2;
+          this.phaseTimer = this.rotationDuration;
+        }
+        break;
+      case 'rotating':
+        const t = 1 - (this.phaseTimer / this.rotationDuration);
+        this.angle = this.lerp(this.rotationStart, this.rotationEnd, t);
+        if (this.phaseTimer <= 0) {
+          this.phase = 'normal';
+          this.phaseTimer = this.cycleDuration;
+        }
+        break;
+    }
+  }
+  
+  get warningProgress() {
+    if (this.phase === 'warning') {
+      return 1 - (this.phaseTimer / this.warningDuration);
+    }
+    return 0;
+  }
+  
+  get rotationProgress() {
+    if (this.phase === 'rotating') {
+      return 1 - (this.phaseTimer / this.rotationDuration);
+    }
+    return 0;
+  }
+  
+  get countdown() {
+    if (this.phase === 'warning') return this.phaseTimer;
+    return this.phaseTimer;
+  }
+  
+  get isWarning() { return this.phase === 'warning'; }
+  get isRotating() { return this.phase === 'rotating'; }
+}
+```
+
+Hmm, this is getting complicated. Let me simplify by tracking time since last rotation:
+
+```javascript
+export class RotationManager {
+  constructor() {
+    this.cycleDuration = 8;
+    this.warningDuration = 1.5;
+    this.rotationDuration = 0.5;
+    this.angle = 0;
+    this.timeUntilRotation = this.cycleDuration;
+    this.warningProgress = 0;
+    this.rotationProgress = 0;
+    this.isWarning = false;
+    this.isRotating = false;
+    this.lastRotationAngle = 0;
+  }
+  
+  update(dt) {
+    if (this.isRotating) {
+      this.rotationProgress = 1 - (this.timeUntilRotation / this.rotationDuration);
+      this.angle = this.lerp(this.lastRotationAngle, this.lastRotationAngle + Math.PI/2, this.rotationProgress);
+      this.timeUntilRotation -= dt;
+      if (this.timeUntilRotation <= 0) {
+        this.isRotating = false;
+        this.timeUntilRotation = this.cycleDuration;
+      }
+    } else {
+      this.timeUntilRotation -= dt;
+      if (this.timeUntilRotation <= this.warningDuration && !this.isWarning) {
+        this.isWarning = true;
+      }
+      if (this.isWarning) {
+        this.warningProgress = 1 - (this.timeUntilRotation / this.warningDuration);
+        if (this.timeUntilRotation <= 0) {
+          this.isRotating = true;
+          this.lastRotationAngle = this.angle;
+          this.timeUntilRotation = this.rotationDuration;
+        }
+      } else {
+        this.warningProgress = 0;
+      }
+    }
+  }
+  
+  get countdown() {
+    return this.isWarning ? this.timeUntilRotation : this.timeUntilRotation;
+  }
+}
+```
+
+Wait, this has issues because when warning ends and rotation starts, timeUntilRotation gets reset to rotationDuration, but then in the rotating case, it counts down. But when rotation ends, timeUntilRotation resets to cycleDuration. But during warning, timeUntilRotation is counting down from cycleDuration. So the countdown during warning would show the remaining warning time, which is correct.
+
+Actually wait, there's a subtle issue. During warning, timeUntilRotation is counting down from cycleDuration. When warning ends, we set timeUntilRotation = rotationDuration. Then during rotation, it counts down. When rotation ends, timeUntilRotation = cycleDuration. This seems right.
+
+But the warningProgress calculation: during warning, timeUntilRotation goes from warningDuration to 0. So warningProgress = 1 - (timeUntilRotation / warningDuration). At the start of warning, timeUntilRotation = warningDuration, so progress = 0. At end, timeUntilRotation = 0, progress = 1. That's correct.
+
+During rotation, timeUntilRotation goes from rotationDuration to 0. rotationProgress = 1 - (timeUntilRotation / rotationDuration). At start, progress = 0. At end, progress = 1. Correct.
+
+OK this looks good. Let me proceed.
+
+Now for the player entity:
+
+```javascript
+// src/entities/player.js
+import { Physics } from '../core/physics.js';
+
+export class Player {
+  constructor(game) {
+    this.game = game;
+    this.x = 500;
+    this.y = 500;
+    this.vx = 0;
+    this.vy = 0;
+    this.radius = 12;
+    this.health = 100;
+    this.maxHealth = 100;
+    this.fireRate = 0.15; // seconds between shots
+    this.fireCooldown = 0;
+    this.rapidFire = false;
+    this.rapidFireTimer = 0;
+    this.shield = false;
+    this.shieldTimer = 0;
+    this.trail = []; // motion blur trail
+    this.aimAngle = 0;
+  }
+  
+  update(dt) {
+    // Input
+    const input = this.game.input;
+    let ax = 0, ay = 0;
+    if (input.isDown('w') || input.isDown('arrowup')) ay -= 1;
+    if (input.isDown('s') || input.isDown('arrowdown')) ay += 1;
+    if (input.isDown('a') || input.isDown('arrowleft')) ax -= 1;
+    if (input.isDown('d') || input.isDown('arrowright')) ax += 1;
+    
+    // Normalize diagonal
+    if (ax !== 0 && ay !== 0) {
+      ax *= 0.707;
+      ay *= 0.707;
+    }
+    
+    // Acceleration
+    const accel = 1500;
+    this.vx += ax * accel * dt;
+    this.vy += ay * accel * dt;
+    
+    // Friction
+    const friction = 0.85;
+    const frictionFactor = Math.pow(friction, dt * 60); // frame-rate independent
+    this.vx *= frictionFactor;
+    this.vy *= frictionFactor;
+    
+    // Cap speed
+    const maxSpeed = 320;
+    const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+    if (speed > maxSpeed) {
+      this.vx = (this.vx / speed) * maxSpeed;
+      this.vy = (this.vy / speed) * maxSpeed;
+    }
+    
+    // Update position
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    
+    // Collision with square bounds
+    const collision = Physics.resolveSquareCollision(
+      this.x, this.y,
+      this.game.centerX, this.game.centerY,
+      this.game.playArea, this.game.centerX, this.game.centerY,
+      this.game.playArea,
+      this.radius);
+    if (collision) {
+      this.x = collision.x;
+      this.y = collision.y;
+    }
+    
+    // Update trail
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > 8) this.trail.shift();
+    
+    // Aiming
+    const mouseX = this.game.input.mouseX;
+    const mouseY = this.game.input.mouseY;
+    this.aimAngle = Math.atan2(mouseY - this.y, mouseX - this.x);
+    
+    // Shooting
+    this.fireCooldown -= dt;
+    if (this.fireCooldown <= 0 && (input.isDown(' ') || input.isDown('j'))) {
+      this.shoot();
+      this.fireCooldown = this.rapidFire ? 0.06 : this.fireRate;
+    }
+    
+    // Timers
+    if (this.rapidFireTimer > 0) {
+      this.rapidFireTimer -= dt;
+      if (this.rapidFireTimer <= 0) this.rapidFire = false;
+    }
+    if (this.shieldTimer > 0) {
+      this.shieldTimer -= dt;
+      if (this.shieldTimer <= 0) this.shield = false;
+    }
+  }
+  
+  shoot() {
+    const spread = this.rapidFire ? 12 : 15;
+    const angleOffset = (Math.random() - 0.5) * (spread * Math.PI / 180);
+    const baseAngle = this.aimAngle + angleOffset;
+    
+    for (let i = -1; i <= 1; i++) {
+      const a = baseAngle + i * (5 * Math.PI / 180);
+      this.game.projectiles.push(new Projectile(
+        this.x + Math.cos(a) * 20,
+        this.y + Math.sin(a) * 20,
+        Math.cos(a) * 600,
+        Math.sin(a) * 600
+      ));
+    }
+    
+    this.game.audio.play('shoot');
+  }
+  
+  takeDamage(amount) {
+    if (this.shield) {
+      this.game.audio.play('shield');
+      this.game.addParticles(this.x, this.y, '#00ffff', 8);
+      return;
+    }
+    this.health -= amount;
+    this.game.audio.play('hit');
+    this.game.screenShake.trigger(5);
+    this.game.addParticles(this.x, this.y, '#ff0044', 10);
+  }
+  
+  render(ctx) {
+    // Trail
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i];
+      const alpha = (i / this.trail.length) * 0.3;
+      ctx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, this.radius * (i / this.trail.length), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    // Shield
+    if (this.shield) {
+      ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius + 6, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    
+    // Player body
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.aimAngle);
+    
+    ctx.fillStyle = '#00ffff';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 10;
+    
+    ctx.beginPath();
+    ctx.moveTo(this.radius, 0);
+    ctx.lineTo(-this.radius * 0.7, -this.radius * 0.7);
+    ctx.lineTo(-this.radius * 0.4, 0);
+    ctx.lineTo(-this.radius * 0.7, this.radius * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    
+    ctx.restore();
+  }
+}
+
+
+### src/entities/enemy.js
+
+javascript
+// src/entities/enemy.js
+import { Physics } from '../core/physics.js';
+
+export class Enemy {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    this.vx = 0;
+    this.vy = 0;
+    this.angle = 0;
+    this.hitFlash = 0;
+    this.dead = false;
+    
+    switch (type) {
+      case 'drone':
+        this.health = 20;
+        this.maxHealth = 20;
+        this.speed = 180;
+        this.radius = 10;
+        this.scoreValue = 100;
+        this.color = '#ff4466';
+        break;
+      case 'tank':
+        this.health = 60;
+        this.maxHealth = 60;
+        this.speed = 60;
+        this.radius = 18;
+        this.scoreValue = 300;
+        this.color = '#ff8800';
+        break;
+    }
+  }
+  
+  update(dt, player) {
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    
+    switch (this.type) {
+      case 'drone':
+        if (dist > 0) {
+          this.vx = (dx / dist) * this.speed;
+          this.vy = (dy / dist) * this.speed;
+        }
+        break;
+      case 'tank':
+        const targetDist = 250;
+        if (dist > targetDist) {
+          this.vx = (dx / dist) * this.speed;
+          this.vy = (dy / dist) * this.speed;
+        } else if (dist < targetDist - 50) {
+          this.vx = -(dx / dist) * this.speed;
+          this.vy = -(dy / dist) * this.speed;
+        } else {
+          const wobble = Math.sin(Date.now() * 0.003) * 0.5;
+          this.vx = (dx / dist) * this.speed * 0.3 + Math.cos(wobble) * 30;
+          this.vy = (dy / dist) * this.speed * 0.3 + Math.sin(wobble) * 30;
+        }
+        break;
+    }
+    
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    
+    this.angle = Math.atan2(this.vy, this.vx);
+    
+    if (this.hitFlash > 0) this.hitFlash -= dt;
+  }
+  
+  takeDamage(amount) {
+    this.health -= amount;
+    this.hitFlash = 0.1;
+    if (this.health <= 0) {
+      this.dead = true;
+    }
+  }
+  
+  render(ctx) {
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    
+    if (this.hitFlash > 0) {
+      ctx.fillStyle = '#ffffff';
+    } else {
+      ctx.fillStyle = this.color;
+    }
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = 8;
+    
+    switch (this.type) {
+      case 'drone':
+        ctx.beginPath();
+        ctx.moveTo(this.radius, 0);
+        ctx.lineTo(0, -this.radius * 0.6);
+        ctx.lineTo(-this.radius * 0.6, 0);
+        ctx.lineTo(0, this.radius * 0.6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+      case 'tank':
+        ctx.beginPath();
+        ctx.rect(-this.radius, -this.radius * 0.7, this.radius * 2, this.radius * 1.4);
+        ctx.fill();
+        ctx.stroke();
+        // Turret
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(this.radius * 0.8, 0);
+        ctx.stroke();
+        break;
+    }
+    
+    ctx.restore();
+    
+    // Health bar
+    if (this.health < this.maxHealth) {
+      const barW = this.radius * 2;
+      const barH = 3;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillRect(this.x - barW / 2, this.y - this.radius - 8, barW, barH);
+      ctx.fillStyle = '#00ff88';
+      ctx.fillRect(this.x - barW / 2, this.y - this.radius - 8, barW * (this.health / this.maxHealth), barH);
+    }
+  }
+}
+
+
+### src/entities/projectile.js
+
+javascript
+// src/entities/projectile.js
+export class Projectile {
+  constructor(x, y, vx, vy) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.radius = 3;
+    this.lifetime = 1.5;
+    this.age = 0;
+    this.dead = false;
+    this.trail = [];
+  }
+  
+  update(dt) {
+    this.age += dt;
+    if (this.age >= this.lifetime) {
+      this.dead = true;
+      return;
+    }
+    
+    this.trail.push({ x: this.x, y: this.y });
+    if (this.trail.length > 5) this.trail.shift();
+    
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+  }
+  
+  render(ctx) {
+    // Trail
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i];
+      const alpha = (i / this.trail.length) * 0.5;
+      ctx.fillStyle = `rgba(0, 255, 255, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, this.radius * (i / this.trail.length), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    ctx.fillStyle = '#00ffff';
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+
+### src/entities/particle.js
+
+javascript
+// src/entities/particle.js
+export class Particle {
+  constructor(x, y, color) {
+    this.x = x;
+    this.y = y;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 50 + Math.random() * 150;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.life = 0.4 + Math.random() * 0.3;
+    this.maxLife = this.life;
+    this.color = color;
+    this.size = 2 + Math.random() * 3;
+    this.dead = false;
+  }
+  
+  update(dt) {
+    this.life -= dt;
+    if (this.life <= 0) {
+      this.dead = true;
+      return;
+    }
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.vx *= 0.95;
+    this.vy *= 0.95;
+  }
+  
+  render(ctx) {
+    const alpha = this.life / this.maxLife;
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+
+### src/entities/powerup.js
+
+javascript
+// src/entities/powerup.js
+export class PowerUp {
+  constructor(x, y, type) {
+    this.x = x;
+    this.y = y;
+    this.type = type; // 'health', 'rapidFire', 'shield'
+    this.radius = 14;
+    this.bobOffset = 0;
+    this.dead = false;
+    
+    switch (type) {
+      case 'health': this.symbol = '▲'; this.color = '#00ff66'; break;
+      case 'rapidFire': this.symbol = '■'; this.color = '#ffdd00'; break;
+      case 'shield': this.symbol = '⬡'; this.color = '#00ffff'; break;
+    }
+  }
+  
+  update(dt) {
+    this.bobOffset += dt * 3;
+  }
+  
+  render(ctx) {
+    const bob = Math.sin(this.bobOffset) * 3;
+    
+    ctx.save();
+    ctx.translate(this.x, this.y + bob);
+    
+    ctx.fillStyle = this.color;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = this.color;
+    ctx.shadowBlur = 12;
+    
+    switch (this.type) {
+      case 'health':
+        ctx.beginPath();
+        ctx.moveTo(0, -this.radius);
+        ctx.lineTo(this.radius * 0.7, this.radius * 0.7);
+        ctx.lineTo(-this.radius * 0.7, this.radius * 0.7);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+      case 'rapidFire':
+        ctx.beginPath();
+        ctx.rect(-this.radius * 0.7, -this.radius * 0.7, this.radius * 1.4, this.radius * 1.4);
+        ctx.fill();
+        ctx.stroke();
+        break;
+      case 'shield':
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 - Math.PI / 2;
+          const px = Math.cos(a) * this.radius;
+          const py = Math.sin(a) * this.radius;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        break;
+    }
+    
+    ctx.restore();
+  }
+}
+
+
+### src/systems/combat.js
+
+javascript
+// src/systems/combat.js
+import { Enemy } from '../entities/enemy.js';
+import { Projectile } from '../entities/projectile.js';
+
+export class CombatSystem {
+  constructor(game) {
+    this.game = game;
+  }
+  
+  update(dt) {
+    // Player bullets vs enemies
+    for (const proj of this.game.projectiles) {
+      if (proj.dead) continue;
+      for (const enemy of this.game.enemies) {
+        if (enemy.dead) continue;
+        const dx = proj.x - enemy.x;
+        const dy = proj.y - enemy.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < enemy.radius + proj.radius) {
+          enemy.takeDamage(10);
+          proj.dead = true;
+          this.game.addParticles(proj.x, proj.y, '#00ffff', 5);
+          if (enemy.dead) {
+            this.game.score += enemy.scoreValue;
+            this.game.addParticles(enemy.x, enemy.y, enemy.color, 15);
+            this.game.audio.play('explosion');
+            // Chance to drop powerup
+            if (Math.random() < 0.15) {
+              const types = ['health', 'rapidFire', 'shield'];
+              this.game.powerups.push(new PowerUp(enemy.x, enemy.y, types[Math.floor(Math.random() * 3)]));
+            }
+          }
+          break;
+        }
+      }
+    }
+    
+    // Enemy bullets vs player (handled in enemy update via enemy shooting)
+    // Enemy contact damage
+    for (const enemy of this.game.enemies) {
+      if (enemy.dead) continue;
+      const dx = enemy.x - this.game.player.x;
+      const dy = enemy.y - this.game.player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < enemy.radius + this.game.player.radius) {
+        this.game.player.takeDamage(enemy.type === 'tank' ? 20 : 10);
+        // Knockback
+        const knockDir = { x: dx / dist, y: dy / dist };
+        this.game.player.vx += knockDir.x * 200;
+        this.game.player.vy += knockDir.y * 200;
+      }
+    }
+    
+    // Clean up dead entities
+    this.game.enemies = this.game.enemies.filter(e => !e.dead);
+    this.game.projectiles = this.game.projectiles.filter(p => !p.dead);
+  }
+}
+
+
+Wait, I need to import PowerUp in combat.js. Let me fix that.
+
+Also, enemies shoot projectiles. Let me handle that in the enemy update or combat system.
+
+Let me revise the combat system to include enemy shooting:
+
+javascript
+// src/systems/combat.js
+import { Enemy } from '../entities/enemy.js';
+import { Projectile } from '../entities/projectile.js';
+import { PowerUp } from '../entities/powerup.js';
+
+export class CombatSystem {
+  constructor(game) {
+    this.game = game;
+  }
+  
+  update(dt) {
+    // Player bullets vs enemies
+    for (const proj of this.game.projectiles) {
+      if (proj.dead) continue;
+      for (const enemy of this.game.enemies) {
+        if (enemy.dead) continue;
+        const dx = proj.x - enemy.x;
+        const dy = proj.y - enemy.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < enemy.radius + proj.radius) {
+          enemy.takeDamage(10);
+          proj.dead = true;
+          this.game.addParticles(proj.x, proj.y, '#00ffff', 5);
+          if (enemy.dead) {
+            this.game.score += enemy.scoreValue;
+            this.game.addParticles(enemy.x, enemy.y, enemy.color, 15);
+            this.game.audio.play('explosion');
+            if (Math.random() < 0.15) {
+              const types = ['health', 'rapidFire', 'shield'];
+              this.game.powerups.push(new PowerUp(enemy.x, enemy.y, types[Math.floor(Math.random() * 3)]));
+            }
+          }
+          break;
+        }
+      }
+    }
+    
+    // Enemy shooting
+    for (const enemy of this.game.enemies) {
+      if (enemy.dead) continue;
+      const dx = this.game.player.x - enemy.x;
+      const dy = this.game.player.y - enemy.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 300 && Math.random() < 0.02) {
+        const speed = 200;
+        this.game.enemyProjectiles.push(new Projectile(
+          enemy.x, enemy.y,
+          (dx / dist) * speed,
+          (dy / dist) * speed
+        ));
+      }
+    }
+    
+    // Enemy bullets vs player
+    for (const proj of this.game.enemyProjectiles) {
+      if (proj.dead) continue;
+      const dx = proj.x - this.game.player.x;
+      const dy = proj.y - this.game.player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < this.game.player.radius + proj.radius) {
+        this.game.player.takeDamage(10);
+        proj.dead = true;
+      }
+    }
+    
+    // Enemy contact damage
+    for (const enemy of this.game.enemies) {
+      if (enemy.dead) continue;
+      const dx = enemy.x - this.game.player.x;
+      const dy = enemy.y - this.game.player.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < enemy.radius + this.game.player.radius) {
+        this.game.player.takeDamage(enemy.type === 'tank' ? 20 : 10);
+        const knockDir = { x: dx / dist, y: dy / dist };
+        this.game.player.vx += knockDir.x * 200;
+        this.game.player.vy += knockDir.y * 200;
+      }
+    }
+    
+    // Clean up
+    this.game.enemies = this.game.enemies.filter(e => !e.dead);
+    this.game.projectiles = this.game.projectiles.filter(p => !p.dead);
+    this.game.enemyProjectiles = this.game.enemyProjectiles.filter(p => !p.dead);
+  }
+}
+
+
+I need to add enemyProjectiles to the game. Let me make sure the Game class initializes this.
+
+### src/systems/spawning.js
+
+javascript
+// src/systems/spawning.js
+export class SpawningSystem {
+  constructor(game) {
+    this.game = game;
+    this.spawnTimer = 3;
+    this.spawnInterval = 2.5;
+    this.maxEnemies = 8;
+  }
+  
+  update(dt) {
+    this.spawnTimer -= dt;
+    if (this.spawnTimer <= 0 && this.game.enemies.length < this.maxEnemies) {
+      this.spawnWave();
+      this.spawnTimer = this.spawnInterval;
+    }
+  }
+  
+  spawnWave() {
+    const count = Math.floor(Math.random() * 3) + 2;
+    for (let i = 0; i < count; i++) {
+      const side = Math.floor(Math.random() * 4);
+      let x, y;
+      switch (side) {
+        case 0: x = -20; y = Math.random() * 800 + 100; break;
+        case 1: x = 1020; y = Math.random() * 800 + 100; break;
+        case 2: x = Math.random() * 800 + 100; y = -20; break;
+        case 3: x = Math.random() * 800 + 100; y = 1020; break;
+      }
+      const type = Math.random() < 0.6 ? 'drone' : 'tank';
+      this.game.enemies.push(new Enemy(x, y, type));
+    }
+  }
+}
+
+
+### src/systems/rendering.js
+
+javascript
+// src/systems/rendering.js
+export class RenderingSystem {
+  constructor(game) {
+    this.game = game;
+  }
+  
+  render(ctx) {
+    const { canvas, ctx: c, rotation, screenShake } = this.game;
+    
+    // Background grid
+    this.renderBackground(c);
+    
+    // Apply screen shake
+    const shakeX = screenShake.offsetX;
+    const shakeY = screenShake.offsetY;
+    
+    c.save();
+    c.translate(shakeX, shakeY);
+    
+    // Render cube face
+    this.renderCubeFace(c);
+    
+    // Render spawn points
+    this.renderSpawnPoints(c);
+    
+    // Render enemies
+    for (const enemy of this.game.enemies) {
+      enemy.render(c);
+    }
+    
+    // Render powerups
+    for (const pu of this.game.powerups) {
+      pu.render(c);
+    }
+    
+    // Render player
+    this.game.player.render(c);
+    
+    // Render projectiles
+    for (const proj of this.game.projectiles) {
+      proj.render(c);
+    }
+    for (const proj of this.game.enemyProjectiles) {
+      proj.render(c);
+    }
+    
+    // Render particles
+    for (const p of this.game.particles) {
+      p.render(c);
+    }
+    
+    // Render warning arc
+    if (rotation.isWarning) {
+      this.renderWarningArc(c);
+    }
+    
+    // Render rotation progress
+    if (rotation.isRotating) {
+      this.renderRotationProgress(c);
+    }
+    
+    c.restore();
+    
+    // HUD (no shake)
+    this.renderHUD(c);
+  }
+  
+  renderBackground(ctx) {
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, 1000, 1000);
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(0, 255, 255, 0.05)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= 1000; x += 50) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, 1000);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= 1000; y += 50) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(1000, y);
+      ctx.stroke();
+    }
+  }
+  
+  renderCubeFace(ctx) {
+    const cx = this.game.centerX;
+    const cy = this.game.centerY;
+    const size = this.game.playArea;
+    const half = size / 2;
+    const angle = this.game.rotation.angle;
+    
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle);
+    
+    // Fill interior
+    ctx.fillStyle = 'rgba(0, 20, 40, 0.6)';
+    ctx.fillRect(-half, -half, size, size);
+    
+    // Border
+    ctx.strokeStyle = '#00ffff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 10;
+    ctx.strokeRect(-half, -half, size, size);
+    
+    //
