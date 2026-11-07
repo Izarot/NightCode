@@ -7,7 +7,7 @@
 ## 🎮 How to Play
 
 **The Core Mechanic**
-A massive **Aegis Core** splits the screen down the middle. It blocks *vertical* alien fire perfectly. **It does not block angled flank shots.** Hug the center to survive the rain; strafe the flanks to clear the horde—but watch your six.
+A massive **Aegis Core** splits the screen down the middle. It blocks *vertical* alien fire perfectly. **It does not block angled flank shots.** Hug the center to survive the rain; strafe the flanks to clear the horde— but watch your six.
 
 **Controls**
 | Key | Action |
