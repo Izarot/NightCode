@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Stomp-Shift: The Platformer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👟</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}html,body{width:100%;height:100%;overflow:hidden;background:#0f0524;font-family:system-ui,Arial,sans-serif;color:#fff}
+#wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 20% 20%,#ff2ea6 0%,transparent 40%),radial-gradient(circle at 80% 90%,#00e5ff 0%,transparent 45%),#0f0524}
+canvas{display:block;width:100vw;height:100vh;touch-action:none}
+.overlay{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,0,30,.72);backdrop-filter:blur(8px);z-index:10;text-align:center;padding:20px}
+.hidden{display:none!important}
+h1{font-size:clamp(28px,6vw,64px);letter-spacing:2px;background:linear-gradient(90deg,#00ffff,#ff2ea6,#ffe600,#7cff00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 0 30px rgba(0,255,255,.3)}
+.btn{margin:8px;padding:14px 34px;border:2px solid #00ffff;border-radius:999px;background:rgba(0,255,255,.12);color:#fff;font-size:18px;font-weight:800;cursor:pointer;transition:.2s;min-width:220px}
+.btn:hover{background:#00ffff;color:#000;box-shadow:0 0 24px #00ffff;transform:scale(1.05)}
+.btn.pink{border-color:#ff2ea6;background:rgba(255,46,166,.15)}.btn.pink:hover{background:#ff2ea6;box-shadow:0 0 24px #ff2ea6}
+#touch{position:fixed;bottom:14px;left:0;right:0;display:none;justify-content:space-between;padding:0 16px;z-index:5;pointer-events:none}
+#touch button{pointer-events:auto;width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:rgba(255,255,255,.15);color:#fff;font-size:24px}
+@media(pointer:coarse){#touch{display:flex}}
+.small{opacity:.85;margin-top:10px;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="game"></canvas></div>
+<div id="touch"><div><button id="tL">◀</button><button id="tR">▶</button></div><button id="tJ">⬆</button></div>
+<div id="menu" class="overlay"><h1>STOMP-SHIFT</h1><p style="font-size:20px;color:#00ffff;font-weight:800">THE PLATFORMER</p><p class="small">Stomp enemies to turn them into platforms!<br>They last only 5 seconds — move fast!<br>← → Move &nbsp;•&nbsp; SPACE / ↑ Jump &nbsp;•&nbsp; P Pause</p><button class="btn" id="playBtn">▶ PLAY</button><p class="small" id="bestLine">High Score: 0 &nbsp;•&nbsp; Best Time: --:--</p></div>
+<div id="pause" class="overlay hidden"><h1 style="font-size:42px">PAUSED</h1><button class="btn" id="resumeBtn">Resume</button><button class="btn pink" id="restartBtn">Restart Level</button><button class="btn" id="quitBtn">Quit to Menu</button></div>
+<div id="win" class="overlay hidden"><h1 style="font-size:42px">LEVEL CLEAR! 🏆</h1><p id="winStats" class="small" style="font-size:18px"></p><button class="btn" id="againBtn">Play Again</button><button class="btn pink" id="menuBtn">Main Menu</button></div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

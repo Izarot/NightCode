@@ -1,0 +1,1 @@
+export class Player{constructor(x,y){this.x=x;this.y=y;this.w=36;this.h=42;this.vx=0;this.vy=0;this.onGround=false;this.coyote=0;this.buffer=0;this.invincible=0;this.stompCD=0;this.squash=0;this.face=1;this.dead=false}reset(x,y){this.x=x;this.y=y;this.vx=0;this.vy=0;this.invincible=0;this.stompCD=0}}
