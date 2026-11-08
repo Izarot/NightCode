@@ -1,0 +1,1646 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 2 column 3 (char 4)
+
+Raw: The user wants me to create a complete HTML5 Canvas game called "Asteroid Drift" based on a detailed specification. Let me break down what I need to build:
+
+1. **index.html** - Main HTML file with canvas, favicon, and structure
+2. **src/main.js** - Entry point and game loop controller
+3. **src/model/** - Player, asteroids, particles, projectiles, procedural generation, game state
+4. **src/view/** - Canvas renderer, parallax background, HUD
+5. **src/controller/** - Input handling and game loop
+6. **src/utils/** - Quadtree, object pooling, noise helpers
+
+This is a complex project. Let me plan the architecture carefully:
+
+**Models:**
+- `Player` - physics, shield, health, thrust, rotation
+- `Asteroid` - procedural generation, fragmentation cascade, rendering data
+- `Particle` - engine exhaust, explosions, sparks
+- `Projectile` - bullets
+- `ProceduralGenerator` - cellular automata + perlin noise for asteroid fields
+- `GameState` - score, wave, high score, game over
+
+**Views:**
+- `Renderer` - main canvas drawing
+- `BackgroundRenderer` - parallax starfield, nebulae
+- `HUDRenderer` - health bars, score, wave indicator, minimap, notifications
+
+**Controllers:**
+- `InputController` - keyboard handling
+- `GameLoopController` - requestAnimationFrame loop with dt
+
+**Utils:**
+- `Quadtree` - spatial partitioning
+- `ObjectPool` - particle pooling
+- `Noise` - Perlin noise implementation
+- `MathUtils` - helper functions
+
+Let me think about the implementation details:
+
+### Physics
+- Player has position (x, y), velocity (vx, vy), angle (rotation)
+- W/Up: pitch up, S/Down: pitch down
+- A/Left: yaw left, D/Right: yaw right
+- Space: thrust forward (in direction of angle)
+- Shift: brake/reverse
+- Max velocity 450 px/s, thrust 600 px/s², rotation 3.5 rad/s
+- Rotation easing factor 0.15
+
+### Asteroid Generation
+- Cellular automata + Perlin noise
+- Waves increase density and speed
+- Fragmentation cascade: large → medium → small → debris
+
+### Shield System
+- 100 HP shield
+- Regenerates 2 HP/sec when no damage
+- Hull takes damage when shield depleted
+
+### Energy Core Collection
+- Blue crystals
+- Speed boost + i-frames
+
+### Scoring
+- Points per fragment
+- High score in localStorage
+
+### Visual Design
+- Neon-noir vector art
+- Glowing edges with shadowBlur
+- Parallax starfield (3 layers)
+- Engine particles, explosion particles, spark particles
+- Dynamic light source around cockpit
+
+### HUD
+- Health & Shield bars (bottom-left)
+- Score display (top-center)
+- Wave indicator (top-right)
+- Minimap (top-left)
+- Notifications (bottom-center)
+- Pause menu
+
+### Technical
+- requestAnimationFrame with dt
+- Object pooling for particles
+- Quadtree for collision detection
+- MVC pattern
+
+Let me start coding this. I'll create all the files needed.
+
+Let me think about the file structure:
+```
+index.html
+src/main.js
+src/model/player.js
+src/model/asteroid.js
+src/model/particle.js
+src/model/projectile.js
+src/model/procedural.js
+src/model/gameState.js
+src/view/renderer.js
+src/view/background.js
+src/view/hud.js
+src/controller/input.js
+src/controller/gameLoop.js
+src/utils/quadtree.js
+src/utils/objectPool.js
+src/utils/noise.js
+src/utils/math.js
+```
+
+Actually, let me reconsider. The user said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". So I need to output a JSON object where keys are filenames and values are the complete code for each file.
+
+Let me plan each file's content carefully.
+
+### index.html
+- Canvas element
+- Favicon emoji
+- Script tags loading all JS files
+- Meta viewport for mobile responsiveness
+
+### src/utils/math.js
+- Helper functions: clamp, lerp, randomRange, etc.
+
+### src/utils/noise.js
+- Simple Perlin noise implementation
+
+### src/utils/quadtree.js
+- Quadtree implementation for spatial partitioning
+
+### src/utils/objectPool.js
+- Generic object pool
+
+### src/model/player.js
+- Player class with physics, shield, health
+
+### src/model/asteroid.js
+- Asteroid class with procedural generation, fragmentation
+
+### src/model/particle.js
+- Particle class for engine, explosion, sparks
+
+### src/model/projectile.js
+- Projectile class
+
+### src/model/procedural.js
+- Procedural generation logic
+
+### src/model/gameState.js
+- Game state management
+
+### src/view/renderer.js
+- Main renderer
+
+### src/view/background.js
+- Parallax background
+
+### src/view/hud.js
+- HUD rendering
+
+### src/controller/input.js
+- Input handling
+
+### src/controller/gameLoop.js
+- Game loop controller
+
+### src/main.js
+- Entry point
+
+Let me write each file now. This is going to be extensive.
+
+Let me think about how to organize the code so it works together properly.
+
+I'll use ES6 modules or just regular scripts? Since we're loading from file:// potentially, let me use regular script tags with global namespace or an IIFE pattern. Actually, let me use ES6 modules with type="module" - but that might have CORS issues with file://. Let me use regular scripts with a global namespace pattern.
+
+Actually, let me just use regular script tags loaded in order, with classes defined globally. That's the safest approach for browser games.
+
+Let me think about the game loop and how everything connects:
+
+1. `main.js` creates the game instance
+2. Game loop runs via `requestAnimationFrame`
+3. Each frame: update model (physics, collisions, spawning), then render view
+4. Input is captured by controller, passed to model
+
+Let me design the classes more carefully.
+
+#### Player Model
+```javascript
+class Player {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.vx = 0;
+    this.vy = 0;
+    this.angle = 0; // radians
+    this.angularVelocity = 0;
+    this.maxSpeed = 450;
+    this.thrust = 600;
+    this.maxRotation = 3.5;
+    this.shield = 100;
+    this.hull = 100; // or maybe just shield + hull system
+    this.shieldRegenRate = 2; // HP/sec
+    this.thrusting = false;
+    this.braking = false;
+    this.invincible = false;
+    this.invincibleTimer = 0;
+    this.speedBoostTimer = 0;
+    this.radius = 15;
+  }
+  
+  update(dt, input) {
+    // Rotation
+    if (input.up) this.angle -= this.maxRotation * dt * 0.15; // easing
+    // ...
+    
+    // Thrust
+    if (input.thrust) {
+      const thrustX = Math.cos(this.angle) * this.thrust;
+      const thrustY = Math.sin(this.angle) * this.thrust;
+      this.vx += thrustX * dt;
+      this.vy += thrustY * dt;
+      this.thrusting = true;
+    } else {
+      this.thrusting = false;
+    }
+    
+    // Brake
+    if (input.brake) {
+      // apply reverse thrust
+      this.vx -= Math.cos(this.angle) * this.thrust * 0.5 * dt;
+      this.vy -= Math.sin(this.angle) * this.thrust * 0.5 * dt;
+      // momentum damping
+      this.vx *= 0.995;
+      this.vy *= 0.995;
+    }
+    
+    // Clamp speed
+    const speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+    if (speed > this.maxSpeed) {
+      this.vx = (this.vx / speed) * this.maxSpeed;
+      this.vy = (this.vy / speed) * this.maxSpeed;
+    }
+    
+    // Update position
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    
+    // Shield regen
+    if (!this.damaged && this.shield < 100) {
+      this.shield = Math.min(100, this.shield + this.shieldRegenRate * dt);
+    }
+    
+    // Invincibility timer
+    if (this.invincible) {
+      this.invincibleTimer -= dt;
+      if (this.invincibleTimer <= 0) {
+        this.invincible = false;
+      }
+    }
+    
+    // Speed boost timer
+    if (this.speedBoostTimer > 0) {
+      this.speedBoostTimer -= dt;
+    }
+  }
+  
+  takeDamage(amount) {
+    if (this.invincible) return;
+    this.shield -= amount;
+    this.damaged = true;
+    // trigger damage effect
+  }
+  
+  collectCore() {
+    this.speedBoostTimer = 5; // 5 seconds
+    this.invincible = true;
+    this.invincibleTimer = 5;
+  }
+}
+```
+
+Wait, I need to reconsider the shield/hull system. The spec says "Shield absorbs impacts. When depleted, the hull takes damage." So there are two bars: shield and hull. Let me implement both.
+
+Actually, looking at the spec again: "Health & Shield Bar: Bottom-left. Two parallel horizontal bars. Shield bar is cyan, Hull bar is red."
+
+So there are two bars: shield and hull. Shield regenerates at 2 HP/sec. Hull doesn't regenerate (or maybe does too?). Let me keep it simple - both can take damage, but only shield regenerates.
+
+Let me also think about the asteroid generation. I need Perlin noise + cellular automata.
+
+For Perlin noise, I'll implement a simple version. For cellular automata, I'll generate a grid of cells and apply rules to create organic shapes.
+
+Actually, for simplicity and performance, let me generate asteroid clusters using noise-based spawning rather than full cellular automata. I'll spawn asteroids at random positions with sizes determined by noise values.
+
+Let me think about the fragmentation cascade:
+- Large (radius > 40): shatters into 2-3 medium
+- Medium (radius 20-40): shatters into 2-3 small
+- Small (radius 10-20): shatters into 2-3 debris
+- Debris (< 10): final fragments
+
+Each size tier gives different points.
+
+For the quadtree, I need it to efficiently check collisions between projectiles/player and asteroids.
+
+Let me also think about the minimap - it shows nearby asteroids as dots and player as a bright triangle.
+
+OK, let me start writing the code. This will be quite long but I'll make it comprehensive.
+
+Let me think about the overall structure more carefully to make sure everything fits together.
+
+I'll use a global `Game` object that ties everything together.
+
+Actually, let me simplify the architecture a bit while still following MVC:
+
+- `main.js`: Entry point, creates Game instance, starts loop
+- `Game` class in `main.js` or separate file that orchestrates everything
+- Models: Player, Asteroid, Particle, Projectile, ProceduralGenerator, GameState
+- Views: Renderer, BackgroundRenderer, HUDRenderer
+- Controllers: InputController, GameLoopController
+- Utils: Quadtree, ObjectPool, Noise, MathUtils
+
+Let me write the code now. I'll be thorough but efficient.
+
+For the noise function, I'll implement a simple 2D Perlin noise.
+
+For the quadtree, I'll implement a basic version.
+
+For object pooling, I'll create a generic pool that can be used for particles and projectiles.
+
+Let me start coding:
+
+### math.js
+```javascript
+const MathUtils = {
+  clamp: (v, min, max) => Math.min(Math.max(v, min), max),
+  lerp: (a, b, t) => a + (b - a) * t,
+  randomRange: (min, max) => Math.random() * (max - min) + min,
+  randomInt: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+  distance: (x1, y1, x2, y2) => Math.sqrt((x2-x1)**2 + (y2-y1)**2),
+  angleLerp: (a, b, t) => {
+    let diff = b - a;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    return a + diff * t;
+  },
+  normalizeAngle: (a) => {
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    return a;
+  }
+};
+```
+
+### noise.js
+Simple Perlin noise implementation.
+
+### quadtree.js
+Basic quadtree for spatial partitioning.
+
+### objectPool.js
+Generic object pool.
+
+Now let me think about each model class in detail.
+
+#### Player
+- Position, velocity, angle
+- Physics constants
+- Shield and hull HP
+- Methods: update, takeDamage, collectCore, draw (maybe in view)
+
+#### Asteroid
+- Position, velocity, radius, vertices
+- Fragmentation cascade
+- Methods: update, fragment, draw
+
+#### Particle
+- Position, velocity, life, color, size
+- Types: engine, explosion, spark
+- Methods: update, draw
+
+#### Projectile
+- Position, velocity
+- Methods: update, draw
+
+#### ProceduralGenerator
+- Generates asteroid fields
+- Uses noise for positions and sizes
+- Wave scaling
+
+#### GameState
+- Score, wave, high score, game over flag
+- Methods: addScore, newHighScore, reset
+
+Now for views:
+
+#### BackgroundRenderer
+- Three layers of stars
+- Nebula clouds
+- Parallax scrolling
+
+#### Renderer
+- Main game rendering
+- Draws player, asteroids, particles, projectiles
+- Lighting effects
+
+#### HUDRenderer
+- Health/shield bars
+- Score display
+- Wave indicator
+- Minimap
+- Notifications
+- Pause menu
+
+#### InputController
+- Keyboard state tracking
+- Mouse/touch for mobile
+
+#### GameLoopController
+- requestAnimationFrame loop
+- dt calculation
+- Calls update and render
+
+Let me now write all the files. I'll try to make them complete and functional.
+
+Actually, I realize I should think about how the game state flows. Let me define a central `Game` class that holds references to all models, views, and controllers, and orchestrates the game loop.
+
+Let me restructure slightly:
+
+- `main.js`: Creates Game, starts it
+- `Game` class: Holds models, manages game state, calls update/render
+- Everything else follows MVC
+
+Actually, to keep it clean, let me put the Game orchestrator in `main.js` or a separate `game.js`. But the spec says `src/main.js`, so let me put it there.
+
+Let me write the code now. I'll be very thorough.
+
+One thing to consider: the canvas needs to be responsive for mobile. I'll set up the canvas to scale to fit the window while maintaining aspect ratio.
+
+For the favicon, I'll use an emoji like 🚀 or 🌌.
+
+Color palette: Let me pick something vibrant and neon:
+- Background: deep space dark (#050510 to #0a0a20)
+- Player: cyan/teal (#00ffcc)
+- Shield: cyan (#00ffff)
+- Hull: red (#ff3366)
+- Asteroids: various grays/oranges with glow
+- Particles: orange/yellow for engine, white/orange for explosions
+- UI: cyan/magenta neon accents
+- Stars: white/blue/yellow tints
+
+Let me now write all the files.
+
+I need to be careful about the amount of code. This is a large project. Let me write each file completely.
+
+Let me start with the simpler utility files and work my way up.
+
+Actually, I realize I should think about whether to use ES6 modules or global scripts. Since the user might open the file directly (file:// protocol), ES6 modules would fail due to CORS. So I'll use regular script tags with global scope.
+
+But wait, the user said "Output ONLY a valid raw JSON object". So I need to output a JSON object like:
+```json
+{
+  "index.html": "...",
+  "src/main.js": "...",
+  ...
+}
+```
+
+Let me write all the files now.
+
+Let me plan the exact file list:
+1. `index.html`
+2. `src/utils/math.js`
+3. `src/utils/noise.js`
+4. `src/utils/quadtree.js`
+5. `src/utils/objectPool.js`
+6. `src/model/player.js`
+7. `src/model/asteroid.js`
+8. `src/model/particle.js`
+9. `src/model/projectile.js`
+10. `src/model/procedural.js`
+11. `src/model/gameState.js`
+12. `src/view/renderer.js`
+13. `src/view/background.js`
+14. `src/view/hud.js`
+15. `src/controller/input.js`
+16. `src/controller/gameLoop.js`
+17. `src/main.js`
+
+That's 17 files. Let me write them all.
+
+Let me think about the game flow:
+
+1. Page loads → `main.js` initializes everything
+2. Game starts in "playing" state
+3. Player controls ship, shoots asteroids, collects cores
+4. Waves increase difficulty
+5. If player dies → game over screen with high score
+6. Press P or Esc to pause
+7. Press R to restart
+
+Let me think about shooting mechanics. The spec mentions projectiles but doesn't specify shooting controls. Looking at the controls listed: W/Up, S/Down, A/Left, D/Right, Space (thrust), Shift (brake). No mention of shooting. But the spec says "destroy or narrowly avoid obstacles" and mentions projectiles and fragmentation cascade.
+
+I'll add shooting with mouse click or auto-fire. Let me use mouse click for aiming and shooting, since the controls listed don't include shooting. Or I could add it as an additional control. Let me use mouse click for shooting - the player aims with mouse position and clicks to fire.
+
+Actually, for mobile compatibility, let me add touch controls too. On mobile, tapping shoots. The ship rotates based on touch position relative to ship, or I could add virtual buttons.
+
+Hmm, this is getting complex. Let me simplify: use mouse for aiming and shooting on desktop, and for mobile, auto-fire or tap to shoot. Actually, let me just use mouse click for shooting and keep the movement controls as specified. For mobile, I'll make the canvas responsive and add basic touch support where touching the screen shoots.
+
+Wait, actually the spec says "SNEAKY FEATURE 1: Make the canvas responsive so it scales to fit mobile phone screens." So I need to handle responsive sizing. Let me make the canvas fill the window and scale the game accordingly.
+
+For controls on mobile, I'll add virtual buttons or just make shooting automatic with touch. Let me keep it simple: on mobile, touch anywhere to shoot, and the ship auto-rotates toward the nearest asteroid or something. Actually, let me just make it work with keyboard on desktop and add basic touch for shooting on mobile.
+
+Let me reconsider the controls. The spec lists specific controls but no shooting control. I'll add mouse-based aiming and shooting as an extension. For mobile, I'll add touch-to-shoot.
+
+OK, let me just start writing the code. I'll make reasonable decisions as I go.
+
+Let me write each file:
+
+### index.html
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Asteroid Drift</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; }
+    #gameCanvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script src="src/utils/math.js"></script>
+  <script src="src/utils/noise.js"></script>
+  <script src="src/utils/quadtree.js"></script>
+  <script src="src/utils/objectPool.js"></script>
+  <script src="src/model/player.js"></script>
+  <script src="src/model/asteroid.js"></script>
+  <script src="src/model/particle.js"></script>
+  <script src="src/model/projectile.js"></script>
+  <script src="src/model/procedural.js"></script>
+  <script src="src/model/gameState.js"></script>
+  <script src="src/view/background.js"></script>
+  <script src="src/view/renderer.js"></script>
+  <script src="src/view/hud.js"></script>
+  <script src="src/controller/input.js"></script>
+  <script src="src/controller/gameLoop.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
+```
+
+Now let me write each JS file. This is going to be long.
+
+### src/utils/math.js
+
+Standard math utilities.
+
+### src/utils/noise.js
+
+Perlin noise implementation. I'll implement a simple 2D Perlin noise.
+
+### src/utils/quadtree.js
+
+Quadtree for spatial partitioning.
+
+### src/utils/objectPool.js
+
+Generic object pool.
+
+### src/model/player.js
+
+Player class with physics.
+
+### src/model/asteroid.js
+
+Asteroid class with fragmentation.
+
+### src/model/particle.js
+
+Particle class.
+
+### src/model/projectile.js
+
+Projectile class.
+
+### src/model/procedural.js
+
+Procedural generation.
+
+### src/model/gameState.js
+
+Game state management.
+
+### src/view/background.js
+
+Parallax background.
+
+### src/view/renderer.js
+
+Main renderer.
+
+### src/view/hud.js
+
+HUD rendering.
+
+### src/controller/input.js
+
+Input handling.
+
+### src/controller/gameLoop.js
+
+Game loop controller.
+
+### src/main.js
+
+Entry point.
+
+Let me write them all now. I'll be thorough and make sure everything works together.
+
+Let me think about the key integration points:
+
+1. The Game class (in main.js) holds:
+   - player (Player)
+   - asteroids (array)
+   - particles (pool)
+   - projectiles (pool)
+   - procedural generator
+   - game state
+   - quadtree for collision
+   - input controller
+   - renderers
+
+2. Each frame:
+   - Calculate dt
+   - Update player (with input)
+   - Update asteroids
+   - Update particles
+   - Update projectiles
+   - Check collisions (using quadtree)
+   - Spawn new asteroids if needed
+   - Update procedural generator
+   - Update game state
+   - Render background
+   - Render game objects
+   - Render HUD
+
+3. Input is captured by InputController, passed to player update.
+
+Let me now write all the code.
+
+For the Perlin noise, I'll implement a standard version with permutation table.
+
+For the quadtree, I'll implement a basic version with insert and query methods.
+
+For object pooling, I'll create a generic Pool class.
+
+Let me write the code now. I'll aim for completeness and correctness.
+
+Actually, let me think about the asteroid generation more carefully. The spec says "Cellular Automata approach combined with Perlin Noise." 
+
+Cellular automata approach: Start with a grid of cells, each either empty or filled. Apply rules iteratively to create organic shapes. Then use Perlin noise to place these shapes in the game world.
+
+But implementing full cellular automata might be overkill. Let me do a simpler approach:
+1. Use Perlin noise to determine asteroid cluster centers and sizes
+2. Generate asteroids around those centers with varying sizes
+3. Add some randomness for organic feel
+
+This gives us procedurally generated asteroid fields that look organic without the complexity of full CA simulation.
+
+Actually, let me implement a simplified version: generate a noise field, find regions of high density, and place asteroids there. This is essentially what cellular automata would do but more efficiently.
+
+Let me write the procedural generator:
+
+```javascript
+class ProceduralGenerator {
+  constructor() {
+    this.noiseScale = 0.005;
+    this.noiseOffset = { x: 0, y: 0 };
+    this.waveDensity = 0.3;
+    this.waveSpeed = 1;
+  }
+  
+  generateField(canvasWidth, canvasHeight, wave) {
+    const asteroids = [];
+    const count = Math.floor(5 + wave * 15);
+    
+    for (let i = 0; i < count; i++) {
+      // Use noise to find a good spawn location
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * 400 + 100;
+      const x = (canvasWidth / 2) + Math.cos(angle) * dist + MathUtils.randomRange(-200, 200);
+      const y = (canvasHeight / 2) + Math.sin(angle) * dist + MathUtils.randomRange(-200, 200);
+      
+      // Determine size based on wave
+      const baseSize = 20 + wave * 10;
+      const sizeVariation = MathUtils.randomRange(0.5, 1.5);
+      const radius = baseSize * sizeVariation;
+      
+      // Add some clustering
+      const clusterNoise = this.noise2D(x * this.noiseScale, y * this.noiseScale);
+      if (clusterNoise > 0.5 + wave * 0.1) {
+        // Place near existing cluster
+        const clusterAngle = Math.random() * Math.PI * 2;
+        const clusterDist = Math.random() * 80;
+        const cx = x + Math.cos(clusterAngle) * clusterDist;
+        const cy = y + Math.sin(clusterAngle) * clusterDist;
+        asteroids.push(new Asteroid(cx, cy, radius));
+      } else {
+        asteroids.push(new Asteroid(x, y, radius));
+      }
+    }
+    
+    return asteroids;
+  }
+}
+```
+
+Hmm, this is getting complicated. Let me simplify the procedural generation to focus on creating good-looking asteroid clusters.
+
+Actually, let me think about this differently. The procedural generator should create asteroid clusters that look organic. Here's my approach:
+
+1. Generate a noise field using Perlin noise
+2. Find regions where noise value is above a threshold (these are "dense" regions)
+3. Place asteroid clusters at the center of these dense regions
+4. Each cluster has multiple asteroids of varying sizes
+
+This creates organic, jagged formations.
+
+Let me also think about the asteroid movement. Asteroids should drift slowly in random directions, and their drift speed increases with waves.
+
+OK, let me just write the code now. I've been planning too long.
+
+Let me write each file one by one.
+
+For the noise implementation, I'll use a standard Perlin noise with a permutation table.
+
+Let me write the code:
+
+```javascript
+// src/utils/noise.js
+class Noise {
+  constructor(seed = 12345) {
+    this.permutation = new Uint8Array(512);
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    // Shuffle with seed
+    let s = seed;
+    for (let i = 255; i > 0; i--) {
+      s = (s * 16807) % 2147483647;
+      const j = s % (i + 1);
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    for (let i = 0; i < 512; i++) {
+      this.permutation[i] = p[i & 255];
+    }
+  }
+  
+  fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+  lerp(a, b, t) { return a + t * (b - a); }
+  grad(hash, x, y) {
+    const h = hash & 7;
+    const u = h < 4 ? x : y;
+    const v = h < 4 ? y : x;
+    return ((h & 1) ? -u : u) + ((h & 2) ? -2*v : 2*v);
+  }
+  
+  noise2D(x, y) {
+    const X = Math.floor(x) & 255;
+    const Y = Math.floor(y) & 255;
+    x -= Math.floor(x);
+    y -= Math.floor(y);
+    const u = this.fade(x);
+    const v = this.fade(y);
+    const aa = this.permutation[this.permutation[X] + Y];
+    const ab = this.permutation[this.permutation[X] + Y + 1];
+    const ba = this.permutation[this.permutation[X + 1] + Y];
+    const bb = this.permutation[this.permutation[X + 1] + Y + 1];
+    return this.lerp(
+      this.lerp(this.grad(aa, x, y), this.grad(ba, x-1, y), u),
+      this.lerp(this.grad(ab, x, y-1), this.grad(bb, x-1, y-1), u),
+      v
+    );
+  }
+  
+  fbm(x, y, octaves = 3) {
+    let value = 0;
+    let amplitude = 1;
+    let frequency = 1;
+    let maxValue = 0;
+    for (let i = 0; i < octaves; i++) {
+      value += this.noise2D(x * frequency, y * frequency) * amplitude;
+      maxValue += amplitude;
+      amplitude *= 0.5;
+      frequency *= 2;
+    }
+    return value / maxValue;
+  }
+}
+```
+
+Now the quadtree:
+
+```javascript
+// src/utils/quadtree.js
+class Quadtree {
+  constructor(bounds, capacity = 10) {
+    this.bounds = bounds; // {x, y, w, h}
+    this.capacity = capacity;
+    this.objects = [];
+    this.nodes = null;
+  }
+  
+   subdivide() {
+    const { x, y, w, h } = this.bounds;
+    const hw = w / 2;
+    const hh = h / 2;
+    this.nodes = [
+      new Quadtree({ x, y, w: hw, h: hh }),
+      new Quadtree({ x: x + hw, y, w: hw, h: hh }),
+      new Quadtree({ x, y: y + hh, w: hw, h: hh }),
+      new Quadtree({ x: x + hw, y: y + hh, w: hwThe user wants me to create a complete HTML5 Canvas game called "Asteroid Drift" based on a detailed specification. Let me break down what I need to build:
+
+1. **index.html** - Main HTML file with canvas, favicon, and structure
+2. **src/main.js** - Entry point and game loop controller
+3. **src/model/** - Player, asteroids, particles, projectiles, procedural generation, game state
+4. **src/view/** - Canvas renderer, parallax background, HUD
+5. **src/controller/** - Input handling and game loop
+6. **src/utils/** - Quadtree, object pooling, noise helpers
+
+This is a complex project. Let me plan the architecture carefully:
+
+**Models:**
+- `Player` - physics, shield, health, thrust, rotation
+- `Asteroid` - procedural generation, fragmentation cascade, rendering data
+- `Particle` - engine exhaust, explosions, sparks
+- `Projectile` - bullets
+- `ProceduralGenerator` - cellular automata + perlin noise for asteroid fields
+- `GameState` - score, wave, high score, game over
+
+**Views:**
+- `Renderer` - main canvas drawing
+- `BackgroundRenderer` - parallax starfield, nebulae
+- `HUDRenderer` - health bars, score, wave indicator, minimap, notifications
+
+**Controllers:**
+- `InputController` - keyboard handling
+- `GameLoopController` - requestAnimationFrame loop with dt
+
+**Utils:**
+- `Quadtree` - spatial partitioning
+- `ObjectPool` - particle pooling
+- `Noise` - Perlin noise implementation
+- `MathUtils` - helper functions
+
+Let me think about the implementation details:
+
+### Physics
+- Player has position (x, y), velocity (vx, vy), angle (rotation)
+- W/Up: pitch up, S/Down: pitch down
+- A/Left: yaw left, D/Right: yaw right
+- Space: thrust forward (in direction of angle)
+- Shift: brake/reverse
+- Max velocity 450 px/s, thrust 600 px/s², rotation 3.5 rad/s
+- Rotation easing factor 0.15
+
+### Asteroid Generation
+- Cellular automata + Perlin noise
+- Waves increase density and speed
+- Fragmentation cascade: large → medium → small → debris
+
+### Shield System
+- 100 HP shield
+- Regenerates 2 HP/sec when no damage
+- Hull takes damage when shield depleted
+
+### Energy Core Collection
+- Blue crystals
+- Speed boost + i-frames
+
+### Scoring
+- Points per fragment
+- High score in localStorage
+
+### Visual Design
+- Neon-noir vector art
+- Glowing edges with shadowBlur
+- Parallax starfield (3 layers)
+- Engine particles, explosion particles, spark particles
+- Dynamic light source around cockpit
+
+### HUD
+- Health & Shield bars (bottom-left)
+- Score display (top-center)
+- Wave indicator (top-right)
+- Minimap (top-left)
+- Notifications (bottom-center)
+- Pause menu
+
+### Technical
+- requestAnimationFrame with dt
+- Object pooling for particles
+- Quadtree for collision detection
+- MVC pattern
+
+Let me start coding this. I'll create all the files needed.
+
+Let me think about the file structure:
+
+index.html
+src/main.js
+src/model/player.js
+src/model/asteroid.js
+src/model/particle.js
+src/model/projectile.js
+src/model/procedural.js
+src/model/gameState.js
+src/view/renderer.js
+src/view/background.js
+src/view/hud.js
+src/controller/input.js
+src/controller/gameLoop.js
+src/utils/quadtree.js
+src/utils/objectPool.js
+src/utils/noise.js
+src/utils/math.js
+
+
+Actually, let me reconsider. The user said "Output ONLY a valid raw JSON object mapping filenames to their complete code contents". So I need to output a JSON object where keys are filenames and values are the complete code for each file.
+
+Let me plan each file's content carefully.
+
+### index.html
+- Canvas element
+- Favicon emoji
+- Script tags loading all JS files
+- Meta viewport for mobile responsiveness
+
+### src/main.js
+- Entry point, creates Game instance, starts loop
+- Game class that orchestrates everything
+
+### src/model/player.js
+- Player class with physics, shield, health
+
+### src/model/asteroid.js
+- Asteroid class with procedural generation, fragmentation
+
+### src/model/particle.js
+- Particle class for engine, explosion, sparks
+
+### src/model/projectile.js
+- Projectile class
+
+### src/model/procedural.js
+- Procedural generation logic
+
+### src/model/gameState.js
+- Game state management
+
+### src/view/renderer.js
+- Main renderer
+
+### src/view/background.js
+- Parallax background
+
+### src/view/hud.js
+- HUD rendering
+
+### src/controller/input.js
+- Input handling
+
+### src/controller/gameLoop.js
+- Game loop controller
+
+### src/utils/quadtree.js
+- Quadtree implementation
+
+### src/utils/objectPool.js
+- Generic object pool
+
+### src/utils/noise.js
+- Perlin noise implementation
+
+### src/utils/math.js
+- Helper functions
+
+Let me write each file now. This is going to be extensive.
+
+Let me think about how to organize the code so it works together properly.
+
+I'll use ES6 modules or just regular scripts? Since we're loading from file:// potentially, let me use regular script tags with global namespace or an IIFE pattern. Actually, let me use ES6 modules with type="module" - but that might have CORS issues with file://. Let me use regular scripts with a global namespace pattern.
+
+Actually, let me just use regular script tags loaded in order, with classes defined globally. That's the safest approach for browser games.
+
+Let me think about the game loop and how everything connects:
+
+1. `main.js` creates the game instance
+2. Game loop runs via `requestAnimationFrame`
+3. Each frame: update model (physics, collisions, spawning), then render view
+4. Input is captured by controller, passed to model
+
+Let me design the classes more carefully.
+
+#### Player Model
+javascript
+class Player {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.vx = 0;
+    this.vy = 0;
+    this.angle = 0; // radians
+    this.angularVelocity = 0;
+    this.maxSpeed = 450;
+    this.thrust = 600;
+    this.maxRotation = 3.5;
+    this.shield = 100;
+    this.hull = 100; // or maybe just shield + hull system
+    this.shieldRegenRate = 2; // HP/sec
+    this.thrusting = false;
+    this.braking = false;
+    this.invincible = false;
+    this.invincibleTimer = 0;
+    this.speedBoostTimer = 0;
+    this.radius = 15;
+  }
+  
+  update(dt, input) {
+    // Rotation
+    if (input.up) this.angle -= this.maxRotation * dt * 0.15; // easing
+    // ...
+    
+    // Thrust
+    if (input.thrust) {
+      const thrustX = Math.cos(this.angle) * this.thrust;
+      const thrustY = Math.sin(this.angle) * this.thrust;
+      this.vx += thrustX * dt;
+      this.vy += thrustY * dt;
+      this.thrusting = true;
+    } else {
+      this.thrusting = false;
+    }
+    
+    // Brake
+    if (input.brake) {
+      // apply reverse thrust
+      this.vx -= Math.cos(this.angle) * this.thrust * 0.5 * dt;
+      this.vy -= Math.sin(this.angle) * this.thrust * 0.5 * dt;
+      // momentum damping
+      this.vx *= 0.995;
+      this.vy *= 0.995;
+    }
+    
+    // Clamp speed
+    const speed = Math.sqrt(this.vx*this.vx + this.vy*this.vy);
+    if (speed > this.maxSpeed) {
+      this.vx = (this.vx / speed) * this.maxSpeed;
+      this.vy = (this.vy / speed) * this.maxSpeed;
+    }
+    
+    // Update position
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    
+    // Shield regen
+    if (!this.damaged && this.shield < 100) {
+      this.shield = Math.min(100, this.shield + this.shieldRegenRate * dt);
+    }
+    
+    // Invincibility timer
+    if (this.invincible) {
+      this.invincibleTimer -= dt;
+      if (this.invincibleTimer <= 0) {
+        this.invincible = false;
+      }
+    }
+    
+    // Speed boost timer
+    if (this.speedBoostTimer > 0) {
+      this.speedBoostTimer -= dt;
+    }
+  }
+  
+  takeDamage(amount) {
+    if (this.invincible) return;
+    this.shield -= amount;
+    this.damaged = true;
+    // trigger damage effect
+  }
+  
+  collectCore() {
+    this.speedBoostTimer = 5; // 5 seconds
+    this.invincible = true;
+    this.invincibleTimer = 5;
+  }
+}
+
+
+Wait, I need to reconsider the shield/hull system. The spec says "Shield absorbs impacts. When depleted, the hull takes damage." So there are two bars: shield and hull. Let me implement both.
+
+Actually, looking at the spec again: "Health & Shield Bar: Bottom-left. Two parallel horizontal bars. Shield bar is cyan, Hull bar is red."
+
+So there are two bars: shield and hull. Shield regenerates at 2 HP/sec. Hull doesn't regenerate (or maybe does too?). Let me keep it simple - both can take damage, but only shield regenerates.
+
+Let me also think about the asteroid generation. I need Perlin noise + cellular automata.
+
+For Perlin noise, I'll implement a simple version. For cellular automata, I'll generate a grid of cells and apply rules to create organic shapes.
+
+Actually, for simplicity and performance, let me generate asteroid clusters using noise-based spawning rather than full cellular automata. I'll spawn asteroids at random positions with sizes determined by noise values.
+
+Let me think about the fragmentation cascade:
+- Large (radius > 40): shatters into 2-3 medium
+- Medium (radius 20-40): shatters into 2-3 small
+- Small (radius 10-20): shatters into 2-3 debris
+- Debris (< 10): final fragments
+
+Each size tier gives different points.
+
+For the quadtree, I need it to efficiently check collisions between projectiles/player and asteroids.
+
+Let me also think about the minimap - it shows nearby asteroids as dots and player as a bright triangle.
+
+OK, let me start coding this. I'll create all the files needed.
+
+Let me think about the overall structure more carefully to make sure everything fits together.
+
+I'll use a global `Game` object that ties everything together.
+
+Actually, let me simplify the architecture a bit while still following MVC:
+
+- `main.js`: Entry point, creates Game instance, starts loop
+- `Game` class in `main.js` or separate file that orchestrates everything
+- Models: Player, Asteroid, Particle, Projectile, ProceduralGenerator, GameState
+- Views: Renderer, BackgroundRenderer, HUDRenderer
+- Controllers: InputController, GameLoopController
+- Utils: Quadtree, ObjectPool, Noise, MathUtils
+
+Let me write the code now. I'll be thorough but efficient.
+
+For the noise function, I'll implement a simple 2D Perlin noise.
+
+For the quadtree, I'll implement a basic version.
+
+For object pooling, I'll create a generic pool that can be used for particles and projectiles.
+
+Let me start coding:
+
+### math.js
+javascript
+const MathUtils = {
+  clamp: (v, min, max) => Math.min(Math.max(v, min), max),
+  lerp: (a, b, t) => a + (b - a) * t,
+  randomRange: (min, max) => Math.random() * (max - min) + min,
+  randomInt: (min, max) => Math.floor(Math.random() * (max - min + 1)) + min,
+  distance: (x1, y1, x2, y2) => Math.sqrt((x2-x1)**2 + (y2-y1)**2),
+  angleLerp: (a, b, t) => {
+    let diff = b - a;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    return a + diff * t;
+  },
+  normalizeAngle: (a) => {
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    return a;
+  }
+};
+
+
+### noise.js
+Simple Perlin noise implementation.
+
+### quadtree.js
+Basic quadtree for spatial partitioning.
+
+### objectPool.js
+Generic object pool.
+
+Now let me think about each model class in detail.
+
+#### Player
+- Position, velocity, angle
+- Physics constants
+- Shield and hull HP
+- Methods: update, takeDamage, collectCore, draw (maybe in view)
+
+#### Asteroid
+- Position, velocity, radius, vertices
+- Fragmentation cascade
+- Methods: update, fragment, draw
+
+#### Particle
+- Position, velocity, life, color, size
+- Types: engine, explosion, spark
+- Methods: update, draw
+
+#### Projectile
+- Position, velocity
+- Methods: update, draw
+
+#### ProceduralGenerator
+- Generates asteroid fields
+- Uses noise for positions and sizes
+- Wave scaling
+
+#### GameState
+- Score, wave, high score, game over flag
+- Methods: addScore, newHighScore, reset
+
+Now for views:
+
+#### BackgroundRenderer
+- Three layers of stars
+- Nebula clouds
+- Parallax scrolling
+
+#### Renderer
+- Main game rendering
+- Draws player, asteroids, particles, projectiles
+- Lighting effects
+
+#### HUDRenderer
+- Health/shield bars
+- Score display
+- Wave indicator
+- Minimap
+- Notifications
+- Pause menu
+
+#### InputController
+- Keyboard state tracking
+- Mouse/touch for mobile
+
+#### GameLoopController
+- requestAnimationFrame loop
+- dt calculation
+- Calls update and render
+
+Let me now write all the files. I'll try to make them complete and functional.
+
+Actually, I realize I should think about how the game state flows. Let me define a central `Game` class that holds references to all models, views, and controllers, and orchestrates the game loop.
+
+Let me restructure slightly:
+
+- `main.js`: Creates Game, starts it
+- `Game` class: Holds models, manages game state, calls update/render
+- Everything else follows MVC
+
+Actually, to keep it clean, let me put the Game orchestrator in `main.js` or a separate `game.js`. But the spec says `src/main.js`, so let me put it there.
+
+Let me write the code now. I'll be very thorough.
+
+One thing to consider: the canvas needs to be responsive for mobile. I'll set up the canvas to scale to fit the window while maintaining aspect ratio.
+
+For the favicon, I'll use an emoji like 🚀 or 🌌.
+
+Color palette: Let me pick something vibrant and neon:
+- Background: deep space dark (#050510 to #0a0a20)
+- Player: cyan/teal (#00ffcc)
+- Shield: cyan (#00ffff)
+- Hull: red (#ff3366)
+- Asteroids: various grays/oranges with glow
+- Particles: orange/yellow for engine, white/orange for explosions
+- UI: cyan/magenta neon accents
+- Stars: white/blue/yellow tints
+
+Let me now write all the files.
+
+I need to be careful about the amount of code. This is a large project. Let me write each file completely.
+
+Let me start with the simpler utility files and work my way up.
+
+Actually, I realize I should think about whether to use ES6 modules or global scripts. Since the user might open the file directly (file:// protocol), ES6 modules would fail due to CORS. So I'll use regular script tags with global scope.
+
+But wait, the user said "Output ONLY a valid raw JSON object". So I need to output a JSON object like:
+
+{
+  "index.html": "...",
+  "src/main.js": "...",
+  ...
+}
+
+
+Let me write all the files now.
+
+Let me plan the exact file list:
+1. `index.html`
+2. `src/main.js`
+3. `src/model/player.js`
+4. `src/model/asteroid.js`
+5. `src/model/particle.js`
+6. `src/model/projectile.js`
+7. `src/model/procedural.js`
+8. `src/model/gameState.js`
+9. `src/view/renderer.js`
+10. `src/view/background.js`
+11. `src/view/hud.js`
+12. `src/controller/input.js`
+13. `src/controller/gameLoop.js`
+14. `src/utils/quadtree.js`
+15. `src/utils/objectPool.js`
+16. `src/utils/noise.js`
+17. `src/utils/math.js`
+
+That's 17 files. Let me write them all.
+
+Let me think about the game flow:
+
+1. Page loads → `main.js` initializes everything
+2. Game starts in "playing" state
+3. Player controls ship, shoots asteroids, collects cores
+4. Waves increase difficulty
+5. If player dies → game over screen with high score
+6. Press P or Esc to pause
+7. Press R to restart
+
+Let me think about shooting mechanics. The spec mentions projectiles but doesn't specify shooting controls. Looking at the controls listed: W/Up, S/Down, A/Left, D/Right, Space (thrust), Shift (brake). No mention of shooting. But the spec says "destroy or narrowly avoid obstacles" and mentions projectiles and fragmentation cascade.
+
+I'll add shooting with mouse click or auto-fire. Let me use mouse click for aiming and shooting, since the controls listed don't include shooting. Or I could add it as an additional control. Let me use mouse click for shooting - the player aims with mouse position and clicks to fire.
+
+Actually, for mobile compatibility, let me add touch controls too. On mobile, tapping shoots. The ship rotates based on touch position relative to ship, or I could add virtual buttons.
+
+Hmm, this is getting complex. Let me simplify: use mouse for aiming and shooting on desktop, and for mobile, auto-fire or tap to shoot. Actually, let me just use mouse click for shooting and keep the movement controls as specified. For mobile, I'll make the canvas responsive and add basic touch support where touching the screen shoots.
+
+Wait, actually the spec says "SNEAKY FEATURE 1: Make the canvas responsive so it scales to fit mobile phone screens." So I need to handle responsive sizing. Let me make the canvas fill the window and scale the game accordingly.
+
+For controls on mobile, I'll add virtual buttons or just make shooting automatic with touch. Let me keep it simple: on mobile, touch anywhere to shoot, and the ship auto-rotates toward the nearest asteroid or something. Actually, let me just make it work with keyboard on desktop and add basic touch for shooting on mobile.
+
+Hmm, actually the spec lists specific controls but no shooting control. I'll add mouse-based aiming and shooting as an extension. For mobile, I'll add touch-to-shoot.
+
+OK, let me just start writing the code. I'll make reasonable decisions as I go.
+
+Let me write each file:
+
+### index.html
+
+html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Asteroid Drift</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #050510; }
+    #gameCanvas { display: block; width: 100vw; height: 100vh; touch-action: none; }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script src="src/utils/math.js"></script>
+  <script src="src/utils/noise.js"></script>
+  <script src="src/utils/quadtree.js"></script>
+  <script src="src/utils/objectPool.js"></script>
+  <script src="src/model/player.js"></script>
+  <script src="src/model/asteroid.js"></script>
+  <script src="src/model/particle.js"></script>
+  <script src="src/model/projectile.js"></script>
+  <script src="src/model/procedural.js"></script>
+  <script src="src/model/gameState.js"></script>
+  <script src="src/view/background.js"></script>
+  <script src="src/view/renderer.js"></script>
+  <script src="src/view/hud.js"></script>
+  <script src="src/controller/input.js"></script>
+  <script src="src/controller/gameLoop.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
+
+
+Now let me write each JS file. This is going to be long.
+
+### src/utils/math.js
+
+Standard math utilities.
+
+### src/utils/noise.js
+
+Perlin noise implementation. I'll implement a simple 2D Perlin noise.
+
+### src/utils/quadtree.js
+
+Quadtree for spatial partitioning.
+
+### src/utils/objectPool.js
+
+Generic object pool.
+
+### src/model/player.js
+
+Player class with physics.
+
+### src/model/asteroid.js
+
+Asteroid class with fragmentation.
+
+### src/model/particle.js
+
+Particle class.
+
+### src/model/projectile.js
+
+Projectile class.
+
+### src/model/procedural.js
+
+Procedural generation.
+
+### src/model/gameState.js
+
+Game state management.
+
+### src/view/background.js
+
+Parallax background.
+
+### src/view/renderer.js
+
+Main renderer.
+
+### src/view/hud.js
+
+HUD rendering.
+
+### src/controller/input.js
+
+Input handling.
+
+### src/controller/gameLoop.js
+
+Game loop controller.
+
+### src/main.js
+
+Entry point.
+
+Let me write them all now. I'll be thorough and make sure everything works together.
+
+Let me think about the key integration points:
+
+1. The Game class (in main.js) holds:
+   - player (Player)
+   - asteroids (array)
+   - particles (pool)
+   - projectiles (pool)
+   - procedural generator
+   - game state
+   - quadtree for collision
+   - input controller
+   - renderers
+
+2. Each frame:
+   - Calculate dt
+   - Update player (with input)
+   - Update asteroids
+   - Update particles
+   - Update projectiles
+   - Check collisions (using quadtree)
+   - Spawn new asteroids if needed
+   - Update procedural generator
+   - Update game state
+   - Render background
+   - Render game objects
+   - Render HUD
+
+3. Input is captured by InputController, passed to player update.
+
+Let me now write all the code.
+
+For the Perlin noise, I'll implement a standard version with permutation table.
+
+For the quadtree, I'll implement a basic version with insert and query methods.
+
+For object pooling, I'll create a generic Pool class.
+
+Let me write the code now. I'll aim for completeness and correctness.
+
+Actually, let me think about the asteroid generation more carefully. The spec says "Cellular Automata approach combined with Perlin Noise." 
+
+Cellular automata approach: Start with a grid of cells, each either empty or filled. Apply rules iteratively to create organic shapes. Then use Perlin noise to place these shapes in the game world.
+
+But implementing full cellular automata might be overkill. Let me do a simpler approach:
+1. Use Perlin noise to determine asteroid cluster centers and sizes
+2. Generate asteroids around those centers with varying sizes
+3. Add some randomness for organic feel
+
+This gives us procedurally generated asteroid fields that look organic without the complexity of full CA simulation.
+
+Actually, let me implement a simplified version: generate a noise field, find regions of high density, and place asteroids there. This is essentially what cellular automata would do but more efficiently.
+
+Let me write the procedural generator:
+
+javascript
+class ProceduralGenerator {
+  constructor() {
+    this.noiseScale = 0.005;
+    this.noiseOffset = { x: 0, y: 0 };
+    this.waveDensity = 0.3;
+    this.waveSpeed = 1;
+  }
+  
+  generateField(canvasWidth, canvasHeight, wave) {
+    const asteroids = [];
+    const count = Math.floor(5 + wave * 15);
+    
+    for (let i = 0; i < count; i++) {
+      // Use noise to find a good spawn location
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * 400 + 100;
+      const x = (canvasWidth / 2) + Math.cos(angle) * dist + MathUtils.randomRange(-200, 200);
+      const y = (canvasHeight / 2) + Math.sin(angle) * dist + MathUtils.randomRange(-200, 200);
+      
+      // Determine size based on wave
+      const baseSize = 20 + wave * 10;
+      const sizeVariation = MathUtils.randomRange(0.5, 1.5);
+      const radius = baseSize * sizeVariation;
+      
+      // Add some clustering
+      const clusterNoise = this.noise2D(x * this.noiseScale, y * this.noiseScale);
+      if (clusterNoise > 0.5 + wave * 0.1) {
+        // Place near existing cluster
+        const clusterAngle = Math.random() * Math.PI * 2;
+        const clusterDist = Math.random() * 80;
+        const cx = x + Math.cos(clusterAngle) * clusterDist;
+        const cy = y + Math.sin(clusterAngle) * clusterDist;
+        asteroids.push(new Asteroid(cx, cy, radius));
+      } else {
+        asteroids.push(new Asteroid(x, y, radius));
+      }
+    }
+    
+    return asteroids;
+  }
+}
+
+
+Hmm, this is getting complicated. Let me simplify the procedural generation to focus on creating good-looking asteroid clusters.
+
+Actually, let me think about this differently. The procedural generator should create asteroid clusters that look organic. Here's my approach:
+
+1. Generate a noise field using Perlin noise
+2. Find regions where noise value is above a threshold (these are "dense" regions)
+3. Place asteroid clusters at the center of these dense regions
+4. Each cluster has multiple asteroids of varying sizes
+
+This creates organic, jagged formations.
+
+Let me also think about the asteroid movement. Asteroids should drift slowly in random directions, and their drift speed increases with waves.
+
+OK, let me just write the code now. I've been planning too long.
+
+Let me write each file one by one.
+
+For the noise implementation, I'll use a standard Perlin noise with a permutation table.
+
+Let me write the code:
+
+javascript
+// src/utils/noise.js
+class Noise {
+  constructor(seed = 12345) {
+    this.permutation = new Uint8Array(512);
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    // Shuffle with seed
+    let s = seed;
+    for (let i = 255; i > 0; i--) {
+      s = (s * 16807) % 2147483647;
+      const j = s % (i + 1);
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    for (let i = 0; i < 512; i++) {
+      this.permutation[i] = p[i & 255];
+    }
+  }
+  
+  fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+  lerp(a, b, t) { return a + t * (b - a); }
+  grad(hash, x, y) {
+    const h = hash & 7;
+    const u = h < 4 ? x : y;
+    const v = h < 4 ? y : x;
+    return ((h & 1) ? -u : u) + ((h & 2) ? -2*v : 2*v);
+  }
+  
+  noise2D(x, y) {
+    const X = Math.floor(x) & 255;
+    const Y = Math.floor(y) & 255;
+    x -= Math.floor(x);
+    y -= Math.floor(y);
+    const u = this.fade(x);
+    const v = this.fade(y);
+    const aa = this.permutation[this.permutation[X] + Y];
+    const ab = this.permutation[this.permutation[X] + Y + 1];
+    const ba = this.permutation[this.permutation[X + 1] + Y];
+    const bb = this.permutation[this.permutation[X + 1] + Y + 1];
+    return this.lerp(
+      this.lerp(this.grad(aa, x, y), this.grad(ba, x-1, y), u),
+      this.lerp(this.grad(ab, x, y-1), this.grad(bb, x-1, y-1), u),
+      v
+    );
+  }
+  
+  fbm(x, y, octaves = 3) {
+    let value = 0;
+    let amplitude = 1;
+    let frequency = 1;
+    let maxValue = 0;
+    for (let i = 0; i < octaves; i++) {
+      value += this.noise2D(x * frequency, y * frequency) * amplitude;
+      maxValue += amplitude;
+      amplitude *= 0.5;
+      frequency *= 2;
+    }
+    return value / maxValue;
+  }
+}
+
+
+Now the quadtree:
+
+javascript
+// src/utils/quadtree.js
+class Quadtree {
+  constructor(bounds, capacity = 10) {
+    this.bounds = bounds; // {x, y, w, h}
+    this.capacity = capacity;
+    this.objects = [];
+    this.nodes = null;
+  }
+  
+   subdivide() {
+    const { x, y, w, h } = this.bounds;
+    const hw = w / 2;
+    const hh = h / 2;
+    this.nodes = [
+      new Quadtree({ x, y, w: hw, h: hh }),
+      new Quadtree({ x: x + hw, y, w: hw, h: hh }),
+      new Quadtree({ x, y: y + hh, w: hw, h: hh }),
+      new Quadtree({ x: x + hw, y: y + hh, w: hw
+
+Continue the JSON exactly from the
