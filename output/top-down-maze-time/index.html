@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>
+<title>Chrono Maze</title>
+<link rel='icon' href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⏳</text></svg>">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0a0a12;color:#0ff;font-family:'Courier New',monospace;overflow-x:hidden;display:flex;flex-direction:column;align-items:center;min-height:100vh}
+#wrap{width:100%;max-width:900px;padding:8px;position:relative}
+#topbar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.glass{background:rgba(255,255,255,.06);border:1px solid rgba(0,255,255,.35);border-radius:12px;padding:8px 12px;backdrop-filter:blur(8px);box-shadow:0 4px 20px rgba(0,0,0,.5)}
+#healthWrap{width:180px;height:14px;background:#111;border:1px solid #0ff;border-radius:6px;overflow:hidden}
+#healthBar{height:100%;width:100%;background:linear-gradient(90deg,#0ff,#ff2ec4,#39ff88);transition:width .2s}
+#healthBar.hit{background:#f00}
+#wave{font-size:28px;font-weight:bold;color:rgba(255,255,255,.85);text-shadow:0 0 10px #ff2ec4}
+#timer{color:#39ff88;font-weight:bold}
+#score{color:#fa0}
+canvas{width:100%;height:auto;display:block;background:#0a0a12;border:2px solid #0ff;border-radius:12px;box-shadow:0 0 24px rgba(0,255,255,.35),0 0 40px rgba(98,0,170,.4);touch-action:none}
+#freezeWrap{display:flex;justify-content:center;margin-top:8px}
+#freezeBar{width:70%;height:12px;background:#111;border:1px solid #6200aa;border-radius:6px;overflow:hidden}
+#freezeFill{height:100%;width:100%;background:linear-gradient(90deg,#6200aa,#0ff,#ff2ec4)}
+#freezeFill.active{background:#6200aa;box-shadow:0 0 12px #6200aa}
+#minimap{position:absolute;right:16px;bottom:52px;width:110px;height:80px;background:rgba(10,10,18,.85);border:1px solid #0ff;border-radius:8px}
+#pauseMenu{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(10,10,18,.7);backdrop-filter:blur(6px);z-index:10}
+#pauseMenu .box{text-align:center;padding:24px}
+button{background:#1a1a2e;color:#0ff;border:1px solid #0ff;padding:10px 18px;margin:6px;border-radius:8px;font-family:inherit;cursor:pointer}
+button:hover{background:#0ff;color:#000}
+#touch{display:none;justify-content:space-between;padding:10px 4px}
+#joy{width:110px;height:110px;border:2px solid #0ff;border-radius:50%;position:relative;background:rgba(0,255,255,.08)}
+#stick{width:48px;height:48px;background:#0ff;border-radius:50%;position:absolute;left:31px;top:31px;opacity:.8}
+#freezeBtn{width:90px;height:90px;border-radius:50%;background:#6200aa;color:#fff;border:2px solid #ff2ec4;font-size:14px}
+@media (pointer:coarse){#touch{display:flex}}
+#msg{text-align:center;color:#ff2ec4;min-height:20px;margin-top:4px}
+</style>
+</head>
+<body>
+<div id='wrap'>
+<div id='topbar'>
+<div class='glass'><div>HP</div><div id='healthWrap'><div id='healthBar'></div></div></div>
+<div class='glass' id='timer'>⏱ 00:00.0</div>
+<div class='glass' id='score'>BEST: -</div>
+<div class='glass' id='wave'>WAVE 1</div>
+</div>
+<canvas id='game' width='840' height='600'></canvas>
+<canvas id='minimap' width='110' height='80'></canvas>
+<div id='freezeWrap' class='glass'><div style='width:100%'><div style='text-align:center;font-size:12px'>TEMPORAL ENERGY [HOLD SPACE]</div><div id='freezeBar'><div id='freezeFill'></div></div></div></div>
+<div id='msg'></div>
+<div id='touch'><div id='joy'><div id='stick'></div></div><button id='freezeBtn'>❄ FREEZE</button></div>
+</div>
+<div id='pauseMenu'><div class='glass box'><h2>⏸ PAUSED</h2><button id='resumeBtn'>Resume</button><button id='restartBtn'>Restart Wave</button><button id='quitBtn'>Quit</button></div></div>
+<script type='module' src='src/main.js'></script>
+</body>
+</html>
