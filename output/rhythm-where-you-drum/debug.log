@@ -1,0 +1,978 @@
+JSON Decode Error after continuation: Invalid control character at: line 3 column 15546 (char 19889)
+
+Raw: ```json
+{
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>BeatBox: Rhythm Drums</title>\n    <link href=\"https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;600&display=swap\" rel=\"stylesheet\">\n    <img src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Ctext x='8' y='10' font-size='12' text-anchor='middle' fill='%23ff2d95'%3E🔥%3C/text%3E%3C/svg%3E\" alt=\"BeatBox Emoji Favicon\" width=\"24\" height=\"24\">\n    <style>\n        * { margin: 0; padding: 0; box-sizing: border-box; }\n        body {\n            background: #0f0f1a;\n            font-family: 'JetBrains Mono', monospace;\n            overflow: hidden;\n            height: 100vh;\n            display: flex;\n            flex-direction: column;\n        }\n        canvas {\n            position: absolute;\n            top: 0; left: 0;\n            width: 100%; height: 100%;\n        }\n        #speedrun {\n            position: absolute;\n            top: 20px; right: 20px;\n            font-family: 'Orbitron', sans-serif;\n            font-size: 24px;\n            color: #00e5ff;\n            background: rgba(0, 0, 0, 0.7);\n            padding: 12px 20px;\n            border-radius: 8px;\n            z-index: 10;\n            display: flex;\n            align-items: center;\n            gap: 8px;\n        }\n        #speedrun .label {\n            color: #00e5ff;\n            font-weight: 700;\n        }\n        #speedrun .timer {\n            font-family: 'Orbitron', sans-serif;\n            font-size: 48px;\n            font-weight: 900;\n            color: #ff2d95;\n            text-shadow: 0 0 20px #ff2d95;\n        }\n        #start-screen {\n            position: absolute;\n            top: 0; left: 0; right: 0; bottom: 0;\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            background: rgba(0, 0, 0, 0.9);\n            z-index: 20;\n            transition: opacity 0.3s;\n        }\n        #start-screen.hidden {\n            opacity: 0;\n            pointer-events: none;\n        }\n        #start-screen h1 {\n            font-family: 'Orbitron', sans-serif;\n            font-size: 48px;\n            color: #ff2d95;\n            margin-bottom: 20px;\n            text-shadow: 0 0 30px #ff2d95;\n        }\n        #start-screen p {\n            font-size: 16px;\n            color: #888;\n            margin-bottom: 30px;\n        }\n        button {\n            font-family: 'Orbitron', sans-serif;\n            font-size: 20px;\n            padding: 15px 40px;\n            border: none;\n            border-radius: 8px;\n            cursor: pointer;\n            transition: all 0.2s;\n        }\n        button:hover {\n            transform: scale(1.05);\n        }\n        #pause-overlay {\n            position: absolute;\n            top: 0; left: 0; right: 0; bottom: 0;\n            background: rgba(0, 0, 0, 0.6);\n            display: flex;\n            flex-direction: column;\n            align-items: center;\n            justify-content: center;\n            z-index: 15;\n            opacity: 0;\n            pointer-events: none;\n            transition: opacity 0.3s;\n        }\n        #pause-overlay.active {\n            opacity: 1;\n            pointer-events: auto;\n        }\n        #pause-overlay button {\n            margin-top: 20px;\n            font-size: 18px;\n        }\n    </style>\n</head>\n<body>\n    <canvas id=\"gameCanvas\"></canvas>\n    \n    <div id=\"speedrun\">\n        <span class=\"label\">Speedrun</span>\n        <div class=\"timer\" id=\"timer\">60</div>\n    </div>\n    \n    <div id=\"start-screen\">\n        <h1>BeatBox</h1>\n        <p>Rhythm Drums - Hit the boxes in time!</p>\n        <button id=\"startBtn\">Start Game</button>\n    </div>\n    \n    <div id=\"pause-overlay\">\n        <p>Paused</p>\n        <button id=\"resumeBtn\">Resume</button>\n    </div>\n    \n    <script src=\"audio.js\"></script>\n    <script src=\"physics.js\"></script>\n    <script src=\"renderer.js\"></script>\n    <script src=\"main.js\"></script>\n</body>\n</html>",
+  "main.js": "// BeatBox: Rhythm Drums - Main Game Logic\nconst CANVAS = document.getElementById('gameCanvas');\nconst TIMER = document.getElementById('timer');\nconst START_BTN = document.getElementById('startBtn');\nconst PAUSE_OVERLAY = document.getElementById('pause-overlay');\nconst RESUME_BTN = document.getElementById('resumeBtn');\n\n// Game State\nlet gameState = {\n    isPlaying: false,\n    isPaused: false,\n    combo: 0,\n    score: 0,\n    highScore: 0,\n    currentLane: null,\n    hitLineY: 0,\n    speedrunTime: 60,\n    lastHitTime: 0,\n    startTime: 0\n};\n\n// Color Palette (Vibrant & Unique)\nconst COLORS = {\n    lane1: '#FF2D95',    // Neon Pink - D\n    lane2: '#00E5FF',   // Cyan Blue - F\n    lane3: '#A8FF00',   // Lime Green - J\n    lane4: '#FF6B35',   // Vibrant Orange - K\n    hitLine: '#00E5FF',\n    perfect: '#FFFFFF',\n    great: '#FFD700',\n    good: '#FFA500',\n    score: '#00E5FF',\n    multiplier: '#FF6B35'\n};\n\n// Audio System using Web Audio API\nlet audioCtx = null;\nlet audioGain = null;\nlet audioSource = null;\nlet beatSynth = null;\n\n// Initialize Audio Context\nfunction initAudio() {\n    if (!audioCtx) {\n        audioCtx = new (window.AudioContext || window.webkitAudioContext)();\n        audioGain = audioCtx.createGain();\n        audioGain.gain.value = 0.3;\n        audioGain.connect(audioCtx.destination);\n        \n        // Create sound effects\n        const hitSynth = audioCtx.createOscillator();\n        hitSynth.type = 'square';\n        hitSynth.frequency.setValueAtTime(800, audioCtx.currentTime);\n        hitSynth.gain.setValueAtTime(0.15, audioCtx.currentTime);\n        hitSynth.connect(audioGain);\n        \n        const perfectSynth = audioCtx.createOscillator();\n        perfectSynth.type = 'sine';\n        perfectSynth.frequency.setValueAtTime(1200, audioCtx.currentTime);\n        perfectSynth.gain.setValueAtTime(0.4, audioCtx.currentTime + 0.1);\n        perfectSynth.connect(audioGain);\n        \n        const greatSynth = audioCtx.createOscillator();\n        greatSynth.type = 'triangle';\n        greatSynth.frequency.setValueAtTime(1000, audioCtx.currentTime);\n        greatSynth.gain.setValueAtTime(0.3, audioCtx.currentTime + 0.15);\n        greatSynth.connect(audioGain);\n        \n        const missSynth = audioCtx.createOscillator();\n        missSynth.type = 'sawtooth';\n        missSynth.frequency.setValueAtTime(200, audioCtx.currentTime);\n        missSynth.gain.setValueAtTime(0.2, audioCtx.currentTime);\n        missSynth.connect(audioGain);\n        \n        // Store references for later use\n        audioGain = hitSynth;\n        perfectSynth = perfectSynth;\n        greatSynth = greatSynth;\n        missSynth = missSynth;\n    }\n}\n\n// Speedrun Timer\nlet speedrunTimer = 0;\n\nfunction startSpeedrun() {\n    speedrunTimer = 60;\n    TIMER.textContent = speedrunTimer;\n    PAUSE_OVERLAY.classList.add('active');\n    gameState.isPaused = true;\n}\n\nfunction updateSpeedrun() {\n    if (gameState.isPlaying && !gameState.isPaused) {\n        speedrunTimer--;\n        TIMER.textContent = speedrunTimer;\n        if (speedrunTimer <= 0) {\n            endGame();\n        }\n    }\n}\n\n// Game Initialization\nfunction initGame() {\n    resizeCanvas();\n    initAudio();\n    gameState.isPlaying = true;\n    gameState.combo = 0;\n    gameState.score = 0;\n    gameState.highScore = localStorage.getItem('beatbox_highscore') || 0;\n    gameState.currentLane = null;\n    gameState.hitLineY = CANVAS.height * 0.5;\n    gameState.speedrunTime = 60;\n    updateSpeedrun();\n    startSpeedrun();\n    renderHUD();\n}\n\n// Resize Canvas to Fill Screen\nfunction resizeCanvas() {\n    CANVAS.width = window.innerWidth;\n    CANVAS.height = window.innerHeight;\n}\n\n// Start the Game\nSTART_BTN.addEventListener('click', () => {\n    if (!gameState.isPlaying) {\n        initGame();\n    }\n});\n\n// Pause/Resume\nRESUME_BTN.addEventListener('click', () => {\n    if (gameState.isPaused) {\n        gameState.isPaused = false;\n        PAUSE_OVERLAY.classList.remove('active');\n        startSpeedrun();\n    } else {\n        gameState.isPaused = true;\n        PAUSE_OVERLAY.classList.add('active');\n    }\n});\n\n// Keyboard Input\ndocument.addEventListener('keydown', (e) => {\n    if (!gameState.isPlaying || gameState.isPaused) return;\n    \n    const key = e.key.toLowerCase();\n    \n    // Map keys to lanes\n    if (key === 'd') {\n        handleLaneHit(COLORS.lane1, 'D');\n    } else if (key === 'f') {\n        handleLaneHit(COLORS.lane2, 'F');\n    } else if (key === 'j') {\n        handleLaneHit(COLORS.lane3, 'J');\n    } else if (key === 'k') {\n        handleLaneHit(COLORS.lane4, 'K');\n    }\n});\n\n// Handle Lane Hit - Check Timing and Update State\nfunction handleLaneHit(laneColor, key) {\n    // Only process if we're in a lane and within the timing window\n    if (gameState.currentLane === laneColor) {\n        gameState.currentLane = laneColor;\n        gameState.combo++;\n        gameState.score += 100 * gameState.combo;\n        \n        // Check for perfect hit (within 20ms of hit line)\n        const now = performance.now();\n        const hitTime = now - gameState.lastHitTime;\n        const timeSinceHitLine = now - gameState.hitLineY;\n        \n        if (Math.abs(timeSinceHitLine) < 20) {\n            // Perfect hit\n            gameState.combo++;\n            gameState.score += 300;\n            showJudgment('PERFECT');\n            triggerCameraShake();\n            // Update high score\n            if (gameState.score > gameState.highScore) {\n                gameState.highScore = gameState.score;\n                localStorage.setItem('beatbox_highscore', gameState.highScore);\n            }\n        } else if (Math.abs(timeSinceHitLine) < 100) {\n            // Great hit\n            gameState.combo++;\n            gameState.score += 200;\n            showJudgment('GREAT');\n            triggerCameraShake();\n        } else if (Math.abs(timeSinceHitLine) < 200) {\n            // Good hit\n            gameState.combo++;\n            gameState.score += 150;\n            showJudgment('GOOD');\n            triggerCameraShake();\n        } else {\n            // Miss - combo breaks\n            gameState.combo = 0;\n            gameState.score = 0;\n            showJudgment('MISS');\n            triggerCameraShake();\n        }\n        \n        // Update HUD\n        renderHUD();\n        \n        // Update speedrun timer\n        updateSpeedrun();\n        \n        // Spawn next note\n        spawnNote();\n    }\n}\n\n// Spawn a new note at a random lane\nfunction spawnNote() {\n    const lanes = [COLORS.lane1, COLORS.lane2, COLORS.lane3, COLORS.lane4];\n    const lane = lanes[Math.floor(Math.random() * lanes.length)];\n    gameState.currentLane = lane;\n    \n    // Add a small delay before the note appears\n    setTimeout(() => {\n        const x = Math.random() * CANVAS.width;\n        const y = CANVAS.height - 50;\n        createBox(x, y, lane, laneColor: lane);\n    }, 100 + Math.random() * 200);\n}\n\n// Create a box on the canvas\nfunction createBox(x, y, lane, laneColor) {\n    const box = {\n        x,\n        y,\n        width: 80,\n        height: 60,\n        color: laneColor,\n        hitLineY: y,\n        isHeld: false,\n        heldKey: null,\n        heldTime: 0,\n        hit: false\n    };\n    \n    // Add to renderer's box list\n    renderer.boxes.push(box);\n    \n    // Visual feedback on hit\n    if (box.hit) {\n        box.animation = {\n            type: 'squashStretch',\n            scale: 1.2,\n            duration: 150\n        };\n    }\n}\n\n// Renderer Module\nconst renderer = {\n    boxes: [],\n    animation: [],\n    \n    // Draw a single box\n    drawBox(x, y, color, hitLineY, isHeld) {\n        const alpha = isHeld ? 0.5 : 1.0;\n        const glowIntensity = isHeld ? 0.3 : 0;\n        \n        // Main box with glow\n        const grad = ctx.createLinearGradient(x, y, x, y + 60);\n        grad.addColorStop(0, color + '40');\n        grad.addColorStop(0.5, color + '20');\n        grad.addColorStop(1, color + '10');\n        \n        ctx.save();\n        ctx.globalAlpha = alpha;\n        ctx.globalCompositeOperation = 'lighter';\n        \n        // Box body\n        ctx.fillStyle = color;\n        ctx.strokeStyle = color + '80';\n        ctx.lineWidth = 2;\n        \n        // Rounded box\n        const radius = 8;\n        ctx.beginPath();\n        ctx.roundRect(x + 4, y + 10, x + 72 - 8, 50 - 20, radius);\n        ctx.fill();\n        ctx.stroke();\n        \n        // Glow effect\n        if (glowIntensity > 0) {\n            ctx.fillStyle = color + '100';\n            ctx.beginPath();\n            ctx.arc(x + 36, y + 35, 25, 0, Math.PI * 2);\n            ctx.fill();\n        }\n        \n        ctx.restore();\n    },\n    \n    // Update and draw all boxes\n    updateAndDraw() {\n        for (const box of this.boxes) {\n            // Check if box has been hit\n            if (box.hit) {\n                // Remove after a short delay\n                setTimeout(() => {\n                    this.boxes = this.boxes.filter(b => b !== box);\n                }, 300);\n                continue;\n            }\n            \n            // Update animation\n            if (box.animation) {\n                const elapsed = performance.now() - box.animation.startTime;\n                if (elapsed < box.animation.duration) {\n                    // Squash and stretch animation\n                    const progress = Math.min(elapsed / box.animation.duration, 1);\n                    const scale = 1 + (1 - progress) * 0.2;\n                    box.scale = scale;\n                    \n                    // Update visual properties\n                    if (box.animation.type === 'squashStretch') {\n                        box.scale = 1.2;\n                    }\n                }\n            }\n            \n            // Draw the box\n            this.drawBox(box.x, box.y, box.color, box.hitLineY, box.isHeld);\n        }\n    },\n    \n    // Update all animations\n    updateAnimations() {\n        for (const box of this.boxes) {\n            if (box.animation) {\n                const elapsed = performance.now() - box.animation.startTime;\n                if (elapsed < box.animation.duration) {\n                    // Continue animation\n                } else {\n                    // Animation complete - reset\n                    box.animation = null;\n                }\n            }\n        }\n    }\n};\n\n// HUD Module\nconst ui = {\n    // Update combo display\n    updateCombo() {\n        document.getElementById('comboDisplay').textContent = `Combo: ${gameState.combo}`;\n    },\n    \n    // Update score display\n    updateScore() {\n        document.getElementById('scoreDisplay').textContent = `Score: ${gameState.score.toLocaleString()}`;\n    },\n    \n    // Update high score display\n    updateHighScore() {\n        const highScoreEl = document.getElementById('highScoreDisplay');\n        if (gameState.highScore > 0) {\n            highScoreEl.textContent = `High Score: ${gameState.highScore.toLocaleString()}`;\n        } else {\n            highScoreEl.textContent = 'High Score: 0';\n        }\n    },\n    \n    // Update multiplier display\n    updateMultiplier() {\n        const multiplierEl = document.getElementById('multiplierDisplay');\n        if (gameState.combo >= 20) {\n            multiplierEl.textContent = `x${Math.floor(gameState.combo / 10)}`;\n        } else {\n            multiplierEl.textContent = `x${Math.floor(gameState.combo / 10)}`;\n        }\n    }\n};\n\n// Judgment Display\nlet judgmentText = null;\n\nfunction showJudgment(judgment) {\n    judgmentText = judgment;\n    const el = document.createElement('div');\n    el.textContent = judgment;\n    el.style.color = judgment === 'PERFECT' ? '#fff' : (judgment === 'GREAT' ? '#ffd700' : '#ffa500');\n    el.style.fontSize = '24px';\n    el.style.fontWeight = '900';\n    el.style.textShadow = '0 0 20px currentColor';\n    el.style.animation = 'floatUp 1.2s ease-out';\n    \n    document.body.appendChild(el);\n    \n    // Remove after animation\n    setTimeout(() => {\n        if (el.parentNode) el.remove();\n    }, 1200);\n}\n\n// Floating judgment text animation\nlet floatUpAnimation = null;\n\nfunction floatUp(text) {\n    const el = document.createElement('div');\n    el.textContent = text;\n    el.style.color = '#fff';\n    el.style.fontSize = '28px';\n    el.style.fontWeight = '900';\n    el.style.textShadow = '0 0 30px #fff';\n    el.style.animation = 'floatUp 1.2s ease-out forwards';\n    document.body.appendChild(el);\n    \n    // Clean up after animation\n    setTimeout(() => el.remove(), 1200);\n}\n\n// Camera Shake Effect\nlet cameraShake = false;\n\nfunction triggerCameraShake() {\n    cameraShake = true;\n    const canvas = document.getElementById('gameCanvas');\n    const centerX = canvas.width / 2;\n    const centerY = canvas.height / 2;\n    \n    // Decay wave effect\n    const waveOffset = (performance.now() * 0.003) % 4;\n    \n    // Apply shake to canvas transform\n    if (canvas.transform) {\n        canvas.style.transform = `translate(${waveOffset}px, ${waveOffset}px) rotate(${waveOffset * 0.5}deg)`;\n    } else {\n        canvas.style.transform = `translate(${waveOffset}px, ${waveOffset}px) rotate(${waveOffset * 0.5}deg)`;\n    }\n    \n    // Add a brief translation pulse\n    setTimeout(() => {\n        if (canvas.transform) {\n            const current = parseFloat(canvas.style.transform.replace('translate(.*)', '').replace('rotate(.*)', ''));\n            canvas.style.transform = `translate(${current - 2}px, ${current - 2}px) rotate(${current * 0.5}deg)`;\n        }\n    }, 200);\n}\n\n// Pause/Resume Game\nfunction togglePause() {\n    if (gameState.isPlaying) {\n        gameState.isPaused = true;\n        PAUSE_OVERLAY.classList.add('active');\n    } else {\n        gameState.isPaused = false;\n        PAUSE_OVERLAY.classList.remove('active');\n        startSpeedrun();\n    }\n}\n\n// End Game\nfunction endGame() {\n    gameState.isPlaying = false;\n    gameState.isPaused = false;\n    \n    // Stop speedrun timer\n    if (speedrunTimer > 0) {\n        speedrunTimer = 0;\n        TIMER.textContent = '0';\n    }\n    \n    // Update high score if needed\n    if (gameState.score > gameState.highScore) {\n        gameState.highScore = gameState.score;\n        localStorage.setItem('beatbox_highscore', gameState.highScore);\n    }\n    \n    // Show final screen\n    const finalScreen = document.createElement('div');\n    finalScreen.style.position = 'absolute';\n    finalScreen.style.top = '0'; finalScreen.style.left = '0'; finalScreen.style.width = '100%'; finalScreen.style.height = '100%';\n    finalScreen.style.background = 'rgba(0, 0, 0, 0.95)';\n    finalScreen.style.display = 'flex';\n    finalScreen.style.alignItems = 'center'; finalScreen.style.justifyContent = 'center';\n    finalScreen.innerHTML = `\n        <h2>Game Over</h2>\n        <p>Final Score: ${gameState.score.toLocaleString()}</p>\n        <p>High Score: ${gameState.highScore.toLocaleString()}</p>\n        <button id=\"restartBtn\">Restart</button>\n    `;\n    document.body.replaceChild(finalScreen, document.getElementById('start-screen'));\n    \n    // Add restart button\n    const restartBtnconst restartBtn = document.getElementById('restartBtn');
+    const RESTART_BTN = document.getElementById('restartBtn');
+
+    // Restart Game
+    RESTART_BTN.addEventListener('click', () => {
+        if (gameState.isPlaying || gameState.isPaused) {
+            // Reset game state
+            gameState.isPlaying = false;
+            gameState.isPaused = false;
+            gameState.combo = 0;
+            gameState.score = 0;
+            gameState.highScore = localStorage.getItem('beatbox_highscore') || 0;
+            gameState.currentLane = null;
+            gameState.hitLineY = CANVAS.height * 0.5;
+            gameState.speedrunTime = 60;
+            updateSpeedrun();
+            startSpeedrun();
+            renderHUD();
+        }
+    });
+
+    // Game Initialization
+    initGame();
+
+    // Keyboard Input (continued)
+    document.addEventListener('keydown', (e) => {
+        if (!gameState.isPlaying || gameState.isPaused) return;
+        
+        const key = e.key.toLowerCase();
+        
+        // Map keys to lanes
+        if (key === 'd') {
+            handleLaneHit(COLORS.lane1, 'D');
+        } else if (key === 'f') {
+            handleLaneHit(COLORS.lane2, 'F');
+        } else if (key === 'j') {
+            handleLaneHit(COLORS.lane3, 'J');
+        } else if (key === 'k') {
+            handleLaneHit(COLORS.lane4, 'K');
+        }
+    });
+
+    // Handle Lane Hit - Check Timing and Update State (continued)
+    function handleLaneHit(laneColor, key) {
+        // Only process if we're in a lane and within the timing window
+        if (gameState.currentLane === laneColor) {
+            gameState.currentLane = laneColor;
+            gameState.combo++;
+            gameState.score += 100 * gameState.combo;
+            
+            // Check for perfect hit (within 20ms of hit line)
+            const now = performance.now();
+            const hitTime = now - gameState.lastHitTime;
+            const timeSinceHitLine = now - gameState.hitLineY;
+            
+            if (Math.abs(timeSinceHitLine) < 20) {
+                // Perfect hit
+                gameState.combo++;
+                gameState.score += 300;
+                showJudgment('PERFECT');
+                triggerCameraShake();
+                // Update high score
+                if (gameState.score > gameState.highScore) {
+                    gameState.highScore = gameState.score;
+                    localStorage.setItem('beatbox_highscore', gameState.highScore);
+                }
+            } else if (Math.abs(timeSinceHitLine) < 100) {
+                // Great hit
+                gameState.combo++;
+                gameState.score += 200;
+                showJudgment('GREAT');
+                triggerCameraShake();
+            } else if (Math.abs(timeSinceHitLine) < 200) {
+                // Good hit
+                gameState.combo++;
+                gameState.score += 150;
+                showJudgment('GOOD');
+                triggerCameraShake();
+            } else {
+                // Miss - combo breaks
+                gameState.combo = 0;
+                gameState.score = 0;
+                showJudgment('MISS');
+                triggerCameraShake();
+            }
+            
+            // Update HUD
+            renderHUD();
+            
+            // Update speedrun timer
+            updateSpeedrun();
+            
+            // Spawn next note
+            spawnNote();
+        }
+    }
+
+    // Spawn a new note at a random lane
+    function spawnNote() {
+        const lanes = [COLORS.lane1, COLORS.lane2, COLORS.lane3, COLORS.lane4];
+        const lane = lanes[Math.floor(Math.random() * lanes.length)];
+        gameState.currentLane = lane;
+        
+        // Add a small delay before the note appears
+        setTimeout(() => {
+            const x = Math.random() * CANVAS.width;
+            const y = CANVAS.height - 50;
+            createBox(x, y, lane, laneColor: lane);
+        }, 100 + Math.random() * 200);
+    }
+
+    // Create a box on the canvas
+    function createBox(x, y, lane, laneColor) {
+        const box = {
+            x,
+            y,
+            width: 80,
+            height: 60,
+            color: laneColor,
+            hitLineY: y,
+            isHeld: false,
+            heldKey: null,
+            heldTime: 0,
+            hit: false
+        };
+        
+        // Add to renderer's box list
+        renderer.boxes.push(box);
+        
+        // Visual feedback on hit
+        if (box.hit) {
+            box.animation = {
+                type: 'squashStretch',
+                scale: 1.2,
+                duration: 150
+            };
+        }
+    }
+
+    // Renderer Module
+    const renderer = {
+        boxes: [],
+        animation: [],
+        
+        // Draw a single box
+        drawBox(x, y, color, hitLineY, isHeld) {
+            const alpha = isHeld ? 0.5 : 1.0;
+            const glowIntensity = isHeld ? 0.3 : 0;
+            
+            // Main box with glow
+            const grad = ctx.createLinearGradient(x, y, x, y + 60);
+            grad.addColorStop(0, color + '40');
+            grad.addColorStop(0.5, color + '20');
+            grad.addColorStop(1, color + '10');
+            
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.globalCompositeOperation = 'lighter';
+            
+            // Box body
+            ctx.fillStyle = color;
+            ctx.strokeStyle = color + '80';
+            ctx.lineWidth = 2;
+            
+            // Rounded box
+            const radius = 8;
+            ctx.beginPath();
+            ctx.roundRect(x + 4, y + 10, x + 72 - 8, 50 - 20, radius);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Glow effect
+            if (glowIntensity > 0) {
+                ctx.fillStyle = color + '100';
+                ctx.beginPath();
+                ctx.arc(x + 36, y + 35, 25, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        },
+        
+        // Update and draw all boxes
+        updateAndDraw() {
+            for (const box of this.boxes) {
+                // Check if box has been hit
+                if (box.hit) {
+                    // Remove after a short delay
+                    setTimeout(() => {
+                        this.boxes = this.boxes.filter(b => b !== box);
+                    }, 300);
+                    continue;
+                }
+                
+                // Update animation
+                if (box.animation) {
+                    const elapsed = performance.now() - box.animation.startTime;
+                    if (elapsed < box.animation.duration) {
+                        // Squash and stretch animation
+                        const progress = Math.min(elapsed / box.animation.duration, 1);
+                        const scale = 1 + (1 - progress) * 0.2;
+                        box.scale = scale;
+                        
+                        // Update visual properties
+                        if (box.animation.type === 'squashStretch') {
+                            box.scale = 1.2;
+                        }
+                    }
+                }
+                
+                // Draw the box
+                this.drawBox(box.x, box.y, box.color, box.hitLineY, box.isHeld);
+            }
+        },
+        
+        // Update all animations
+        updateAnimations() {
+            for (const box of this.boxes) {
+                if (box.animation) {
+                    const elapsed = performance.now() - box.animation.startTime;
+                    if (elapsed < box.animation.duration) {
+                        // Continue animation
+                    } else {
+                        // Animation complete - reset
+                        box.animation = null;
+                    }
+                }
+            }
+        }
+    };
+
+    // HUD Module
+    const ui = {
+        // Update combo display
+        updateCombo() {
+            document.getElementById('comboDisplay').textContent = `Combo: ${gameState.combo}`;
+        },
+        
+        // Update score display
+        updateScore() {
+            document.getElementById('scoreDisplay').textContent = `Score: ${gameState.score.toLocaleString()}`;
+        },
+        
+        // Update high score display
+        updateHighScore() {
+            const highScoreEl = document.getElementById('highScoreDisplay');
+            if (gameState.highScore > 0) {
+                highScoreEl.textContent = `High Score: ${gameState.highScore.toLocaleString()}`;
+            } else {
+                highScoreEl.textContent = 'High Score: 0';
+            }
+        },
+        
+        // Update multiplier display
+        updateMultiplier() {
+            const multiplierEl = document.getElementById('multiplierDisplay');
+            if (gameState.combo >= 20) {
+                multiplierEl.textContent = `x${Math.floor(gameState.combo / 10)}`;
+            } else {
+                multiplierEl.textContent = `x${Math.floor(gameState.combo / 10)}`;
+            }
+        }
+    };
+
+    // Judgment Display
+    let judgmentText = null;
+    
+    function showJudgment(judgment) {
+        judgmentText = judgment;
+        const el = document.createElement('div');
+        el.textContent = judgment;
+        el.style.color = judgment === 'PERFECT' ? '#fff' : (judgment === 'GREAT' ? '#ffd700' : '#ffa500');
+        el.style.fontSize = '24px';
+        el.style.fontWeight = '900';
+        el.style.textShadow = '0 0 20px currentColor';
+        el.style.animation = 'floatUp 1.2s ease-out';
+        
+        document.body.appendChild(el);
+        
+        // Remove after animation
+        setTimeout(() => {
+            if (el.parentNode) el.remove();
+        }, 1200);
+    }
+    
+    // Floating judgment text animation
+    let floatUpAnimation = null;
+    
+    function floatUp(text) {
+        const el = document.createElement('div');
+        el.textContent = text;
+        el.style.color = '#fff';
+        el.style.fontSize = '28px';
+        el.style.fontWeight = '900';
+        el.style.textShadow = '0 0 30px #fff';
+        el.style.animation = 'floatUp 1.2s ease-out forwards';
+        document.body.appendChild(el);
+        
+        // Clean up after animation
+        setTimeout(() => el.remove(), 1200);
+    }
+    
+    // Camera Shake Effect
+    let cameraShake = false;
+    
+    function triggerCameraShake() {
+        cameraShake = true;
+        const canvas = document.getElementById('gameCanvas');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        // Decay wave effect
+        const waveOffset = (performance.now() * 0.003) % 4;
+        
+        // Apply shake to canvas transform
+        if (canvas.transform) {
+            canvas.style.transform = `translate(${waveOffset}px, ${waveOffset}px) rotate(${waveOffset * 0.5}deg)`;
+        } else {
+            canvas.style.transform = `translate(${waveOffset}px, ${waveOffset}px) rotate(${waveOffset * 0.5}deg)`;
+        }
+        
+        // Add a brief translation pulse
+        setTimeout(() => {
+            if (canvas.transform) {
+                const current = parseFloat(canvas.style.transform.replace('translate(.*)', '').replace('rotate(.*)', '')) || 0;
+                canvas.style.transform = `translate(${current - 2}px, ${current - 2}px) rotate(${current * 0.5}deg)`;
+            }
+        }, 200);
+    }
+    
+    // Pause/Resume Game
+    function togglePause() {
+        if (gameState.isPlaying) {
+            gameState.isPaused = true;
+            PAUSE_OVERLAY.classList.add('active');
+        } else {
+            gameState.isPaused = false;
+            PAUSE_OVERLAY.classList.remove('active');
+            startSpeedrun();
+        }
+    }
+    
+    // End Game
+    function endGame() {
+        gameState.isPlaying = false;
+        gameState.isPaused = false;
+        
+        // Stop speedrun timer
+        if (speedrunTimer > 0) {
+            speedrunTimer = 0;
+            TIMER.textContent = '0';
+        }
+        
+        // Update high score if needed
+        if (gameState.score > gameState.highScore) {
+            gameState.highScore = gameState.score;
+            localStorage.setItem('beatbox_highscore', gameState.highScore);
+        }
+        
+        // Show final screen
+        const finalScreen = document.createElement('div');
+        finalScreen.style.position = 'absolute';
+        finalScreen.style.top = '0'; finalScreen.style.left = '0'; finalScreen.style.width = '100%'; finalScreen.style.height = '100%';
+        finalScreen.style.background = 'rgba(0, 0, 0, 0.95)';
+        finalScreen.style.display = 'flex';
+        finalScreen.style.alignItems = 'center'; finalScreen.style.justifyContent = 'center';
+        finalScreen.innerHTML = `
+            <h2>Game Over</h2>
+            <p>Final Score: ${gameState.score.toLocaleString()}</p>
+            <p>High Score: ${gameState.highScore.toLocaleString()}</p>
+            <button id="restartBtn">Restart</button>
+        `;
+        document.body.replaceChild(finalScreen, document.getElementById('start-screen'));
+        
+        // Add restart button
+        const restartBtn = document.getElementById('restartBtn');
+        restartBtn.addEventListener('click', () => {
+            if (gameState.isPlaying || gameState.isPaused) {
+                // Reset game state
+                gameState.isPlaying = false;
+                gameState.isPaused = false;
+                gameState.combo = 0;
+                gameState.score = 0;
+                gameState.highScore = localStorage.getItem('beatbox_highscore') || 0;
+                gameState.currentLane = null;
+                gameState.hitLineY = CANVAS.height * 0.5;
+                gameState.speedrunTime = 60;
+                updateSpeedrun();
+                startSpeedrun();
+                renderHUD();
+            }
+        });
+    }
+    
+    // Initialize the game
+    initGame();
+    resizeCanvas();
+    initAudio();
+    gameState.isPlaying = true;
+    gameState.combo = 0;
+    gameState.score = 0;
+    gameState.highScore = localStorage.getItem('beatbox_highscore') || 0;
+    gameState.currentLane = null;
+    gameState.hitLineY = CANVAS.height * 0.5;
+    gameState.speedrunTime = 60;
+    updateSpeedrun();
+    startSpeedrun();
+    renderHUD();
+    
+    // Start the game
+    START_BTN.addEventListener('click', () => {
+        if (!gameState.isPlaying) {
+            initGame();
+        }
+    });
+    
+    // Pause/Resume
+    RESUME_BTN.addEventListener('click', () => {
+        if (gameState.isPaused) {
+            gameState.isPaused = false;
+            PAUSE_OVERLAY.classList.remove('active');
+            startSpeedrun();
+        } else {
+            gameState.isPaused = true;
+            PAUSE_OVERLAY.classList.add('active');
+        }
+    });
+    
+    // Keyboard Input
+    document.addEventListener('keydown', (e) => {
+        if (!gameState.isPlaying || gameState.isPaused) return;
+        
+        const key = e.key.toLowerCase();
+        
+        // Map keys to lanes
+        if (key === 'd') {
+            handleLaneHit(COLORS.lane1, 'D');
+        } else if (key === 'f') {
+            handleLaneHit(COLORS.lane2, 'F');
+        } else if (key === 'j') {
+            handleLaneHit(COLORS.lane3, 'J');
+        } else if (key === 'k') {
+            handleLaneHit(COLORS.lane4, 'K');
+        }
+    });
+    
+    // Handle Lane Hit - Check Timing and Update State
+    function handleLaneHit(laneColor, key) {
+        // Only process if we're in a lane and within the timing window
+        if (gameState.currentLane === laneColor) {
+            gameState.currentLane = laneColor;
+            gameState.combo++;
+            gameState.score += 100 * gameState.combo;
+            
+            // Check for perfect hit (within 20ms of hit line)
+            const now = performance.now();
+            const hitTime = now - gameState.lastHitTime;
+            const timeSinceHitLine = now - gameState.hitLineY;
+            
+            if (Math.abs(timeSinceHitLine) < 20) {
+                // Perfect hit
+                gameState.combo++;
+                gameState.score += 300;
+                showJudgment('PERFECT');
+                triggerCameraShake();
+                // Update high score
+                if (gameState.score > gameState.highScore) {
+                    gameState.highScore = gameState.score;
+                    localStorage.setItem('beatbox_highscore', gameState.highScore);
+                }
+            } else if (Math.abs(timeSinceHitLine) < 100) {
+                // Great hit
+                gameState.combo++;
+                gameState.score += 200;
+                showJudgment('GREAT');
+                triggerCameraShake();
+            } else if (Math.abs(timeSinceHitLine) < 200) {
+                // Good hit
+                gameState.combo++;
+                gameState.score += 150;
+                showJudgment('GOOD');
+                triggerCameraShake();
+            } else {
+                // Miss - combo breaks
+                gameState.combo = 0;
+                gameState.score = 0;
+                showJudgment('MISS');
+                triggerCameraShake();
+            }
+            
+            // Update HUD
+            renderHUD();
+            
+            // Update speedrun timer
+            updateSpeedrun();
+            
+            // Spawn next note
+            spawnNote();
+        }
+    }
+    
+    // Spawn a new note at a random lane
+    function spawnNote() {
+        const lanes = [COLORS.lane1, COLORS.lane2, COLORS.lane3, COLORS.lane4];
+        const lane = lanes[Math.floor(Math.random() * lanes.length)];
+        gameState.currentLane = lane;
+        
+        // Add a small delay before the note appears
+        setTimeout(() => {
+            const x = Math.random() * CANVAS.width;
+            const y = CANVAS.height - 50;
+            createBox(x, y, lane, laneColor: lane);
+        }, 100 + Math.random() * 200);
+    }
+    
+    // Create a box on the canvas
+    function createBox(x, y, lane, laneColor) {
+        const box = {
+            x,
+            y,
+            width: 80,
+            height: 60,
+            color: laneColor,
+            hitLineY: y,
+            isHeld: false,
+            heldKey: null,
+            heldTime: 0,
+            hit: false
+        };
+        
+        // Add to renderer's box list
+        renderer.boxes.push(box);
+        
+        // Visual feedback on hit
+        if (box.hit) {
+            box.animation = {
+                type: 'squashStretch',
+                scale: 1.2,
+                duration: 150
+            };
+        }
+    }
+    
+    // Renderer Module
+    const renderer = {
+        boxes: [],
+        animation: [],
+        
+        // Draw a single box
+        drawBox(x, y, color, hitLineY, isHeld) {
+            const alpha = isHeld ? 0.5 : 1.0;
+            const glowIntensity = isHeld ? 0.3 : 0;
+            
+            // Main box with glow
+            const grad = ctx.createLinearGradient(x, y, x, y + 60);
+            grad.addColorStop(0, color + '40');
+            grad.addColorStop(0.5, color + '20');
+            grad.addColorStop(1, color + '10');
+            
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.globalCompositeOperation = 'lighter';
+            
+            // Box body
+            ctx.fillStyle = color;
+            ctx.strokeStyle = color + '80';
+            ctx.lineWidth = 2;
+            
+            // Rounded box
+            const radius = 8;
+            ctx.beginPath();
+            ctx.roundRect(x + 4, y + 10, x + 72 - 8, 50 - 20, radius);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Glow effect
+            if (glowIntensity > 0) {
+                ctx.fillStyle = color + '100';
+                ctx.beginPath();
+                ctx.arc(x + 36, y + 35, 25, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            ctx.restore();
+        },
+        
+        // Update and draw all boxes
+        updateAndDraw() {
+            for (const box of this.boxes) {
+                // Check if box has been hit
+                if (box.hit) {
+                    // Remove after a short delay
+                    setTimeout(() => {
+                        this.boxes = this.boxes.filter(b => b !== box);
+                    }, 300);
+                    continue;
+                }
+                
+                // Update animation
+                if (box.animation) {
+                    const elapsed = performance.now() - box.animation.startTime;
+                    if (elapsed < box.animation.duration) {
+                        // Squash and stretch animation
+                        const progress = Math.min(elapsed / box.animation.duration, 1);
+                        const scale = 1 + (1 - progress) * 0.2;
+                        box.scale = scale;
+                        
+                        // Update visual properties
+                        if (box.animation.type === 'squashStretch') {
+                            box.scale = 1.2;
+                        }
+                    }
+                }
+                
+                // Draw the box
+                this.drawBox(box.x, box.y, box.color, box.hitLineY, box.isHeld);
+            }
+        },
+        
+        // Update all animations
+        updateAnimations() {
+            for (const box of this.boxes) {
+                if (box.animation) {
+                    const elapsed = performance.now() - box.animation.startTime;
+                    if (elapsed < box.animation.duration) {
+                        // Continue animation
+                    } else {
+                        // Animation complete - reset
+                        box.animation = null;
+                    }
+                }
+            }
+        }
+    };
+    
+    // HUD Module
+    const ui = {
+        // Update combo display
+        updateCombo() {
+            document.getElementById('comboDisplay').textContent = `Combo: ${gameState.combo}`;
+        },
+        
+        // Update score display
+        updateScore() {
+            document.getElementById('scoreDisplay').textContent = `Score: ${gameState.score.toLocaleString()}`;
+        },
+        
+        // Update high score display
+        updateHighScore() {
+            const highScoreEl = document.getElementById('highScoreDisplay');
+            if (gameState.highScore > 0) {
+                highScoreEl.textContent = `High Score: ${gameState.highScore.toLocaleString()}`;
+            } else {
+                highScoreEl.textContent = 'High Score: 0';
+            }
+        },
+        
+        // Update multiplier display
+        updateMultiplier() {
+            const multiplierEl = document.getElementById('multiplierDisplay');
+            if (gameState.combo >= 20) {
+                multiplierEl.textContent = `x${Math.floor(gameState.combo / 10)}`;
+            } else {
+                multiplierEl.textContent = `x${Math.floor(gameState.combo / 10)}`;
+            }
+        }
+    };
+    
+    // Judgment Display
+    let judgmentText = null;
+    
+    function showJudgment(judgment) {
+        judgmentText = judgment;
+        const el = document.createElement('div');
+        el.textContent = judgment;
+        el.style.color = judgment === 'PERFECT' ? '#fff' : (judgment === 'GREAT' ? '#ffd700' : '#ffa500');
+        el.style.fontSize = '24px';
+        el.style.fontWeight = '900';
+        el.style.textShadow = '0 0 20px currentColor';
+        el.style.animation = 'floatUp 1.2s ease-out';
+        
+        document.body.appendChild(el);
+        
+        // Remove after animation
+        setTimeout(() => {
+            if (el.parentNode) el.remove();
+        }, 1200);
+    }
+    
+    // Floating judgment text animation
+    let floatUpAnimation = null;
+    
+    function floatUp(text) {
+        const el = document.createElement('div');
+        el.textContent = text;
+        el.style.color = '#fff';
+        el.style.fontSize = '28px';
+        el.style.fontWeight = '900';
+        el.style.textShadow = '0 0 30px #fff';
+        el.style.animation = 'floatUp 1.2s ease-out forwards';
+        document.body.appendChild(el);
+        
+        // Clean up after animation
+        setTimeout(() => el.remove(), 1200);
+    }
+    
+    // Camera Shake Effect
+    let cameraShake = false;
+    
+    function triggerCameraShake() {
+        cameraShake = true;
+        const canvas = document.getElementById('gameCanvas');
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        
+        // Decay wave effect
+        const waveOffset = (performance.now() * 0.003) % 4;
+        
+        // Apply shake to canvas transform
+        if (canvas.transform) {
+            canvas.style.transform = `translate(${waveOffset}px, ${waveOffset}px) rotate(${waveOffset * 0.5}deg)`;
+        } else {
+            canvas.style.transform = `translate(${waveOffset}px, ${waveOffset}px) rotate(${waveOffset * 0.5}deg)`;
+        }
+        
+        // Add a brief translation pulse
+        setTimeout(() => {
+            if (canvas.transform) {
+                const current = parseFloat(canvas.style.transform.replace('translate(.*)', '').replace('rotate(.*)', '')) || 0;
+                canvas.style.transform = `translate(${current - 2}px, ${current - 2}px) rotate(${current * 0.5}deg)`;
+            }
+        }, 200);
+    }
+    
+    // Pause/Resume Game
+    function togglePause() {
+        if (gameState.isPlaying) {
+            gameState.isPaused = true;
+            PAUSE_OVERLAY.classList.add('active');
+        } else {
+            gameState.isPaused = false;
+            PAUSE_OVERLAY.classList.remove('active');
+            startSpeedrun();
+        }
+    }
+    
+    // End Game
+    function endGame() {
+        gameState.isPlaying = false;
+        gameState.isPaused = false;
+        
+        // Stop speedrun timer
+        if (speedrunTimer > 0) {
+            speedrunTimer = 0;
+            TIMER.textContent = '0';
+        }
+        
+        // Update high score if needed
+        if (gameState.score > gameState.highScore) {
+            gameState.highScore = gameState.score;
+            localStorage.setItem('beatbox_highscore', gameState.highScore);
+        }
+        
+        // Show final screen
+        const finalScreen = document.createElement('div');
+        finalScreen.style.position = 'absolute';
+        finalScreen.style.top = '0'; finalScreen.style.left = '0'; finalScreen.style.width = '100%'; finalScreen.style.height = '100%';
+        finalScreen.style.background = 'rgba(0, 0, 0, 0.95)';
+        finalScreen.style.display = 'flex';
+        finalScreen.style.alignItems = 'center'; finalScreen.style.justifyContent = 'center';
+        finalScreen.innerHTML = `
+            <h2>Game Over</h2>
+            <p>Final Score: ${gameState.score.toLocaleString()}</p>
+            <p>High Score: ${gameState.highScore.toLocaleString()}</p>
+            <button id="restartBtn">Restart</button>
+        `;
+        document.body.replaceChild(finalScreen, document.getElementById('start-screen'));
+        
+        // Add restart button
+        const restartBtn = document.getElementById('restartBtn');
+        restartBtn.addEventListener('click', () => {
+            if (gameState.isPlaying || gameState.isPaused) {
+                // Reset game state
+                gameState.isPlaying = false;
+                gameState.isPaused = false;
+                gameState.combo = 0;
+                gameState.score = 0;
+                gameState.highScore = localStorage.getItem('beatbox_highscore') || 0;
+                gameState.currentLane = null;
+                gameState.hitLineY = CANVAS.height * 0.5;
+                gameState.speedrunTime = 60;
+                updateSpeedrun();
+                startSpeedrun();
+                renderHUD();
+            }
+        });
+    }
+    
+    // Initialize the game
+    initGame();
+    resizeCanvas();
+    initAudio();
+    gameState.isPlaying = true;
+    gameState.combo = 0;
+    gameState.score = 0;
+    gameState.highScore = localStorage.getItem('beatbox_highscore') || 0;
+    gameState.currentLane = null;
+    gameState.hitLineY = CANVAS.height * 0.5;
+    gameState.speedrunTime = 60;
+    updateSpeedrun();
+    startSpeedrun();
+    renderHUD();
+    
+    // Start the game
+    START_BTN.addEventListener('click', () => {
+        if (!gameState.isPlaying) {
+            initGame();
+        }
+    });
+    
+    // Pause/Resume
+    RESUME_BTN.addEventListener('click', () => {
+        if (gameState.isPaused) {
+            gameState.isPaused = false;
+            PAUSE_OVERLAY.classList.remove('active');
+            startSpeedrun();
+        } else {
+            gameState.isPaused = true;
+            PAUSE_OVERLAY.classList.add('active');
+        }
+    });
+    
+    // Keyboard Input
+    document.addEventListener('keydown', (e) => {
+        if (!gameState.isPlaying || gameState.isPaused) return;
+        
+        const key = e.key.toLowerCase();
+        
+        // Map keys to lanes
+        if (key === 'd') {
+            handleLaneHit(COLORS.lane1, 'D');
+        } else if (key === 'f') {
+            handleLaneHit(COLORS.lane2, 'F');
+        } else if (key === 'j') {
+            handleLaneHit(COLORS.lane3, 'J');
+        } else if (key === 'k') {
+            handleLaneHit(COLORS.lane4, 'K');
+        }
+    });
+    
+    // Handle Lane Hit - Check Timing and Update State
+    function handleLaneHit(laneColor, key) {
+        // Only process if we're in a lane and within the timing window
+        if (gameState.currentLane === laneColor) {
+            gameState.currentLane = laneColor;
+            gameState.combo++;
+            gameState.score += 100 * gameState.combo;
+            
+            // Check for perfect hit (within 20ms of hit line)
+            const now = performance.now();
+            const hitTime = now - gameState.lastHitTime;
+            const timeSinceHitLine = now - gameState.hitLineY;
+            
+            if (Math.abs(timeSinceHitLine) < 20) {
+                // Perfect hit
+                gameState.combo++;
+                gameState.score += 300;
+                showJudgment('PERFECT');
+                triggerCameraShake();
+                // Update high score
+                if (gameState.score > gameState.highScore) {
+                    gameState.highScore = gameState.score;
+                    localStorage.setItem('beatbox_highscore', gameState.highScore);
+                }
+            } else if (Math.abs(timeSinceHitLine) < 100) {
+                // Great hit
+                gameState.combo++;
+                gameState.score += 200;
+                showJudgment('GREAT');
+                triggerCameraShake();
+            } else if (Math.abs(timeSinceHitLine) < 200) {
+                // Good hit
+                gameState.combo++;
+                gameState.score += 150;
+                showJudgment('GOOD');
+                triggerCameraShake();
+            } else {
+                // Miss - combo breaks
+                gameState.combo = 0;
+                gameState.score = 0;
+                showJudgment('MISS');
+                triggerCameraShake();
+            }
+            
+            // Update HUD
+            renderHUD();
+            
+            // Update speedrun timer
+            updateSpeedrun();
+            
+            // Spawn next note
+            spawnNote();
+        }
+    }
+    
+    // Spawn a new note at a random lane
+    function spawnNote() {
+        const lanes = [COLORS.lane1, COLORS.lane2, COLORS.lane3, COLORS.lane4];
+        const lane = lanes[Math.floor(Math.random() * lanes.length)];
+        gameState.currentLane = lane;
+        
+        // Add a small delay before the note appears
+        setTimeout(() => {
+            const x = Math.random() * CANVAS.width;
+            const y = CANVAS.height - 50;
+            createBox(x, y, lane, laneColor: lane);
+        }, 100 + Math.random() * 200);
+    }
+    
+    // Create a box on the canvas
+    function createBox(x, y, lane, laneColor) {
+        const box = {
+            x,
+            y,
+            width: 80,
+            height: 60,
+            color: laneColor,
+            hitLineY: y,
+            isHeld: false,
+            heldKey: null,
+            heldTime: 0,
+            hit: false
+        };
+        
+        // Add to renderer's box list
+        renderer.boxes.push(box);
+        
+        // Visual feedback on hit
+        if (box.hit) {
+            box.animation = {
+                type: 'squashStretch',
+                scale: 1.2,
+                duration: 150
+            };
+        }
+    }
+    
+    // Renderer Module
+    const renderer = {
+        boxes: [],
+        animation: [],
+        
+        // Draw a single box
+        drawBox(x, y, color, hitLineY, isHeld) {
+            const alpha = isHeld ? 0.5 : 1.0;
+            const glowIntensity = isHeld ? 0.3 : 0;
+            
+            // Main box with glow
+            const grad = ctx.createLinearGradient(x, y, x, y + 60);
+            grad.addColorStop(0, color + '40');
+            grad.addColorStop(0.5, color + '20');
+            grad.addColorStop(1, color + '10');
+            
+            ctx.save();
+            ctx.globalAlpha = alpha;
+            ctx.globalCompositeOperation = 'lighter';
+            
+            // Box body
+            ctx.fillStyle = color;
+            ctx.strokeStyle = color + '80';
+            ctx.lineWidth = 2;
+            
+            // Rounded box
