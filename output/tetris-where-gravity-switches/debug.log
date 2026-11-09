@@ -1,0 +1,649 @@
+JSON Decode Error: Extra data: line 1 column 42 (char 41)
+
+Raw LLM Output that failed to parse:
+The user wants a complete Tetris game with gravity flipping mechanics. Let me build this as a single HTML file with all the features specified. I need to be careful about the JSON output format - it must be valid JSON mapping filenames to code contents.
+
+Let me plan the structure:
+- `index.html` - the main file with everything embedded
+
+Key features to implement:
+1. 12x12 grid, 40px cells, 480x480 canvas
+2. Gravity switching (Down/Up/Left/Right) with timer
+3. 7-bag randomizer, hold, next queue
+4. DAS/ARR for lateral movement
+5. Lock delay, wall kicks
+6. Ghost piece, interpolation
+7. Line/column clearing with collapse
+8. Score system with level progression
+9. HUD with score, level, lines, time, next pieces, hold
+10. Gravity compass and switch timer
+11. Audio via WebAudio API
+12. localStorage high score
+13. Responsive canvas with devicePixelRatio
+14. Particle effects, screen shake
+15. Touch controls
+16. Pause on visibility change
+
+This is a big task. Let me write compact but complete code. I'll keep it organized into clear sections within the script tag.
+
+Let me think about the architecture:
+- Input module: keyboard + touch handling with DAS/ARR
+- Board module: grid management, line/column clearing, collapse
+- Piece module: tetromino definitions, rotation, wall kicks, spawn
+- Gravity module: gravity vector, switch timer, warning phase
+- Renderer module: drawing playfield, blocks, ghost, particles, effects
+- HUD module: DOM panels for score, level, etc.
+- Audio module: WebAudio synthesized sounds
+- GameState module: state machine, main loop, delta time accumulation
+
+Let me write this carefully. The code needs to be valid JavaScript inside an HTML file.
+
+For the JSON output, I need to output `{"index.html": "<the full html content>"}`.
+
+Let me write the code now. I'll aim for completeness but keep it reasonably compact.
+
+Key implementation details:
+
+**Tetromino definitions** - I'll use cell offsets for each piece in each rotation state. Standard approach: define base shapes and rotate.
+
+Actually, let me use a simpler representation - define each piece's cells relative to center for each rotation. Or use the standard 4x4/3x3 matrices.
+
+Let me use the matrix rotation approach:
+```js
+const SHAPES = {
+  I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+  O: [[0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+  ...
+};
+```
+Then rotate by transposing and reversing.
+
+Colors:
+- I: #00F0FF cyan
+- O: #FFE600 yellow
+- T: #B537F2 purple
+- S: #00FF85 green
+- Z: #FF2E63 red
+- J: #4361EE blue
+- L: #FF9F1C orange
+
+**Gravity vectors:**
+- DOWN: {x:0, y:1}
+- UP: {x:0, y:-1}
+- LEFT: {x:-1, y:0}
+- RIGHT: {x:1, y:0}
+
+Spawn position based on gravity:
+- DOWN: top edge, center X -> x=5, y=0
+- UP: bottom edge, center X -> x=5, y=11
+- LEFT: right edge, center Y -> x=11, y=5
+- RIGHT: left edge, center Y -> x=0, y=5
+
+Wait, "center X" for 12 columns is column 5 or 6. Let me use 5.
+
+**Fall interval:** `max(80, 800 * pow(0.85, level-1))` ms
+Soft drop: 30ms
+Hard drop: instant
+
+**Lock delay:** 500ms, max 15 resets
+
+**Switch timer:**
+- First switch: 15s after start
+- Subsequent: starts at 12s, decreases by 0.5s per level, min 6s
+- Warning: 1s before switch
+- Random among 3 directions not current
+
+**Line/column clear:** scan all rows and columns, clear simultaneously, then collapse.
+
+Scoring:
+- 1 line: 100, 2: 300, 3: 500, 4+: 800
+- Row+Col simultaneous: +500 bonus per intersection cell
+- Switch survival: +50 per switch survived
+
+Level: every 10 lines cleared.
+
+**Controls:**
+- Left/Right: move
+- Down: soft drop (also moves along gravity if Down pressed and gravity is Left/Right)
+- Up/X: rotate CW
+- Z: rotate CCW
+- Space: hard drop
+- C: hold
+- P/Esc: pause
+- Enter: start/restart
+
+Touch: D-pad, rotate, hard drop, hold, pause buttons; swipe down = hard drop.
+
+**Audio:** WebAudio synthesized sounds.
+
+**High score:** localStorage key `gravityFlipHighScore`.
+
+**Responsive:** Canvas scales to fit viewport maintaining square aspect ratio, using devicePixelRatio.
+
+Let me now write the full code. I'll be thorough but compact.
+
+I need to make sure the JSON is valid. The filename is "index.html".
+
+Let me write the HTML file content carefully. This will be long.
+
+Let me structure the JS:
+
+```js
+// Constants
+const COLS = 12, ROWS = 12, CELL = 40;
+const CANVAS_W = COLS * CELL, CANVAS_H = ROWS * CELL; // 480x480
+
+// Tetromino shapes
+const SHAPES = {...};
+const COLORS = {...};
+
+// State
+let state = 'MENU'; // MENU, PLAYING, PAUSED, GAME_OVER
+let grid, currentPiece, nextQueue, heldPiece, ...
+let gravity = {dir:'DOWN', timer, warningTimer, ...};
+let score, lines, level, time, highScore;
+let particles, effects;
+let input = {...};
+let audio;
+let renderer;
+let hud;
+let gameState;
+```
+
+Let me write it all out now. I'll focus on getting it working correctly.
+
+For the main loop, I'll use requestAnimationFrame with delta time. Accumulate time for gravity ticks and switch timer.
+
+For interpolation, I'll track previousGridPos and currentGridPos of active piece, and lerp between them.
+
+Let me write the code. I'll try to keep it under reasonable length while being complete.
+
+Actually, given the complexity, let me just write it carefully and completely. The user wants a working game.
+
+Let me draft the key algorithms:
+
+**Board operations:**
+- `grid[r][c] = 0 | typeId`
+- `canPlace(piece, x, y)` checks collision
+- `lockPiece()` locks current piece into grid
+- `clearLines()` scans rows and columns, returns set of cleared cells
+- `collapse()` applies fall after row clears and column clears
+
+**Piece:**
+- `piece = {type, rotation, x, y, gridX, gridY}` where gridX/gridY is logical position
+- `cells()` returns array of [r,c] offsets for current rotation
+- `rotate(dir)` with wall kicks
+- `spawn()` based on gravity direction
+
+**Gravity:**
+- `gravity = {dir, timer, warningTimer, nextDir}`
+- update: decrement timer, when warningTimer hits 0, switch
+- switch: pick random dir != current, reset timer
+
+**Input:**
+- Track key states, DAS timers
+- On keydown: trigger action (move, rotate, harddrop, hold, pause)
+- DAS/ARR handled in update loop
+
+**Renderer:**
+- drawGrid, drawBlock, drawGhost, drawParticles, drawEffects
+- screen shake offset
+
+**HUD:**
+- DOM elements updated each frame
+
+**Audio:**
+- synth functions for each sound
+
+Let me write it now. I'll produce the final HTML.
+
+I need to be careful about the JSON escaping. The entire HTML content goes as a string value. Newlines need to be escaped as \n within the JSON string. Actually, since I'm writing the JSON manually, I need to escape quotes and newlines.
+
+Wait - the instruction says Output ONLY a valid raw JSON object. So I write `{"index.html": "...content..."}` where the content is the full HTML. I need to properly escape the HTML content as a JSON string value (escape `"` as `\"`, escape newlines as `\n`, etc.).
+
+This is going to be a very long string. Let me write it carefully.
+
+Actually, let me reconsider. Writing a huge JSON string by hand with proper escaping is error-prone. But the format requires it. Let me write the HTML content first, then carefully construct the JSON.
+
+Let me write the HTML file content. I'll make it complete and working.
+
+Given the length, let me be efficient but correct. Here's my plan for the code:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>GRAVITY FLIP</title>
+<style>...</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud-left">...</div>
+  <canvas id="game"></canvas>
+  <div id="hud-right">...</div>
+  <div id="overlay-menu">...</div>
+  <div id="overlay-pause">...</div>
+  <div id="overlay-gameover">...</div>
+  <div id="touch-controls">...</div>
+</div>
+<script>
+// All game code here
+</script>
+</body>
+</html>
+```
+
+Let me write the full thing now. I'll aim for correctness.
+
+For brevity in some areas, I'll use helper functions and keep tetromino definitions compact.
+
+Let me write the tetromino shapes using rotation matrices. I'll define base shapes and compute rotations.
+
+```js
+const PIECES = ['I','O','T','S','Z','J','L'];
+const BASE = {
+  I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+  O: [[0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+  T: [[0,0,1,0],[0,1,1,1],[0,0,0,0],[0,0,0,0]],
+  S: [[0,1,1,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+  Z: [[1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]],
+  J: [[1,0,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],
+  L: [[0,0,1,0],[0,1,1,0],[0,1,0,0],[0,0,0,0]],
+};
+```
+
+Rotation function:
+```js
+function rotateMatrix(m){ return m[0].map((_,i)=>m.map(row=>row[i]).reverse()); }
+```
+
+For each piece, I'll store rotations. To keep it simple, I'll compute on the fly or precompute.
+
+Actually for performance and simplicity, let me store the shape as a function that returns cells given rotation index. Or precompute all rotations.
+
+Let me precompute:
+```js
+const SHAPES = {};
+PIECES.forEach(p => {
+  SHAPES[p] = [];
+  let m = BASE[p];
+  for(let r=0;r<4;r++){
+    SHAPES[p][r] = m.map(row=>row.slice());
+    m = rotateMatrix(m);
+  }
+});
+```
+
+But O doesn't rotate - I'll handle that. Actually O rotating gives same shape, so it's fine. But the spec says O does not rotate. I'll just skip rotation for O.
+
+Cell extraction from shape matrix at position (px, py):
+```js
+function getCells(shape){
+  return shape.flat().map((v,i)=>{
+    const r = Math.floor(i/4), c = i%4;
+    if(v) return [r,c];
+    return null;
+  }).filter(Boolean);
+}
+```
+
+Wait, shapes are 4x4. For I piece that's fine. For others, the filled cells are in the top rows. That works.
+
+Actually for the I piece, the filled cells are row 1 (index 1). For others, rows 0-1 have filled cells. Good.
+
+But wait, some shapes might look better centered. Let me check - standard Tetris uses these shapes. The I piece at row 1 is fine. Others have their mass in top two rows. When placed at spawn, they'll overlap the top. That's standard.
+
+Hmm, but actually for better gameplay, pieces should spawn so they don't immediately overlap. With spawn at top edge for DOWN gravity, the piece is at y=0, and its cells are in rows 0-1, which is fine since grid is empty there.
+
+OK let me proceed.
+
+**Collision detection:**
+```js
+function collides(piece, x, y){
+  for(const [r,c] of piece.cells()){
+    const gr = y+r, gc = x+c;
+    if(gr<0||gr>=ROWS||gc<0||gc>=COLS) return true;
+    if(grid[gr][gc]) return true;
+  }
+  return false;
+}
+```
+
+**Lock:**
+When piece can't move further in gravity direction, lock it.
+```js
+function lockPiece(){
+  for(const [r,c] of currentPiece.cells()){
+    grid[currentPiece.y+r][currentPiece.x+c] = currentPiece.typeId;
+  }
+  // check clears
+  clearAndScore();
+  // spawn next
+}
+```
+
+**Clear detection:**
+```js
+function findClears(){
+  const cleared = new Set();
+  for(let r=0;r<ROWS;r++){
+    let full=true;
+    for(let c=0;c<COLS;c++){ if(!grid[r][c]){full=false;break;} }
+    if(full) for(let c=0;c<COLS;c++) cleared.add(r*COLS+c);
+  }
+  for(let c=0;c<COLS;c++){
+    let full=true;
+    for(let r=0;r<ROWS;r++){ if(!grid[r][c]){full=false;break;} }
+    if(full) for(let r=0;r<ROWS;r++) cleared.add(r*COLS+c);
+  }
+  return cleared;
+}
+```
+
+**Collapse:**
+After clearing, cells above cleared rows fall down, cells left of cleared columns fall right.
+```js
+function collapse(cleared){
+  // rows: for each cleared row, shift cells above down
+  const rowCleared = new Set();
+  cleared.forEach(idx=>{
+    const r=Math.floor(idx/COLS), c=idx%COLS;
+    rowCleared.add(r);
+  });
+  // fall down
+  for(let r=ROWS-1;r>=0;r--){
+    if(rowCleared.has(r)){
+      // collect cells above this row
+      let above=[];
+      for(let rr=r-1;rr>=0;rr--) for(let cc=0;cc<COLS;cc++) if(grid[rr][cc]) above.push([rr,cc]);
+      above.forEach(([rr,cc])=>grid[r][cc]=grid[rr][cc]);
+      for(let cc=0;cc<COLS;cc++) grid[r][cc]=0;
+    } else {
+      // collect cells below? no, only fall down
+      // cells below stay
+    }
+  }
+  // columns: for each cleared col, shift cells left of it right
+  const colCleared = new Set();
+  cleared.forEach(idx=>{
+    const r=Math.floor(idx/COLS), c=idx%COLS;
+    colCleared.add(c);
+  });
+  for(let c=0;c<COLS;c++){
+    if(colCleared.has(c)){
+      let left=[];
+      for(let cc=c-1;cc>=0;cc--) for(let rr=0;rr<ROWS;rr++) if(grid[rr][cc]) left.push([rr,cc]);
+      left.forEach(([rr,cc])=>grid[rr][c+1]=grid[rr][cc]);
+      for(let rr=0;rr<ROWS;rr++) grid[rr][c+1]=0;
+    }
+  }
+}
+```
+
+Hmm, this is getting complex. Let me simplify the collapse logic.
+
+Actually, the spec says: "Cells above a cleared row fall down by 1. Cells left of a cleared column fall right by 1." So:
+- For cleared rows: cells in rows above the cleared row move down into the cleared row's position.
+- For cleared columns: cells in columns left of the cleared column move right into the cleared column's position.
+
+Let me implement more carefully:
+
+```js
+function collapse(cleared){
+  // Row collapse: for each cleared row, move cells above down
+  const clearedRows = new Set();
+  cleared.forEach(idx=>{
+    const r=Math.floor(idx/COLS), c=idx%COLS;
+    clearedRows.add(r);
+  });
+  for(let r=0;r<ROWS;r++){
+    if(clearedRows.has(r)){
+      // gather cells from rows above
+      const cells=[];
+      for(let rr=r-1;rr>=0;rr--) for(let cc=0;cc<COLS;cc++) if(grid[rr][cc]) cells.push([rr,cc]);
+      // place them in row r
+      for(let cc=0;cc<COLS;cc++) grid[r][cc]=0;
+      cells.forEach(([rr,cc])=>grid[r][cc]=grid[rr][cc]);
+    }
+  }
+  // Column collapse: for each cleared col, move cells left of it right
+  const clearedCols = new Set();
+  cleared.forEach(idx=>{
+    const r=Math.floor(idx/COLS), c=idx%COLS;
+    clearedCols.add(c);
+  });
+  for(let c=0;c<COLS;c++){
+    if(clearedCols.has(c)){
+      const cells=[];
+      for(let cc=c-1;cc>=0;cc--) for(let rr=0;rr<ROWS;rr++) if(grid[rr][cc]) cells.push([rr,cc]);
+      for(let rr=0;rr<ROWS;rr++) grid[rr][c]=0;
+      cells.forEach(([rr,cc])=>grid[rr][c+1]=grid[rr][cc]);
+    }
+  }
+}
+```
+
+This should work. After both, re-scan for cascading clears? The spec says "re-scan once" to prevent infinite loops. I'll add a second pass.
+
+Actually, let me add a re-scan after collapse to catch any newly formed full rows/columns. But the spec says collapse prevents cascading infinite loops - meaning we do one collapse pass. Let me do: clear, collapse, then re-scan once more for additional clears. Actually the spec says "If both row and column clears occur, apply row collapse first, then column collapse, then re-scan once." So one re-scan. Let me implement that.
+
+Hmm, but re-scanning could cascade. The spec says "This prevents cascading infinite loops" - meaning the single re-scan prevents infinite loops. So I'll do: clear, collapse, re-scan once. If that produces more clears, those get added to the same batch? Or process sequentially? 
+
+To keep it simple and avoid infinite loops, I'll do: clear all at once, collapse once, then re-scan once and merge any new clears into the existing batch, then collapse again? No, that could loop.
+
+Let me just do: clear, collapse, re-scan, and if new clears found, process them too (collapse again). Use a max iteration count to prevent infinite loops. Actually, simplest: do clear → collapse → re-scan → if new clears, collapse again → repeat up to N times. But realistically, after one collapse pass, new full rows/cols are rare. Let me just do one re-scan and merge.
+
+Actually, let me just do iterative: while there are clears, clear them, collapse, re-scan. Cap iterations at 5 to prevent infinite loops. This is robust.
+
+Let me simplify: 
+```js
+function processClear(){
+  let cleared = findClears();
+  while(cleared.size>0){
+    collapse(cleared);
+    cleared = findClears();
+  }
+  // award score
+}
+```
+
+This handles cascading safely. Good enough.
+
+**Score calculation:**
+```js
+function awardClear(clearedCount, rowCleared, colCleared){
+  let lines = 0;
+  if(rowCleared.size>0 && colCleared.size>0){
+    lines = rowCleared.size + colCleared.size; // both
+    score += lines * 500; // bonus per intersection
+  } else if(rowCleared.size>0){
+    lines = rowCleared.size;
+    score += [100,300,500,800][Math.min(lines,4)] || 800;
+  } else {
+    lines = colCleared.size;
+    score += [100,300,500,800][Math.min(lines,4)] || 800;
+  }
+  lines += linesCleared; // total lines
+  linesCleared = lines;
+  level = Math.floor(linesCleared/10)+1;
+  score += level * 100; // level multiplier? spec says "Base x Level Multiplier"
+  // Actually spec: scoring table is base values. Level multiplier mentioned. Let me apply level multiplier to base.
+  // Re-read: "Scoring (Base x Level Multiplier): 1 Line: 100 ..." So base * level? Or the table already includes level?
+  // The table shows fixed values. "Base x Level Multiplier" suggests multiply by level. But that would make higher levels give way more.
+  // I'll interpret: base values as given, and level multiplier applies. Let me do base * level for clarity. Hmm, but that makes 1 line at level 10 = 1000.
+  // Actually, let me just use the base values as given (they seem like totals). The "Level Multiplier" might mean the table IS the base and you multiply. Ambiguous.
+  // I'll go with: score += baseValue * level. This rewards progression.
+}
+```
+
+Hmm, let me re-read: "Scoring (Base x Level Multiplier): 1 Line: 100, 2 Lines: 300, 3 Lines: 500, 4+ Lines: 800". And separately "Level Progression: Level increases every 10 lines cleared."
+
+I think the table gives base points, and there's a level multiplier. But what multiplier? Maybe level 1 = 1x, level 2 = 2x, etc.? That seems harsh. Or maybe the multiplier is implicit and the table already accounts for it.
+
+To be safe and rewarding, I'll do: base value * level. So 1 line at level 1 = 100, at level 5 = 500. That matches "Base x Level Multiplier".
+
+Actually, let me just use the base values directly without extra multiplier, since the table already has nice numbers. The "Level Multiplier" phrase might just mean the scoring scales with level naturally through the table. I'll keep it simple: use base values as given. Plus switch survival bonus +50 per switch.
+
+Hmm, but the spec explicitly says "Base x Level Multiplier". Let me apply a level multiplier of level (so level 1 = 1x, level 2 = 2x...). Wait that makes 1 line at level 10 = 1000. That's a lot but Tetris games often do scale. Let me do base * level. Actually no - many Tetris implementations have the base table and the level multiplier is separate. Let me just do base * level to honor the spec literally.
+
+Hmm, actually re-reading once more: the bullet list under scoring gives specific numbers. I think these ARE the final values (already including any multiplier). The "Base x Level Multiplier" is just describing the formula conceptually. I'll use the numbers as-is. This is the most common interpretation.
+
+Decision: Use base values as given. Add switch survival bonus. Done.
+
+**Switch survival bonus:** +50 per switch survived. Track switches survived.
+
+**Time tracking:** elapsed play time. Display in HUD.
+
+**Level progression:** every 10 lines cleared, level increases. Fall speed formula uses level. Switch interval decreases with level.
+
+**Gravity switch mechanics:**
+- First switch 15s after start
+- Subsequent: 12s - 0.5*(level-1), min 6s
+- Warning 1s before
+- Random among 3 non-current directions
+- On switch: reset lock delay, recalculate ghost, screen shake, particles, sound
+
+**Spawn:** opposite edge of gravity.
+
+**Game over:** new piece can't spawn (overlaps locked block at spawn position).
+
+Let me also handle: "active piece has no legal move in any direction and lock delay expires while overlapping spawn zone" - this is complex. I'll primarily use the spawn-overlap check for game over, which covers most cases.
+
+**Hard drop:** move piece along gravity vector to lowest valid position.
+```js
+function hardDrop(){
+  let y=currentPiece.y;
+  while(!collides(currentPiece, currentPiece.x, y+gravity.y)){ y+=gravity.y; }
+  currentPiece.y = y;
+  // lock immediately
+  lockPiece();
+  // award 2 points per cell
+  score += Math.abs(y - currentPiece.yBefore)*2; // hmm
+}
+```
+
+Actually hard drop awards 2 points per cell descended. Let me track descent distance.
+
+**Soft drop:** 30ms interval, moves along gravity if Down pressed and gravity is Down/Up, else lateral. Awards 1 point per cell.
+
+Wait, the spec says: "Down Arrow: Soft Drop (when gravity is Down/Up, also moves along gravity if Down is pressed and gravity is Left/Right, it acts as lateral move)". So Down arrow always moves the piece in the gravity direction if gravity is Down/Up, and laterally otherwise. And soft drop speed is 30ms.
+
+So Down arrow behavior:
+- If gravity is Down or Up: move piece along gravity vector (down if gravity down, up if gravity up)
+- If gravity is Left or Right: move piece laterally (left/right)
+
+And this happens at 30ms intervals (soft drop).
+
+**Hold:** C key, once per drop. Hold piece to be used next.
+
+**Rotation:** Up/X = CW, Z = CCW. Wall kicks applied.
+
+**DAS/ARR:**
+- DAS: 150ms before auto-repeat
+- ARR: 35ms between auto-repeats
+- Applied to Left/Right/Up/Down lateral movement.
+
+For gravity-aligned movement (Down when gravity is Down), it's a different tick (30ms soft drop). I'll handle: if Down pressed and gravity aligned, use soft drop tick; else use DAS/ARR lateral tick.
+
+Let me structure input handling:
+- Track keys held
+- In update: if Left held and no DAS timer running, start DAS timer. When DAS expires, move and start ARR. When ARR expires, move and restart DAS.
+- Similarly for Right.
+- For Up: rotate on keydown (with repeat handling - rotate once per press, but OS repeat could fire... I'll handle via keydown event with repeat flag).
+- For Down: if gravity aligned, soft drop tick; else DAS/ARR lateral.
+- For Space: hard drop on keydown.
+- For C: hold on keydown.
+- For P/Esc: pause toggle on keydown.
+
+Let me implement DAS/ARR in the input manager.
+
+**Interpolation:**
+Track `prevGridX, prevGridY` and `curGridX, curGridY` of active piece. Each frame, lerp displayed position between prev and cur based on elapsed fraction.
+
+For lateral moves, animate over 50ms.
+
+Let me implement:
+```js
+// piece has gridX, gridY (logical)
+// displayX = gridX + (gridX - prevGridX) * t  where t = elapsed/moveDuration
+```
+
+Actually simpler: track `displayOffset` that lerps toward 0. Each frame, `displayOffset *= 0.8` (lerp factor). When a move happens, set target to 0.
+
+Let me use: `displayDX, displayDY` that decay toward 0 each frame. Render at `gridX + displayDX`.
+
+For gravity fall, the piece moves in grid space each tick, and displayDX/DY lerp toward the delta.
+
+Hmm, let me think. The piece's logical position updates each tick. For rendering, I want smooth motion. Approach:
+- Keep `renderX, renderY` (current display position)
+- Keep `targetX, targetY` (logical position)
+- Each frame, lerp render toward target: `render += (target - render) * min(1, dt*15)`
+
+This gives smooth interpolation for both gravity fall and lateral moves. 
+
+But for gravity fall, the logical position jumps each tick (800ms). The lerp will smoothly interpolate. Good.
+
+For lateral moves, logical position changes instantly on key press, lerp animates over ~50ms. Good.
+
+Let me use this approach.
+
+**Ghost piece:** at lowest valid position along gravity vector. Recalculate each frame.
+
+**Particles:** simple particle system for effects.
+
+**Screen shake:** offset applied to canvas translate.
+
+OK, I think I have enough understanding. Let me write the code now. It'll be long but I'll keep it organized.
+
+Let me write it section by section, then assemble.
+
+I'll write the complete HTML file. Given the size, I'll be efficient with comments (minimal) but keep logic clear.
+
+Let me write it now.
+
+One concern: the JSON output. The entire HTML must be a valid JSON string. I need to escape:
+- `"` as `\"`
+- newlines as `\n`
+- backslashes as `\\`
+- tabs as `\t`
+
+Since I'm writing this response, I'll construct the JSON carefully. The HTML contains lots of quotes and newlines. I'll write the JSON with proper escaping.
+
+Actually, this is going to be extremely tedious to do by hand with all the escaping. Let me write the HTML content, then carefully build the JSON string.
+
+Alternatively, I can write the JSON using a here-doc style but the instruction says NO markdown block formatting like ```json. So I must output raw JSON.
+
+Let me write the HTML content as a string, being very careful with escaping. I'll use `\"` for double quotes inside the HTML, and `\n` for newlines.
+
+Actually, a smarter approach: I can write the JSON such that the HTML content uses single quotes internally where possible, and I escape the few double quotes. But HTML attributes use double quotes heavily.
+
+Hmm. Let me just be meticulous. I'll write the whole thing and escape properly.
+
+Actually, the cleanest way: write the HTML, then in my JSON, represent every `"` as `\"` and every newline as `\n`. I'll do this systematically.
+
+This is a lot of manual work but necessary. Let me proceed.
+
+Let me draft the HTML content first (mentally), then convert to JSON.
+
+Given the extreme length, let me write the code and be very careful. I'll produce the final JSON.
+
+Let me write the actual code now. I'll keep it focused.
+
+I'm going to write a fairly complete implementation. Let me go.
+
+For the canvas scaling with devicePixelRatio:
+```js
+function resizeCanvas(){
+  const dpr = window.devicePixelRatio || 1;
+  const size = Math.min(window.innerWidth, window.innerHeight) - margins;
+  canvas.style.width = size+'px';
+  canvas.style.height = size+'px';
+  canvas.width = CANVAS_W * dpr;
+  canvas.height = CANVAS_H * dpr;
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
+```
+
+The playfield is 480x480 logical
