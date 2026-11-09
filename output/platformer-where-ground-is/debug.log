@@ -1,0 +1,1032 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 2 column 13 (char 14)
+
+Raw: 
+
+
+Here is the complete, single-file source code for **Sandfall**. It includes the responsive canvas, neon visuals, local storage high score, Web Audio API sound effects, and the full game logic as specified.
+
+Save the following code as an `.html` file (e.g., `sandfall.html`) and open it in any modern browser.
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sandfall - Neon Physics Platformer</title>
+    <!-- Cool Emoji Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⛰️</text></svg>">
+    
+    <style>
+        :root {
+            --bg-color: #050508;
+            --glass-bg: rgba(20, 20, 30, 0.6);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --accent-cyan: #00e5ff;
+            --accent-magenta: #ff00ff;
+            --accent-amber: #ffaa00;
+            --text-main: #ffffff;
+            --font-stack: 'Courier New', Courier, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            overflow: hidden;
+            font-family: var(--font-stack);
+            color: var(--text-main);
+        }
+
+        /* Game Container */
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        }
+
+        /* UI Overlays */
+        .ui-layer {
+            position: absolute;
+            pointer-events: none; /* Let clicks pass through to canvas */
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        /* HUD Elements */
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+        }
+
+        .hud-center {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+        }
+
+        .health-bar-container {
+            width: 100%;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .health-bar-fill {
+            height: 100%;
+            background: var(--accent-magenta);
+            width: 100%;
+            transition: width 0.2s ease-out;
+            box-shadow: 0 0 10px var(--accent-magenta);
+        }
+
+        .timer-display {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--accent-cyan);
+        }
+
+        .score-display {
+            font-size: 1rem;
+            color: var(--accent-amber);
+        }
+
+        .hud-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .ability-icons {
+            display: flex;
+            gap: 15px;
+        }
+
+        .ability-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.8rem;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(5px);
+        }
+
+        .ability-icon span {
+            z-index: 2;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .cooldown-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background: rgba(0, 0, 0, 0.7);
+            transition: height 0.1s linear;
+        }
+
+        .sand-counter {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid var(--accent-amber);
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+            box-shadow: 0 0 15px rgba(255, 170, 0, 0.3);
+        }
+
+        /* Screens (Start, Game Over) */
+        .screen-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .screen-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, var(--accent-cyan), var(--accent-magenta));
+            -webkit-background-clip: text;
+            color: transparent;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        p.subtitle {
+            color: #aaa;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        .btn {
+            padding: 15px 40px;
+            font-size: 1.2rem;
+            background: transparent;
+            color: var(--accent-cyan);
+            border: 2px solid var(--accent-cyan);
+            cursor: pointer;
+            font-family: var(--font-stack);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            background: var(--accent-cyan);
+            color: #000;
+            box-shadow: 0 0 20px var(--accent-cyan);
+        }
+
+        .controls-hint {
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: #666;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .key {
+            display: inline-block;
+            padding: 2px 6px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #ddd;
+            font-size: 0.8rem;
+            margin: 0 2px;
+        }
+
+        /* Animations */
+        @keyframes flashWhite {
+            0% { background-color: rgba(255, 255, 255, 0.8); }
+            100% { background-color: rgba(0, 0, 0, 0.85); }
+        }
+
+        .death-flash {
+            animation: flashWhite 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+
+        .fade-out {
+            animation: fadeOut 1s forwards;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 600px) {
+            h1 { font-size: 2rem; }
+            .hud-center { width: 90%; top: 10px; }
+            .timer-display { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- Canvas Layer -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- UI Overlay Layer -->
+        <div class="ui-layer">
+            <!-- Top HUD -->
+            <div class="hud-top">
+                <div class="timer-display" id="timer">00:00.00</div>
+                <div class="score-display">HI: <span id="highScoreVal">0</span></div>
+                <div class="health-bar-container">
+                    <div class="health-bar-fill" id="healthFill"></div>
+                </div>
+            </div>
+
+            <!-- Center Content (Empty mostly, for layout balance) -->
+            <div class="hud-center"></div>
+
+            <!-- Bottom HUD -->
+            <div class="hud-bottom">
+                <div class="ability-icons">
+                    <div class="ability-icon" id="buildIcon">
+                        <span>BUILD</span>
+                        <div class="cooldown-overlay" id="buildCD"></div>
+                    </div>
+                    <div class="ability-icon" id="digIcon">
+                        <span>DIG</span>
+                        <div class="cooldown-overlay" id="digCD"></div>
+                    </div>
+                </div>
+                <div class="sand-counter" id="sandCounter">0</div>
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="startScreen" class="screen-overlay active">
+            <h1>Sandfall</h1>
+            <p class="subtitle">Neon Physics Survival</p>
+            <button class="btn" id="startBtn">Initialize System</button>
+            <div class="controls-hint">
+                <div><span class="key">←</span> <span class="key">→</span> Move</div>
+                <div style="margin-top:5px;"><span class="key">SPACE</span> / <span class="key">L-CLICK</span> Build</div>
+                <div style="margin-top:5px;"><span class="key">SHIFT</span> / <span class="key">R-CLICK</span> Dig</div>
+                <div style="margin-top:5px;"><span class="key">↑</span> Jump</div>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen-overlay">
+            <h1 style="color: var(--accent-magenta); -webkit-text-fill-color: var(--accent-magenta);">Buried</h1>
+            <p class="subtitle">Time survived: <span id="finalTime">00:00.00</span></p>
+            <p class="subtitle" id="newRecordMsg" style="color: var(--accent-cyan); display:none;">New High Score!</p>
+            <button class="btn" id="restartBtn">Re-bury</button>
+        </div>
+    </div>
+
+<script>
+/**
+ * SANDFALL - Single File Architecture
+ * Modules are simulated via classes within a single script scope.
+ */
+
+// --- Constants & Config ---
+const CONFIG = {
+    GRAVITY: 0.5,
+    PLAYER_ACCEL: 0.6,
+    PLAYER_FRICTION: 0.85,
+    PLAYER_MAX_SPEED: 6,
+    JUMP_FORCE: -12,
+    GRID_COLS: 40,
+    GRID_ROWS: 25, // Logical resolution
+    CELL_SIZE: 20, // Visual scale factor (calculated dynamically)
+    SPAWN_RATE: 0.2, // Chance per frame to spawn sand at top
+    COLORS: {
+        SAND: '#ffaa00',
+        SAND_FALLING: '#ffcc66',
+        SOLID: '#33334d',
+        SOLID: '#33334d',
+        PLAYER: '#00e5ff',
+        BUILD_MARKER: '#ff00ff',
+        DIG_MARKER: '#ffaa00',
+        GRAVITY_ZONE: 'rgba(255, 170, 0, 0.1)',
+    },
+    MAX_HEALTH: 100,
+    ABILITY_COOLDOWN: {
+        build: 2000, // ms
+        dig: 1500,   // ms
+    },
+    SAND_PER_BUILD: 3,
+    DIG_SAND_PER_TURN: 1,
+};
+
+// --- Utility Functions ---
+function rand(min, max) { return Math.random() * (max - min) + min; }
+function clamp(val, min, max) { return Math.max(min, Math.min(max, val)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+// --- Audio System ---
+class AudioSystem {
+    constructor() {
+        this.ctx = null;
+        this.enabled = false;
+    }
+    init() {
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.enabled = true;
+        } catch (e) { this.enabled = false; }
+    }
+    play(type) {
+        if (!this.enabled || !this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        switch (type) {
+            case 'build':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                osc.start(now); osc.stop(now + 0.15);
+                break;
+            case 'dig':
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.1);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+                break;
+            case 'jump':
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                osc.start(now); osc.stop(now + 0.12);
+                break;
+            case 'death':
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                osc.start(now); osc.stop(now + 0.5);
+                break;
+            case 'score':
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(660, now);
+                osc.frequency.exponentialRampToValueAtTime(990, now + 0.08);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+                break;
+        }
+    }
+}
+
+// --- Particle System ---
+class Particle {
+    constructor(x, y, vx, vy, color, life, size) {
+        this.x = x; this.y = y;
+        this.vx = vx; this.vy = vy;
+        this.color = color;
+        this.life = life;
+        this.maxLife = life;
+        this.size = size || rand(1, 3);
+    }
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += 0.1;
+        this.life--;
+    }
+    draw(ctx) {
+        const alpha = this.life / this.maxLife;
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+        ctx.globalAlpha = 1;
+    }
+}
+
+// --- Game Logic ---
+class Game {
+    constructor(canvas) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+
+        this.gridCols = CONFIG.GRID_COLS;
+        this.gridRows = CONFIG.GRID_ROWS;
+        this.cellSize = this.resizeCellSize();
+
+        this.grid = [];
+        for (let r = 0; r < this.gridRows; r++) {
+            this.grid[r] = [];
+            for (let c = 0; c < this.gridCols; c++) {
+                this.grid[r][c] = null;
+            }
+        }
+
+        this.player = null;
+        this.particles = [];
+        this.fallingSand = [];
+        this.sandCount = 0;
+        this.health = CONFIG.MAX_HEALTH;
+        this.score = 0;
+        this.highScore = parseInt(localStorage.getItem('sandfall_highscore') || '0', 10);
+        this.timeElapsed = 0;
+        this.gameOver = false;
+        this.running = false;
+        this.lastSpawn = 0;
+        this.lastTime = 0;
+
+        this.audio = new AudioSystem();
+        this.keys = {};
+        this.mousePos = { x: 0, y: 0 };
+        this.mouseDown = false;
+        this.mouseAction = null; // 'build' or 'dig'
+
+        this.abilityCooldowns = { build: 0, dig: 0 };
+
+        this.setupInput();
+        this.updateHighScoreDisplay();
+    }
+
+    resize() {
+        const container = document.getElementById('game-container');
+        this.canvas.width = container.clientWidth;
+        this.canvas.height = container.clientHeight;
+        this.cellSize = Math.floor(Math.min(this.canvas.width / this.gridCols, this.canvas.height / this.gridRows));
+        this.canvas.style.width = (this.cellSize * this.gridCols) + 'px';
+        this.canvas.style.height = (this.cellSize * this.gridRows) + 'px';
+    }
+
+    resizeCellSize() {
+        const container = document.getElementById('game-container');
+        return Math.floor(Math.min(this.canvas.width / this.gridCols, this.canvas.height / this.gridRows));
+    }
+
+    setupInput() {
+        document.addEventListener('keydown', (e) => {
+            if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' '].includes(e.key)) e.preventDefault();
+            this.keys[e.key] = true;
+            if (e.key === ' ') this.keys['Space'] = true;
+        });
+        document.addEventListener('keyup', (e) => {
+            this.keys[e.key] = false;
+            if (e.key === ' ') this.keys['Space'] = false;
+        });
+
+        this.canvas.addEventListener('mousedown', (e) => {
+            this.mouseDown = true;
+            this.handleMouseAction(e);
+        });
+        this.canvas.addEventListener('mouseup', () => { this.mouseDown = false; });
+        this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+        this.canvas.addEventListener('mousemove', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mousePos.x = e.clientX - rect.left;
+            this.mousePos.y = e.clientY - rect.top;
+        });
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = this.canvas.getBoundingClientRect();
+            this.mousePos.x = touch.clientX - rect.left;
+            this.mousePos.y = touch.clientY - rect.top;
+            this.mouseDown = true;
+            this.handleMouseAction({ clientX: touch.clientX, clientY: touch.clientY });
+        }, { passive: false });
+        this.canvas.addEventListener('touchend', () => { this.mouseDown = false; });
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = this.canvas.getBoundingClientRect();
+            this.mousePos.x = touch.clientX - rect.left;
+            this.mousePos.y = touch.clientY - rect.top;
+        }, { passive: false });
+    }
+
+    handleMouseAction(e) {
+        if (!this.running || this.gameOver) return;
+        const rect = this.canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const col = Math.floor(mx / this.cellSize);
+        const row = Math.floor(my / this.cellSize);
+        if (col >= 0 && col < this.gridCols && row >= 0 && row < this.gridRows) {
+            if (this.abilityCooldowns.build <= 0) {
+                this.doBuild(row, col);
+            } else if (this.abilityCooldowns.dig <= 0) {
+                this.doDig(row, col);
+            }
+        }
+    }
+
+    start() {
+        this.audio.init();
+        this.reset();
+        this.running = true;
+        this.lastTime = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
+    }
+
+    reset() {
+        // Clear grid
+        for (let r = 0; r < this.gridRows; r++) {
+            for (let c = 0; c < this.gridCols; c++) {
+                this.grid[r][c] = null;
+            }
+        }
+        // Create initial platform
+        for (let c = 0; c < this.gridCols; c++) {
+            this.grid[this.gridRows - 1][c] = { type: 'solid' };
+        }
+        // Spawn player at bottom center
+        const startCol = Math.floor(this.gridCols / 2);
+        this.player = new Player(startCol * this.cellSize + this.cellSize / 2, (this.gridRows - 1) * this.cellSize);
+        this.particles = [];
+        this.fallingSand = [];
+        this.sandCount = 0;
+        this.health = CONFIG.MAX_HEALTH;
+        this.score = 0;
+        this.timeElapsed = 0;
+        this.gameOver = false;
+        this.abilityCooldowns = { build: 0, dig: 0 };
+        this.lastSpawn = performance.now();
+        this.updateHUD();
+    }
+
+    loop(timestamp) {
+        if (!this.running) return;
+        const dt = Math.min((timestamp - this.lastTime) / 16.67, 2); // Normalized delta time
+        this.lastTime = timestamp;
+
+        if (!this.gameOver) {
+            this.update(dt);
+        }
+        this.draw();
+
+        requestAnimationFrame((t) => this.loop(t));
+    }
+
+    update(dt) {
+        this.timeElapsed += dt / 60; // seconds
+
+        // Spawn sand
+        if (performance.now() - this.lastSpawn > 100) {
+            this.spawnSand();
+            this.lastSpawn = performance.now();
+        }
+
+        // Update falling sand
+        for (let i = this.fallingSand.length - 1; i >= 0; i--) {
+            const s = this.fallingSand[i];
+            s.vy += CONFIG.GRAVITY * dt;
+            s.y += s.vy * dt;
+            s.rotation += s.rotSpeed * dt;
+
+            // Check collision with solid
+            const col = Math.floor(s.x / this.cellSize);
+            const row = Math.floor(s.y / this.cellSize);
+            if (row >= 0 && row < this.gridRows && col >= 0 && col < this.gridCols) {
+                if (this.grid[row][col]) {
+                    // Land on solid
+                    this.grid[row][col] = { type: 'sand', rotation: s.rotation };
+                    this.fallingSand.splice(i, 1);
+                    this.spawnParticles(s.x, s.y, CONFIG.COLORS.SAND, 3);
+                    continue;
+                }
+            }
+
+            // Check if below bottom
+            if (s.y > this.canvas.height) {
+                this.fallingSand.splice(i, 1);
+                continue;
+            }
+        }
+
+        // Update player
+        this.player.update(dt, this.grid, this.cellSize);
+
+        // Check player death
+        if (this.player.y > this.canvas.height + 50) {
+            this.die();
+        }
+
+        // Check player health
+        if (this.health <= 0) {
+            this.die();
+        }
+
+        // Update ability cooldowns
+        this.abilityCooldowns.build = Math.max(0, this.abilityCooldowns.build - dt * 16.67);
+        this.abilityCooldowns.dig = Math.max(0, this.abilityCooldowns.dig - dt * 16.67);
+
+        // Update particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            this.particles[i].update();
+            if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+        }
+
+        // Update HUD
+        this.updateHUD();
+    }
+
+    spawnSand() {
+        const col = Math.floor(rand(0, this.gridCols));
+        const row = 0;
+        if (!this.grid[row][col]) {
+            this.grid[row][col] = { type: 'sand', rotation: rand(0, Math.PI * 2) };
+            this.sandCount++;
+        }
+    }
+
+    doBuild(row, col) {
+        if (this.abilityCooldowns.build > 0) return;
+        if (this.grid[row][col]) return; // Can't build on existing
+        if (this.sandCount < 1) return; // Not enough sand
+
+        this.grid[row][col] = { type: 'sand', rotation: rand(0, Math.PI * 2) };
+        this.sandCount--;
+        this.abilityCooldowns.build = CONFIG.ABILITY_COOLDOWN.build;
+        this.audio.play('build');
+        this.spawnParticles(col * this.cellSize + this.cellSize/2, row * this.cellSize + this.cellSize/2, CONFIG.COLORS.BUILD_MARKER, 5);
+    }
+
+    doDig(row, col) {
+        if (this.abilityCooldowns.dig > 0) return;
+        if (!this.grid[row][col]) return; // Nothing to dig
+
+        this.grid[row][col] = null;
+        this.abilityCooldowns.dig = CONFIG.ABILITY_COOLDOWN.dig;
+        this.audio.play('dig');
+        this.spawnParticles(col * this.cellSize + this.cellSize/2, row * this.cellSize + this.cellSize/2, CONFIG.COLORS.DIG_MARKER, 4);
+    }
+
+    spawnParticles(x, y, color, count) {
+        for (let i = 0; i < count; i++) {
+            const angle = rand(0, Math.PI * 2);
+            const speed = rand(1, 4);
+            this.particles.push(new Particle(
+                x, y,
+                Math.cos(angle) * speed,
+                Math.sin(angle) * speed - 1,
+                color,
+                rand(20, 40),
+                rand(1, 3)
+            ));
+        }
+    }
+
+    die() {
+        this.gameOver = true;
+        this.audio.play('death');
+        this.spawnParticles(this.player.x, this.player.y, CONFIG.COLORS.PLAYER, 20);
+
+        // Update high score
+        const finalScore = Math.floor(this.timeElapsed * 10);
+        if (finalScore > this.highScore) {
+            this.highScore = finalScore;
+            localStorage.setItem('sandfall_highscore', String(this.highScore));
+            document.getElementById('newRecordMsg').style.display = 'block';
+        } else {
+            document.getElementById('newRecordMsg').style.display = 'none';
+        }
+        document.getElementById('finalTime').textContent = this.formatTime(this.timeElapsed);
+
+        // Show game over screen
+        setTimeout(() => {
+            document.getElementById('gameOverScreen').classList.add('active');
+            document.getElementById('gameContainer').classList.add('death-flash');
+        }, 500);
+    }
+
+    formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        const ms = Math.floor((seconds % 1) * 100);
+        return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(ms).padStart(2,'0')}`;
+    }
+
+    updateHUD() {
+        document.getElementById('timer').textContent = this.formatTime(this.timeElapsed);
+        document.getElementById('sandCounter').textContent = this.sandCount;
+        document.getElementById('healthFill').style.width = (this.health / CONFIG.MAX_HEALTH * 100) + '%';
+        document.getElementById('buildCD').style.height = (this.abilityCooldowns.build / CONFIG.ABILITY_COOLDOWN.build * 100) + '%';
+        document.getElementById('digCD').style.height = (this.abilityCooldowns.dig / CONFIG.ABILITY_COOLDOWN.dig * 100) + '%';
+    }
+
+    updateHighScoreDisplay() {
+        document.getElementById('highScoreVal').textContent = this.highScore;
+    }
+
+    draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw background gradient
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+        bgGrad.addColorStop(0, '#0a0a14');
+        bgGrad.addColorStop(1, '#050508');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Draw grid lines (subtle)
+        ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+        ctx.lineWidth = 1;
+        for (let r = 0; r < this.gridRows; r++) {
+            for (let c = 0; c < this.gridCols; c++) {
+                const x = c * this.cellSize;
+                const y = r * this.cellSize;
+                ctx.strokeRect(x, y, this.cellSize, this.cellSize);
+            }
+        }
+
+        // Draw gravity zone indicator at top
+        ctx.fillStyle = CONFIG.COLORS.GRAVITY_ZONE;
+        ctx.fillRect(0, 0, this.canvas.width, this.cellSize * 3);
+
+        // Draw grid cells
+        for (let r = 0; r < this.gridRows; r++) {
+            for (let c = 0; c < this.gridCols; c++) {
+                const cell = this.grid[r][c];
+                if (!cell) continue;
+                const x = c * this.cellSize;
+                const y = r * this.cellSize;
+
+                if (cell.type === 'solid') {
+                    ctx.fillStyle = CONFIG.COLORS.SOLID;
+                    ctx.fillRect(x, y, this.cellSize, this.cellSize);
+                    // Neon border
+                    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(x + 1, y + 1, this.cellSize - 2, this.cellSize - 2);
+                } else if (cell.type === 'sand') {
+                    ctx.save();
+                    ctx.translate(x + this.cellSize/2, y + this.cellSize/2);
+                    ctx.rotate(cell.rotation || 0);
+                    ctx.fillStyle = CONFIG.COLORS.SAND;
+                    ctx.fillRect(-this.cellSize/2 + 2, -this.cellSize/2 + 2, this.cellSize - 4, this.cellSize - 4);
+                    ctx.restore();
+                }
+            }
+        }
+
+        // Draw falling sand
+        for (const s of this.fallingSand) {
+            ctx.save();
+            ctx.translate(s.x, s.y);
+            ctx.rotate(s.rotation);
+            ctx.fillStyle = CONFIG.COLORS.SAND_FALLING;
+            ctx.fillRect(-this.cellSize/2 + 1, -this.cellSize/2 + 1, this.cellSize - 2, this.cellSize - 2);
+            ctx.restore();
+        }
+
+        // Draw particles
+        for (const p of this.particles) p.draw(ctx);
+
+        // Draw player
+        if (this.player) this.player.draw(ctx, this.cellSize);
+
+        // Draw build/dig markers at mouse position
+        if (this.mouseDown && !this.gameOver) {
+            const col = Math.floor(this.mousePos.x / this.cellSize);
+            const row = Math.floor(this.mousePos.y / this.cellSize);
+            if (col >= 0 && col < this.gridCols && row >= 0 && row < this.gridRows) {
+                const x = col * this.cellSize;
+                const y = row * this.cellSize;
+                ctx.strokeStyle = this.abilityCooldowns.build > 0 ? CONFIG.COLORS.DIG_MARKER : CONFIG.COLORS.BUILD_MARKER;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x + 2, y + 2, this.cellSize - 4, this.cellSize - 4);
+            }
+        }
+    }
+}
+
+// --- Player Class ---
+class Player {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.width = 14;
+        this.height = 14;
+        this.onGround = false;
+        this.facing = 1; // 1 right, -1 left
+        this.animFrame = 0;
+        this.animTimer = 0;
+    }
+
+    update(dt, grid, cellSize) {
+        // Horizontal movement
+        if (game.keys['ArrowLeft'] || game.keys['a']) {
+            this.vx -= CONFIG.PLAYER_ACCEL * dt;
+            this.facing = -1;
+        }
+        if (game.keys['ArrowRight'] || game.keys['d']) {
+            this.vx += CONFIG.PLAYER_ACCEL * dt;
+            this.facing = 1;
+        }
+
+        // Jump
+        if ((game.keys['ArrowUp'] || game.keys['w'] || game.keys[' ']) && this.onGround) {
+            this.vy = CONFIG.JUMP_FORCE;
+            this.onGround = false;
+            game.audio.play('jump');
+        }
+
+        // Apply friction
+        this.vx *= CONFIG.PLAYER_FRICTION;
+        this.vx = clamp(this.vx, -CONFIG.PLAYER_MAX_SPEED, CONFIG.PLAYER_MAX_SPEED);
+
+        // Gravity
+        this.vy += CONFIG.GRAVITY * dt;
+        this.vy = clamp(this.vy, -20, 20);
+
+        // Move and check collisions
+        this.x += this.vx * dt;
+        this.checkCollisionX(grid, cellSize);
+        this.y += this.vy * dt;
+        this.checkCollisionY(grid, cellSize);
+
+        // Animation
+        this.animTimer += dt;
+        if (this.animTimer > 5) {
+            this.animFrame = (this.animFrame + 1) % 4;
+            this.animTimer = 0;
+        }
+    }
+
+    checkCollisionX(grid, cellSize) {
+        const left = Math.floor(this.x / cellSize);
+        const right = Math.floor((this.x + this.width) / cellSize);
+        const top = Math.floor(this.y / cellSize);
+        const bottom = Math.floor((this.y + this.height) / cellSize);
+
+        for (let r = top; r <= bottom; r++) {
+            for (let c = left; c <= right; c++) {
+                if (r >= 0 && r < grid.length && c >= 0 && c < grid[r].length) {
+                    const cell = grid[r][c];
+                    if (cell && cell.type === 'solid') {
+                        if (this.vx > 0) {
+                            this.x = c * cellSize - this.width;
+                        } else if (this.vx < 0) {
+                            this.x = (c + 1) * cellSize;
+                        }
+                        this.vx = 0;
+                    }
+                }
+            }
+        }
+    }
+
+    checkCollisionY(grid, cellSize) {
+        const left = Math.floor(this.x / cellSize);
+        const right = Math.floor((this.x + this.width) / cellSize);
+        const top = Math.floor(this.y / cellSize);
+        const bottom = Math.floor((this.y + this.height) / cellSize);
+
+        this.onGround = false;
+
+        for (let r = top; r <= bottom; r++) {
+            for (let c = left; c <= right; c++) {
+                if (r >= 0 && r < grid.length && c >= 0 && c < grid[r].length) {
+                    const cell = grid[r][c];
+                    if (cell && cell.type === 'solid') {
+                        if (this.vy > 0) {
+                            this.y = r * cellSize - this.height;
+                            this.vy = 0;
+                            this.onGround = true;
+                        } else if (this.vy < 0) {
+                            this.y = (r + 1) * cellSize;
+                            this.vy = 0;
+                        }
+                    } else if (cell && cell.type === 'sand') {
+                        // Sand is not solid, but check if player is inside it
+                        // For simplicity, treat sand as non-solid but allow digging
+                    }
+                }
+            }
+        }
+    }
+
+    draw(ctx, cellSize) {
+        const x = this.x;
+        const y = this.y;
+        const w = this.width;
+        const h = this.height;
+
+        // Glow effect
+        ctx.shadowColor = CONFIG.COLORS.PLAYER;
+        ctx.shadowBlur = 15;
+
+        // Body
+        ctx.fillStyle = CONFIG.COLORS.PLAYER;
+        ctx.fillRect(x, y, w, h);
+
+        ctx.shadowBlur = 0;
+
+        // Eyes
+        ctx.fillStyle = '#000';
+        const eyeOffset = this.facing > 0 ? 2 : -2;
+        ctx.fillRect(x + w/2 + eyeOffset - 1, y + 3, 2, 2);
+        ctx.fillRect(x + w/2 + eyeOffset - 1, y + 7, 2, 2);
+
+        // Trail effect
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = CONFIG.COLORS.PLAYER;
+        ctx.fillRect(x - this.facing * 5, y, w, h);
+        ctx.globalAlpha = 1;
+    }
+}
+
+// --- Initialization ---
+let game;
+
+window.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById('gameCanvas');
+    game = new Game(canvas);
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+        document.getElementById('startScreen').classList.remove('active');
+        game.start();
+    });
+
+    document.getElementById('restartBtn').addEventListener('click', () => {
+        document.getElementById('gameOverScreen').classList.remove('active');
+        document.getElementById('gameContainer').classList.remove('death-flash');
+        game.reset();
+        game.running = true;
+        game.lastTime = performance.now();
+        requestAnimationFrame((t) => game.loop(t));
+    });
+});
+</script>
+</body>
+</html>
