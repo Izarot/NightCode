@@ -1,0 +1,914 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 2 column 3 (char 4)
+
+Raw: The user wants me to create a game called "Tempest Tiles" based on the detailed specification provided. This is a complex roguelike puzzle-strategy game with Mahjong solitaire mechanics, weather systems, and various visual/audio features.
+
+Let me break down what I need to implement:
+1. A responsive HTML5 Canvas game
+2. Tile matching mechanics (Mahjong solitaire style)
+3. Weather system that affects gameplay
+4. Cursor physics with spring dynamics
+5. Barometer UI for weather forecasting
+6. High score persistence via LocalStorage
+7. Sound effects using Web Audio API
+8. Speedrun timer
+9. Vibrant color palette
+10. Emoji favicon
+11. Mobile responsive scaling
+
+Given the complexity, I'll create a single HTML file with embedded JavaScript that implements the core gameplay. I need to keep it manageable while covering the key features.
+
+Let me design the architecture:
+- HTML structure with canvas
+- CSS for responsive scaling and styling
+- JavaScript for game logic
+
+Key systems to implement:
+1. Tile generation (procedural mountain layout)
+2. Tile selectability rules
+3. Matching logic
+4. Gravity/falling tiles
+5. Weather system
+6. Cursor physics
+7. Barometer UI
+8. Score tracking
+9. High score persistence
+10. Sound effects
+11. Timer
+12. Mobile support
+
+Let me write this as a comprehensive but focused implementation. I'll use vanilla JS with Canvas 2D for simplicity (WebGL would be too much for a single file), but I'll structure it like the spec calls for.
+
+Actually, let me think about this more carefully. The spec is very detailed about WebGL2, instanced rendering, etc. But for a practical implementation in a single HTML file, I should focus on what works well:
+
+- Canvas 2D rendering (simpler, still looks good)
+- Proper game loop with requestAnimationFrame
+- All the core mechanics
+
+Let me plan the code structure:
+
+```javascript
+// Game state
+const Game = {
+  state: 'BOOT',
+  tiles: [],
+  cursor: { x, y, vx, vy, targetX, targetY, state },
+  weather: null,
+  barometer: [null, null, null, null, null],
+  score: 0,
+  combo: 0,
+  chainTimer: 0,
+  shuffles: 3,
+  pressure: 0,
+  cycle: 0,
+  maxCycles: 10,
+  timer: 0,
+  highScore: 0,
+  // ...
+}
+```
+
+Tile types:
+- Bamboo (🎋)
+- Characters (🀇🀈🀉...)
+- Dots (🔴🔵)
+- Winds (🌬️)
+- Dragons (🐉)
+- Seasons/Flowers (🌸🍁🍂)
+
+Weather types:
+- Wind (🌬️)
+- Rain (🌧️)
+- Lightning (⚡)
+- Earthquake (🌋)
+- Fog (🌫️)
+
+Let me write the complete implementation now. I'll make it a single HTML file with everything embedded.
+
+I need to be careful about the size - the user said "write shorter code" so I should be efficient but complete.
+
+Let me structure this properly:
+
+1. HTML head with meta tags, favicon, CSS
+2. Body with canvas and overlay UI
+3. Script with all game logic
+
+For the tile matching, I'll use a simplified version of Mahjong solitaire - tiles are stacked, you can only select free tiles (no tile on top, no tile on left/right). When you select two matching tiles, they get removed.
+
+Wait, actually re-reading the spec more carefully - it says "Standard Mahjong solitaire mechanics inverted—clearing the board is trivial; surviving the clearance is the challenge." So the win condition is surviving weather cycles, not clearing the board.
+
+Let me implement:
+- Procedural tile layout (mountain shape)
+- Free tile detection
+- Match detection (same type)
+- Weather system that changes every N matches
+- Score based on matches + weather survival
+- High score persistence
+- Timer
+- Sound effects via Web Audio API
+- Mobile responsive
+
+Let me write this now. I'll aim for clean, working code that covers all the major features.
+
+For the tile layout, I'll generate a pyramid/mountain shape similar to Mahjong solitaire.
+
+Let me code this up:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Tempest Tiles</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌩️</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0a0a1a; 
+            overflow: hidden; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        #gameContainer {
+            position: relative;
+            width: 1920px;
+            height: 1080px;
+            transform-origin: center;
+        }
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            background: #0a0a1a;
+        }
+        /* Responsive scaling */
+        @media (max-width: 1920px) {
+            #gameContainer { transform: scale(calc(100vw / 1920)); }
+        }
+        @media (min-width: 1921px) {
+            #gameContainer { transform: scale(calc(100vh / 1080)); }
+        }
+        /* Actually, better approach: JS-based scaling */
+        #ui-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+        .hud-element { pointer-events: auto; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui-overlay"></div>
+    </div>
+    <script>
+        // ... game code
+    </script>
+</body>
+</html>
+```
+
+Actually, let me think about the responsive scaling more carefully. The spec says "Native 1920x1080, Dynamic Scaling (CSS transform: scale)" and "Pixel-Perfect Rendering via image-rendering: pixelated".
+
+I'll use JavaScript to calculate the optimal scale factor based on the viewport size, and apply it via CSS transform.
+
+Let me write the full implementation now. I'll organize it into clear sections.
+
+For the tile types, I'll use emoji characters since we don't have actual sprite assets:
+- Bamboo: 🎋🎋🎋🎋
+- Characters: 🀇🀈🀉🀊🀋🀌🀍🀎🀏
+- Dots: 🔴🔵🟡
+- Winds: 🌬️💨
+- Dragons: 🐉🐲
+- Seasons: 🌸🍁🍂
+
+Actually, for a cleaner look, let me use simpler representations. I'll draw the tiles on canvas with text/emoji.
+
+Let me think about the tile layout algorithm. For a Mahjong-style layout, I'll create a pyramid:
+
+Row 0: 4 tiles
+Row 1: 6 tiles
+Row 2: 8 tiles
+...
+
+Or a more traditional pyramid shape. Let me do a simple pyramid:
+
+```
+Row 0:     [T][T][T][T]
+Row 1:    [T][T][T][T][T][T]
+Row 2:   [T][T][T][T][T][T][T][T]
+...
+```
+
+Each tile has a position (x, y) and type. A tile is "free" if no tile is directly above it, no tile is to its left or right (in the same row).
+
+Wait, in standard Mahjong solitaire, a tile is free if:
+- No tile is on top of it
+- No tile is to its left OR no tile is to its right (in the same row)
+
+Actually, the standard rule is: a tile is free if there's no tile directly on top AND no tile directly to the left AND no tile directly to the right. Wait no - it's: no tile on top, and at least one side is empty (left OR right).
+
+Hmm, let me re-check. In Mahjong solitaire:
+- A tile is free if no tile is on top of it
+- AND no tile is to its immediate left AND no tile is to its immediate right
+
+Wait, that's not right either. The standard rule is:
+- No tile on top
+- At least one side (left or right) is empty
+
+So a tile is blocked if there's a tile on top AND both sides are occupied.
+
+Actually, I think the correct rule is:
+- A tile is free if there's no tile directly on top of it
+- AND there's no tile directly to its left
+- AND there's no tile directly to its right
+
+No wait, that would make most tiles unselectable. Let me think again...
+
+In Mahjong solitaire, the standard rule is:
+- A tile can be selected if no other tile is on top of it
+- AND no other tile is immediately to its left
+- AND no other tile is immediately to its right
+
+So ALL three conditions must be met for a tile to be free. If any neighbor (top, left, right) exists, the tile is not free.
+
+This is the standard rule. Let me implement it this way.
+
+Now for the matching - when you select two free tiles of the same type, they get removed. Then gravity pulls down any tiles that were supported by them.
+
+Let me code this up properly. I'll write a comprehensive but focused implementation.
+
+Let me also think about the weather system. Each weather has:
+- Visual effect (particles, screen distortion)
+- Input modifier (affects cursor and selection)
+- Duration (how many matches before it changes)
+
+Weather types:
+1. Wind - cursor drifts, tiles slide after match
+2. Rain - double tap required, sluggish cursor
+3. Lightning - random lockouts, chain reactions
+4. Earthquake - screen shake, board reshuffles
+5. Fog - hidden tiles, reduced visibility
+
+For the barometer, I'll show 5 slots at the top. Each successful match advances the barometer. When the current slot expires, weather activates.
+
+OK let me just write the code now. I'll make it work well and cover all the key features.
+
+Let me structure the JavaScript:
+
+```javascript
+// === CONFIG ===
+const CONFIG = {
+  CANVAS_W: 1920,
+  CANVAS_H: 1080,
+  TILE_SIZE: 72,
+  TILE_SPACING: 8,
+  STIFFNESS: 45,
+  DAMPING: 8.5,
+  GRAVITY: 1200,
+  MAX_CYCLES: 10,
+  INITIAL_SHUFFLES: 3,
+};
+
+// === TILE TYPES ===
+const TILE_TYPES = [
+  { id: 0, name: 'Bamboo', emoji: '🎋', color: '#4CAF50' },
+  { id: 1, name: 'Characters', emoji: '🀇', color: '#E91E63' },
+  { id: 2, name: 'Dots', emoji: '🔴', color: '#FF9800' },
+  { id: 3, name: 'Winds', emoji: '🌬', color: '#2196F3' },
+  { id: 4, name: 'Dragons', emoji: '🐉', color: '#F44336' },
+  { id: 5, name: 'Seasons', emoji: '🌸', color: '#9C27B0' },
+];
+
+// === WEATHER TYPES ===
+const WEATHER_TYPES = [
+  { id: 0, name: 'Wind', icon: '🌬', color: '#87CEEB' },
+  { id: 1, name: 'Rain', icon: '🌧', color: '#4FC3F7' },
+  { id: 2, name: 'Lightning', icon: '⚡', color: '#FFEB3B' },
+  { id: 3, name: 'Earthquake', icon: '🌋', color: '#8D6E63' },
+  { id: 4, name: 'Fog', icon: '🌫', color: '#B0BEC5' },
+];
+```
+
+Let me now write the complete game. I'll focus on making it playable and visually appealing.
+
+Actually, I realize I should be more careful about the tile layout. Let me create a proper pyramid layout.
+
+For a pyramid with N rows:
+- Row 0: N tiles
+- Row i: 2*i+1 tiles... no wait.
+
+Standard Mahjong pyramid:
+- Row 0: 4 tiles
+- Row 1: 6 tiles
+- Row 2: 8 tiles
+- ...
+- Row N-1: 2N tiles
+
+Total tiles = sum(2*i+2 for i in 0..N-1) = N^2 + N
+
+For 144 tiles, N would be about 12 (12^2 + 12 = 156). Close enough.
+
+Actually, let me simplify. I'll create a pyramid where each row has an odd number of tiles centered horizontally.
+
+Row 0: 3 tiles
+Row 1: 5 tiles
+Row 2: 7 tiles
+...
+Row N-1: 2N+1 tiles
+
+Total = sum(2i+3 for i in 0..N-1) = N^2 + 2N
+
+For 144 tiles, N≈11 (121+22=143). Close.
+
+Let me just do a reasonable layout. I'll make it work.
+
+OK, I'm going to write the full code now. Let me be efficient and produce a working game.
+
+Let me think about the overall structure of the code:
+
+1. Setup (canvas, context, input handling)
+2. Game state management
+3. Tile generation and layout
+4. Tile selection and matching
+5. Gravity/falling system
+6. Weather system
+7. Barometer UI
+8. Score and combo system
+9. Sound system
+10. Rendering
+11. Main game loop
+12. High score persistence
+13. Mobile/responsive handling
+
+This is going to be a substantial amount of code. Let me write it efficiently.
+
+For sound, I'll use Web Audio API to generate simple sounds programmatically (no external files needed).
+
+For the cursor physics, I'll implement the damped spring system described.
+
+For rendering, I'll use Canvas 2D with good visual effects.
+
+Let me write this now. I'll aim for around 800-1200 lines of well-organized code.
+
+Actually, let me reconsider the approach. The user wants a complete, working game. Let me focus on making something that:
+1. Works correctly
+2. Looks good
+3. Has all the key features from the spec
+4. Is reasonably concise
+
+Let me write it now.
+
+One more thing - the spec mentions TypeScript but also says "Vanilla JS". Since this needs to be a single HTML file, I'll use plain JavaScript with JSDoc-style comments for clarity.
+
+Let me start coding:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tempest Tiles</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌩️</text></svg>">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0a1a; }
+        body { display: flex; justify-content: center; align-items: center; }
+        #wrap { position: relative; width: 1920px; height: 1080px; transform-origin: center center; }
+        canvas { display: block; image-rendering: pixelated; background: #0d0d2b; }
+        #hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .hud-panel { position: absolute; pointer-events: auto; }
+        /* ... more styles */
+    </style>
+</head>
+<body>
+<div id="wrap">
+    <canvas id="c"></canvas>
+    <div id="hud"></div>
+</div>
+<script>
+// Full game code here
+</script>
+</body>
+</html>
+```
+
+Let me write the complete implementation now. I'll be thorough but concise.
+
+For the responsive scaling, I'll calculate the scale factor in JS and apply it via CSS transform. This ensures pixel-perfect rendering at any resolution.
+
+Let me write the full code now. I need to be careful about:
+1. Correct tile layout generation
+2. Free tile detection
+3. Match detection
+4. Gravity simulation
+5. Weather system
+6. Barometer UI
+7. Score/combo system
+8. Sound effects
+9. High score persistence
+10. Timer
+11. Mobile support
+
+Here's my plan for the code structure:
+
+```javascript
+// ===== CONFIG =====
+const CFG = { ... };
+
+// ===== CONSTANTS =====
+const TILE_TYPES = [...];
+const WEATHER_TYPES = [...];
+
+// ===== STATE =====
+let game = { ... };
+
+// ===== AUDIO =====
+class AudioManager { ... }
+
+// ===== TILES =====
+function generateTiles() { ... }
+function isFree(tile) { ... }
+function findMatches() { ... }
+function removeTiles(t1, t2) { ... }
+function applyGravity() { ... }
+
+// ===== WEATHER =====
+function advanceBarometer() { ... }
+function activateWeather() { ... }
+function updateWeather(dt) { ... }
+
+// ===== CURSOR =====
+class Cursor { ... }
+
+// ===== INPUT =====
+function handleInput(e) { ... }
+
+// ===== RENDERING =====
+function render() { ... }
+function renderTiles() { ... }
+function renderCursor() { ... }
+function renderHUD() { ... }
+function renderWeatherEffects() { ... }
+
+// ===== GAME LOOP =====
+function update(dt) { ... }
+function gameLoop(timestamp) { ... }
+
+// ===== INIT =====
+function init() { ... }
+init();
+```
+
+OK let me just write the whole thing now. I'll make it work.
+
+Let me think about the tile layout more concretely. I want a pyramid shape:
+
+```
+Row 0:       [0][0][0][0]
+Row 1:     [0][0][0][0][0][0]
+Row 2:   [0][0][0][0][0][0][0][0]
+...
+```
+
+Each tile position is calculated as:
+- x = centerX + (col - rowWidth/2) * tileSpacing
+- y = rowY + rowHeight
+
+Where rowWidth = 2*row + 1 (for odd widths) or similar.
+
+Actually, let me use a simpler approach. I'll define the layout as a 2D array where each cell is either null or a tile object.
+
+For a pyramid:
+- Row 0 has 3 tiles
+- Row 1 has 5 tiles
+- Row 2 has 7 tiles
+- ...
+- Row N-1 has 2N-1 tiles
+
+Total = N^2
+
+For 144 tiles, N=12.
+
+Let me generate this layout.
+
+Tile positions:
+- Center the pyramid horizontally
+- Each row is offset to create the pyramid shape
+- Tiles stack vertically
+
+For the tile grid, I'll use a coordinate system where:
+- x increases to the right
+- y increases downward
+- Each tile occupies a grid cell
+
+A tile at (row, col) is free if:
+- No tile at (row-1, col) [above]
+- No tile at (row-1, col-1) [upper-left] -- wait, this depends on the layout
+
+Actually, in a standard pyramid layout, the adjacency is:
+- Left: (row, col-1)
+- Right: (row, col+1)
+- Top-left: (row-1, col-1)
+- Top-right: (row-1, col)
+
+But for simplicity, let me just check direct neighbors:
+- Above: (row-1, col)
+- Left: (row, col-1)
+- Right: (row, col+1)
+
+And a tile is free if no tile is above it AND no tile is to its left AND no tile is to its right.
+
+Wait, that's too strict. In Mahjong solitaire, a tile is free if:
+- No tile on top
+- At least one side (left or right) is empty
+
+So: NOT (tile above exists AND tile left exists AND tile right exists)
+
+Which means: free if (no tile above) OR (no tile left) OR (no tile right)
+
+Hmm, but that doesn't match the standard rule. Let me look this up mentally...
+
+Standard Mahjong Solitaire rule: A tile is free if:
+1. No tile is on top of it
+2. No tile is to its immediate left
+3. No tile is to its immediate right
+
+All three must be true. So a tile is blocked if ANY neighbor exists (top, left, or right).
+
+Wait no, that can't be right either. If a tile has a tile on top but no neighbors on sides, it should still be free in some variants...
+
+Actually, the standard rule IS: a tile is free if no tile is on top AND no tile is to the left AND no tile is to the right. All three conditions must hold.
+
+So: free = (no tile above) AND (no tile left) AND (no tile right)
+
+This makes sense because in Mahjong, you need both hands to pick up two matching tiles, and they need to be accessible.
+
+Let me go with this rule. It's the standard and makes the game challenging.
+
+Now for gravity: when tiles are removed, tiles above fall down to fill gaps. In a pyramid layout, this means tiles move down one row.
+
+Actually, in Mahjong solitaire, when you remove two tiles, the tiles that were resting on them fall. In a pyramid layout, this typically means tiles drop down by one row.
+
+Let me implement gravity as: after removing tiles, any tile that had a tile below it (in the next row) now has space and moves down. But wait, in a pyramid, tiles are stacked, so removing a lower tile could cause upper tiles to fall.
+
+Actually, in standard Mahjong solitaire, gravity works differently. Tiles don't really "fall" in the traditional sense. Instead, when you remove a pair, the tiles that were supporting them become unsupported and shift.
+
+For simplicity, I'll implement gravity as: after removal, tiles that were directly above the removed tiles shift down by one row. This simulates the physical falling.
+
+Let me implement this step by step.
+
+OK, I think I've planned enough. Let me write the actual code now.
+
+I'll write a comprehensive implementation that covers all the key features. Let me aim for clean, working code.
+
+Here's my final plan for the code:
+
+1. HTML structure with canvas and HUD overlay
+2. CSS for responsive scaling and styling
+3. JavaScript game engine with:
+   - Config constants
+   - Tile type and weather definitions
+   - Game state object
+   - Audio manager (Web Audio API)
+   - Tile generation (pyramid layout)
+   - Free tile detection
+   - Match detection and removal
+   - Gravity simulation
+   - Weather system with barometer
+   - Cursor physics (spring)
+   - Input handling (mouse/touch/keyboard)
+   - Rendering (tiles, cursor, HUD, weather effects)
+   - Score/combo system
+   - High score persistence (LocalStorage)
+   - Timer
+   - Main game loop
+   - Start screen / game over screen
+
+Let me write this now. I'll try to keep it under 1500 lines while being comprehensive.
+
+Actually, I realize I should think about how to handle the "weather" mechanic more concretely. The spec says:
+
+- Every successful match advances the Barometer by 1 tick
+- When CURRENT slot expires, weather activates (duration: 3-5 matches)
+- Next slot slides into CURRENT
+- New weather generated into +4 slot based on Climate Deck
+
+So the flow is:
+1. Start with barometer slots: [weather0, weather1, weather2, weather3, weather4]
+2. Each match advances the barometer (shifts everything left, new weather goes to slot 4)
+3. When the current slot (slot 0) reaches its match count, weather activates
+4. Weather lasts for N matches, then deactivates
+5. New weather is generated for the next slot
+
+Wait, I need to re-read this. "Every Successful Match advances Barometer by 1 tick." So each match increments a counter. When that counter reaches the duration, weather activates.
+
+Let me simplify:
+- Barometer has 5 slots showing upcoming weather
+- Current active weather slot shows remaining match count
+- Each match decrements the counter
+- When counter hits 0, weather activates and new weather appears in next slot
+- Weather lasts for a set number of matches (3-5)
+
+Actually, let me re-read more carefully:
+
+"Every Successful Match advances Barometer by 1 tick."
+"CURRENT slot expires -> Weather Effect activates (Duration: 3-5 Matches)."
+"Next slot slides into CURRENT."
+"New Weather generated into +4 slot based on Climate Deck."
+
+So the barometer shows 5 upcoming weather events. Each match advances the timeline. When the current event's duration is reached, it activates and the next one takes its place.
+
+Let me model it as:
+- barometer[0..4] = array of {weatherId, matchCount}
+- Each match: barometer[0].matchCount--, if <= 0 then activate weather[0], shift array, fill last with new weather
+- Active weather = barometer[0].weatherId (when matchCount > 0) or previous weather (when matchCount == 0)
+
+Hmm, this is getting complex. Let me simplify for implementation:
+
+- Track `weatherActive` (boolean) and `weatherTimer` (matches remaining)
+- Track `barometer` array of 5 weather objects
+- Each match: weatherTimer--, if <= 0 then activate weather, weatherTimer = random(3,5), shift barometer
+- Weather effects apply during weatherTimer > 0
+
+Actually, let me just implement it simply:
+- `currentWeather` object with `type`, `intensity`, `timer` (matches remaining)
+- `barometer` array of 5 weather preview objects
+- Each match: currentWeather.timer--, if <= 0: activate new weather, reset timer
+- Barometer shows upcoming weathers
+
+This is cleaner. Let me go with this.
+
+For the climate deck, I'll randomly assign weather types to upcoming slots.
+
+OK, let me finally write the code. I'll be comprehensive but focused.
+
+Let me also think about what makes this game fun and challenging:
+1. The weather creates pressure - bad weather makes matching harder
+2. You need to survive N cycles (matches) without running out of shuffles
+3. Chain combos give bonus points
+4. Special tiles (seasons, dragons) provide pressure release or deck manipulation
+
+For the initial implementation, I'll focus on:
+- Core matching gameplay
+- Basic weather system
+- Score and combo
+- Timer
+- High score
+- Sound effects
+- Mobile support
+
+Let me write it now. Here goes:
+
+Actually, I want to make sure the code is correct and handles edge cases. Let me think through the main game flow:
+
+1. Page loads -> Show start screen
+2. Click "Start" -> Generate tiles, init game state
+3. Player selects two free matching tiles -> They get removed
+4. Gravity applies -> Tiles fall
+5. Each match advances barometer
+6. When weather timer hits 0 -> Weather activates
+7. Weather affects gameplay (cursor, selection, visuals)
+8. After N matches (cycles), check win/loss
+9. Win: survived all cycles (or cleared board)
+10. Loss: no valid moves AND shuffles == 0
+11. Show end screen with stats
+12. Save high score
+
+Let me implement this flow.
+
+For the tile generation, I'll create a pyramid layout with 144 tiles. Each tile gets a random type from the 6 categories. I need to ensure there are always valid matches available (or at least that the game doesn't end immediately due to no valid moves).
+
+To ensure valid matches exist, I can:
+- Generate tiles ensuring each type appears multiple times
+- Or check for valid moves after generation and regenerate if needed
+
+I'll go with the simpler approach: generate enough of each type to ensure matches exist.
+
+With 144 tiles and 6 types, that's ~24 tiles per type. That should be plenty of matches.
+
+Let me write the code now. For real this time.
+
+Let me think about the rendering. I want it to look good with Canvas 2D:
+
+1. Background: Dark gradient with subtle animated particles
+2. Tiles: Rounded rectangles with emoji glyphs, colored borders, shadow effects
+3. Selected tile: Lifted up, glowing
+4. Cursor: Custom drawn with spring physics animation
+5. HUD: Clean text overlays
+6. Weather effects: Screen-space distortions, particle overlays
+
+For the tile rendering, I'll draw:
+- Rounded rectangle background with gradient
+- Emoji character centered
+- Border (colored by type)
+- Shadow when selected
+- Desaturation when blocked
+
+Let me code this up.
+
+For the cursor, I'll draw a custom cursor with:
+- Spring physics animation
+- Glow effect
+- Trail effect
+
+For input, I'll handle:
+- Mouse click/tap
+- Touch
+- Keyboard (arrows + enter)
+- Gamepad (basic)
+
+OK, I'm going to write the complete code now. Let me be thorough and produce a high-quality implementation.
+
+Let me estimate the code length: probably around 1000-1500 lines. That's fine for a comprehensive single-file game.
+
+Let me write it section by section.
+
+Actually, I realize I should think about the coordinate system. The game runs at 1920x1080 native resolution. The canvas is set to this size. The CSS transform scales it to fit the viewport.
+
+For mouse/touch input, I need to convert screen coordinates to canvas coordinates accounting for the CSS transform.
+
+Let me handle this properly.
+
+OK here's my final approach. I'll write the complete HTML file now. Let me be efficient and produce clean, working code.
+
+Let me think about what emojis to use for tiles. I want them to be recognizable:
+
+Bamboo: 🎋 (or use bamboo emoji)
+Characters: 🀇🀈🀉🀊🀋🀌🀍🀎🀏 (these might not render well on all platforms)
+Dots: 🔴🔵🟡 (or use ●○●)
+Winds: 🌬️ or 💨
+Dragons: 🐉
+Seasons: 🌸🍁🍂
+
+Actually, for better cross-platform compatibility, let me use simpler representations:
+- Bamboo: 🎋
+- Characters: Use Chinese character numbers (一, 二, 三, 四, 五, 六, 七, 八, 九)
+- Dots: ●○● (alternating filled/empty circles)
+- Winds: 🌬
+- Dragons: 🐉
+- Seasons: 🌸🍁🍂
+
+Hmm, the Chinese characters might not render well. Let me use simpler alternatives:
+- Bamboo: 🎋
+- Characters: 🀇🀈🀉 (just use a few different ones)
+- D<tool_call>write<param_key>filePath</param_key><param_value>/home/user/tempest-tiles.html</param_value><param_key>content</param_key><param_value><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Tempest Tiles</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌩️</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#0a0a1a;font-family:'Segoe UI',system-ui,sans-serif}
+body{display:flex;justify-content:center;align-items:center}
+#wrap{position:relative;width:1920px;height:1080px;transform-origin:center center;flex-shrink:0}
+canvas{display:block;image-rendering:pixelated;background:#0d0d2b;touch-action:none}
+#hud{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+.panel{position:absolute;pointer-events:auto;background:rgba(10,10,30,.75);border:1px solid rgba(255,255,255,.12);border-radius:12px;backdrop-filter:blur(8px)}
+#barometer{top:16px;left:50%;transform:translateX(-50%);display:flex;gap:6px;padding:8px 14px}
+.bslot{width:52px;height:52px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;font-weight:700;transition:all .3s;position:relative;overflow:hidden}
+.bslot .count{font-size:10px;opacity:.7;position:absolute;bottom:2px}
+.bslot.active{box-shadow:0 0 16px var(--bc),inset 0 0 8px var(--bc)}
+.bslot.current{outline:2px solid #fff;outline-offset:1px}
+#scorePanel{top:16px;right:16px;min-width:180px;padding:12px 16px}
+.score-row{display:flex;justify-content:space-between;align-items:center;margin:4px 0;color:#e0e0ff;font-size:14px}
+.score-val{font-weight:700;font-size:18px;color:#fff}
+#cyclePanel{top:16px;left:16px;min-width:160px;padding:12px 16px}
+.cycle-dots{display:flex;gap:6px;margin-top:6px}
+.cdot{width:18px;height:18px;border-radius:50%;border:2px solid rgba(255,255,255,.2);transition:all .3s}
+.cdot.filled{border-color:#fff;background:var(--cc)}
+#shuffleBtn{bottom:16px;right:16px;padding:10px 20px;font-size:14px;font-weight:700;color:#fff;background:linear-gradient(135deg,#e74c3c,#c0392b);border:none;border-radius:10px;cursor:pointer;transition:all .2s;pointer-events:auto}
+#shuffleBtn:hover{transform:scale(1.05);box-shadow:0 0 20px rgba(231,76,60,.5)}
+#shuffleBtn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+#timerPanel{bottom:16px;left:16px;min-width:120px;padding:8px 14px;color:#aaa;font-size:13px}
+#startScreen{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,5,20,.92);z-index:20;pointer-events:auto}
+#startScreen h1{font-size:56px;color:#fff;text-shadow:0 0 30px rgba(100,149,237,.6);margin-bottom:8px;letter-spacing:2px}
+#startScreen .subtitle{color:#888;font-size:16px;margin-bottom:32px}
+#startScreen button{padding:14px 48px;font-size:20px;font-weight:700;color:#fff;background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:12px;cursor:pointer;transition:all .2s;pointer-events:auto}
+#startScreen button:hover{transform:scale(1.05);box-shadow:0 0 30px rgba(102,126,234,.5)}
+#endScreen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,5,20,.92);z-index:20;pointer-events:auto}
+#endScreen h2{font-size:42px;color:#fff;margin-bottom:12px}
+#endScreen .stats{color:#ccc;font-size:16px;margin:6px 0;text-align:center}
+#endScreen button{margin-top:24px;padding:12px 36px;font-size:16px;font-weight:700;color:#fff;background:linear-gradient(135deg,#667eea,#764ba2);border:none;border-radius:10px;cursor:pointer;pointer-events:auto}
+#weatherBanner{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:48px;font-weight:900;color:var(--wc);text-shadow:0 0 40px var(--wc);opacity:0;pointer-events:none;z-index:15;transition:opacity .5s;letter-spacing:4px}
+#weatherBanner.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="c"></canvas>
+<div id="hud">
+<div class="panel" id="barometer"></div>
+<div class="panel" id="scorePanel">
+<div class="score-row"><span>SCORE</span><span class="score-val" id="scoreVal">0</span></div>
+<div class="score-row"><span>COMBO</span><span class="score-val" id="comboVal">x1</span></div>
+<div class="score-row"><span>TIME</span><span class="score-val" id="timeVal">0:00</span></div>
+</div>
+<div class="panel" id="cyclePanel">
+<div style="color:#ccc;font-size:13px;margin-bottom:4px">CYCLE</div>
+<div class="cycle-dots" id="cycleDots"></div>
+</div>
+<div class="panel" id="timerPanel">SPEEDRUN</div>
+<button id="shuffleBtn">RESTACK (3)</button>
+<div id="weatherBanner"></div>
+</div>
+<div id="startScreen">
+<h1>🌩️ TEMPEST TILES 🌩️</h1>
+<div class="subtitle">Survive the storm · Match tiles · Weather shifts</div>
+<button id="startBtn">START</button>
+</div>
+<div id="endScreen">
+<h2 id="endTitle">STORM CLEARED!</h2>
+<div class="stats" id="endStats"></div>
+<button id="restartBtn">PLAY AGAIN</button>
+</div>
+</div>
+<script>
+"use strict";
+// ======================== CONFIG ========================
+const CFG={W:1920,H:1080,TS:72,TSW:8,STIFF:45,DAMP:8.5,GRAV:1200,MAXCYC:10,SHUFFLES:3,BAROMSZ:5,WEATHERMIN:3,WEATHERMAX:5};
+// ======================== DATA ========================
+const TT=[
+{id:0,name:"Bamboo",emoji:"🎋",color:"#4CAF50"},
+{id:1,name:"Chars",emoji:"🀇",color:"#E91E63"},
+{id:2,name:"Dots",emoji:"🔴",color:"#FF9800"},
+{id:3,name:"Winds",emoji:"🌬",color:"#2196F3"},
+{id:4,name:"Dragons",emoji:"🐉",color:"#F44336"},
+{id:5,name:"Seasons",emoji:"🌸",color:"#9C27B0"}
+];
+const WT=[
+{id:0,name:"Wind",icon:"🌬",color:"#87CEEB"},
+{id:1,name:"Rain",icon:"🌧",color:"#4FC3F7"},
+{id:2,name:"Lightning",icon:"⚡",color:"#FFEB3B"},
+{id:3,name:"Quake",icon:"🌋",color:"#8D6E63"},
+{id:4,name:"Fog",icon:"🌫",color:"#B0BEC5"}
+];
+// ======================== STATE ========================
+let G={
+state:"BOOT",tiles:[],selected:[],cursor:{x:CFG.W/2,y:CFG.H/2,vx:0,vy:0,tx:CFG.W/2,ty:CFG.H/2,st:0},
+weather:null,baro:[],score:0,combo:0,chainT:0,shuffles:CFG.SHUFFLES,pressure:0,cycle:0,maxCycles:CFG.MAXCYC,
+timer:0,highScore:0,particles:[],shake:0,flash:0,lockout:0,windDrift:0,rainDrops:[],fogAlpha:0,
+audio:null,lastTime:0,running:false
+};
+// ======================== AUDIO ========================
+class Audio{
+constructor(){this.ctx=null;this.enabled=true}
+init(){try{this.ctx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){this.enabled=false}}
+play(freq,dur=.15,type="sine",vol=.12){
+if(!this.ctx||!this.enabled)return;
+try{
+const o=this.ctx.createOscillator(),g=this.ctx.createGain();
+o.type=type;o.frequency.value=freq;
+g.gain.setValueAtTime(vol,this.ctx.currentTime);
+g.gain.exponentialRampToValueAtTime(.001,this.ctx.currentTime+dur);
+o.connect(g);g.connect(this.ctx.destination);
+o.start();o.stop(this.ctx.currentTime+dur);
+}catch(e){}
+}
+match(){this.play(660,.1,"sine",.1);setTimeout(()=>this.play(880,.12,"sine",.1),60)}
+miss(){this.play(200,.2,"sawtooth",.06)}
+weather(){this.play(110,.5,"triangle",.08)}
+chain(){this.play(440,.08,"sine",.08);setTimeout(()=>this.play(554,.08,"sine",.08),50);setTimeout(()=>this.play(659,.1,"sine",.08),100)}
+win(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.play(f,.3,"sine",.1),i*150))}
+lose(){[400,350,300,250].forEach((f,i)=>setTimeout(()=>this.play(f,.4,"sawtooth",.08),i*200))}
+click(){this.play(800,.05,"square",.04)}
+}
+G.audio=new Audio();
+// ======================== TILES ========================
+function genTiles(){
+const tiles=[];const rows=12;const total=rows*rows;
+for(let r=0;r<rows;r++){
+const cols=r*2+1;
+for(let c=0;c<cols;c++){
+tiles.push({row:r,col:c,type:Math.floor(Math.random()*TT.length),x:0,y:0,vy:0,removed:false,blocked:false});
+}
+}
+// center horizontally
+const totalW=rows*CFG.TSW*2-CFG.TSW;
+const startX=(CFG.W-totalW)/2;
+tiles.forEach(t=>{t.x=startX+((t.col-(rows-1)/2)*CFG.TSW);t.y=60+t.row*CFG.TSW});
+return tiles;}
+function findFree(t){
+if(t.removed)return false;
+const above=tiles.find(x=>x.row===t.row-1&&x.col===t.col&&!x.removed);
+const left=tiles.find(x=>x.row===t.row&&x.col===t.col-1&&!x.removed);
+const right=tiles.find(x=>x.row===t.row&&x.col===t.col+1&&!x.removed);
+return !above&&!left&&!right;
+}
+function updateBlocked(){
+tiles.forEach(t=>{t.blocked=findFree(t)?false:true});}
+function findMatches(){
+const pairs=[];
+for(let i=0;i<tiles.length;i++){
+if(tiles[i].removed)continue;
+if(!findFree(tiles[i]))continue;
+for(let j=i+1;j<tiles.length;j++){
+if(tiles[j].removed)continue;
+if(!findFree(
