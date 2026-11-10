@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Ash & Vapor</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊🔥</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1a1a2e; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+    canvas { display: block; width: 100vw; height: 100vh; touch-action: none; background: #0f0f1a; }
+    #ui-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+    .hud-panel { position: absolute; color: #fff; font-size: 14px; text-shadow: 0 0 5px #000; }
+    #timer { top: 20px; left: 50%; transform: translateX(-50%); font-size: 24px; font-weight: bold; color: #00ffff; text-shadow: 0 0 10px #00ffff; }
+    #highscore { top: 55px; left: 50%; transform: translateX(-50%); font-size: 12px; color: #ffd700; }
+    #objectives { top: 20px; left: 20px; max-width: 250px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border-left: 3px solid #00ffff; }
+    .obj-item { margin: 4px 0; opacity: 0.8; }
+    .obj-item.done { text-decoration: line-through; opacity: 0.4; color: #888; }
+    #synergy-bar { bottom: 20px; left: 50%; transform: translateX(-50%); width: 300px; height: 10px; background: rgba(0,0,0,0.5); border-radius: 5px; overflow: hidden; border: 2px solid #fff; }
+    #synergy-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #00ffff, #ff6600); transition: width 0.1s; }
+    .player-hud { bottom: 20px; width: 200px; height: 80px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; border: 2px solid; display: flex; flex-direction: column; gap: 5px; }
+    #hud-aqua { left: 20px; border-color: #00ffff; }
+    #hud-ignis { right: 20px; border-color: #ff6600; }
+    .hud-label { display: flex; justify-content: space-between; font-size: 12px; }
+    .hud-bar { height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; }
+    .hud-bar-fill { height: 100%; transition: width 0.1s; }
+    #hud-aqua .hud-bar-fill { background: linear-gradient(90deg, #00ffff, #0088ff); }
+    #hud-ignis .hud-bar-fill { background: linear-gradient(90deg, #ff6600, #ffcc00); }
+    #msg-box { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(20,20,40,0.95); padding: 40px; border-radius: 16px; text-align: center; border: 3px solid #00ffff; box-shadow: 0 0 30px #00ffff; z-index: 100; display: none; }
+    #msg-box h1 { color: #00ffff; margin-bottom: 10px; text-shadow: 0 0 10px #00ffff; }
+    #msg-box p { color: #ccc; margin-bottom: 20px; }
+    #msg-box button { background: linear-gradient(45deg, #00ffff, #0088ff); border: none; color: #000; padding: 12px 30px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+    #msg-box button:hover { box-shadow: 0 0 20px #00ffff; }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="ui-overlay">
+    <div id="timer" class="hud-panel">00:00.00</div>
+    <div id="highscore" class="hud-panel">Best: --:--.--</div>
+    <div id="objectives" class="hud-panel"><div class="obj-item" id="obj1">Melt Ice Geyser</div><div class="obj-item" id="obj2">Create Steam Lift</div><div class="obj-item" id="obj3">Unlock Thermal Gate</div><div class="obj-item" id="obj4">Reach Exit</div></div>
+    <div id="synergy-bar" class="hud-panel"><div id="synergy-fill"></div></div>
+    <div id="hud-aqua" class="hud-panel player-hud"><div class="hud-label"><span>💧 WATER</span><span id="aqua-water-txt">100%</span></div><div class="hud-bar"><div id="aqua-water-bar" class="hud-bar-fill" style="width:100%"></div></div><div class="hud-label"><span>❄️ CHILL</span><span id="aqua-chill-txt">0%</span></div><div class="hud-bar"><div id="aqua-chill-bar" class="hud-bar-fill" style="width:0%"></div></div></div>
+    <div id="hud-ignis" class="hud-panel player-hud"><div class="hud-label"><span>🔥 HEAT</span><span id="ignis-heat-txt">50%</span></div><div class="hud-bar"><div id="ignis-heat-bar" class="hud-bar-fill" style="width:50%"></div></div><div class="hud-label"><span>☄️ OVERHEAT</span><span id="ignis-over-txt">0%</span></div><div class="hud-bar"><div id="ignis-over-bar" class="hud-bar-fill" style="width:0%; background:#ff0000"></div></div></div>
+  </div>
+  <div id="msg-box"><h1 id="msg-title">ASH & VAPOR</h1><p id="msg-text">Press Start to Begin</p><button id="start-btn">Start</button></div>
+  <script src="game.js"></script>
+</body>
+</html>
