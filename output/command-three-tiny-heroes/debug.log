@@ -1,0 +1,763 @@
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 1 column 3 (char 2)
+
+Raw: ```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiny Heroes – Tactical Dungeon</title>
+    <!-- Emoji favicon -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23f59e0b'/%3E%3Ccircle cx='16' cy='16' r='6' fill='%23eab308'/%3E%3C/svg%3E">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f1a;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #gameCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #hud {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 10;
+        }
+        .hud-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .hud-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #888;
+        }
+        .health-bar, .mana-bar {
+            width: 120px;
+            height: 8px;
+            background: #2d3748;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .health-fill, .mana-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        .health-fill.hero-warrior { background: linear-gradient(90deg, #f59e0b, #e2e8f0); }
+        .mana-fill { background: linear-gradient(90deg, #8b5cf6, #ec4899); }
+        .action-points {
+            font-size: 24px;
+            font-weight: bold;
+            color: #fbbf24;
+        }
+        .turn-counter {
+            font-size: 14px;
+            color: #cbd5e1;
+        }
+        #speedrun-timer {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #fbbf24;
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
+        }
+        .command-wheel {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: rgba(30, 40, 60, 0.9);
+            border: 2px solid #4a5568;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .command-wheel:hover {
+            transform: scale(1.1);
+        }
+        .cmd-btn {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .cmd-btn:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.05);
+        }
+        .cmd-btn.move { border-color: #f59e0b; }
+        .cmd-btn.attack { border-color: #8b5cf6; }
+        .cmd-btn.ability { border-color: #06b6d4; }
+        .cmd-btn.interact { border-color: #ec4899; }
+        .hud-panel {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            width: 200px;
+            background: rgba(10, 15, 25, 0.95);
+            border: 1px solid #4a5568;
+            border-radius: 12px;
+            padding: 15px;
+            z-index: 10;
+            display: none;
+        }
+        .hud-panel.active { display: block; }
+        .hero-portrait {
+            width: 70px;
+            height: 70px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .hero-warrior { background: linear-gradient(135deg, #f59e0b, #e2e8f0); }
+        .hero-mage { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+        .hero-rogue { background: linear-gradient(135deg, #06b6d4, #3b82f6); }
+        .health-bar { height: 10px; border-radius: 5px; }
+        .mana-bar { height: 10px; border-radius: 5px; }
+        .toast {
+            position: fixed;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #fbbf24;
+            color: #0f0f1a;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 100;
+        }
+        .toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="hud">
+        <div class="hud-group">
+            <span class="hud-label">Warrior</span>
+            <div class="health-bar"><div class="health-fill" id="warriorHealth"></div></div>
+            <div class="mana-bar"><div class="mana-fill" id="warriorMana"></div></div>
+        </div>
+        <div class="hud-group">
+            <span class="hud-label">Mage</span>
+            <div class="health-bar"><div class="health-fill" id="mageHealth"></div></div>
+            <div class="mana-bar"><div class="mana-fill" id="mageMana"></div></div>
+        </div>
+        <div class="hud-group">
+            <span class="hud-label">Rogue</span>
+            <div class="health-bar"><div class="health-fill" id="rogueHealth"></div></div>
+            <div class="mana-bar"><div class="mana-fill" id="rogueMana"></div></div>
+        </div>
+        <div class="hud-group">
+            <span class="hud-label">Action Points</span>
+            <span class="action-points" id="actionPoints">3</span>
+        </div>
+        <div class="hud-group">
+            <span class="hud-label">Turn</span>
+            <span class="turn-counter" id="turnCounter">1</span>
+        </div>
+    </div>
+    <div id="speedrun-timer">60</div>
+    <div class="command-wheel" id="commandWheel">
+        <button class="cmd-btn move" data-command="move">↔</button>
+        <button class="cmd-btn attack" data-command="attack">⬆</button>
+        <button class="cmd-btn ability" data-command="ability">⚡</button>
+        <button class="cmd-btn interact" data-command="interact">💬</button>
+    </div>
+    <div class="hud-panel" id="inventoryPanel">
+        <h3>Inventory</h3>
+        <div id="inventoryItems"></div>
+    </div>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ==================== CONFIG & COLORS ====================
+        const CONFIG = {
+            TILE_SIZE: 32,
+            GRID_WIDTH: 20,
+            GRID_HEIGHT: 15,
+            TURN_COST: 1,
+            MAX_ACTION_POINTS: 3,
+            SPEEDRUN_TIME: 60,
+            WORLD_WIDTH: 32 * CONFIG.TILE_SIZE,
+            WORLD_HEIGHT: 20 * CONFIG.TILE_SIZE
+        };
+
+        const COLORS = {
+            dungeon: '#2d3748',
+            floor: '#4a5568',
+            wall: '#1a202c',
+            heroWarrior: '#f59e0b',
+            heroMage: '#8b5cf6',
+            heroRogue: '#06b6d4',
+            enemy: '#e53e3e',
+            particle: '#fbbf24',
+            critical: '#fbbf24',
+            success: '#10b981'
+        };
+
+        // ==================== AUDIO (Web Audio API) ====================
+        const Audio = {
+            ctx: null,
+            init: function() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            },
+            playTap: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain).connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            },
+            playAttack: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain).connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            },
+            playAbility: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                osc.connect(gain).connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            },
+            playInteract: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(250, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain).connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            },
+            playCritical: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+                osc.connect(gain).connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.4);
+            },
+            playDeath: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 1.2);
+                osc.connect(gain).connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 1.2);
+            }
+        };
+
+        // ==================== GAME STATE ====================
+        const Game = {
+            canvas: null,
+            ctx: null,
+            width: 0,
+            height: 0,
+            grid: [],
+            heroes: [],
+            enemies: [],
+            particles: [],
+            highScore: 0,
+            actionPoints: 3,
+            turn: 1,
+            speedrunTimer: CONFIG.SPEEDRUN_TIME,
+            isPaused: false,
+            isGameOver: false,
+            currentHero: 0,
+            lastActionCost: 0,
+
+            init: function() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.resize();
+                this.loadHighScore();
+                this.setupInput();
+                this.loop();
+            },
+
+            resize: function() {
+                // Make canvas responsive - fit window while maintaining aspect ratio
+                const dpr = window.devicePixelRatio || 1;
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.canvas.width = this.width * dpr;
+                this.canvas.height = this.height * dpr;
+                this.canvas.style.width = this.width + 'px';
+                this.canvas.style.height = this.height + 'px';
+                this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                this.updateWorldBounds();
+            },
+
+            updateWorldBounds: function() {
+                this.grid = [];
+                for (let y = 0; y < CONFIG.GRID_HEIGHT; y++) {
+                    for (let x = 0; x < CONFIG.GRID_WIDTH; x++) {
+                        this.grid.push({
+                            x, y,
+                            wall: false,
+                            enemy: null,
+                            loot: null,
+                            trap: false,
+                            type: 'empty'
+                        });
+                    }
+                }
+            },
+
+            loadHighScore: function() {
+                try {
+                    const saved = localStorage.getItem('tinyheroes_highscore');
+                    if (saved) {
+                        this.highScore = parseInt(saved, 10);
+                    }
+                } catch (e) {
+                    this.highScore = 0;
+                }
+            },
+
+            saveHighScore: function() {
+                try {
+                    localStorage.setItem('tinyheroes_highscore', this.highScore);
+                } catch (e) { /* ignore */ }
+            },
+
+            // ==================== HEROES ====================
+            createHero: function(type) {
+                const baseStats = {
+                    warrior: { health: 30, mana: 20, attack: 12, defense: 5, speed: 2, agility: 1 },
+                    mage: { health: 25, mana: 35, attack: 8, defense: 2, speed: 1.5, agility: 1.5 },
+                    rogue: { health: 28, mana: 22, attack: 10, defense: 4, speed: 2.5, agility: 2 }
+                };
+                const stats = baseStats[type] || baseStats.warrior;
+                return {
+                    id: this.heroes.length,
+                    type,
+                    x: Math.floor(Math.random() * CONFIG.GRID_WIDTH),
+                    y: Math.floor(Math.random() * CONFIG.GRID_HEIGHT),
+                    health: stats.health,
+                    mana: stats.mana,
+                    attack: stats.attack,
+                    defense: stats.defense,
+                    speed: stats.speed,
+                    agility: stats.agility,
+                    maxHealth: stats.health,
+                    maxMana: stats.mana,
+                    // Synergy bonus
+                    synergyBonus: 0,
+                    // State
+                    isAlive: true,
+                    cooldown: 0,
+                    abilityCooldown: 0,
+                    // Visuals
+                    portrait: type === 'warrior' ? 'hero-warrior' : type === 'mage' ? 'hero-mage' : 'hero-rogue'
+                };
+            },
+
+            addHero: function(type) {
+                const hero = this.createHero(type);
+                this.heroes.push(hero);
+                return hero;
+            },
+
+            // ==================== ENEMIES ====================
+            addEnemy: function(type) {
+                const enemy = {
+                    id: this.enemies.length,
+                    x: Math.floor(Math.random() * CONFIG.GRID_WIDTH),
+                    y: Math.floor(Math.random() * CONFIG.GRID_HEIGHT),
+                    health: type === 'goblin' ? 15 : 25,
+                    attack: type === 'goblin' ? 6 : 8,
+                    defense: type === 'goblin' ? 3 : 5,
+                    type,
+                    // AI behavior
+                    target: null,
+                    state: 'idle' // idle, alert, attack, dead
+                };
+                this.enemies.push(enemy);
+                return enemy;
+            },
+
+            // ==================== TURN LOGIC ====================
+            startTurn: function() {
+                this.turn++;
+                this.updateActionPoints();
+                this.updateSpeedrunTimer();
+                this.processCommands();
+            },
+
+            processCommands: function() {
+                if (this.isGameOver) return;
+
+                // Apply action points
+                if (this.actionPoints > 0) {
+                    this.actionPoints--;
+                    this.lastActionCost = this.actionPoints;
+                }
+
+                // Get current command
+                const cmd = this.getCurrentCommand();
+
+                // Execute command for all heroes
+                for (const hero of this.heroes) {
+                    if (!hero.isAlive) continue;
+
+                    if (cmd === 'move') {
+                        hero.move(cmd);
+                    } else if (cmd === 'attack') {
+                        hero.attack(cmd);
+                    } else if (cmd === 'ability') {
+                        hero.useAbility(cmd);
+                    } else if (cmd === 'interact') {
+                        hero.interact(cmd);
+                    }
+                }
+
+                // Enemy AI turn
+                this.enemyAIMove();
+            },
+
+            getCurrentCommand: function() {
+                // Simple command selection: Move, Attack, Ability, Interact
+                // In a real game, this would be from UI input
+                return this.currentHero !== undefined ? 'move' : 'attack';
+            },
+
+            enemyAIMove: function() {
+                this.enemies.forEach(enemy => {
+                    if (!enemy.isAlive) return;
+
+                    // Simple AI: move toward nearest hero or random
+                    let dx = 0, dy = 0;
+                    let minDist = Infinity;
+
+                    for (const hero of this.heroes) {
+                        if (!hero.isAlive) continue;
+                        const dist = this.calculateDistance(hero, enemy);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            dx = hero.x - enemy.x;
+                            dy = hero.y - enemy.y;
+                        }
+                    }
+
+                    if (minDist > 0) {
+                        // Move one step toward hero
+                        const stepX = dx > 0 ? 1 : (dx < 0 ? -1 : 0);
+                        const stepY = dy > 0 ? 1 : (dy < 0 ? -1 : 0);
+
+                        if (this.canMove(enemy, stepX, stepY)) {
+                            enemy.x += stepX;
+                            enemy.y += stepY;
+                        }
+                    }
+
+                    // Check if enemy reached hero (attack)
+                    if (Math.abs(enemy.x - this.heroes[0].x) < 2 && Math.abs(enemy.y - this.heroes[0].y) < 2) {
+                        enemy.attack();
+                    }
+                });
+            },
+
+            canMove: function(enemy, dx, dy) {
+                const hero = this.heroes[0]; // Use first hero as reference
+                if (!hero || !enemy.isAlive) return false;
+
+                // Check wall/corridor
+                const tx = enemy.x + dx;
+                const ty = enemy.y + dy;
+
+                // Simple wall check: if adjacent to wall, can't move
+                if (this.grid[enemy.y + dy]?.wall || this.grid[enemy.x + dx]?.wall) {
+                    return false;
+                }
+
+                // Check if target tile is free (not occupied by another hero)
+                if (this.grid[enemy.y + dy]?.x === enemy.x + dx && 
+                    this.grid[enemy.y + dy]?.x === enemy.x && 
+                    this.grid[enemy.y + dy]?.y === enemy.y) {
+                    return false;
+                }
+
+                return true;
+            },
+
+            // ==================== COMBAT ====================
+            heroMove: function(hero) {
+                const cmd = this.getCurrentCommand();
+                if (cmd === 'move') {
+                    hero.move(cmd);
+                }
+            },
+
+            heroAttack: function(hero) {
+                if (hero.cooldown > 0) return;
+                hero.cooldown = 2; // 2 turns cooldown
+                hero.attack();
+            },
+
+            heroUseAbility: function(hero) {
+                if (hero.abilityCooldown > 0) return;
+                hero.abilityCooldown = 3;
+                hero.useAbility('ability');
+            },
+
+            heroInteract: function(hero) {
+                // Simple interaction: pick up loot or use item
+                if (hero.mana < 5) return;
+                // Pick up loot
+                const loot = this.grid[hero.y][hero.x]?.loot;
+                if (loot) {
+                    hero.mana += 10;
+                    this.grid[hero.y][hero.x] = { ...this.grid[hero.y][hero.x], loot: null };
+                }
+            },
+
+            heroAttack: function() {
+                const target = this.getNearestEnemy(this.heroes[0]);
+                if (target) {
+                    const damage = this.calculateDamage(this.hero.attack, target.defense);
+                    target.health -= damage;
+                    this.createParticles(target.x, target.y, COLORS.enemy, 'critical' + (Math.random() > 0.7));
+                    if (target.health <= 0) {
+                        this.onEnemyDeath(target);
+                    }
+                }
+            },
+
+            calculateDamage: function(attack, defense) {
+                const raw = attack - defense;
+                return Math.max(1, Math.floor(raw));
+            },
+
+            onEnemyDeath: function(enemy) {
+                // Remove enemy
+                const idx = this.enemies.findIndex(e => e.id === enemy.id);
+                if (idx > -1) this.enemies.splice(idx, 1);
+
+                // Add XP
+                const xp = 10 + Math.floor(this.turn * 2);
+                this.highScore = Math.min(this.highScore + xp, 100); // Cap at 100
+
+                // Spawn loot
+                if (Math.random() > 0.5) {
+                    const lootType = Math.random() > 0.5 ? 'potion' : 'key';
+                    this.grid[enemy.y][enemy.x] = {
+                        type: lootType,
+                        x: enemy.x,
+                        y: enemy.y,
+                        loot: lootType
+                    };
+                }
+
+                // Update HUD
+                this.updateHUD();
+            },
+
+            // ==================== PARTICLES ====================
+            createParticles: function(x, y, color, type = 'success') {
+                for (let i = 0; i < 5; i++) {
+                    this.particles.push({
+                        x, y,
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: (Math.random() - 0.5) * 8,
+                        life: 1.0,
+                        color,
+                        type
+                    });
+                }
+            },
+
+            updateParticles: function() {
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life -= 0.03;
+                    if (p.life <= 0) {
+                        this.particles.splice(i, 1);
+                    }
+                }
+            },
+
+            // ==================== HUD UPDATES ====================
+            updateHUD: function() {
+                // Health bars
+                const warriorHealth = document.getElementById('warriorHealth');
+                const warriorMana = document.getElementById('warriorMana');
+                const mageHealth = document.getElementById('mageHealth');
+                const mageMana = document.getElementById('mageMana');
+                const rogueHealth = document.getElementById('rogueHealth');
+                const rogueMana = document.getElementById('rogueMana');
+
+                warriorHealth.style.width = (warriorHealth.querySelector('.health-fill').getBoundingClientRect().width * 0.5 + 'px');
+                warriorMana.style.width = (warriorMana.querySelector('.mana-fill').getBoundingClientRect().width * 0.5 + 'px');
+                mageHealth.style.width = (mageHealth.querySelector('.health-fill').getBoundingClientRect().width * 0.5 + 'px');
+                mageMana.style.width = (mageMana.querySelector('.mana-fill').getBoundingClientRect().width * 0.5 + 'px');
+                rogueHealth.style.width = (rogueHealth.querySelector('.health-fill').getBoundingClientRect().width * 0.5 + 'px');
+                rogueMana.style.width = (rogueMana.querySelector('.mana-fill').getBoundingClientRect().width * 0.5 + 'px');
+
+                // Action points
+                document.getElementById('actionPoints').textContent = this.actionPoints;
+
+                // Turn counter
+                document.getElementById('turnCounter').textContent = this.turn;
+            },
+
+            updateSpeedrunTimer: function() {
+                if (this.speedrunTimer > 0) {
+                    this.speedrunTimer--;
+                    const timerEl = document.getElementById('speedrun-timer');
+                    timerEl.textContent = this.speedrunTimer;
+                } else {
+                    this.speedrunTimer = CONFIG.SPEEDRUN_TIME;
+                    timerEl.textContent = CONFIG.SPEEDRUN_TIME;
+                }
+            },
+
+            // ==================== UI ====================
+            showToast: function(message) {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2000);
+            },
+
+            showPause: function() {
+                this.isPaused = true;
+                document.getElementById('commandWheel').style.display = 'none';
+                document.getElementById('inventoryPanel').classList.remove('active');
+            },
+
+            toggleInventory: function() {
+                document.getElementById('inventoryPanel').classList.toggle('active');
+            },
+
+            // ==================== INPUT ====================
+            setupInput: function() {
+                // Keyboard controls
+                document.addEventListener('keydown', (e) => {
+                    if (this.isPaused || this.isGameOver) return;
+
+                    switch (e.key) {
+                        case 'ArrowUp': case 'w': case 'W':
+                            this.heroMove(0, -1);
+                            break;
+                        case 'ArrowDown': case 's': case 'S':
+                            this.heroMove(0, 1);
+                            break;
+                        case 'ArrowLeft': case 'a': case 'A':
+                            this.heroMove(-1, 0);
+                            break;
+                        case 'ArrowRight': case 'd': case 'D':
+                            this.heroMove(1, 0);
+                            break;
+                        case ' ': case 'Enter':
+                            // Attack or ability (alternate with move)
+                            if (this.currentHero !== undefined) {
+                                this.heroAttack();
+                            }
+                            break;
+                    }
+                });
+
+                // Command wheel (right-click or space)
+                document.getElementById('commandWheel').addEventListener('click', (e) => {
+                    if (e.target.tagName === 'BUTTON') {
+                        const cmd = e.target.dataset.command;
+                        this.currentHero = cmd;
+                        this.heroMove(0, 0); // Reset position
+                        this.updateHUD();
+                        this.showToast(cmd.charAt(0).toUpperCase() + cmd.slice(1));
+                    }
+                });
+
+                // Keyboard command selection
+                document.addEventListener('keydown', (e) => {
+                    if (this.isPaused || this.isGameOver) return;
+                    switch (e.key) {
+                        case 'm': // Move
+                            this.heroMove(0, -1);
+                            break;
+                        case 'a': // Attack
+                            this.heroAttack();
+                            break;
+                        case 'i': // Ability
+                            this.heroUseAbility('ability');
+                            break;
+                        case ' ': // Interact (space bar)
+                            this.heroInteract();
+                            break;
+                    }
+                });
+            },
+
+            // ==================== INITIALIZATION ====================
+            init: function() {
+                this.loadHighScore();
+                this.addHero('warrior');
+                this.addHero('mage');
+                this.addHero('rogue');
+                this.startTurn();
+                this.updateHUD();
+            }
+        };
+
+        // Start the game
+        window.onload = () => Game.init();
+    </script>
+</body>
+</html>
+```
