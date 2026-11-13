@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lava Diversion</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>">
+    <style>
+        body { margin: 0; padding: 0; background: #1a1a1a; color: white; font-family: Arial, sans-serif; overflow: hidden; }
+        #gameCanvas { display: block; background: #2B2B2B; cursor: crosshair; }
+        #ui { position: absolute; top: 10px; left: 10px; z-index: 10; }
+        .health-bar { width: 100px; height: 10px; background: #333; border: 1px solid #555; margin: 2px 0; }
+        .health-fill { height: 100%; background: #4CAF50; transition: width 0.3s; }
+        .health-fill.home { background: #FF9800; }
+        .health-fill.lava { background: #F44336; }
+        #score, #timer { font-size: 18px; margin: 5px 0; }
+        #startScreen, #gameOverScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 20; }
+        button { padding: 10px 20px; font-size: 16px; background: #FF4500; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 10px; }
+        button:hover { background: #FF6347; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div id="score">Score: 0</div>
+        <div id="timer">Time: 0s</div>
+        <div>Player Health: <div class="health-bar"><div class="health-fill" id="playerHealth" style="width:100%"></div></div></div>
+        <div>Home Health: <div class="health-bar"><div class="health-fill home" id="homeHealth" style="width:100%"></div></div></div>
+        <div>Lava Level: <div class="health-bar"><div class="health-fill lava" id="lavaLevel" style="width:0%"></div></div></div>
+    </div>
+    <div id="startScreen">
+        <h1>Lava Diversion</h1>
+        <p>Dig tunnels to redirect lava away from homes!</p>
+        <p>Use WASD/Arrows to move, Space to jump, Mouse to dig</p>
+        <button id="startButton">Start Game</button>
+    </div>
+    <div id="gameOverScreen" style="display:none">
+        <h1 id="gameOverTitle">Game Over</h1>
+        <p id="gameOverMessage">All homes destroyed!</p>
+        <button id="restartButton">Play Again</button>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
