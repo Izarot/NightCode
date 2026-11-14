@@ -1,27 +1,55 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>TILE-STRAT</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='50%' x='50%' dominant-baseline='middle' text-anchor='middle' font-size='90'%3E🎲%3C/text%3E%3C/svg%3E">
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>Line-Turn</title>
+<link rel='icon' href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🎮</text></svg>'>
 <style>
-body{margin:0;overflow:hidden;background:#111;color:#fff;font-family:sans-serif}
-#canvas{display:block}
-#hud{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:20px;align-items:center}
-#turn{position:absolute;top:10px;right:10px}
-#timer{position:absolute;top:10px;right:50px}
-#tileTray{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px}
-.tile{width:40px;height:40px;background:#222;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px}
-.tile:hover{opacity:0.8}
+body { margin: 0; background: #0d0d0d; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+canvas { width: 100%; height: auto; aspect-ratio: 4 / 3; background: #0d0d0d; }
 </style>
 </head>
 <body>
-<canvas id="canvas"></canvas>
-<div id="hud">
-<div id="turn">Turn 0</div>
-<div id="timer">00:00</div>
-<div id="tileTray"></div>
-</div>
-<script type="module" src="game.js"></script>
+<canvas id='game'></canvas>
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+canvas.width = 800;
+canvas.height = 600;
+const dpr = window.devicePixelRatio || 1;
+canvas.width = 800 * dpr;
+canvas.height = 600 * dpr;
+ctx.scale(dpr, dpr);
+const player = { x: 100, y: 100, w: 32, h: 32, vx: 0, vy: 0 };
+const obstacles = [];
+let turn = 0;
+let score = 0;
+let lives = 3;
+let timer = 5;
+let lastTime = 0;
+let highScore = localStorage.getItem('lineTurn_highScore') || 0;
+function loop(t) {
+  let dt = (t - lastTime) / 1000;
+  lastTime = t;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+function update(dt) {
+  // player movement
+player.x += player.vx * dt;
+  player.y += player.vy * dt;
+  // collisions
+  for (let i = 0; i < obstacles.length; i++) {
+    const o = obstacles[i];
+    if (player.x < o.x + o.w && player.x + player.w > o.x && player.y < o.y + o.h && player.y + player.h > o.y) {
+      lives--;
+      if (lives <= 0) {
+        // game over
+      }
+    }
+  }
+</script>
 </body>
 </html>
