@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ECHO DEPTHS</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>">
+  <style>
+    :root {
+      --abyss: #030712;
+      --abyss-light: #0a1628;
+      --cyan: #00f5ff;
+      --violet: #bc8cff;
+      --amber: #ffb800;
+      --coral: #ff4d6a;
+      --ghost-cyan: rgba(0, 245, 255, 0.35);
+      --ghost-violet: rgba(188, 140, 255, 0.28);
+      --headlamp: rgba(255, 240, 200, 0.18);
+      --headlamp-edge: rgba(255, 240, 200, 0.05);
+      --hull-ok: #00ff88;
+      --hull-warn: #ffb800;
+      --hull-crit: #ff4d6a;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--abyss); overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; color: var(--cyan); touch-action: none; }
+    #gameCanvas { display: block; width: 100vw; height: 100vh; background: var(--abyss); }
+    #ui {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 10;
+      display: grid; grid-template-areas:
+        "timer . highscore"
+        "hull battery oxygen"
+        "sector . depth";
+      grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto auto auto; padding: clamp(8px, 2vh, 16px);
+    }
+    .ui-panel { background: linear-gradient(135deg, rgba(3,7,18,0.9), rgba(10,22,40,0.7)); border: 1px solid rgba(0,245,255,0.2);
+      border-radius: 8px; padding: clamp(6px, 1.5vh, 10px) clamp(10px, 2vw, 16px); backdrop-filter: blur(4px);
+      box-shadow: 0 0 20px rgba(0,245,255,0.05), inset 0 0 20px rgba(0,245,255,0.02); }
+    #timer { grid-area: timer; font-variant-numeric: tabular-nums; font-size: clamp(14px, 3vh, 22px); font-weight: 600; letter-spacing: 0.05em;
+      text-shadow: 0 0 8px var(--cyan), 0 0 16px var(--violet); color: var(--cyan); }
+    #highscore { grid-area: highscore; text-align: right; font-size: clamp(11px, 2.5vh, 16px); opacity: 0.8; }
+    #highscore .label { font-size: 0.7em; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.1em; }
+    #hull { grid-area: hull; } #battery { grid-area: battery; } #oxygen { grid-area: oxygen; }
+    .resource { display: flex; align-items: center; gap: 8px; }
+    .resource-bar { flex: 1; height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px; overflow: hidden; border: 1px solid rgba(0,245,255,0.15); }
+    .resource-fill { height: 100%; border-radius: 2px; transition: width 0.3s ease, background 0.3s; box-shadow: 0 0 8px currentColor; }
+    .resource-label { font-size: 0.7em; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.7; min-width: 45px; }
+    #sector { grid-area: sector; font-weight: 600; font-size: clamp(12px, 2.5vh, 18px); }
+    #depth { grid-area: depth; text-align: right; font-variant-numeric: tabular-nums; font-size: clamp(12px, 2.5vh, 18px); opacity: 0.8; }
+    #pingIndicator { position: fixed; bottom: clamp(12px, 3vh, 20px); left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px; pointer-events: none; z-index: 15; }
+    .ping-btn { width: 48px; height: 48px; border-radius: 50%; border: 2px solid rgba(0,245,255,0.3);
+      background: radial-gradient(circle at 30% 30%, rgba(0,245,255,0.15), transparent 70%), var(--abyss-light);
+      display: flex; align-items: center; justify-content: center; color: var(--cyan); font-size: 18px;
+      box-shadow: 0 0 12px rgba(0,245,255,0.1), inset 0 0 12px rgba(0,245,255,0.05);
+      transition: all 0.15s ease; opacity: 0.7; }
+    .ping-btn.ready { opacity: 1; border-color: var(--cyan); box-shadow: 0 0 16px var(--cyan), inset 0 0 12px rgba(0,245,255,0.2); }
+    .ping-btn.charging { border-color: var(--violet); color: var(--violet); box-shadow: 0 0 16px var(--violet), inset 0 0 12px rgba(188,140,255,0.2); }
+    .ping-btn.cooldown { opacity: 0.4; border-color: rgba(255,77,106,0.3); color: var(--coral); }
+    .ping-btn .key { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: 9px; opacity: 0.5; white-space: nowrap; }
+    #controlsHint { position: fixed; bottom: clamp(70px, 12vh, 90px); left: 50%; transform: translateX(-50%);
+      display: flex; gap: clamp(12px, 3vw, 24px); font-size: clamp(10px, 2vh, 13px); opacity: 0.5; flex-wrap: wrap; justify-content: center; text-align: center; }
+    .hint { display: flex; align-items: center; gap: 6px; background: rgba(3,7,18,0.7); padding: 4px 10px; border-radius: 12px; border: 1px solid rgba(0,245,255,0.1); }
+    .hint kbd { background: rgba(0,245,255,0.1); border: 1px solid rgba(0,245,255,0.2); padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+    #pauseMenu, #gameOverMenu, #startMenu {
+      position: fixed; inset: 0; background: rgba(3,7,18,0.95); backdrop-filter: blur(8px);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(16px, 3vh, 24px);
+      z-index: 100; pointer-events: auto; opacity: 0; visibility: hidden; transition: opacity 0.3s, visibility 0.3s;
+    }
+    #pauseMenu.visible, #gameOverMenu.visible, #startMenu.visible { opacity: 1; visibility: visible; }
+    .menu-title { font-size: clamp(28px, 6vh, 48px); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+      background: linear-gradient(90deg, var(--cyan), var(--violet), var(--amber)); -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-shadow: 0 0 40px rgba(0,245,255,0.3); animation: titlePulse 3s ease-in-out infinite; }
+    @keyframes titlePulse { 0%,100% { filter: drop-shadow(0 0 8px var(--cyan)); } 50% { filter: drop-shadow(0 0 20px var(--violet)); } }
+    .menu-btn { padding: clamp(12px, 2.5vh, 16px) clamp(28px, 5vw, 40px); font-size: clamp(14px, 3vh, 18px);
+      background: linear-gradient(135deg, rgba(0,245,255,0.15), rgba(188,140,255,0.1));
+      border: 1px solid rgba(0,245,255,0.3); color: var(--cyan); border-radius: 8px; cursor: pointer;
+      transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+    .menu-btn:hover { background: linear-gradient(135deg, rgba(0,245,255,0.3), rgba(188,140,255,0.2));
+      box-shadow: 0 0 24px rgba(0,245,255,0.3), inset 0 0 24px rgba(0,245,255,0.1); transform: translateY(-2px); }
+    .menu-btn:active { transform: translateY(0); }
+    .menu-btn.secondary { border-color: rgba(188,140,255,0.4); color: var(--violet); background: linear-gradient(135deg, rgba(188,140,255,0.1), rgba(0,245,255,0.05)); }
+    .menu-btn.secondary:hover { box-shadow: 0 0 24px rgba(188,140,255,0.3), inset 0 0 24px rgba(188,140,255,0.1); }
+    .menu-btn.danger { border-color: rgba(255,77,106,0.4); color: var(--coral); background: linear-gradient(135deg, rgba(255,77,106,0.1), rgba(255,184,0,0.05)); }
+    .menu-btn.danger:hover { box-shadow: 0 0 24px rgba(255,77,106,0.3), inset 0 0 24px rgba(255,77,106,0.1); }
+    #comboDisplay { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 20;
+      font-size: clamp(24px, 5vh, 40px); font-weight: 800; letter-spacing: 0.05em;
+      background: linear-gradient(90deg, var(--cyan), var(--amber), var(--coral)); -webkit-background-clip: text; background-clip: text; color: transparent;
+      text-shadow: 0 0 30px rgba(255,184,0,0.5); opacity: 0; transition: opacity 0.2s; }
+    #comboDisplay.visible { opacity: 1; }
+    @media (max-width: 600px) { #ui { grid-template-areas: "timer highscore" "hull battery" "oxygen sector" "depth depth"; grid-template-columns: 1fr 1fr; } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="ui">
+    <div id="timer" class="ui-panel">00:00.000</div>
+    <div id="highscore" class="ui-panel"><div class="label">Best</div><div id="highscoreValue">--:--.---</div></div>
+    <div id="hull" class="ui-panel resource"><span class="resource-label">Hull</span><div class="resource-bar"><div id="hullFill" class="resource-fill" style="width:100%; background:var(--hull-ok)"></div></div></div>
+    <div id="battery" class="ui-panel resource"><span class="resource-label">Battery</span><div class="resource-bar"><div id="batteryFill" class="resource-fill" style="width:100%; background:var(--cyan)"></div></div></div>
+    <div id="oxygen" class="ui-panel resource"><span class="resource-label">Oxygen</span><div class="resource-bar"><div id="oxygenFill" class="resource-fill" style="width:100%; background:var(--violet)"></div></div></div>
+    <div id="sector" class="ui-panel">SECTOR 1 / 5</div>
+    <div id="depth" class="ui-panel">DEPTH 0m</div>
+  </div>
+  <div id="pingIndicator">
+    <div id="echoBtn" class="ping-btn" title="Echo Ping (4s lead)"><span>●</span><span class="key">SPACE</span></div>
+    <div id="deepBtn" class="ping-btn" title="Deep Ping (7.5s lead)"><span>◆</span><span class="key">HOLD</span></div>
+  </div>
+  <div id="controlsHint">
+    <div class="hint"><kbd>W</kbd><kbd>↑</kbd> Thrust</div>
+    <div class="hint"><kbd>A</kbd><kbd>D</kbd> / <kbd>←</kbd><kbd>→</kbd> Turn</div>
+    <div class="hint"><kbd>Shift</kbd> Boost</div>
+    <div class="hint"><kbd>F</kbd> Lamp</div>
+  </div>
+  <div id="comboDisplay"></div>
+  <div id="startMenu">
+    <h1 class="menu-title">ECHO DEPTHS</h1>
+    <p style="color:rgba(0,245,255,0.6); font-size:clamp(13px,2.5vh,16px); max-width:80%; text-align:center; line-height:1.6;">Your sonar shows the world 4 seconds from now. The present is blind. Navigate the trench using only future echoes.</p>
+    <button class="menu-btn" id="startBtn">Begin Descent</button>
+    <button class="menu-btn secondary" id="controlsBtn">Controls</button>
+  </div>
+  <div id="pauseMenu"><h2 class="menu-title" style="font-size:clamp(20px,4vh,32px);">PAUSED</h2><button class="menu-btn" id="resumeBtn">Resume</button><button class="menu-btn secondary" id="restartBtn">Restart Sector</button><button class="menu-btn danger" id="quitBtn">Abandon Mission</button></div>
+  <div id="gameOverMenu"><h2 class="menu-title" style="font-size:clamp(20px,4vh,32px);" id="gameOverTitle">HULL BREACH</h2><div id="finalStats" style="color:rgba(0,245,255,0.7); font-size:clamp(13px,2.5vh,16px); text-align:center; line-height:2;"></div><button class="menu-btn" id="retryBtn">Retry Sector</button><button class="menu-btn secondary" id="newGameBtn">New Descent</button></div>
+  <script>
+// ===== ECHO DEPTHS - Core Game =====
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+
+// --- Constants ---
+const CONST = {
+  THRUST_ACCEL: 400, REVERSE_MULT: 0.55, BOOST_MULT: 1.8, DRAG_COEF: 1.35,
+  MAX_SPEED: 300, BOOST_MAX_SPEED: 430, ANG_ACCEL: 5.0, ANG_DRAG: 2.2, MAX_OMEGA: 2.3,
+  PING_LEAD: 4.0, DEEP_LEAD: 7.5, PING_COST: 12, DEEP_COST: 30,
+  PING_CD: 1.6, DEEP_CD: 4.0, PING_RADIUS: 620, DEEP_RADIUS: 900,
+  HULL_MAX: 100, BATTERY_MAX: 100, OXYGEN_SECTOR: 180, // 3 minutes per sector
+  SECTORS: 5, WORLD_W: 4000, WORLD_H: 20000,
+  HEADLAMP_RADIUS: 110, HEADLAMP_ANGLE: Math.PI / 3,
+  COLLISION_HULL_DPS: 12, COLLISION_VEL_KEEP: 0.4,
+  INVULN_TIME: 1.5, COMBO_WINDOW: 3.0,
+  CURRENT_STRENGTH: 40, CURRENT_SCALE: 0.002,
+  HAZARD_SPAWN_DIST: 1500, HAZARD_DESPAWN_DIST: 800,
+  BEACON_RADIUS: 80, BEACON_PULL: 200
+};
+
+// --- Color Palette ---
+const COL = {
+  abyss: '#030712', abyssLight: '#0a1628',
+  cyan: '#00f5ff', violet: '#bc8cff', amber: '#ffb800', coral: '#ff4d6a',
+  ghostCyan: 'rgba(0,245,255,0.35)', ghostViolet: 'rgba(188,140,255,0.28)',
+  headlamp: 'rgba(255,240,200,0.18)', headlampEdge: 'rgba(255,240,200,0.05)',
+  hullOk: '#00ff88', hullWarn: '#ffb800', hullCrit: '#ff4d6a'
+};
+
+// --- Audio System ---
+class AudioEngine {
+  constructor() {
+    this.ctx = null; this.enabled = false; this.sounds = {};
+    this.masterGain = null;
+    document.addEventListener('pointerdown', () => this.init(), { once: true });
+    document.addEventListener('keydown', () => this.init(), { once: true });
+  }
+  init() {
+    if (this.enabled) return;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    this.masterGain = this.ctx.createGain();
+    this.masterGain.gain.value = 0.3;
+    this.masterGain.connect(this.ctx.destination);
+    this.enabled = true;
+    this.createSounds();
+  }
+  createSounds() {
+    // Ping sound
+    this.sounds.ping = () => {
+      if (!this.enabled) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.4);
+      gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);
+      osc.connect(gain).connect(this.masterGain);
+      osc.start(); osc.stop(this.ctx.currentTime + 0.5);
+    };
+    this.sounds.deepPing = () => {
+      if (!this.enabled) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.8);
+      gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1);
+      osc.connect(gain).connect(this.masterGain);
+      osc.start(); osc.stop(this.ctx.currentTime + 1);
+    };
+    this.sounds.boost = () => {
+      if (!this.enabled) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+      osc.connect(gain).connect(this.masterGain);
+      osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+    };
+    this.sounds.collision = () => {
+      if (!this.enabled) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
+      osc.connect(gain).connect(this.masterGain);
+      osc.start(); osc.stop(this.ctx.currentTime + 0.3);
+    };
+    this.sounds.combo = () => {
+      if (!this.enabled) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.2);
+      osc.connect(gain).connect(this.masterGain);
+      osc.start(); osc.stop(this.ctx.currentTime + 0.2);
+    };
+    this.sounds.beacon = () => {
+      if (!this.enabled) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      [440, 554, 660, 880].forEach((f, i) => {
+        osc.frequency.setValueAtTime(f, this.ctx.currentTime + i * 0.1);
+      });
+      gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.6);
+      osc.connect(gain).connect(this.masterGain);
+      osc.start(); osc.stop(this.ctx.currentTime + 0.6);
+    };
+    this.sounds.ambient = () => {
+      if (!this.enabled || this.ambientPlaying) return;
+      this.ambientPlaying = true;
+      const bufferSize = this.ctx.sampleRate * 2;
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.02;
+      const source = this.ctx.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 120;
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0.05;
+      source.connect(filter).connect(gain).connect(this.masterGain);
+      source.start();
+      this.ambientSource = source;
+    };
+  }
+  play(name) { if (this.sounds[name]) this.sounds[name](); }
+}
+const audio = new AudioEngine();
+
+// --- Utility ---
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const rand = (min, max) => Math.random() * (max - min) + min;
+const randInt = (min, max) => Math.floor(rand(min, max + 1));
+const dist2 = (x1, y1, x2, y2) => { const dx = x2 - x1, dy = y2 - y1; return dx*dx + dy*dy; };
+const formatTime = (ms) => {
+  const total = Math.max(0, ms);
+  const m = Math.floor(total / 60000);
+  const s = Math.floor((total % 60000) / 1000);
+  const ms3 = Math.floor(total % 1000);
+  return `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}.${ms3.toString().padStart(3,'0')}`;
+};
+
+// --- Simplex Noise (lightweight) ---
+class SimplexNoise {
+  constructor(seed = Math.random()) {
+    this.perm = new Uint8Array(512);
+    for (let i = 0; i < 256; i++) this.perm[i] = i;
+    for (let i = 255; i > 0; i--) { const j = Math.floor(seed() * (i + 1)); [this.perm[i], this.perm[j]] = [this.perm[j], this.perm[i]]; }
+    for (let i = 0; i < 256; i++) this.perm[i + 256] = this.perm[i];
+  }
+  noise2D(x, y) {
+    const F2 = 0.5 * (Math.sqrt(3) - 1), G2 = (3 - Math.sqrt(3)) / 6;
+    const s = (x + y) * F2; const i = Math.floor(x + s), j = Math.floor(y + s);
+    const t = (i + j) * G2; const X0 = i - t, Y0 =j - t;
+  }
+}
