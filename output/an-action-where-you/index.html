@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Blade Reflex</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Ctext y='.9em' font-size='40'%3E✂%3C/text%3E%3C/svg%3E">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #050505; color: #fff; font-family: 'Courier New', Courier, monospace; overflow: hidden; touch-action: none; }
+canvas { display: block; }
+#touch-left, #touch-right { position: fixed; bottom: 0; width: 50vw; height: 35vh; background: rgba(0, 243, 255, 0.15); z-index: 10; }
+#touch-right { left: 50vw; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="touch-left"></div>
+<div id="touch-right"></div>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+
+const ACtx = window.AudioContext || window.webkitAudioContext;
+const audio = new ACtx();
+function sfx(t){
+ if(audio.state==='suspended') audio.resume();
+ const o = audio.createOscillator(), g = audio.createGain();
+ o.connect(g); g.connect(audio.destination);
+ const n = audio.currentTime;
+ if(t==='hit'){o.type='sawtooth';o.frequency.setValueAtTime(120,n);o.frequency.exponentialRampToValueAtTime(20,n+0.2);g.gain.setValueAtTime(0.2,n);g.gain.exponentialRampToValueAtTime(0.01,n+0.2);o.start(n);o.stop(n+0.2);}
+ else if(t==='ding'){o.type='sine';o.frequency.setValueAtTime(900,n);g.gain.setValueAtTime(0.05,n);g.gain.exponentialRampToValueAtTime(0.01,n+0.2);o.start(n);o.stop(n+0.2);}
+ else if(t==='whoosh'){o.type='square';o.frequency.setValueAtTime(600,n);o.frequency.exponentialRampToValueAtTime(150,n+0.1);g.gain.setValueAtTime(0.08,n);g.gain.exponentialRampToValueAtTime(0.01,n+0.1);o.start(n);o.stop(n+0.1);}
+}
+
+let state='MENU', score=0, hi=+localStorage.getItem('br_hi')||0, t=0, streak=0, maxStreak=0, hp=3, iframe=0, spawnT=0, spawnI=1200, last=0;
+const player={x:W/2,y:H-100,vx:0,w:32,h:64,hw:16,acc:0.8,fric:0.85,max:13};
+const keys={}, knives=[], parts=[];
+
+function spawn(){ const type=Math.random()<0.15?'heavy':(Math.random()<0.3?'sine':'straight'); const x=50+Math.random()*(W-100); const vy=type==='heavy'?4:(6+Math.random()*8); knives.push({x,y:0,vy,type,rot:0,rs:(Math.random()-0.5)*0.2,sx:x,life:0}); }
+
+function collide(p,k){ const pw=p.w/2,ph=p.h/2,kw=k.type==='heavy'?18:8,kh=40; return p.x-pw<k.x+kw&&p.x+pw>k.x-kw&&p.y-ph<k.y+kh&&p.y+ph>k.y-kh; }
+
+function burst(x,y,c,n){ for(let i=0;i<n;i++) parts.push({x,y,vx:(Math.random()-0.5)*12,vy:(Math.random()-0.5)*12,life:25+Math.random()*25,c}); }
+
+function reset(){ score=0;t=0;streak=0;hp=3;iframe=0;spawnI=1200;knives.length=0;parts.length=0;player.x=W/2; }
+
+function upd(dt){
+ if(state!=='PLAY') return;
+ t+=dt; spawnT+=dt;
+ if(spawnT>spawnI){spawn();spawnT=0;if(spawnI>150)spawnI-=5;}
+
+ if(keys['ArrowLeft']||keys['KeyA']) player.vx-=player.acc;
+ if(keys['ArrowRight']||keys['KeyD']) player.vx+=player.acc;
+ if(!keys['ArrowLeft']&&!keys['KeyA']&&!keys['ArrowRight']&&!keys['KeyD']) player.vx*=player.fric;
+ player.vx=Math.max(-player.max,Math.min(player.max,player.vx));
+ if(Math.abs(player.vx)<0.1)player.vx=0;
+ player.x+=player.vx;
+ player.x=Math.max(player.hw,Math.min(W-player.hw,player.x));
+
+ for(let i=knives.length-1;i>=0;i--){
+  const k=knives[i]; k.life++; k.y+=k.vy;
+  if(k.type==='sine') k.x=k.sx+Math.sin(k.y*0.08)*40;
+  k.rot+=k.rs;
+  if(iframe<=0&&collide(player,k)){ hp--; iframe=90; streak=0; sfx('hit'); burst(player.x,player.y,'#ff1a1a',24); if(hp<=0){state='GAMEOVER'; if(score>hi){localStorage.setItem('br_hi',score);hi=score;} } }
+  else if(k.y>H+60){knives.splice(i,1);score+=10;streak++;if(streak>maxStreak)maxStreak=streak;if(streak%10===0){score+=50;sfx('ding');}else sfx('whoosh');}
+ }
+ for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.x+=p.vx;p.y+=p.vy;p.life--;if(p.life<=0)parts.splice(i,1);}
+ if(iframe>0)iframe--;
+}
+
+function draw(){ const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#050505');g.addColorStop(1,'#1a0505');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+
+ knives.forEach(k=>{ctx.save();ctx.translate(k.x,k.y);ctx.rotate(k.rot);ctx.fillStyle=k.type==='heavy'?'#4a4a4a':(k.type==='sine'?'#bf00ff':'#c0c0c0');ctx.fillRect(-5,-20,10,40);ctx.fillStyle='#fff';ctx.fillRect(-2,-20,4,5);ctx.restore();});
+
+ if(iframe<=0||Math.floor(Date.now()/100)%2===0){ctx.strokeStyle='#00f3ff';ctx.lineWidth=3;ctx.strokeRect(player.x-16,player.y-64,32,64);ctx.fillStyle='#000';ctx.fillRect(player.x-12,player.y-60,24,52);}
+
+ parts.forEach(p=>{ctx.fillStyle=p.c;ctx.fillRect(p.x,p.y,4,4);});
+
+ ctx.fillStyle='#fff';ctx.font='20px monospace';
+ ctx.fillText('SCORE '+score,20,30);
+ ctx.fillText('HI '+hi,20,60);
+ const m=Math.floor(t/60000),s=Math.floor((t%60000)/1000);
+ ctx.fillText('TIME '+(m<10?'0':'')+m+':'+(s<10?'0':'')+s,W/2-50,30);
+ ctx.fillStyle='#ff1a1a';
+ for(let i=0;i<hp;i++)ctx.fillRect(W-40-i*22,20,16,16);
+
+ if(state==='MENU'){ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#00f3ff';ctx.font='44px monospace';ctx.fillText('BLADE REFLEX',W/2-150,H/2-40);ctx.fillStyle='#fff';ctx.font='22px monospace';ctx.fillText('TAP OR CLICK TO START',W/2-130,H/2+30);}
+ else if(state==='GAMEOVER'){ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#ff1a1a';ctx.font='44px monospace';ctx.fillText('YOU WERE SPLIT',W/2-170,H/2-50);ctx.fillStyle='#fff';ctx.font='22px monospace';ctx.fillText('SCORE '+score,W/2-50,H/2+10);ctx.fillText('BEST '+hi,W/2-50,H/2+40);if(score===hi&&score>0)ctx.fillText('NEW RECORD!',W/2-70,H/2+70);ctx.fillText('TAP OR CLICK RETRY',W/2-110,H/2+110);}
+}
+
+function loop(ts){const dt=ts-last;last=ts;upd(dt);draw();requestAnimationFrame(loop);}
+
+canvas.addEventListener('mousedown',()=>{if(state==='MENU'){state='PLAY';last=performance.now();requestAnimationFrame(loop);}else if(state==='GAMEOVER'){reset();state='PLAY';last=performance.now();requestAnimationFrame(loop);}});
+window.addEventListener('keydown',e=>keys[e.code]=true);
+window.addEventListener('keyup',e=>keys[e.code]=false);
+const tl=document.getElementById('touch-left'),tr=document.getElementById('touch-right');
+tl.addEventListener('touchstart',e=>{e.preventDefault();keys['ArrowLeft']=true;},{passive:false});
+tl.addEventListener('touchend',e=>{e.preventDefault();keys['ArrowLeft']=false;},{passive:false});
+tr.addEventListener('touchstart',e=>{e.preventDefault();keys['ArrowRight']=true;},{passive:false});
+tr.addEventListener('touchend',e=>{e.preventDefault();keys['ArrowRight']=false;},{passive:false});
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
