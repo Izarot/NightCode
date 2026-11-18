@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>ASTRO TRAIL</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{background:#0a0a12;overflow:hidden;font-family:'Orbitron',sans-serif;color:#0ff;touch-action:none}
+    #gameCanvas{display:block;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);image-rendering:crisp-edges;image-rendering:pixelated}
+    #uiOverlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+    .hud-panel{position:absolute;padding:8px 12px;background:rgba(10,10,20,0.85);border:1px solid #0ff4;border-radius:4px;font-size:14px;text-shadow:0 0 4px #0ff}
+    #hudScore{top:12px;left:12px}
+    #hudHighScore{top:40px;left:12px;font-size:11px;color:#8ff}
+    #hudTimer{top:12px;right:12px;font-size:18px;font-weight:700;color:#ff6}
+    #hudHull{bottom:12px;left:12px}
+    #hudCargo{bottom:12px;right:12px}
+    #hudCombo{bottom:60px;left:12px;font-size:20px;font-weight:700;color:#f80;display:none}
+    #hudWave{bottom:60px;right:12px;color:#f80;font-size:12px}
+    #startScreen,#pauseScreen,#gameOverScreen{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(10,10,20,0.95);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:20;gap:20px}
+    .btn{background:linear-gradient(135deg,#0ff,#08f);border:none;padding:12px 32px;font-family:inherit;font-size:16px;color:#001;cursor:pointer;border-radius:4px;text-transform:uppercase;letter-spacing:2px;transition:all .2s}
+    .btn:hover{transform:scale(1.05);box-shadow:0 0 20px #0ff}
+    .btn:active{transform:scale(0.98)}
+    h1{font-size:48px;background:linear-gradient(90deg,#0ff,#f0f,#ff0);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 30px #0ff8}
+    .stat{font-size:18px;color:#8ff}
+    .stat span{color:#0ff;font-weight:700}
+    @media (max-width:600px){h1{font-size:32px}.hud-panel{font-size:11px;padding:6px 8px}#hudTimer{font-size:14px}}
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="uiOverlay">
+    <div id="hudScore" class="hud-panel">SCORE: <span id="scoreVal">0</span></div>
+    <div id="hudHighScore" class="hud-panel">BEST: <span id="highScoreVal">0</span></div>
+    <div id="hudTimer" class="hud-panel">TIME: <span id="timerVal">00:00.00</span></div>
+    <div id="hudHull" class="hud-panel">HULL: <span id="hullVal">100</span>%</div>
+    <div id="hudCargo" class="hud-panel">CARGO: <span id="cargoVal">0</span></div>
+    <div id="hudCombo" class="hud-panel">COMBO x<span id="comboVal">1</span></div>
+    <div id="hudWave" class="hud-panel">WAVE <span id="waveVal">1</span></div>
+  </div>
+  <div id="startScreen">
+    <h1>ASTRO TRAIL</h1>
+    <p class="stat">WASD / ARROWS to move • SPACE to shoot • Collect your trail</p>
+    <button class="btn" id="startBtn">LAUNCH</button>
+    <p class="stat">High Score: <span id="startHighScore">0</span></p>
+  </div>
+  <div id="pauseScreen" style="display:none">
+    <h1>PAUSED</h1>
+    <button class="btn" id="resumeBtn">RESUME</button>
+    <button class="btn" id="quitBtn">QUIT</button>
+  </div>
+  <div id="gameOverScreen" style="display:none">
+    <h1 style="color:#f44">SHIP LOST</h1>
+    <p class="stat">Final Score: <span id="finalScore">0</span></p>
+    <p class="stat">Time: <span id="finalTime">00:00.00</span></p>
+    <p class="stat">Cargo Collected: <span id="finalCargo">0</span></p>
+    <button class="btn" id="restartBtn">RELAUNCH</button>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
