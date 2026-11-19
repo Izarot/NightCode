@@ -1,0 +1,190 @@
+JSON Decode Error after continuation: Invalid control character at: line 7 column 1559 (char 7270)
+
+Raw: {
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no\">\n    <title>Rule Snake</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐍</text></svg>\">\n    <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">\n    <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>\n    <link href=\"https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap\" rel=\"stylesheet\">\n    <link rel=\"stylesheet\" href=\"style.css\">\n</head>\n<body>\n    <div id=\"game-container\">\n        <canvas id=\"gameCanvas\" width=\"640\" height=\"640\"></canvas>\n    </div>\n    <script type=\"module\" src=\"js/main.js\"></script>\n</body>\n</html>",
+  "style.css": "body {\n    margin: 0;\n    padding: 0;\n    background: #050508;\n    color: #fff;\n    font-family: 'Share Tech Mono', monospace;\n    display: flex;\n    flex-direction: column;\n    align-items: center;\n    justify-content: center;\n    min-height: 100vh;\n    overflow: hidden;\n    touch-action: none;\n}\n#game-container {\n    position: relative;\n    width: 100%;\n    max-width: 640px;\n    aspect-ratio: 1 / 1;\n}\ncanvas {\n    display: block;\n    width: 100%;\n    height: 100%;\n    background: #0A0A0F;\n    image-rendering: pixelated;\n}",
+  "js/data.js": "export const TILE_SIZE = 32;\nexport const GRID_SIZE = 20;\nexport const CANVAS_SIZE = 640;\nexport const BASE_TICK = 125;\nexport const MIN_TICK = 60;\nexport const COLORS = {\n  bg: '#0A0A0F',\n  grid: '#1A1A2E',\n  snakeHead: '#00F2FF',\n  snakeBodyStart: '#0088FF',\n  snakeBodyEnd: '#003366',\n  fruit: '#FF00FF',\n  wall: '#1A1A2E',\n  wallStroke: '#0088FF',\n  text: '#FFFFFF',\n  textDim: '#AAAAAA',\n  accent: '#00F2FF'\n};\nexport const RULES = [\n  { id: 'SOLID', name: 'SOLID', weight: 10 },\n  { id: 'ETHEREAL', name: 'ETHEREAL', weight: 8 },\n  { id: 'WRAPAROUND', name: 'WRAPAROUND', weight: 8 },\n  { id: 'REVERSE', name: 'REVERSE CONTROLS', weight: 6 },\n  { id: 'SLIPPERY', name: 'SLIPPERY ICE', weight: 6 },\n  { id: 'DARKNESS', name: 'DARKNESS', weight: 5 },\n  { id: 'CONVEYORS', name: 'CONVEYORS', weight: 5 },\n  { id: 'PORTALS', name: 'PORTALS', weight: 5 },\n  { id: 'SPEED_FLUX', name: 'SPEED FLUX', weight: 4 },\n  { id: 'GRAVITY_ROTATE', name: 'GRAVITY ROTATE', weight: 4 }\n];\nexport const DIRS = { UP: {x:0, y:-1}, DOWN: {x:0, y:1}, LEFT: {x:-1, y:0}, RIGHT: {x:1, y:0} };\nexport const OPPOSITE = { UP: 'DOWN', DOWN: 'UP', LEFT: 'RIGHT', RIGHT: 'LEFT' };",
+  "js/audio.js": "export class Audio {\n  constructor() {\n    this.ctx = null;\n    this.masterGain = null;\n    this.muted = false;\n  }\n  init() {\n    if (!this.ctx) {\n      const AC = window.AudioContext || window.webkitAudioContext;\n      this.ctx = new AC();\n      this.masterGain = this.ctx.createGain();\n      this.masterGain.gain.value = 0.4;\n      this.masterGain.connect(this.ctx.destination);\n    }\n    if (this.ctx.state === 'suspended') this.ctx.resume();\n  }\n  toggleMute() { this.muted = !this.muted; }\n  playTone(freq, type, duration, startTime = 0) {\n    if (this.muted || !this.ctx) return;\n    const t = this.ctx.currentTime + startTime;\n    const osc = this.ctx.createOscillator();\n    const gain = this.ctx.createGain();\n    osc.type = type;\n    osc.frequency.setValueAtTime(freq, t);\n    gain.gain.setValueAtTime(0.1, t);\n    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);\n    osc.connect(gain);\n    gain.connect(this.masterGain);\n    osc.start(t);\n    osc.stop(t + duration);\n  }\n  playNoise(duration) {\n    if (this.muted || !this.ctx) return;\n    const t = this.ctx.currentTime;\n    const bufferSize = this.ctx.sampleRate * duration;\n    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);\n    const data = buffer.getChannelData(0);\n    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;\n    const noise = this.ctx.createBufferSource();\n    noise.buffer = buffer;\n    const gain = this.ctx.createGain();\n    gain.gain.setValueAtTime(0.2, t);\n    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);\n    noise.connect(gain);\n    gain.connect(this.masterGain);\n    noise.start(t);\n    noise.stop(t + duration);\n  }\n  fruit() {\n    this.playTone(880, 'sine', 0.1);\n    setTimeout(() => this.playTone(1320, 'sine', 0.1), 100);\n  }\n  ruleChange() {\n    [220, 277, 330].forEach((f, i) => this.playTone(f, 'sine', 0.5, i * 0.05));\n  }\n  death() {\n    this.playNoise(0.4);\n  }\n  click() {\n    this.playTone(600, 'sine', 0.06);\n  }\n}",
+  "js/input.js": "export class Input {\n  constructor() {\n    this.keys = {};\n    this.buffer = null;\n    this.setup();\n  }\n  setup() {\n    window.addEventListener('keydown', (e) => {\n      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','w','a','s','d','W','A','S','D'].includes(e.key)) e.preventDefault();\n      this.keys[e.key] = true;\n    });\n    window.addEventListener('keyup', (e) => this.keys[e.key] = false);\n  }\n  getDirection() {\n    if (this.buffer) {\n      const dir = this.buffer;\n      this.buffer = null;\n      return dir;\n    }\n    const map = { 'ArrowUp':'UP','ArrowDown':'DOWN','ArrowLeft':'LEFT','ArrowRight':'RIGHT', 'w':'UP','W':'UP', 's':'DOWN','S':'DOWN', 'a':'LEFT','A':'LEFT', 'd':'RIGHT','D':'RIGHT' };\n    for (const key in map) {\n      if (this.keys[key]) return map[key];\n    }\n    return null;\n  }\n  queue(dir) { this.buffer = dir; }\n  setTouch(dir) { this.buffer = dir; }\n}",
+  "js/game.js": "import { TILE_SIZE, GRID_SIZE, CANVAS_SIZE, BASE_TICK, MIN_TICK, COLORS, RULES, DIRS, OPPOSITE } from './data.js';\n\nexport class Game {\n  constructor(canvas, audio, input) {\n    this.canvas = canvas;\n    this.ctx = canvas.getContext('2d');\n    this.audio = audio;\n    this.input = input;\n    this.state = 'MENU';\n    this.score = 0;\n    this.highScore = parseInt(localStorage.getItem('ruleSnakeHighScore') || '0', 10);\n    this.timerStart = 0;\n    this.timerElapsed = 0;\n    this.running = false;\n    this.resetGame();\n    this.resize();\n  }\n\n  resize() {\n    this.canvas.width = CANVAS_SIZE;\n    this.canvas.height = CANVAS_SIZE;\n  }\n\n  resetGame() {\n    this.snake = [{x: 10, y: 10}, {x: 10, y: 11}, {x: 10, y: 12}, {x: 10, y: 13}, {x: 10, y: 14}];\n    this.dir = 'UP';\n    this.nextDir = 'UP';\n    this.score = 0;\n    this.rule = RULES[0];\n    this.ruleAnnounce = 0;\n    this.fruit = this.spawnFruit();\n    this.particles = [];\n    this.walls = this.generateWalls();\n    this.conveyors = [];\n    this.portals = [];\n    this.darkness = false;\n    this.gravityRotate = 0;\n    this.gravityTimer = 0;\n    this.tickRate = BASE_TICK;\n    this.lastTick = 0;\n    this.speedrunTime = 0;\n    this.timerStart = 0;\n    this.screenShake = 0;\n    this.screenShakeTime = 0;\n  }\n\n  generateWalls() {\n    const walls = [];\n    for (let x = 0; x < GRID_SIZE; x++) {\n      for (let y = 0; y < GRID_SIZE; y++) {\n        if (x === 0 || x === GRID_SIZE -1 || y === 0 || y === GRID_SIZE - 1) walls.push({x, y});
+      }
+    }
+    return walls;
+  }
+
+  spawnFruit() {
+    let pos;
+    do {
+      pos = { x: Math.floor(Math.random() * GRID_SIZE), y: Math.floor(Math.random() * GRID_SIZE) };
+    } while (this.snake.some(s => s.x === pos.x && s.y === pos.y) || this.walls.some(w => w.x === pos.x && w.y === pos.y));
+    return pos;
+  }
+
+  changeRule() {
+    const totalWeight = RULES.reduce((sum, r) => sum + r.weight, 0);
+    let rand = Math.random() * totalWeight;
+    for (const rule of RULES) {
+      rand -= rule.weight;
+      if (rand <= 0) {
+        this.rule = rule;
+        this.ruleAnnounce = 120;
+        this.audio.ruleChange();
+        break;
+      }
+    }
+  }
+
+  update(dt) {
+    if (this.state !== 'PLAYING' || !this.running) return;
+    
+    const inputDir = this.input.getDirection();
+    if (inputDir && inputDir !== OPPOSITE[this.dir]) {
+      this.nextDir = inputDir;
+    }
+    
+    this.lastTick += dt;
+    if (this.lastTick < this.tickRate) return;
+    this.lastTick = 0;
+    
+    this.dir = this.nextDir;
+    const head = { ...this.snake[0] };
+    head.x += DIRS[this.dir].x;
+    head.y += DIRS[this.dir].y;
+    
+    if (this.rule.id === 'WRAPAROUND') {
+      if (head.x < 0) head.x = GRID_SIZE - 1;
+      if (head.x >= GRID_SIZE) head.x = 0;
+      if (head.y < 0) head.y = GRID_SIZE - 1;
+      if (head.y >= GRID_SIZE) head.y = 0;
+    }
+    
+    if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+      this.gameOver();
+      return;
+    }
+    
+    if (this.walls.some(w => w.x === head.x && w.y === head.y)) {
+      this.gameOver();
+      return;
+    }
+    
+    if (this.snake.some(s => s.x === head.x && s.y === head.y)) {
+      this.gameOver();
+      return;
+    }
+    
+    this.snake.unshift(head);
+    
+    if (head.x === this.fruit.x && head.y === this.fruit.y) {
+      this.score += 10;
+      this.audio.fruit();
+      this.fruit = this.spawnFruit();
+      if (this.score % 50 === 0) {
+        this.changeRule();
+      }
+      this.tickRate = Math.max(MIN_TICK, BASE_TICK - this.score * 2);
+    } else {
+      this.snake.pop();
+    }
+    
+    if (this.score > this.highScore) {
+      this.highScore = this.score;
+      localStorage.setItem('ruleSnakeHighScore', String(this.highScore));
+    }
+  }
+
+  gameOver() {
+    this.running = false;
+    this.state = 'GAMEOVER';
+    this.audio.death();
+  }
+
+  draw() {
+    const ctx = this.ctx;
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    
+    ctx.strokeStyle = COLORS.grid;
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= GRID_SIZE; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * TILE_SIZE, 0);
+      ctx.lineTo(i * TILE_SIZE, CANVAS_SIZE);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i * TILE_SIZE);
+      ctx.lineTo(CANVAS_SIZE, i * TILE_SIZE);
+      ctx.stroke();
+    }
+    
+    ctx.fillStyle = COLORS.wall;
+    ctx.strokeStyle = COLORS.wallStroke;
+    for (const w of this.walls) {
+      ctx.fillRect(w.x * TILE_SIZE, w.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+      ctx.strokeRect(w.x * TILE_SIZE, w.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+    }
+    
+    ctx.fillStyle = COLORS.fruit;
+    ctx.beginPath();
+    ctx.arc(this.fruit.x * TILE_SIZE + TILE_SIZE / 2, this.fruit.y * TILE_SIZE + TILE_SIZE / 2, TILE_SIZE / 3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    for (let i = 0; i < this.snake.length; i++) {
+      const s = this.snake[i];
+      const t = i / Math.max(1, this.snake.length - 1);
+      ctx.fillStyle = i === 0 ? COLORS.snakeHead : `rgb(0, ${Math.floor(136 * (1 - t) + 51 * t)}, ${Math.floor(255 * (1 - t) + 102 * t)})`;
+      ctx.fillRect(s.x * TILE_SIZE + 1, s.y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+    }
+    
+    ctx.fillStyle = COLORS.text;
+    ctx.font = '16px Share Tech Mono';
+    ctx.fillText(`SCORE ${this.score}`, 10, 20);
+    ctx.fillText(`HI ${this.highScore}`, 10, 40);
+    ctx.fillText(`RULE: ${this.rule.name}`, 10, CANVAS_SIZE - 10);
+    
+    if (this.ruleAnnounce > 0) {
+      ctx.fillStyle = COLORS.accent;
+      ctx.font = '24px Share Tech Mono';
+      ctx.fillText(this.rule.name, CANVAS_SIZE / 2 - 60, CANVAS_SIZE / 2);
+      this.ruleAnnounce--;
+    }
+    
+    if (this.state === 'MENU') {
+      ctx.fillStyle = COLORS.text;
+      ctx.font = '32px Share Tech Mono';
+      ctx.fillText('RULE SNAKE', CANVAS_SIZE / 2 - 90, CANVAS_SIZE / 2 - 40);
+      ctx.font = '16px Share Tech Mono';
+      ctx.fillStyle = COLORS.textDim;
+      ctx.fillText('PRESS SPACE TO START', CANVAS_SIZE / 2 - 80, CANVAS_SIZE / 2 + 20);
+    }
+    
+    if (this.state === 'GAMEOVER') {
+      ctx.fillStyle = '#FF00FF';
+      ctx.font = '32px Share Tech Mono';
+      ctx.fillText('GAME OVER', CANVAS_SIZE / 2 - 85, CANVAS_SIZE / 2 - 20);
+      ctx.fillStyle = COLORS.textDim;
+      ctx.font = '16px Share Tech Mono';
+      ctx.fillText('PRESS SPACE TO RESTART', CANVAS_SIZE / 2 - 85, CANVAS_SIZE / 2 + 20);
+    }
+  }
+
+  start() {
+    this.state = 'PLAYING';
+    this.running = true;
+    this.resetGame();
+  }
+
+  loop(timestamp) {
+    if (!this.lastTime) this.lastTime = timestamp;
+    const dt = timestamp - this.lastTime;
+    this.lastTime = timestamp;
+    
+    this.update(dt);
+    this.draw();
+    
+    requestAnimationFrame((t) => this.loop(t));
+  }
+}
+",
+  "js/main.js": "import { Game } from './game.js';\nimport { Audio } from './audio.js';\nimport { Input } from './input.js';\n\nconst canvas = document.getElementById('gameCanvas');\nconst audio = new Audio();\nconst input = new Input();\nconst game = new Game(canvas, audio, input);\n\nwindow.addEventListener('keydown', (e) => {\n  if (e.key === ' ') {\n    if (game.state === 'MENU' || game.state === 'GAMEOVER') game.start();\n    audio.init();\n  }\n});\n\ngame.loop(0);\n"
+}
