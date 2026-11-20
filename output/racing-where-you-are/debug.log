@@ -1,7 +1,944 @@
-JSON Decode Error after continuation: Expecting ',' delimiter: line 3 column 3774 (char 4883)
+JSON Decode Error after continuation: Expecting property name enclosed in double quotes: line 2 column 13 (char 14)
 
-Raw: {
-  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Snail Rocket Racer</title>\n<link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='70' font-size='60' fill='%23ff6b6b'%3E🐌%3C/text%3E%3C/svg%3E\">\n<style>\nbody{margin:0;overflow:hidden;background:#1a1a2e;color:#eee;font-family:sans-serif}\n#gameCanvas{background:#0f0f23;display:block;margin:0 auto}\n#hud{position:absolute;top:10px;left:10px;color:#fff;font-size:14px}\n#highScore{position:absolute;top:10px;right:10px;color:#ff6b6b}\n#timer{position:absolute;top:10px;right:150px;color:#4ecdc4;font-family:monospace}\n</style>\n</head>\n<body>\n<canvas id=\"gameCanvas\"></canvas>\n<div id=\"hud\">Lap: <span id=\"lap\">1/3</span> | Score: <span id=\"score\">0</span> | Lives: <span id=\"lives\">3</span></div>\n<div id=\"highScore\">Best: <span id=\"bestScore\">0</span></div>\n<div id=\"timer\">00:00</div>\n<script src=\"bundle.js\"></script>\n</body>\n</html>",
-  "bundle.js": "class Vector2{constructor(x=0,y=0){this.x=x;this.y=y}add(v){return new Vector2(this.x+v.x,this.y+v.y)}sub(v){return new Vector2(this.x-v.x,this.y-v.y)}mul(s){return new Vector2(this.x*s,this.y*s)}len(){return Math.hypot(this.x,this.y)}norm(){const l=this.len();return l>0?this.mul(1/l):new Vector2()}\n}\nclass AudioManager{constructor(){this.audioCtx=new(window.AudioContext||window.webkitAudioContext)();this.sounds={}}\nplay(name){const osc=this.audioCtx.createOscillator();const gain=this.audioCtx.createGain();osc.type='sine';osc.frequency.setValueAtTime(220, this.audioCtx.currentTime);gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);osc.connect(gain);gain.connect(this.audioCtx.destination);osc.start();osc.stop(this.audioCtx.currentTime+0.1)}}\n}\nclass Player{constructor(){this.pos=new Vector2(100,300);this.vel=new Vector2();this.acc=new Vector2();this.speed=0;this.maxSpeed=5;this.boosting=false;this.boostTimer=0;this.boostCooldown=0;this.lives=3;this.score=0;this.fuel=100;this.color='#4ecdc4';this.sprite=new Vector2(0,0)}\nupdate(dt,keys){const F_ENGINE=0.15;const F_ROCKET=0.8;const DRAG=0.02;const FRICTION=0.05;let acc=new Vector2();if(keys.ArrowLeft||keys.A){acc.acc.x=-0.1}\nif(keys.ArrowRight||keys.D){acc.acc.x=0.1}\nif(this.boosting&&this.boostCooldown<=0){acc.acc.x+=F_ROCKET;this.boostTimer=2;this.boostCooldown=5}\nif(this.boostTimer>0){this.boostTimer-=dt;if(this.boostTimer<=0){this.boosting=false}}\nif(this.boostCooldown>0){this.boostCooldown-=dt}\nthis.vel=this.vel.mul(1-DRAG).add(acc.acc.mul(dt*60));if(this.vel.len()>this.maxSpeed){this.vel=this.vel.norm().mul(this.maxSpeed)}\nthis.pos=this.pos.add(this.vel);this.fuel=Math.max(0,this.fuel-0.01*dt*60)}\n}\nclass Game{constructor(){this.canvas=document.getElementById('gameCanvas');this.ctx=this.canvas.getContext('2d');this.resize();window.addEventListener('resize',()=>this.resize());this.keys={};this.player=new Player();this.audio=new AudioManager();this.highScore=localStorage.getItem('snailHighScore')||0;this.lastTime=0;this.timer=0;this.lap=1;this.totalLaps=3;this.running=true;document.addEventListener('keydown',e=>this.keys[e.key]=true);document.addEventListener('keyup',e=>this.keys[e.key]=false);requestAnimationFrame(t=>this.loop(t))}\nresize(){const w=800,h=600;const sw=Math.min(window.innerWidth,w);const sh=sw/w*h;this.canvas.width=sw;this.canvas.height=sh;this.canvas.style.transform='scale('+sw/w+')';this.canvas.style.transformOrigin='top left'}\nloop(timestamp){if(!this.lastTime)this.lastTime=timestamp;const dt=(timestamp-this.lastTime)/1000;this.lastTime=timestamp;if(this.running){this.update(dt);this.render();requestAnimationFrame(t=>this.loop(t))}}\nupdate(dt){const keys=this.keys;if(keys[' ']){this.player.boosting=true}if(keys['r']){}this.player.update(dt,keys);this.timer+=dt;document.getElementById('timer').textContent=this.formatTime(this.timer);document.getElementById('score').textContent=this.player.score;document.getElementById('lives').textContent=this.player.lives;document.getElementById('lap').textContent=this.lap+'/'+this.totalLaps;if(this.player.score>this.highScore){this.highScore=this.player.score;localStorage.setItem('snailHighScore',this.highScore);document.getElementById('bestScore').textContent=this.highScore}}\nrender(){const ctx=this.ctx;ctx.clearRect(0,0,this.canvas.width,this.canvas.height);ctx.fillStyle='#0f0f23';ctx.fillRect(0,0,this.canvas.width,this.canvas.height);ctx.fillStyle=this.player.color;ctx.fillRect(this.player.pos.x,this.player.pos.y-15,20,30);ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.fillText('🐌',this.player.pos.x-5,this.player.pos.y-10)}\nformatTime(s){const m=Math.floor(s/60);const sec=Math.floor(s%60);return(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec}\n}\nnew Game();"</arg>
-}{"index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n<title>Snail Rocket Racer</title>\n<link rel=\"icon\" href=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='70' font-size='60' fill='%23ff6b6b'%3E🐌%3C/text%3E%3C/svg%3E\">\n<style>\nbody{margin:0;overflow:hidden;background:#1a1a2e;color:#eee;font-family:sans-serif}\n#gameCanvas{background:#0f0f23;display:block;margin:0 auto}\n#hud{position:absolute;top:10px;left:10px;color:#fff;font-size:14px}\n#highScore{position:absolute;top:10px;right:10px;color:#ff6b6b}\n#timer{position:absolute;top:10px;right:150px;color:#4ecdc4;font-family:monospace}\n</style>\n</head>\n<body>\n<canvas id=\"gameCanvas\"></canvas>\n<div id=\"hud\">Lap: <span id=\"lap\">1/3</span> | Score: <span id=\"score\">0</span> | Lives: <span id=\"lives\">3</span></div>\n<div id=\"highScore\">Best: <span id=\"bestScore\">0</span></div>\n<div id=\"timer\">00:00</div>\n<script src=\"bundle.js\"></script>\n</body>\n</html>",
-  "bundle.js": "class Vector2{constructor(x=0,y=0){this.x=x;this.y=y}add(v){return new Vector2(this.x+v.x,this.y+v.y)}sub(v){return new Vector2(this.x-v.x,this.y-v.y)}mul(s){return new Vector2(this.x*s,this.y*s)}len(){return Math.hypot(this.x,this.y)}norm(){const l=this.len();return l>0?this.mul(1/l):new Vector2()}\n}\nclass AudioManager{constructor(){this.audioCtx=new(window.AudioContext||window.webkitAudioContext)();this.sounds={}}\nplay(name){const osc=this.audioCtx.createOscillator();const gain=this.audioCtx.createGain();osc.type='sine';osc.frequency.setValueAtTime(220, this.audioCtx.currentTime);gain.gain.setValueAtTime(0.1, this.audioCtx.currentTime);osc.connect(gain);gain.connect(this.audioCtx.destination);osc.start();osc.stop(this.audioCtx.currentTime+0.1)}}\n}\nclass Player{constructor(){this.pos=new Vector2(100,300);this.vel=new Vector2();this.acc=new Vector2();this.speed=0;this.maxSpeed=5;this.boosting=false;this.boostTimer=0;this.boostCooldown=0;this.lives=3;this.score=0;this.fuel=100;this.color='#4ecdc4';this.sprite=new Vector2(0,0)}\nupdate(dt,keys){const F_ENGINE=0.15;const F_ROCKET=0.8;const DRAG=0.02;const FRICTION=0.05;let acc=new Vector2();if(keys.ArrowLeft||keys.A){acc.acc.x=-0.1}\nif(keys.ArrowRight||keys.D){acc.acc.x=0.1}\nif(this.boosting&&this.boostCooldown<=0){acc.acc.x+=F_ROCKET;this.boostTimer=2;this.boostCooldown=5}\nif(this.boostTimer>0){this.boostTimer-=dt;if(this.boostTimer<=0){this.boosting=false}}\nif(this.boostCooldown>0){this.boostCooldown-=dt}\nthis.vel=this.vel.mul(1-DRAG).add(acc.acc.mul(dt*60));if(this.vel.len()>this.maxSpeed){this.vel=this.vel.norm().mul(this.maxSpeed)}\nthis.pos=this.pos.add(this.vel);this.fuel=Math.max(0,this.fuel-0.01*dt*60)}\n}\nclass Game{constructor(){this.canvas=document.getElementById('gameCanvas');this.ctx=this.canvas.getContext('2d');this.resize();window.addEventListener('resize',()=>this.resize());this.keys={};this.player=new Player();this.audio=new AudioManager();this.highScore=localStorage.getItem('snailHighScore')||0;this.lastTime=0;this.timer=0;this.lap=1;this.totalLaps=3;this.running=true;document.addEventListener('keydown',e=>this.keys[e.key]=true);document.addEventListener('keyup',e=>this.keys[e.key]=false);requestAnimationFrame(t=>this.loop(t))}\nresize(){const w=800,h=600;const sw=Math.min(window.innerWidth,w);const sh=sw/w*h;this.canvas.width=sw;this.canvas.height=sh;this.canvas.style.transform='scale('+sw/w+')';this.canvas.style.transformOrigin='top left'}\nloop(timestamp){if(!this.lastTime)this.lastTime=timestamp;const dt=(timestamp-this.lastTime)/1000;this.lastTime=timestamp;if(this.running){this.update(dt);this.render();requestAnimationFrame(t=>this.loop(t))}}\nupdate(dt){const keys=this.keys;if(keys[' ']){this.player.boosting=true}if(keys['r']){}this.player.update(dt,keys);this.timer+=dt;document.getElementById('timer').textContent=this.formatTime(this.timer);document.getElementById('score').textContent=this.player.score;document.getElementById('lives').textContent=this.player.lives;document.getElementById('lap').textContent=this.lap+'/'+this.totalLaps;if(this.player.score>this.highScore){this.highScore=this.player.score;localStorage.setItem('snailHighScore',this.highScore);document.getElementById('bestScore').textContent=this.highScore}}\nrender(){const ctx=this.ctx;ctx.clearRect(0,0,this.canvas.width,this.canvas.height);ctx.fillStyle='#0f0f23';ctx.fillRect(0,0,this.canvas.width,this.canvas.height);ctx.fillStyle=this.player.color;ctx.fillRect(this.player.pos.x,this.player.pos.y-15,20,30);ctx.fillStyle='#fff';ctx.font='12px sans-serif';ctx.fillText('🐌',this.player.pos.x-5,this.player.pos.y-10)}\nformatTime(s){const m=Math.floor(s/60);const sec=Math.floor(s%60);return(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec}\n}\nnew Game();"}
+Raw: ```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boulder Rush</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='80'>⛰️</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100%;
+            max-width: 1280px;
+            aspect-ratio: 16/9;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+            display: block;
+        }
+        
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 10;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        h1 {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #ff9d00;
+            text-shadow: 0 0 10px #ff9d00;
+            letter-spacing: 2px;
+        }
+        
+        h2 {
+            font-size: 2. patronage;
+            margin-bottom: 1.5rem;
+            color: #00e5ff;
+        }
+        
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+        
+        .controls {
+            margin-top: 2rem;
+            font-size: 1rem;
+            color: #aaa;
+        }
+        
+        button {
+            background: linear-gradient(to bottom, #00e5ff, #0077b6);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            margin: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+        }
+        
+        button:hover {
+            background: linear-gradient(to bottom, #26f6ff, #0099cc);
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.7);
+        }
+        
+        .countdown {
+            font-size: 6rem;
+            font-weight: bold;
+            color: #ff9d00;
+            text-shadow: 0 0 20px #ff9d00;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+             0percent { transform: scale(1); opacity: 1; }
+            50percent { transform: scale(1.2); opacity: 0.7; }
+            100percent { transform: scale(1); opacity: 1; }
+        }
+        
+        .hud {
+            position: absolute;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .placement {
+            top: 20px;
+            left: 20px;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid #00e5ff;
+        }
+        
+        .timer {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid #00e5ff;
+        }
+        
+        .speedometer {
+            bottom: 20px;
+            left: 20px;
+            width: 150px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            border: 1px solid #00e5ff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .speed-text {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ff9d00;
+        }
+        
+        .boost-meter {
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #00e5ff;
+        }
+        
+        .boost-bar {
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .boost-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #00e5ff, #ff9d00);
+            transition: width 0.1s linear;
+        }
+        
+        .progress-container {
+            top: 20px;
+            right: 20px;
+            width: 200px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #00e5ff;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(to right, #00e5ff, #ff9d00);
+        }
+        
+        .minimap {
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            border: 1px solid #00e5ff;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .warning {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            color: #ff3b30;
+            text-shadow: 0 0 10px #ff3b30;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .touch-controls {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            display: none;
+        }
+        
+        .steer-zone {
+            position: absolute;
+            bottom: 0;
+            width: 50%;
+            height: 30%;
+            touch-action: none;
+        }
+        
+        .left-steer {
+            left: 0;
+            background: rgba(255, 157, 0, 0.1);
+        }
+        
+        .right-steer {
+            right: 0;
+            background: rgba(0, 229, 255, 0.1);
+        }
+        
+        .brake-zone {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 25%;
+            height: 25%;
+            background: rgba(255, 59, 48, 0.1);
+            touch-action: none;
+        }
+        
+        .boost-zone {
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 25%;
+            height: 25%;
+            background: rgba(0, 229, 255, 0.1);
+            touch-action: none;
+        }
+        
+        @media (hover: none) and (pointer: coarse) {
+            .touch-controls {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- HUD Elements -->
+        <div class="hud placement" id="placementHud">1 / 4</div>
+        <div class="hud timer" id="timerHud">00:00.000</div>
+        
+        <div class="hud speedometer">
+            <div class="speed-text" id="speedText">0 MPH</div>
+           广大
+            <canvas id="speedCanvas" width="120" height="120"></canvas>
+        </div>
+        
+        <div class="hud boost-meter">
+            <div>BOOST</div>
+            <div class="boost-bar">
+                <div class="boost-fill" id="boostFill"></div>
+            </div>
+            <div style="text-align: center; margin-top: 5px;" id="boostPrompt">SHIFT to Boost</div>
+        </div>
+        
+        <div class="hud progress-container">
+            <div>PROGRESS</div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+        </div>
+        
+        <div class="hud minimap">
+            <canvas id="minimapCanvas" width="150" height="100"></canvas>
+        </div>
+        
+        <div class="warning" id="warning">BOOST!</div>
+        
+        <!-- Touch Controls -->
+        <div class="touch-controls">
+            <div class="steer-zone left-steer" id="leftSteer"></div>
+            <div class="steer-zone right-steer" id="rightSteer"></div>
+            <div class="brake-zone" id="brakeZone"></div>
+            <div class="boost-zone" id="boostZone"></div>
+        </div>
+        
+        <!-- Overlays -->
+        <div id="titleScreen" class="overlay">
+            <h1>BOULDER RUSH</h1>
+            <p>You are a heavy, unstoppable boulder racing downhill against three AI-controlled rivals. Use slope, momentum, and precision steering to win!</p>
+            <div class="controls">
+                <p><strong>Controls:</strong> A/D or Left/Right arrows to steer • S/Down arrow or Space to brake • Shift to boost • P to pause</p>
+                <p><strong>Touch:</strong> Left side to steer left, right side to steer right • Brake and boost buttons on right</p>
+            </div>
+            <button id="startButton">START RACE</button>
+        </div>
+        
+        <div id="countdownScreen" class="overlay hidden">
+            <div class="countdown" id="countdown">3</div>
+        </div>
+        
+        <div id="pauseScreen" class="overlay hidden">
+            <h2>PAUSED</h2>
+            <button id="resumeButton">RESUME</button>
+            <button id="restartButton">RESTART</button>
+            <button id="muteButton">MUTE</button>
+        </div>
+        
+        <div id="respawnScreen" class="overlay hidden">
+            <h2>RESPAWNING...</h2>
+            <p>Returning to last checkpoint</p>
+        </div>
+        
+        <div id="resultsScreen" class="overlay hidden">
+            <h2>RACE FINISHED</h2>
+            <p id="resultsPlacement">You finished: 1st</p>
+            <p id="resultsTime">Time: 00:00.000</p>
+            <p id="resultsTopSpeed">Top Speed: 000 MPH</p>
+            <p id="resultsBoosts">Boost Pads: 0</p>
+            <p id="resultsCollisions">Collisions: 0</p>
+            <button id="raceAgainButton">RACE AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        // Game Constants
+        const CONSTANTS = {
+            PHYSICS: {
+                DT: 1/60,
+                GRAVITY: 520,
+                MAX_SPEED: 900,
+                BOOST_MAX_SPEED: 1150,
+                ROLLING_RESISTANCE: 0.28,
+                STEERING_LOW_SPEED: 2.6,
+                STEERING_HIGH_SPEED: 1.1,
+                GRIP: 5.5,
+                BRAKE_GRIP: 2.0,
+                BRAKE_FORCE: 1100,
+                BOOST_FORCE: 650,
+                BOOST_DURATION: 1.5,
+                RESTITUTION: 0.35,
+                BOULDER_RADIUS: 22,
+                OFF_TRACK_THRESHOLD: 120,
+                STUCK_SPEED_THRESHOLD: 40,
+                STUCK_TIME_THRESHOLD: 3
+            },
+            TRACK: {
+                WIDTH_MIN: 360,
+                WIDTH_MAX: 520,
+                SEGMENT_LENGTH: 50,
+                CHECKPOINT_INTERVAL: 0.25
+            },
+            PARTICLES: {
+                MAX: 250
+            },
+            COLORS: {
+                PLAYER: '#ff9d00',
+                RIVAL_1: '#00e5ff',
+                RIVAL_2: '#ff3b30',
+                RIVAL_3: '#32cd32',
+                BOOST: '#00e5ff',
+                HAZARD: '#ff3b30',
+                TRACK: '#8b4513',
+                EDGE: '#ffd700',
+                BACKGROUND: '#1a1a2e',
+                DUST: '#d4a574',
+                SPARKS: '#ff9d00'
+            }
+        };
+
+        // Game State
+        const gameState = {
+            state: 'title',
+            track: null,
+            player: null,
+            rivals: [],
+            particles: [],
+            camera: { x: 0, y: 0, zoom: 1 },
+            race: {
+                time: 0,
+                startTime: 0,
+                finished: false,
+                placements: [],
+                boostsCollected: 0,
+                collisions: 0,
+                topSpeed: 0
+            },
+            input: {
+                keys: {},
+                touch: {
+                    steering: 0,
+                    braking: false,
+                    boosting: false
+                }
+            },
+            audio: {
+                context: null,
+                muted: false,
+                sounds: {}
+            },
+            lastCheckpoint: 0,
+            stuckTimer: 0,
+            countdown: 3,
+            countdownTimer: 0,
+            highScore: 0,
+            boostMeter: 0,
+            boostReady: false
+        };
+
+        // Utility Functions
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+
+        function clamp(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        function distance(x1, y1, x2, y2) {
+            return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+        }
+
+        function angleBetween(x1, y1, x2, y2) {
+            return Math.atan2(y2 - y1, x2 - x1);
+        }
+
+        function normalizeAngle(angle) {
+            while (angle < -Math.PI) angle += Math.PI * 2;
+            while (angle > Math.PI) angle -= Math.PI * 2;
+            return angle;
+        }
+
+        function lerpAngle(a, b, t) {
+            const diff = normalizeAngle(b - a);
+            return a + diff * t;
+        }
+
+        // Track Generation
+        function generateTrack(seed) {
+            let random = function() {
+                seed = (seed * 9301 + 49297) % 233280;
+                return seed / 233280;
+            };
+
+            const segments = [];
+            let x = 0, y = 0;
+            let angle = -Math.PI / 2;
+            
+            for (let i = 0; i < 200; i++) {
+                const segment = {
+                    x: x,
+                    y: y,
+                    angle: angle,
+                    width: lerp(CONSTANTS.TRACK.WIDTH_MIN, CONSTANTS.TRACK.WIDTH_MAX, random()),
+                    type: Math.floor(random() * 5),
+                    features: []
+                };
+                
+                if (segment.type === 4) {
+                    segment.features.push(random() < 0.5 ? 'boost' : 'ramp');
+                } else if (random() < 0.3) {
+                    segment.features.push('obstacle');
+                } else if (random() < 0.2) {
+                    segment.features.push('hazard');
+                }
+                
+                segments.push(segment);
+                
+                const segmentLength = CONSTANTS.TRACK.SEGMENT_LENGTH;
+                x += Math.cos(angle) * segmentLength;
+                y += Math.sin(angle) * segmentLength;
+                
+                if (segment.type === 1) {
+                    angle += 0.1 + random() * 0.1;
+                } else if (segment.type === 2) {
+                    angle -= 0.1 - random() * 0.1;
+                } else if (segment.type === 3) {
+                    if (i % 2 === 0) {
+                        angle += 0.15;
+                    } else {
+                        angle -= 0.15;
+                    }
+                }
+                
+                angle = clamp(angle, -Math.PI * 0.75, -Math.PI * 0.25);
+            }
+            
+            segments.push({
+                x: x,
+                y: y,
+                angle: angle,
+                width: segments[segments.length - 1].width,
+                type: 5,
+                features: []
+            });
+            
+            return {
+                segments: segments,
+                totalLength: segments.length * CONSTANTS.TRACK.SEGMENT_LENGTH,
+                checkpoints: []
+            };
+        }
+
+        // Particle System
+        function createParticle(x, y, color, size, lifetime) {
+            if (gameState.particles.length >= CONSTANTS.PARTICLES.MAX) {
+                gameState.particles.shift();
+            }
+            
+            gameState.particles.push({
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 2,
+                vy: (Math.random() - 0.5) * 2,
+                color: color,
+                size: size,
+                lifetime: lifetime,
+                age: 0
+            });
+        }
+
+        // Audio System
+        function initAudio() {
+            if (gameState.audio.context) return;
+            
+            try {
+                gameState.audio.context = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Create sound buffers
+                const createSound = (type, frequency, duration, volume = 1) => {
+                    const oscillator = gameState.audio.context.createOscillator();
+                    const gainNode = gameState.audio.context.createGain();
+                    
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(frequency, gameState.audio.context.currentTime);
+                    oscillator.start();
+                    
+                    gainNode.gain.setValueAtTime(volume, gameState.audio.context.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, gameState.audio.context.currentTime + duration);
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(gameState.audio.context.destination);
+                    
+                    oscillator.stop(gameState.audio.context.currentTime + duration);
+                };
+                
+                gameState.audio.sounds = {
+                    boost: () => createSound('boost', 800, 0.2, 0.5),
+                    collision: () => createSound('collision', 200, 0.3, 0.4),
+                    checkpoint: () => createSound('checkpoint', 1200, 0.2, 0.6),
+                    countdown: (freq) => createSound('countdown', freq, 0.5, 0.7),
+                    finish: () => createSound('finish', 600, 1.0, 0.8)
+                };
+            } catch (e) {
+                console.log('Audio not supported');
+            }
+        }
+
+        function playSound(type) {
+            if (gameState.audio.muted || !gameState.audio.context) return;
+            
+            if (gameState.audio.sounds[type]) {
+                gameState.audio.sounds[type]();
+            }
+        }
+
+        // Game Objects
+        class Boulder {
+            constructor(x, y, color, isPlayer = false) {
+                this.x = x;
+                this.y = y;
+                this.radius = CONSTANTS.PHYSICS.BOULDER_RADIUS;
+                this.color = color;
+                this.isPlayer = isPlayer;
+                
+                this.vx = 0;
+                this.vy = 0;
+                this.heading = 0;
+                this.angularVelocity = 0;
+                
+                this.mass = 1.0;
+                this.boostTimer = 0;
+                this.boostActive = false;
+                
+                this.ai = {
+                    targetOffset: 0,
+                    lookAhead: 200,
+                    obstacleAvoidance: 0
+                };
+                
+                this.trail = [];
+                this.maxTrailLength = 20;
+            }
+
+            update(dt, track, rivals) {
+                this.trail.push({x: this.x, y: this.y});
+                if (this.trail.length > this.maxTrailLength) {
+                    this.trail.shift();
+                }
+                
+                const segment = this.getSegment(track);
+                if (!segment) return;
+                
+                const downhillAngle = segment.angle;
+                const downhillDirX = Math.cos(downhillAngle);
+                const downhillDirY = Math.sin(downhillAngle);
+                
+                const slopeFactor = 1.0 + 0.4 * Math.sin(segment.angle + Math.PI/2);
+                const acceleration = CONSTANTS.PHYSICS.GRAVITY * slopeFactor;
+                
+                this.vx += downhillDirX * acceleration * dt;
+                this.vy += downhillDirY * acceleration * dt;
+                
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > 0) {
+                    const resistance = CONSTANTS.PHYSICS.ROLLING_RESISTANCE * speed;
+                    this.vx -= (this.vx / speed) * resistance * dt;
+                    this.vy -= (this.v
+```this.vy -= (this.vy / speed) * resistance * dt;
+if (this.boostActive) {
+    const boostForce = CONSTANTS.PHYSICS.BOOST_FORCE;
+    const boostDirX = Math.cos(this.heading);
+    const boostDirY = Math.sin(this.heading);
+    this.vx += boostDirX * boostForce * dt;
+    this.vy += boostDirY * boostForce * dt;
+    this.boostTimer -= dt;
+    if (this.boostTimer <= 0) {
+        this.boostActive = false;
+    }
+}
+if (this.isPlayer) {
+    let steering = 0;
+    if (gameState.input.keys['a'] || gameState.input.keys[37]) steering -= 1;
+    if (gameState.input.keys['d'] || gameState.input.keys[39]) steering += 1;
+    if ((gameState.input.keys['s'] || gameState.input.keys[40] || gameState.input.keys[' ']) && speed > 5) {
+        const brakeForce = CONSTANTS.PHYSICS.BRAKE_FORCE;
+        const brakeDirX = -this.vx / speed;
+        const brakeDirY = -this.vy / speed;
+        this.vx += brakeDirX * brakeForce * dt;
+        this.vy += brakeDirY * brakeForce * dt;
+    }
+    if ((gameState.input.keys['shift'] || gameState.input.touch.boosting) && gameState.boostReady) {
+        this.boostActive = true;
+        this.boostTimer = CONSTANTS.PHYSICS.BOOST_DURATION;
+        gameState.boostReady = false;
+        gameState.boostMeter = 0;
+    }
+} else {
+    const segment = this.getSegment(track);
+    const desiredHeading = segment.angle + this.ai.targetOffset;
+    const headingDiff = normalizeAngle(desiredHeading - this.heading);
+    const maxSteer = CONSTANTS.PHYSICS.GRIP * dt;
+    const steeringForce = (CONSTANTS.PHYSICS.STEERING_LOW_SPEED + (CONSTANTS.PHYSICS.STEERING_HIGH_SPEED - CONSTANTS.PHYSICS.STEERING_LOW_SPEED) * (speed / CONSTANTS.PHYSICS.MAX_SPEED));
+    const steerAmount = clamp(headingDiff * steeringForce, -maxSteer, maxSteer);
+    this.heading += steerAmount;
+    this.angularVelocity = steerAmount / dt;
+}
+const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+if (speed > CONSTANTS.PHYSICS.MAX_SPEED) {
+    const excess = speed - CONSTANTS.PHYSICS.MAX_SPEED;
+    const drag = excess * 0.5 * dt;
+    this.vx -= (this.vx / speed) * drag;
+    this.vy -= (this.vy / speed) * drag;
+}
+this.x += this.vx * dt;
+this.y += this.vy * dt;
+if (this.isPlayer) {
+    gameState.race.topSpeed = Math.max(gameState.race.topSpeed, speed);
+}
+if (speed > 0) {
+    createParticle(this.x, this.y, CONSTANTS.COLORS.DUST, 2, 1);
+}
+const segment = this.getSegment(track);
+if (segment.features.includes('boost')) {
+    this.boostActive = true;
+    this.boostTimer = CONSTANTS.PHYSICS.BOOST_DURATION;
+    gameState.boostsCollected++;
+    playSound('boost');
+}
+const distanceFromCenter = Math.abs(Math.cos(this.heading) * this.x + Math.sin(this.heading) * this.y);
+if (distanceFromCenter > segment.width / 2 + this.radius) {
+    this.x = Math.cos(segment.angle) * segment.width * 0.45;
+    this.y = Math.sin(segment.angle) * segment.width * 0.45;
+    this.vx *= 0.5;
+    this.vy *= 0.5;
+}
+if (speed < CONSTANTS.PHYSICS.STUCK_SPEED_THRESHOLD) {
+    gameState.stuckTimer += dt;
+    if (gameState.stuckTimer > CONSTANTS.PHYSICS.STUCK_TIME_THRESHOLD) {
+        this.x = track.segments[0].x;
+        this.y = track.segments[0].y;
+        this.vx = 0;
+        this.vy = 0;
+        this.heading = track.segments[0].angle;
+        gameState.state = 'respawn';
+    }
+} else {
+    gameState.stuckTimer = 0;
+}
+Boulder.prototype.getSegment = function(track) {
+    const step = CONSTANTS.TRACK.SEGMENT_LENGTH;
+    let dx = Math.cos(this.heading) * step;
+    let dy = Math.sin(this.heading) * step;
+    let segIndex = 0;
+    for (let i = 0; i < track.segments.length; i++) {
+        const seg = track.segments[i];
+        const segEndX = seg.x + Math.cos(seg.angle) * step;
+        const segEndY = seg.y + Math.sin(seg.angle) * step;
+        if (distance(this.x, this.y, seg.x, seg.y) < distance(this.x, this.y, segEndX, segEndY)) {
+            segIndex = i;
+            break;
+        }
+    }
+    return track.segments[segIndex];
+};
+function updateRivals(dt, track) {
+    for (let i = 0; i < gameState.rivals.length; i++) {
+        const rival = gameState.rivals[i];
+        rival.update(dt, track, gameState.rivals);
+        for (let j = 0; j < gameState.rivals.length; j++) {
+            if (i !== j) {
+                const dx = rival.x - gameState.rivals[j].x;
+                const dy = rival.y - gameState.rivals[j].y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < CONSTANTS.PHYSICS.BOULDER_RADIUS * 2) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    const relativeVx = rival.vx - gameState.rivals[j].vx;
+                    const relativeVy = rival.vy - gameState.rivals[j].vy;
+                    const velAlongNormal = relativeVx * nx + relativeVy * ny;
+                    if (velAlongNormal > 0) continue;
+                    const restitution = CONSTANTS.PHYSICS.RESTITUTION;
+                    rival.vx -= (1 + restitution) * velAlongNormal * gameState.rivals[j].mass / (1 / rival.mass + 1 / gameState.rivals[j].mass) * nx;
+                    rival.vy -= (1 + restitution) * velAlongNormal * gameState.rivals[j].mass / (1 / rival.mass + 1 / gameState.rivals[j].mass) * ny;
+                    gameState.rivals[j].vx += (1 + restitution) * velAlongNormal * rival.mass / (1 / rival.mass + 1 / gameState.rivals[j].mass) * nx;
+                    gameState.rivals[j].vy += (1 + restitution) * velAlongNormal * rival.mass / (1 / rival.mass + 1 / gameState.rivals[j].mass) * ny;
+                    gameState.race.collisions++;
+                    playSound('collision');
+                }
+            }
+        }
+    }
+}
+function updateParticles(dt) {
+    for (let i = gameState.particles.length - 1; i >= 0; i--) {
+        const p = gameState.particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.vx *= 0.98;
+        p.vy *= 0.98;
+        p.age += dt;
+        if (p.age > p.lifetime) {
+            gameState.particles.splice(i, 1);
+        }
+    }
+}
+function draw() {
+    const ctx = document.getElementById('gameCanvas').getContext('2d');
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.save();
+    ctx.translate(-gameState.camera.x, -gameState.camera.y);
+    ctx.scale(gameState.camera.zoom, gameState.camera.zoom);
+    for (let i = 0; i < gameState.track.segments.length - 1; i++) {
+        const seg = gameState.track.segments[i];
+        const nextSeg = gameState.track.segments[i + 1];
+        ctx.beginPath();
+        ctx.moveTo(seg.x, seg.y);
+        ctx.lineTo(nextSeg.x, nextSeg.y);
+        ctx.strokeStyle = CONSTANTS.COLORS.TRACK;
+        ctx.lineWidth = seg.width;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+    }
+    for (let i = 0; i < gameState.particles.length; i++) {
+        const p = gameState.particles[i];
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    for (let i = 0; i < gameState.rivals.length; i++) {
+        const b = gameState.rivals[i];
+        ctx.fillStyle = b.color;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y);
+        ctx.lineTo(b.x + Math.cos(b.heading) * b.radius, b.y + Math.sin(b.heading) * b.radius);
+        ctx.stroke();
+    }
+    const player = gameState.player;
+    ctx.fillStyle = player.color;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(player.x + Math.cos(player.heading) * player.radius, player.y + Math.sin(player.heading) * player.radius);
+    ctx.stroke();
+    ctx.restore();
+    drawHUD();
+}
+function drawHUD() {
+    const ctx = document.getElementById('gameCanvas').getContext('2d');
+    ctx.save();
+    ctx.font = '20px Arial';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(`Placement: ${gameState.race.placements[0] || 0}`, 20, 40);
+    ctx.fillText(`Time: ${formatTime(gameState.race.time)}`, ctx.canvas.width / 2 - 50, 40);
+    ctx.restore();
+}
+function formatTime(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const millis = Math.floor(ms % 1000);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${millis.toString().padStart(3, '0')}`;
+}
+function gameLoop() {
+    const dt = CONSTANTS.PHYSICS.DT;
+    if (gameState.state === 'playing') {
+        gameState.race.time = Date.now() - gameState.race.startTime;
+        gameState.player.update(dt, gameState.track, gameState.rivals);
+        updateRivals(dt, gameState.track);
+        updateParticles(dt);
+        updateBoostMeter(dt);
+        if (gameState.race.time > 60000) {
+            gameState.state = 'results';
+            showResults();
+        }
+    }
+    draw();
+    requestAnimationFrame(gameLoop);
+}
+function updateBoostMeter(dt) {
+    if (gameState.boostReady) {
+        gameState.boostMeter = Math.min(1, gameState.boostMeter + dt * 0.5);
+    } else {
+        gameState.boostMeter = Math.max(0, gameState.boostMeter - dt * 2);
+        if (gameState.boostMeter <= 0) {
+            gameState.boostReady = true;
+        }
+    }
+    const fill = document.getElementById('boostFill');
+    fill.style.width = `${gameState.boostMeter * 100}%`;
+}
+function showResults() {
+    const placement = gameState.race.placements[0] || 1;
+    document.getElementById('resultsPlacement').textContent = `You finished: ${placement === 1 ? '1st' : placement === 2 ? '2nd' : placement === 3 ? '3rd' : `${placement}th`}`;
+    document.getElementById('resultsTime').textContent = `Time: ${formatTime(gameState.race.time)}`;
+    document.getElementById('resultsTopSpeed').textContent = `Top Speed: ${gameState.race.topSpeed} MPH`;
+    document.getElementById('resultsBoosts').textContent = `Boost Pads: ${gameState.race.boostsCollected}`;
+    document.getElementById('resultsCollisions').textContent = `Collisions: ${gameState.race.collisions}`;
+    document.getElementById('resultsScreen').classList.remove('hidden');
+}
+function init() {
+    initAudio();
+    gameState.track = generateTrack(Date.now());
+    gameState.player = new Boulder(gameState.track.segments[0].x, gameState.track.segments[0].y, CONSTANTS.COLORS.PLAYER, true);
+    for (let i = 0; i < 3; i++) {
+        gameState.rivals.push(new Boulder(gameState.track.segments[0].x + (i - 1) * 30, gameState.track.segments[0].y - 20 - i * 10, CONSTANTS.COLORS['RIVAL_' + i], false));
+    }
+    gameState.state = 'title';
+    document.getElementById('startButton').addEventListener('click', () => {
+        gameState.state = 'countdown';
+        document.getElementById('titleScreen').classList.add('hidden');
+        document.getElementById('countdownScreen').classList.remove('hidden');
+        countdownStart();
+    });
+    document.getElementById('resumeButton').addEventListener('click', () => {
+        gameState.state = 'playing';
+        document.getElementById('pauseScreen').classList.add('hidden');
+    });
+    document.getElementById('restartButton').addEventListener('click', () => {
+        gameState.state = 'title';
+        document.getElementById('pauseScreen').classList.add('hidden');
+    });
+    document.getElementById('muteButton').addEventListener('click', () => {
+        gameState.audio.muted = !gameState.audio.muted;
+    });
+    document.getElementById('raceAgainButton').addEventListener('click', () => {
+        gameState.state = 'title';
+        document.getElementById('resultsScreen').classList.add('hidden');
+    });
+    document.getElementById('gameCanvas').addEventListener('keydown', (e) => {
+        gameState.input.keys[e.key] = true;
+    });
+    document.getElementBy
