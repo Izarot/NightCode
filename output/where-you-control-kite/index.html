@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Aether Kite</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪁</text></svg>">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a1a; overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; touch-action: none; }
+    #gameCanvas { display: block; position: fixed; top: 0; left: 0; }
+    #uiOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+    .hud-element { position: absolute; color: #fff; font-size: 14px; text-shadow: 0 2px 8px rgba(0,0,0,0.8); transition: opacity 0.3s ease; }
+    #windIndicator { top: 20px; left: 20px; }
+    #altitudeMeter { top: 20px; left: 50%; transform: translateX(-50%); text-align: center; }
+    #tensionBar { top: 60px; left: 50%; transform: translateX(-50%); width: 200px; height: 8px; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; }
+    #tensionFill { height: 100%; width: 0%; transition: width 0.1s, background 0.3s; border-radius: 4px; }
+    #comboScore { top: 20px; right: 20px; text-align: right; }
+    #scoreValue { font-size: 28px; font-weight: 700; color: #ffd700; }
+    #comboValue { font-size: 18px; color: #ff6b9d; }
+    #trickPrompt { bottom: 30px; left: 50%; transform: translateX(-50%); text-align: center; max-width: 80%; font-size: 16px; color: #00ffff; }
+    #timer { top: 20px; right: 20px; font-size: 22px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+    #highScore { top: 50px; right: 20px; font-size: 14px; color: #ffd700; }
+    .hidden { opacity: 0 !important; pointer-events: none; }
+    .debug-panel { position: fixed; bottom: 20px; left: 20px; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; border-radius: 4px; z-index: 100; pointer-events: auto; }
+    @media (max-width: 600px) { .hud-element { font-size: 12px; } #scoreValue { font-size: 22px; } #timer { font-size: 18px; } #tensionBar { width: 150px; } }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <div id="uiOverlay">
+    <div id="windIndicator" class="hud-element">
+      <div>WIND</div>
+      <div id="windArrow" style="font-size: 24px; margin-top: 4px;">↑</div>
+      <div id="windSpeed">0.0 m/s</div>
+    </div>
+    <div id="altitudeMeter" class="hud-element">
+      <div>ALTITUDE</div>
+      <div id="altitudeValue" style="font-size: 24px; font-weight: 700;">0 m</div>
+      <div id="thermalIndicator" style="font-size: 11px; color: #ff6b9d; height: 14px;"></div>
+    </div>
+    <div id="tensionBar" class="hud-element">
+      <div id="tensionFill"></div>
+    </div>
+    <div id="comboScore" class="hud-element">
+      <div id="scoreValue">0</div>
+      <div id="comboValue">x1</div>
+    </div>
+    <div id="timer" class="hud-element">00:00.000</div>
+    <div id="highScore" class="hud-element">BEST: 0</div>
+    <div id="trickPrompt" class="hud-element"></div>
+  </div>
+  <div id="debugPanel" class="debug-panel hidden"></div>
+  <script type="module" src="game.js"></script>
+</body>
+</html>
