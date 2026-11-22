@@ -1,0 +1,1 @@
+class Engine { constructor() { this.running = true; } start() { this.loop(); } loop() { requestAnimationFrame(() => this.loop()); } }

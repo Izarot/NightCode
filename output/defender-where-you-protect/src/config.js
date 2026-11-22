@@ -1,0 +1,1 @@
+const CONFIG = { palette: { background: '#0a0e17', city: '#2d3436', player: '#00d2ff', enemy: '#ff6b6b' }, world: { citySpeed: 1.2, cameraOffset: -200 } };
