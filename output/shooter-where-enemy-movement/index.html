@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TETHERFIRE</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🔫%3C/text%3E%3C/svg%3E">
+<style>
+body{margin:0;overflow:hidden;background:#05051a;font-family:sans-serif}
+canvas{display:block}
+#hud{position:fixed;top:10px;left:10px;right:10px;padding:12px;background:rgba(0,0,0,0.6);color:#0ff;font-size:14px}
+#hud .score{float:left;font-size:20px}
+#hud .wave{float:right;font-size:20px}
+#hud .heat{bottom:10px;position:fixed;left:10px;width:200px;background:#222;color:#f0f;padding:6px}
+#hud .dash{bottom:10px;position:fixed;right:10px;width:100px;background:#222;color:#f0f;padding:6px}
+#pause{position:absolute;top;left;width;height;background:rgba(0,0,0,0.8);color:#fff;display:none;line-height:200px;text-align:center}
+#gameover{position:absolute;top;left;width;height;background:rgba(0,0,0,0.8);color:#fff;display:none;text-align:center;padding-top:50px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"></div>
+<div id="pause">PAUSED</div>
+<div id="gameover">SYSTEM DOWN<br>Final Score: <span id="final-score">0</span><br>Wave: <span id="final-wave">0</span><br>Press R to restart</div>
+<script>
+/* TETHERFIRE - Self-contained arena shooter */
+(function(){ "use strict";
+
+// ----- Constants & Setup -----
+var c = document.getElementById('c');
+var ctx = c.getContext('2d');
+var W = 1280, H = 720; // logical resolution
+var dpr = window.devicePixelRatio || 1;
+c.width = W * dpr; c.height = H * dpr;
+ctx.scale(dpr, dpr);
+var ua = navigator.userAgent; var isMobile = /Mobi|Android|iPhone/.test(ua);
+var lastTime = 0; var accumulator = 0; var fixedDt = 1/60; var paused = false; var gameOver = false; var score = 0; var wave = 0; var combo = 1; var lastHitTime = 0; var lastDamageTime = 0; var heat = 0; var heatOverheatTime = 0; var dashCooldown = 0; var dashTimer = 0; var invuln = 0; var screenShake = 0; var startTime = Date.now();
+var highScore = parseInt(localStorage.getItem('tetherfire_hs')) || 0;
+
+// Color palette
+var NAVY = '#05051a'; var CYAN = '#00ffff'; var MAGENTA = '#ff00ff'; var YELLOW = '#ffff00'; var RED = '#ff2a2a'; var WHITE = '#fff';
+
+// ----- Input -----
+var keys = {w:false,a:false:s:false,d:false,arrowUp:false,arrowDown:false,arrowLeft:false,arrowRight:false,space:false,shift:false,p:false,esc:false,r:false};
+window.addEventListener('keydown',function(e){ switch(e.code){ case'KeyW': keys.w=true; break; case'KeyA': keys.a=true; break; case'KeyS': keys.s=true; break; case'KeyD': keys.d=true; break; case'ArrowUp': keys.arrowUp=true; break; case'ArrowDown': keys.arrowDown=true; break; case'ArrowLeft': keys.arrowLeft=true; break; case'ArrowRight': keys.arrowRight=true; break; case'Space': e.preventDefault(); keys.space=true; break; case'ShiftLeft': keys.shift=true; break; case'KeyP': keys.p=true; break; case'Escape': keys.esc=true; break; case'KeyR': keys.r=true; break}}
+);
+window.addEventListener('keyup',function(e){ switch(e.code){ case'KeyW': keys.w=false; break; case'KeyA': keys.a=false; break; case'KeyS': keys.s=false; break; case'KeyD': keys.d=false; break; case'ArrowUp': keys.arrowUp=false; break; case'ArrowDown': keys.arrowDown=false; break; case'ArrowLeft': keys.arrowLeft=false; break; case'ArrowRight': keys.arrowRight=false; break; case'Space': keys.space=false; break; case'ShiftLeft': keys.shift=false; break; case'KeyP': keys.p=false; break; case'Escape': keys.esc=false; break; case'KeyR': keys.r=false; break}}
+);
+window.addEventListener('focus',function(){ paused = false; }, true);
+window.addEventListener('blur',function(){ paused = true; }, true);
+
+// ----- Audio Context -----
+var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playOsc(freq, type, duration, volume){ var osc = audioCtx.createOscillator(); var gain = audioCtx.createGain(); osc.type = type || 'sine'; osc.frequency.value = freq; gain.gain.value = volume || 0.1; osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); setTimeout(function(){ osc.stop(); }, duration*1000); }
+function playShoot(){ playOsc(220, 'square', 0.05, 0.15); }
+function playHit(){ playOsc(150, 'sine', 0.08, 0.2); }
+function playOverheat(){ playOsc(80, 'sawtooth', 0.3, 0.15); }
+
+// ----- Player -----
+var Player = { x:W/2, y:H/2, vx:0, vy:0, r:12, health:100, maxSpeed:260, acc:2400, drag:8.0, dashVel:520, dashDur:0.12, dashCd:1.2, dashCdTimer:0, invuln:0, invulnDur:0.8, trail:[] }; 
+Player.update = function(dt){ if(paused||gameOver) return; var accel = this.acc; var drag = this.drag; var speedLimit = this.maxSpeed; var dx=0, dy=0; if(keys.w) dy-=1; if(keys.s) dy+=1; if(keys.a) dx-=1; if(keys.d) dx+=1; var len = Math.hypot(dx,dy); if(len){ dx/=len; dy/=len; } this.vx += dx*accel*dt; this.vy += dy*accel*dt; var speed = Math.hypot(this.vx,this.vy); if(speed > speedLimit){ var ratio = speedLimit/speed; this.vx *= ratio; this.vy *= ratio; } this.vx -= this.vx*drag*dt; this.vy -= this.vy*drag*dt; this.x += this.vx*dt; this.y += this.vy*dt; // clamp to arena
+ if(this.x < this.r) { this.x = this.r; this.vx = 0; } if(this.x > W-this.r) { this.x = W-this.r; this.vx = 0; } if(this.y < this.r) { this.y = this.r; this.vy = 0; } if(this.y > H-this.r) { this.y = H-this.r; this.vy = 0; } // dash
+ if(keys.shift && this.dashCdTimer <= 0 && !paused){ this.vx += (dx||0)*this.dashVel*dt; this.vy += (dy||0)*this.dashVel*dt; this.dashCdTimer = this.dashCd; this.invuln = this.invulnDur; } if(this.dashCdTimer > 0) this.dashCdTimer -= dt; // invuln
+ if(this.invuln > 0){ this.invuln -= dt; if(this.invuln <= 0) this.invuln = 0; } // trail
+ this.trail.unshift({x:this.x,y:this.y}); if(this.trail.length > 12) this.trail.pop(); 
+};
+Player.draw = function(){ var t = this.trail; ctx.save(); ctx.globalAlpha = 0.6; ctx.strokeStyle = CYAN; ctx.lineWidth = 2; for(var i=0;i<t.length;i++){ var a = i/t.length; ctx.globalAlpha = a; ctx.beginPath(); ctx.moveTo(t[0].x,t[0].y); for(var j=1;j<=i;j++){ ctx.lineTo(t[j].x,t[j].y); } ctx.stroke(); } ctx.restore(); // player circle
+ ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2); ctx.fillStyle = this.invuln ? 'rgba(0,255,255,0.5)' : CYAN; ctx.fill(); ctx.strokeStyle = WHITE; ctx.lineWidth = 2; ctx.stroke(); // directional notch
+ ctx.beginPath(); ctx.moveTo(this.x, this.y-this.r); ctx.lineTo(this.x-6, this.y-this.r+4); ctx.lineTo(this.x+6, this.y-this.r+4); ctx.closePath(); ctx.fillStyle = WHITE; ctx.fill(); // pulse when dashing
+ if(this.dashCdTimer < 0.2 && this.dashCdTimer > 0) ctx.globalAlpha = 0.5; else ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(this.x, this.y, this.r+2*Math.sin(Date.now()*0.02), 0, Math.PI*2); ctx.strokeStyle = CYAN; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1; };
+
+// ----- Aim Drone -----
+var Drone = { x:W/2, y:H/2, vx:0, vy:0, r:18, maxSpeed:420, springK:0.6, drag:2.2 }; 
+Drone.update = function(enemies, dt){ if(paused||gameOver) return; var cx = this.x, cy = this.y; var forces = {fx:0, fy:0}; var centerX = W/2, centerY = H/2; enemies.forEach(function(e){ var dist = Math.hypot(cx-e.x, cy-e.y); if(dist < 1) dist = 1; var falloff = Math.max(0.15, 1 - dist/600); var speedFactor = 0.5 + e.speed/200; var fx = e.vx * 0.9 * falloff * speedFactor; var fy = e.vy * 0.9 * falloff * speedFactor; forces.fx += fx; forces.fy += fy; }); // spring
+ forces.fx -= (cx - centerX) * this.springK; forces.fy -= (cy - centerY) * this.springK; // damping
+ forces.fx -= this.vx * this.drag; forces.fy -= this.vy * this.drag; // apply
+ this.vx += forces.fx * dt; this.vy += forces.fy * dt; var speed = Math.hypot(this.vx,this.vy); if(speed > this.maxSpeed){ var ratio = this.maxSpeed/speed; this.vx *= ratio; this.vy *= ratio; } this.x += this.vx*dt; this.y += this.vy*dt; // clamp to arena
+ if(this.x < this.r) { this.x = this.r; this.vx = 0; } if(this.x > W-this.r) { this.x = W-this.r; this.vx = 0; } if(this.y < this.r) { this.y = this.r; this.vy = 0; } if(this.y > H-this.r) { this.y = H-this.r; this.vy = 0; } };
+Drone.draw = function(){ ctx.save(); ctx.strokeStyle = YELLOW; ctx.lineWidth = 2; ctx.globalAlpha = 0.8; // concentric rings
+ for(var i=0;i<3;i++){ var r = this.r * (0.6 + i*0.15); ctx.beginPath(); ctx.arc(this.x, this.y, r, 0, Math.PI*2); ctx.stroke(); } // rotating tick marks
+ var tickAngle = (Date.now()*0.001) % (Math.PI*2); for(i=0;i<8;i++){ var a = tickAngle + i*Math.PI/4; var x = this.x + Math.cos(a)*(this.r+8); var y = this.y + Math.sin(a)*(this.r+8); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); } ctx.stroke(); // velocity streak
+ ctx.globalAlpha = 0.5; ctx.strokeStyle = 'rgba(255,255,0,0.4)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x - this.vx*0.15, this.y - this.vy*0.15); ctx.stroke(); ctx.globalAlpha = 1; // player-to-drone line when firing
+ ctx.beginPath(); ctx.moveTo(Player.x, Player.y); ctx.lineTo(this.x, this.y); ctx.strokeStyle = 'rgba(255,255,0,0.3)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); };
+
+// ----- Enemies -----
+var Enemies = { list:[] }; 
+function Enemy(type, x, y){ this.type = type; this.x = x; this.y = y; this.r = 0; this.health = 0; this.speed = 0; this.score = 0; this.minis = []; this.telegraph = 0; this.dashing = false; this.dashTimer = 0; this.damage = 12; this.color = MAGENTA; this.shape = 'circle'; this.initialize(); } 
+Enemy.prototype.initialize = function(type) { this.r = 8; this.health = 30; this.speed = 120; this.score = 100; this.shape = 'circle'; this.color = MAGENTA; this.minis = []; }
