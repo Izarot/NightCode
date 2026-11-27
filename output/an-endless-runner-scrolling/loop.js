@@ -1,0 +1,1 @@
+export function createLoop(update) { let last = 0; return { start() { requestAnimationFrame((t) => loop(t)); }, stop() {}, then(cb) { return this; }, catch(cb) { return this; } }; function loop(t) { const dt = (t - last) / 1000; last = t; update(dt); requestAnimationFrame(loop); } return { start: () => loop(0), update, render: () => {} }; }
