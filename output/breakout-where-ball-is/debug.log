@@ -1,0 +1,130 @@
+JSON Decode Error after continuation: Invalid control character at: line 3 column 16439 (char 17356)
+
+Raw: {
+  "index.html": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Star-Breakout</title>\n    <link rel=\"icon\" href=\"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>\">\n    <style>\n        * { margin: 0; padding: 0; box-sizing: border-box; }\n        body { background: #0a0f33; overflow: hidden; font-family: 'Montserrat', sans-serif; }\n        canvas { display: block; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 100%; max-height: 100%; }\n        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');\n    </style>\n</head>\n<body>\n    <canvas id=\"gameCanvas\"></canvas>\n    <script src=\"game.js\"></script>\n</body>\n</html>",
+  "game.js": "const CONFIG = {\n    GAME_WIDTH: 800,\n    GAME_HEIGHT: 450,\n    PADDLE_WIDTH: 100,\n    PADDLE_HEIGHT: 20,\n    PADDLE_SPEED: 800,\n    PADDLE_ACCEL: 2000,\n    BALL_RADIUS: 10,\n    BALL_SPEED: 500,\n    BRICK_ROWS: 5,\n    BRICK_COLS: 10,\n    BRICK_WIDTH: 70,\n    BRICK_HEIGHT: 25,\n    BRICK_PADDING: 10,\n    BRICK_OFFSET_TOP: 60,\n    BRICK_OFFSET_LEFT: 30,\n    LIVES: 3,\n    POWERUP_CHANCE: 0.1,\n    MAX_COMBO: 3,\n    LEVEL_SPEED_INCREASE: 0.1,\n    MAX_SPEED_MULTIPLIER: 2,\n    COLORS: {\n        BG_GRADIENT: ['#0a0f33', '#1a1a4a', '#2d1b4e'],\n        PADDLE: '#ffffff',\n        BALL: '#ffeb3b',\n        BRICKS: ['#ff6b6b', '#feca57', '#48dbfb', '#1dd1a1', '#55efc4', '#a0e6ff', '#bfe9ff', '#f7f5fe'],\n        PARTICLE: ['#ffeb3b', '#ff6b6b', '#48dbfb', '#1dd1a1'],\n        HUD: '#ffffff',\n        HIGH_SCORE: '#ffd700'\n    }\n};\n\nconst STATE = { MENU: 0, PLAYING: 1, PAUSED: 2, GAMEOVER: 3, LEVELUP: 4 };\n\nclass Audio {\n    constructor() {\n        this.ctx = new (window.AudioContext || window.webkitAudioContext)();\n        this.enabled = true;\n    }\n    playTone(freq, duration, type = 'sine', volume = 0.1) {\n        if (!this.enabled) return;\n        const osc = this.ctx.createOscillator();\n        const gain = this.ctx.createGain();\n        osc.type = type;\n        osc.frequency.value = freq;\n        gain.gain.value = volume;\n        osc.connect(gain).connect(this.ctx.destination);\n        osc.start();\n        gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);\n        osc.stop(this.ctx.currentTime + duration);\n    }\n    bounce() { this.playTone(800, 0.05, 'square', 0.05); }\n    brickBreak() { this.playTone(400, 0.1, 'sawtooth', 0.07); }\n    powerup() { this.playTone(1200, 0.2, 'triangle', 0.1); }\n    lifeLost() { this.playTone(200, 0.3, 'sine', 0.1); }\n    gameOver() { this.playTone(100, 0.5, 'sawtooth', 0.1); }\n}\n\nclass Vector {\n    constructor(x = 0, y = 0) { this.x = x; this.y = y; }\n    set(x, y) { this.x = x; this.y = y; return this; }\n    add(v) { this.x += v.x; this.y += v.y; return this; }\n    sub(v) { this.x -= v.x; this.y -= v.y; return this; }\n    mul(s) { this.x *= s; this.y *= s; return this; }\n    len() { return Math.hypot(this.x, this.y); }\n    normalize() { const l = this.len(); if (l) { this.x /= l; this.y /= l; } return this; }\n    clone() { return new Vector(this.x, this.y); }\n}\n\nclass Paddle {\n    constructor() {\n        this.width = CONFIG.PADDLE_WIDTH;\n        this.height = CONFIG.PADDLE_HEIGHT;\n        this.pos = new Vector();\n        this.vel = new Vector();\n        this.targetX = 0;\n        this.reset();\n    }\n    reset() {\n        this.pos.set((CONFIG.GAME_WIDTH - this.width) / 2, CONFIG.GAME_HEIGHT - 40);\n        this.vel.set(0, 0);\n        this.targetX = this.pos.x;\n    }\n    update(dt, input) {\n        if (input.left) this.targetX -= CONFIG.PADDLE_SPEED * dt;\n        if (input.right) this.targetX += CONFIG.PADDLE_SPEED * dt;\n        this.targetX = Math.max(0, Math.min(this.targetX, CONFIG.GAME_WIDTH - this.width));\n        const dx = this.targetX - this.pos.x;\n        const accel = CONFIG.PADDLE_ACCEL * dt;\n        if (Math.abs(dx) > 0.1) {\n            this.vel.x += Math.sign(dx) * accel;\n            if (Math.abs(this.vel.x) > CONFIG.PADDLE_SPEED) this.vel.x = Math.sign(this.vel.x) * CONFIG.PADDLE_SPEED;\n        } else {\n            this.vel.x *= 0.9;\n        }\n        this.pos.x += this.vel.x * dt;\n        this.pos.x = Math.max(0, Math.min(this.pos.x, CONFIG.GAME_WIDTH - this.width));\n    }\n    draw(ctx) {\n        ctx.fillStyle = CONFIG.COLORS.PADDLE;\n        ctx.beginPath();\n        ctx.roundRect(this.pos.x, this.pos.y, this.width, this.height, 4);\n        ctx.fill();\n        ctx.strokeStyle = '#aaa';\n        ctx.lineWidth = 2;\n        ctx.stroke();\n    }\n}\n\nclass Ball {\n    constructor() {\n        this.radius = CONFIG.BALL_RADIUS;\n        this.pos = new Vector();\n        this.vel = new Vector();\n        this.speed = CONFIG.BALL_SPEED;\n        this.trail = [];\n        this.reset();\n    }\n    reset() {\n        this.pos.set(CONFIG.GAME_WIDTH / 2, CONFIG.GAME_HEIGHT / 2);\n        const angle = (Math.random() * 30 + 30) * Math.PI / 180;\n        this.vel.set(Math.cos(angle), -Math.sin(angle)).mul(this.speed);\n        this.trail = [];\n    }\n    update(dt) {\n        this.trail.unshift(this.pos.clone());\n        if (this.trail.length > 8) this.trail.pop();\n        this.pos.add(this.vel.clone().mul(dt));\n        if (this.pos.x - this.radius < 0) { this.pos.x = this.radius; this.vel.x = -this.vel.x; }\n        if (this.pos.x + this.radius > CONFIG.GAME_WIDTH) { this.pos.x = CONFIG.GAME_WIDTH - this.radius; this.vel.x = -this.vel.x; }\n        if (this.pos.y - this.radius < 0) { this.pos.y = this.radius; this.vel.y = -this.vel.y; }\n    }\n    draw(ctx) {\n        ctx.strokeStyle = CONFIG.COLORS.BALL;\n        ctx.lineWidth = 2;\n        this.trail.forEach((p, i) => {\n            const alpha = 1 - i / this.trail.length;\n            ctx.globalAlpha = alpha * 0.5;\n            drawStar(ctx, p.x, p.y, this.radius * 0.5, 5, 0);\n            ctx.stroke();\n        });\n        ctx.globalAlpha = 1;\n        ctx.fillStyle = CONFIG.COLORS.BALL;\n        ctx.shadowColor = CONFIG.COLORS.BALL;\n        ctx.shadowBlur = 10;\n        drawStar(ctx, this.pos.x, this.pos.y, this.radius, 5, 0);\n        ctx.fill();\n        ctx.shadowBlur = 0;\n    }\n}\n\nfunction drawStar(ctx, cx, cy, r, spikes, rot) {\n    ctx.beginPath();\n    ctx.moveTo(cx, cy - r);\n    for (let i = 0; i < spikes; i++) {\n        const angle = rot + i * 2 * Math.PI / spikes;\n        const x = cx + Math.sin(angle) * r;\n        const y = cy - Math.cos(angle) * r;\n        ctx.lineTo(x, y);\n        const innerAngle = angle + Math.PI / spikes;\n        const ix = cx + Math.sin(innerAngle) * r * 0.4;\n        const iy = cy - Math.cos(innerAngle) * r * 0.4;\n        ctx.lineTo(ix, iy);\n    }\n    ctx.closePath();\n}\n\nclass Brick {\n    constructor(x, y, color, tier = 0) {\n        this.pos = new Vector(x, y);\n        this.width = CONFIG.BRICK_WIDTH;\n        this.height = CONFIG.BRICK_HEIGHT;\n        this.color = color;\n        this.tier = tier;\n        this.alive = true;\n        this.points = tier === 0 ? 10 : 50;\n    }\n    draw(ctx) {\n        if (!this.alive) return;\n        ctx.fillStyle = this.color;\n        ctx.beginPath();\n        ctx.roundRect(this.pos.x, this.pos.y, this.width, this.height, 3);\n        ctx.fill();\n        ctx.strokeStyle = '#fff';\n        ctx.lineWidth = 1;\n        ctx.globalAlpha = 0.3;\n        ctx.stroke();\n        ctx.globalAlpha = 1;\n    }\n}\n\nclass Particle {\n    constructor(x, y, color) {\n        this.pos = new Vector(x, y);\n        this.vel = new Vector((Math.random() - 0.5) * 300, (Math.random() - 0.5) * 300);\n        this.color = color;\n        this.size = Math.random() * 3 + 2;\n        this.life = 1;\n        this.decay = Math.random() * 0.02 + 0.01;\n    }\n    update(dt) {\n        this.pos.add(this.vel.clone().mul(dt));\n        this.vel.y += 200 * dt;\n        this.life -= this.decay;\n    }\n    draw(ctx) {\n        if (this.life <= 0) return;\n        ctx.globalAlpha = this.life;\n        ctx.fillStyle = this.color;\n        drawStar(ctx, this.pos.x, this.pos.y, this.size, 5, 0);\n        ctx.fill();\n        ctx.globalAlpha = 1;\n    }\n}\n\nclass PowerUp {\n    constructor(x, y, type) {\n        this.pos = new Vector(x, y);\n        this.type = type;\n        this.width = 30;\n        this.height = 30;\n        this.vel = new Vector(0, 100);\n        this.alive = true;\n        this.colors = { widen: '#48dbfb', life: '#1dd1a1', speed: '#feca57' };\n    }\n    update(dt) {\n        this.pos.add(this.vel.clone().mul(dt));\n        if (this.pos.y > CONFIG.GAME_HEIGHT + this.height) this.alive = false;\n    }\n    draw(ctx) {\n        ctx.fillStyle = this.colors[this.type];\n        ctx.beginPath();\n        ctx.roundRect(this.pos.x, this.pos.y, this.width, this.height, 5);\n        ctx.fill();\n        ctx.fillStyle = '#fff';\n        ctx.font = '20px Montserrat';\n        ctx.textAlign = 'center';\n        ctx.textBaseline = 'middle';\n        const icons = { widen: '↔', life: '♥', speed: '⚡' };\n        ctx.fillText(icons[this.type], this.pos.x + this.width/2, this.pos.y + this.height/2);\n    }\n}\n\nclass Game {\n    constructor(canvas) {\n        this.canvas = canvas;\n        this.ctx = canvas.getContext('2d');\n        this.state = STATE.MENU;\n        this.audio = new Audio();\n        this.paddle = new Paddle();\n        this.ball = new Ball();\n        this.bricks = [];\n        this.particles = [];\n        this.powerups = [];\n        this.score = 0;\n        this.highScore = parseInt(localStorage.getItem('starBreakoutHighScore')) || 0;\n        this.lives = CONFIG.LIVES;\n        this.level = 1;\n        this.combo = 0;\n        this.maxCombo = 0;\n        this.timer = 0;\n        this.input = { left: false, right: false };\n        this.lastTime = 0;\n        this.accumulator = 0;\n        this.fixedDt = 1/60;\n        this.scale = 1;\n        this.offsetX = 0;\n        this.offsetY = 0;\n        this.initEvents();\n        this.resize();\n        window.addEventListener('resize', () => this.resize());\n        requestAnimationFrame(t => this.loop(t));\n    }\n    initEvents() {\n        window.addEventListener('keydown', e => {\n            if (e.key === 'ArrowLeft' || e.key === 'a') this.input.left = true;\n            if (e.key === 'ArrowRight' || e.key === 'd') this.input.right = true;\n            if (e.key === ' ' || e.key === 'p') this.togglePause();\n            if (e.key === 'r' && this.state === STATE.GAMEOVER) this.restart();\n        });\n        window.addEventListener('keyup', e => {\n            if (e.key === 'ArrowLeft' || e.key === 'a') this.input.left = false;\n            if (e.key === 'ArrowRight' || e.key === 'd') this.input.right = false;\n        });\n        this.canvas.addEventListener('mousemove', e => this.handleMouse(e));\n        this.canvas.addEventListener('touchmove', e => { e.preventDefault(); this.handleTouch(e.touches[0]); }, { passive: false });\n        this.canvas.addEventListener('touchstart', e => { e.preventDefault(); this.handleTouch(e.touches[0]); }, { passive: false });\n        this.canvas.addEventListener('click', () => {\n            if (this.state === STATE.MENU) this.start();\n            else if (this.state === STATE.GAMEOVER) this.restart();\n        });\n    }\n    handleMouse(e) {\n        const rect = this.canvas.getBoundingClientRect();\n        const x = (e.clientX - rect.left - this.offsetX) / this.scale;\n        this.paddle.targetX = x - this.paddle.width / 2;\n    }\n    handleTouch(touch) {\n        const rect = this.canvas.getBoundingClientRect();\n        const x = (touch.clientX - rect.left - this.offsetX) / this.scale;\n        this.paddle.targetX = x - this.paddle.width / 2;\n    }\n    resize() {\n        const cw = window.innerWidth;\n        const ch = window.innerHeight;\n        const gameAspect = CONFIG.GAME_WIDTH / CONFIG.GAME_HEIGHT;\n        const screenAspect = cw / ch;\n        if (screenAspect > gameAspect) {\n            this.scale = ch / CONFIG.GAME_HEIGHT;\n            this.offsetX = (cw - CONFIG.GAME_WIDTH * this.scale) / 2;\n            this.offsetY = 0;\n        } else {\n            this.scale = cw / CONFIG.GAME_WIDTH;\n            this.offsetX = 0;\n            this.offsetY = (ch - CONFIG.GAME_HEIGHT * this.scale) / 2;\n        }\n        this.canvas.style.width = `${CONFIG.GAME_WIDTH * this.scale}px`;\n        this.canvas.style.height = `${CONFIG.GAME_HEIGHT * this.scale}px`;\n        this.canvas.width = CONFIG.GAME_WIDTH;\n        this.canvas.height = CONFIG.GAME_HEIGHT;\n    }\n    togglePause() {\n        if (this.state === STATE.PLAYING) this.state = STATE.PAUSED;\n        else if (this.state === STATE.PAUSED) this.state = STATE.PLAYING;\n    }\n    start() {\n        this.state = STATE.PLAYING;\n        this.timer = 0;\n        this.level = 1;\n        this.score = 0;\n        this.lives = CONFIG.LIVES;\n        this.combo = 0;\n        this.maxCombo = 0;\n        this.ball.speed = CONFIG.BALL_SPEED;\n        this.spawnBricks();\n        this.paddle.reset();\n        this.ball.reset();\n    }\n    restart() {\n        this.start();\n    }\n    spawnBricks() {\n        this.bricks = [];\n        const colors = CONFIG.COLORS.BRICKS;\n        for (let r = 0; r < CONFIG.BRICK_ROWS; r++) {\n            for (let c = 0; c < CONFIG.BRICK_COLS; c++) {\n                const x = CONFIG.BRICK_OFFSET_LEFT + c * (CONFIG.BRICK_WIDTH + CONFIG.BRICK_PADDING);\n                const y = CONFIG.BRICK_OFFSET_TOP + r * (CONFIG.BRICK_HEIGHT + CONFIG.BRICK_PADDING);\n                const color = colors[(r + c + this.level) % colors.length];\n                const tier = Math.random() < 0.1 ? 1 : 0;\n                this.bricks.push(new Brick(x, y, color, tier));\n            }\n        }\n    }\n    loop(time) {\n        const dt = (time - this.lastTime) / 1000;\n        this.lastTime = time;\n        this.accumulator += dt;\n        while (this.accumulator >= this.fixedDt) {\n            this.update(this.fixedDt);\n            this.accumulator -= this.fixedDt;\n        }\n        this.render();\n        requestAnimationFrame(t => this.loop(t));\n    }\n    update(dt) {\n        if (this.state !== STATE.PLAYING) return;\n        this.timer += dt;\n        this.paddle.update(dt, this.input);\n        this.ball.update(dt);\n        this.checkCollisions();\n        this.particles = this.particles.filter(p => p.life > 0);\n        this.particles.forEach(p => p.update(dt));\n        this.powerups = this.powerups.filter(p => p.alive);\n        this.powerups.forEach(p => p.update(dt));\n        this.checkPowerupCollision();\n        if (this.bricks.every(b => !b.alive)) this.levelUp();\n        if (this.ball.pos.y > CONFIG.GAME_HEIGHT) this.loseLife();\n    }\n    checkCollisions() {\n        // Paddle\n        if (this.ball.pos.y + this.ball.radius >= this.paddle.pos.y &&\n            this.ball.pos.y - this.ball.radius <= this.paddle.pos.y + this.paddle.height &&\n            this.ball.pos.x >= this.paddle.pos.x &&\n            this.ball.pos.x <= this.paddle.pos.x + this.paddle.width) {\n            this.ball.pos.y = this.paddle.pos.y - this.ball.radius;\n            const rel = (this.ball.pos.x - (this.paddle.pos.x + this.paddle.width/2)) / (this.paddle.width/2);\n            const angle = Math.max(-1, Math.min(1, rel)) * Math.PI / 6;\n            this.ball.vel.set(Math.sin(angle), -Math.cos(angle)).mul(this.ball.speed);\n            this.audio.bounce();\n            this.combo = 0;\n        }\n        // Bricks\n        for (const brick of this.bricks) {\n            if (!brick.alive) continue;\n            if (this.ball.pos.x + this.ball.radius > brick.pos.x &&\n                this.ball.pos.x - this.ball.radius < brick.pos.x + brick.width &&\n                this.ball.pos.y + this.ball.radius > brick.pos.y &&\n                this.ball.pos.y - this.ball.radius < brick.pos.y + brick.height) {\n                brick.alive = false;\n                this.audio.brickBreak();\n                this.score += brick.points * (1 + Math.floor(this.combo / 5));\n                this.combo++;\n                this.maxCombo = Math.max(this.maxCombo, this.combo);\n                this.spawnParticles(brick.pos.x + brick.width/2, brick.pos.y + brick.height/2, brick.color);\n                if (Math.random() < CONFIG.POWERUP_CHANCE) {\n                    const types = ['widen', 'life', 'speed'];\n                    this.powerups.push(new PowerUp(brick.pos.x + brick.width/2, brick.pos.y + brick.height/2, types[Math.floor(Math.random()*types.length)]));\n                }\n                // Determine bounce direction\n                const overlapX = Math.min(this.ball.pos.x + this.ball.radius - brick.pos.x, brick.pos.x + brick.width - (this.ball.pos.x - this.ball.radius));\n                const overlapY = Math.min(this.ball.pos.y + this.ball.radius - brick.pos.y, brick.pos.y + brick.height - (this.ball.pos.y - this.ball.radius));\n                if (overlapX < overlapY) this.ball.vel.x = -this.ball.vel.x;\n               else this.ball.vel.y = -this.ball.vel.y;
+            }
+        }
+    }
+    spawnParticles(x, y, color) {
+        for (let i = 0; i < 10; i++) {
+            this.particles.push(new Particle(x, y, color));
+        }
+    }
+    checkPowerupCollision() {
+        for (const pu of this.powerups) {
+            if (pu.pos.x < this.paddle.pos.x + this.paddle.width &&
+                pu.pos.x + pu.width > this.paddle.pos.x &&
+                pu.pos.y < this.paddle.pos.y + this.paddle.height &&
+                pu.pos.y + pu.height > this.paddle.pos.y) {
+                pu.alive = false;
+                this.audio.powerup();
+                if (pu.type === 'widen') {
+                    this.paddle.width = Math.min(this.paddle.width + 20, 200);
+                } else if (pu.type === 'life') {
+                    this.lives++;
+                } else if (pu.type === 'speed') {
+                    this.ball.speed = Math.min(this.ball.speed * 1.1, CONFIG.BALL_SPEED * CONFIG.MAX_SPEED_MULTIPLIER);
+                    this.ball.vel.normalize().mul(this.ball.speed);
+                }
+            }
+        }
+    }
+    levelUp() {
+        this.state = STATE.LEVELUP;
+        this.level++;
+        this.ball.speed = Math.min(this.ball.speed * (1 + CONFIG.LEVEL_SPEED_INCREASE), CONFIG.BALL_SPEED * CONFIG.MAX_SPEED_MULTIPLIER);
+        setTimeout(() => {
+            this.spawnBricks();
+            this.paddle.reset();
+            this.ball.reset();
+            this.state = STATE.PLAYING;
+        }, 1500);
+    }
+    loseLife() {
+        this.lives--;
+        this.audio.lifeLost();
+        this.combo = 0;
+        if (this.lives <= 0) {
+            this.gameOver();
+        } else {
+            this.paddle.reset();
+            this.ball.reset();
+        }
+    }
+    gameOver() {
+        this.state = STATE.GAMEOVER;
+        this.audio.gameOver();
+        if (this.score > this.highScore) {
+            this.highScore = this.score;
+            localStorage.setItem('starBreakoutHighScore', this.highScore);
+        }
+    }
+    render() {
+        const ctx = this.ctx;
+        // Background gradient
+        const grad = ctx.createLinearGradient(0, 0, 0, CONFIG.GAME_HEIGHT);
+        CONFIG.COLORS.BG_GRADIENT.forEach((c, i) => grad.addColorStop(i / (CONFIG.COLORS.BG_GRADIENT.length - 1), c));
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, CONFIG.GAME_WIDTH, CONFIG.GAME_HEIGHT);
+        // Stars background
+        ctx.fillStyle = '#fff';
+        for (let i = 0; i < 50; i++) {
+            const x = (i * 123 + this.timer * 10) % CONFIG.GAME_WIDTH;
+            const y = (i * 456 + this.timer * 5) % CONFIG.GAME_HEIGHT;
+            const size = Math.sin(this.timer + i) * 0.5 + 1;
+            ctx.globalAlpha = 0.3 + 0.3 * Math.sin(this.timer * 2 + i);
+            drawStar(ctx, x, y, size, 5, 0);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        // Draw game objects
+        this.bricks.forEach(b => b.draw(ctx));
+        this.particles.forEach(p => p.draw(ctx));
+        this.powerups.forEach(p => p.draw(ctx));
+        this.paddle.draw(ctx);
+        this.ball.draw(ctx);
+        // HUD
+        ctx.fillStyle = CONFIG.COLORS.HUD;
+        ctx.font = '20px Montserrat';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Score: ${this.score}`, 20, 30);
+        ctx.fillText(`Level: ${this.level}`, 20, 55);
+        ctx.fillText(`Lives: ${this.lives}`, 20, 80);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = CONFIG.COLORS.HIGH_SCORE;
+        ctx.fillText(`High Score: ${this.highScore}`, CONFIG.GAME_WIDTH - 20, 30);
+        ctx.fillStyle = CONFIG.COLORS.HUD;
+        ctx.fillText(`Combo: ${this.combo}`, CONFIG.GAME_WIDTH - 20, 55);
+        // State overlays
+        if (this.state === STATE.MENU) {
+            this.drawOverlay('STAR BREAKOUT', 'Click or press SPACE to start', 'Use ← → or A/D to move, P to pause');
+        } else if (this.state === STATE.PAUSED) {
+            this.drawOverlay('PAUSED', 'Press SPACE to resume');
+        } else if (this.state === STATE.GAMEOVER) {
+            this.drawOverlay('GAME OVER', `Final Score: ${this.score}`, 'Click or press R to restart');
+        } else if (this.state === STATE.LEVELUP) {
+            this.drawOverlay(`LEVEL ${this.level}`, 'Get ready!');
+        }
+    }
+    drawOverlay(title, subtitle, hint = '') {
+        const ctx = this.ctx;
+        ctx.fillStyle = 'rgba(10, 15, 51, 0.85)';
+        ctx.fillRect(0, 0, CONFIG.GAME_WIDTH, CONFIG.GAME_HEIGHT);
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 48px Montserrat';
+        ctx.fillText(title, CONFIG.GAME_WIDTH / 2, CONFIG.GAME_HEIGHT / 2 - 40);
+        ctx.font = '24px Montserrat';
+        ctx.fillText(subtitle, CONFIG.GAME_WIDTH / 2, CONFIG.GAME_HEIGHT / 2 + 10);
+        if (hint) {
+            ctx.font = '18px Montserrat';
+            ctx.fillStyle = '#aaa';
+            ctx.fillText(hint, CONFIG.GAME_WIDTH / 2, CONFIG.GAME_HEIGHT / 2 + 50);
+        }
+    }
+}
+
+new Game(document.getElementById('gameCanvas'));\n",
+  "style.css": ""
+}
